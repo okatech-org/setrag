@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "SETRAG",
+    "slug": "setrag-voyageur",
+    "version": "1.0.0",
+    "runtimeVersion": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "setrag",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "primaryColor": "#15704A",
+    "description": "Application voyageur SETRAG — horaires, réservation et billets électroniques du Transgabonais (Owendo–Franceville).",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ga.setrag.voyageur",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleAllowMixedLocalizations": true,
+        "NSFaceIDUsageDescription": "SETRAG utilise Face ID pour déverrouiller vos billets en toute sécurité."
+      }
+    },
+    "android": {
+      "package": "ga.setrag.voyageur",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": {
+        "backgroundColor": "#15704A"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-localization",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#15704A",
+          "resizeMode": "contain"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {}
+    }
+  }
+}
