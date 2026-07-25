@@ -1,0 +1,36 @@
+{
+  "name": "@workspace/mobile-ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Design system mobile SETRAG — tokens et composants React Native alignés sur la charte web (@workspace/ui).",
+  "exports": {
+    "./tokens": "./src/tokens/index.ts",
+    "./components": "./src/components/index.ts",
+    "./fonts": "./src/fonts.ts",
+    "./voyage": "./src/components/voyage/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@expo-google-fonts/ibm-plex-mono": ">=0.4.0",
+    "@expo-google-fonts/schibsted-grotesk": ">=0.4.0",
+    "expo-font": ">=57.0.0",
+    "lucide-react-native": ">=1.0.0",
+    "react": ">=19.0.0",
+    "react-native": ">=0.86.0",
+    "react-native-safe-area-context": ">=5.0.0",
+    "react-native-svg": ">=15.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.10",
+    "@workspace/tsconfig": "workspace:*",
+    "react": "19.2.8",
+    "react-native": "0.86.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@workspace/shared": "workspace:*"
+  }
+}
