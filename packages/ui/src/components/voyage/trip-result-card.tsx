@@ -102,7 +102,7 @@ function TripResultCard({
                 <span
                   className={cn(
                     "tabular text-center text-[11px] leading-none font-medium",
-                    selected ? "text-accent-ink" : "text-ink-faint"
+                    selected ? "text-accent-ink" : "text-ink-muted"
                   )}
                 >
                   {formatDuration(durationMinutes)}
@@ -126,7 +126,7 @@ function TripResultCard({
                 <span
                   className={cn(
                     "text-center text-[11px] leading-none font-medium",
-                    selected ? "text-accent-ink" : "text-ink-faint"
+                    selected ? "text-accent-ink" : "text-ink-muted"
                   )}
                 >
                   {connectionLabel}
@@ -170,7 +170,7 @@ function TripResultCard({
                 ✓ Dans votre panier
               </span>
             ) : (
-              <span className="text-[12px] leading-none text-ink-faint">
+              <span className="text-[12px] leading-none text-ink-muted">
                 {priceNote}
               </span>
             )}

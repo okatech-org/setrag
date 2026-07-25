@@ -73,7 +73,7 @@ function ToastBar({
         {children}
       </span>
       {action && (
-        <span className="text-[14px] leading-none font-semibold text-accent-base">
+        <span className="text-[14px] leading-none font-semibold text-accent-on-ink">
           {action}
         </span>
       )}

@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import { cn } from "@workspace/ui/lib/utils"
-import { formatPrice } from "@workspace/ui/lib/format"
+import { formatPriceCompact } from "@workspace/ui/lib/format"
 
 export interface PriceCalendarDay {
   /** Quantième affiché (« 03 »). */
@@ -91,7 +91,7 @@ function PriceCalendar({
               aria-pressed={isSelected}
               onClick={() => onSelect?.(day.value)}
               className={cn(
-                "grid justify-items-center gap-[3px] rounded-md px-1 py-2.5 transition-colors duration-200 ease-setrag",
+                "grid min-w-0 justify-items-center gap-[3px] overflow-hidden rounded-md px-1 py-2.5 transition-colors duration-200 ease-setrag",
                 isSelected
                   ? "bg-ink"
                   : unavailable
@@ -107,7 +107,7 @@ function PriceCalendar({
                   isSelected
                     ? "font-semibold text-ink-inverse"
                     : unavailable
-                      ? "text-ink-faint"
+                      ? "text-ink-muted"
                       : "text-ink"
                 )}
               >
@@ -115,17 +115,17 @@ function PriceCalendar({
               </span>
               <span
                 className={cn(
-                  "tabular text-[11px] leading-none",
+                  "tabular max-w-full truncate text-[11px] leading-none",
                   isSelected
-                    ? "font-semibold text-accent-base"
+                    ? "font-semibold text-accent-on-ink"
                     : unavailable
-                      ? "font-medium text-ink-faint"
+                      ? "font-medium text-ink-muted"
                       : isBest
                         ? "font-semibold text-accent-ink"
                         : "font-medium text-ink-muted"
                 )}
               >
-                {day.priceXaf === null ? "—" : formatPrice(day.priceXaf)}
+                {day.priceXaf === null ? "—" : formatPriceCompact(day.priceXaf)}
               </span>
             </button>
           )
@@ -134,6 +134,7 @@ function PriceCalendar({
 
       <div className="flex flex-wrap gap-4 text-[12px] leading-none font-medium text-ink-muted">
         <Legend swatch="bg-accent-soft" label="Meilleur prix" />
+        <span className="tabular">Prix en FCFA</span>
         <Legend swatch="bg-ink" label="Jour sélectionné" />
         <Legend swatch="bg-surface-sunk" label="Indisponible" />
       </div>

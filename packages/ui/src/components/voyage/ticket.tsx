@@ -13,12 +13,15 @@ const STATE_LABELS: Record<TicketState, string> = {
   hors_ligne: "Hors ligne",
 }
 
+/* Fond clair + encre de la même famille : le seul motif dont le contraste est
+   garanti sur les cinq états. Les teintes pleines (`bg-success`, `bg-info`)
+   tombaient entre 3,6 et 3,9:1 sous du texte encre. */
 const STATE_TONES: Record<TicketState, string> = {
-  valide: "bg-success text-ink",
-  utilise: "bg-line-strong text-ink",
-  echange: "bg-info text-ink",
-  rembourse: "bg-second text-ink",
-  hors_ligne: "bg-warning text-ink",
+  valide: "bg-success-soft text-success-ink",
+  utilise: "bg-surface-sunk text-ink-muted",
+  echange: "bg-info-soft text-info-ink",
+  rembourse: "bg-second-soft text-second-ink",
+  hors_ligne: "bg-warning-soft text-warning-ink",
 }
 
 export interface TicketProps extends React.ComponentProps<"article"> {
@@ -74,7 +77,7 @@ function Ticket({
     >
       <header className="flex items-start justify-between gap-4">
         <div className="grid gap-1">
-          <span className="text-mono-label text-accent-base">{legLabel}</span>
+          <span className="text-mono-label text-accent-on-ink">{legLabel}</span>
           <h3 className="text-h3 font-bold">{routeLabel}</h3>
         </div>
         <span

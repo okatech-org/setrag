@@ -11,7 +11,9 @@
 /* Tokens du design system (source de vérité) */
 @import "./tokens.css";
 
-@custom-variant dark (&:is([data-theme="dark"] *));
+/* `:not([data-theme="light"] *)` : sous un scope clair imbriqué, les
+   variantes `dark:` des composants shadcn ne doivent pas s'activer. */
+@custom-variant dark (&:is([data-theme="dark"] *):not([data-theme="light"] *));
 
 /* Scan des sources du monorepo pour le JIT Tailwind.
    Chemin résolu depuis packages/ui/src/styles/ → ../../../ = packages/ */
@@ -23,9 +25,16 @@
    Pont SETRAG → shadcn
    Les composants shadcn consomment les variables ci-dessous ; on les branche
    sur les tokens SETRAG pour qu'ils héritent de la charte sans réécriture.
+
+   ⚠ Les trois sélecteurs sont nécessaires. Une custom property qui contient
+   `var()` est résolue sur l'élément où elle est DÉCLARÉE, puis héritée comme
+   valeur figée : déclarée sur `:root` seul, `--card` garderait le thème de
+   l'hôte même à l'intérieur d'un `[data-theme="light"]`.
    ============================================================================ */
 
-:root {
+:root,
+[data-theme="light"],
+[data-theme="dark"] {
   --radius: var(--r-md);
 
   --background: var(--c-canvas);
@@ -105,6 +114,7 @@
   --color-accent-soft: var(--c-accent-soft);
   --color-accent-line: var(--c-accent-line);
   --color-accent-ink: var(--c-accent-ink);
+  --color-accent-on-ink: var(--c-accent-on-ink);
   --color-second: var(--c-second);
   --color-second-soft: var(--c-second-soft);
   --color-second-ink: var(--c-second-ink);

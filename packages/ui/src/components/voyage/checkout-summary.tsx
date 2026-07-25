@@ -147,7 +147,7 @@ function CheckoutSummary({
       </Button>
 
       {footnote && (
-        <p className="text-center text-[12px] leading-normal text-ink-faint">
+        <p className="text-center text-[12px] leading-normal text-ink-muted">
           {footnote}
         </p>
       )}

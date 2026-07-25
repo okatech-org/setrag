@@ -50,6 +50,7 @@ export { TripSearchBar, SearchSlot } from "./components/voyage/trip-search-bar"
 export { cn } from "./lib/utils"
 export {
   formatPrice,
+  formatPriceCompact,
   formatTime,
   formatDuration,
   spellTime,

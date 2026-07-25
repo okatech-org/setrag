@@ -113,6 +113,52 @@ le billet et le toast (`--sh-lg`), et la carte de résultat au survol. Les
 panneaux sont `border: 1px solid`, **sans ombre**. `card.tsx` et le déclencheur
 de `select.tsx` arrivaient du registre shadcn avec `shadow-xs` : retiré.
 
+## Contraste — 28 défauts corrigés, et le garde-fou
+
+Les règles étaient écrites dans `conventions.md` mais pas appliquées au code.
+Quatre causes, toutes mesurées puis corrigées :
+
+1. **`ink-faint` sous 18 px** — la source le réserve au texte ≥ 18 px (3,6:1) ;
+   il était utilisé à 12-15 px dans 16 endroits (aides de champ, libellés de
+   stepper, états désactivés, footnotes). Tous passés en `ink-muted` (6,9:1).
+2. **Accent sur fond encre** — l'accent bleu foncé sur `bg-ink` tombe à 2,2:1
+   (toast « Voir », surtitre du billet, jour sélectionné du calendrier). Token
+   dédié : **`--c-accent-on-ink`**, clair. À utiliser dès qu'on pose de
+   l'accent sur `bg-ink`.
+3. **Le pont shadcn ne suivait pas le scope de thème.** Une custom property qui
+   contient `var()` est résolue **sur l'élément où elle est déclarée**, puis
+   héritée figée. Déclaré sur `:root` seul, `--card` gardait le thème de l'hôte
+   à l'intérieur d'un `[data-theme="light"]` : `Card` et `Tabs` rendaient un
+   fond sombre sous du texte foncé. Le bloc porte désormais les trois
+   sélecteurs `:root, [data-theme="light"], [data-theme="dark"]`.
+   **C'est la règle générale : toute variable dérivant d'une autre doit être
+   déclarée sur les mêmes sélecteurs que sa source.**
+4. **Variante `dark:` sous un scope clair imbriqué** — `@custom-variant dark`
+   s'activait pour un descendant de `[data-theme="dark"]` même à l'intérieur
+   d'un `[data-theme="light"]`. Corrigé par `:not([data-theme="light"] *)`.
+
+Restaient deux paires de couleurs trop proches : les badges shadcn pointaient
+sur `bg-success-light` (nommage mort, donc aucun fond) et les pastilles d'état
+du billet utilisaient des teintes pleines sous du texte encre. Toutes alignées
+sur le motif **`bg-*-soft` + `text-*-ink`**, le seul dont le contraste est
+garanti.
+
+Débordement : `PriceCalendar` affichait « 18 000 FCFA » dans un septième de
+largeur. `formatPriceCompact()` retire le code devise, porté une seule fois par
+la légende.
+
+### Le garde-fou
+
+```sh
+node .design-sync/check-contrast.mjs --emit    # imprime le script d'audit
+```
+
+À coller dans la console sur `/.review.html`. Il mesure le ratio WCAG de chaque
+nœud de texte contre son fond réel, et détecte les débordements horizontaux.
+**Verdict attendu : `{ contraste: 0, debordement: 0 }`** — vérifié aussi sous
+hôte hostile (`.dark` + `data-theme="dark"` + `body{color}` imposé).
+À passer avant chaque upload.
+
 ## Risques pour la prochaine synchro
 
 - **Le CSS peut silencieusement se vider.** Tailwind ne génère que les classes

@@ -15,7 +15,7 @@ const box =
   "grid size-[22px] shrink-0 place-items-center rounded-[6px] border-[1.5px] border-line-strong bg-surface text-ink-inverse transition-colors duration-200 ease-setrag outline-none data-[state=checked]:border-accent-base data-[state=checked]:bg-accent-base data-[disabled]:border-line data-[disabled]:bg-surface-sunk"
 
 const row =
-  "flex min-h-target items-center gap-3 text-[15px] text-ink data-[disabled]:text-ink-faint"
+  "flex min-h-target items-center gap-3 text-[15px] text-ink data-[disabled]:text-ink-muted"
 
 function Checkbox({
   label,

@@ -151,7 +151,7 @@ function SearchSlot({
 /** Gabarit visuel par défaut, quand l'application ne fournit pas de champ. */
 function SearchSlotPlaceholder() {
   return (
-    <span className="flex h-14 items-center overflow-hidden rounded-md border border-line-strong px-4 text-[16px] leading-tight font-medium text-ink-faint">
+    <span className="flex h-14 items-center overflow-hidden rounded-md border border-line-strong px-4 text-[16px] leading-tight font-medium text-ink-muted">
       —
     </span>
   )

@@ -18,13 +18,13 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "border-transparent bg-accent-base text-ink-inverse hover:bg-accent-hover active:bg-accent-active active:translate-y-px disabled:bg-line disabled:text-ink-faint",
+          "border-transparent bg-accent-base text-ink-inverse hover:bg-accent-hover active:bg-accent-active active:translate-y-px disabled:bg-line disabled:text-ink-muted",
         secondary:
-          "border-[1.5px] border-ink bg-surface text-ink hover:bg-surface-sunk active:translate-y-px disabled:border-line disabled:text-ink-faint",
+          "border-[1.5px] border-ink bg-surface text-ink hover:bg-surface-sunk active:translate-y-px disabled:border-line disabled:text-ink-muted",
         ghost:
-          "border-transparent bg-transparent text-accent-ink hover:bg-accent-soft active:translate-y-px disabled:text-ink-faint",
+          "border-transparent bg-transparent text-accent-ink hover:bg-accent-soft active:translate-y-px disabled:text-ink-muted",
         danger:
-          "border-transparent bg-danger text-ink-inverse hover:bg-danger-hover active:translate-y-px disabled:bg-line disabled:text-ink-faint",
+          "border-transparent bg-danger text-ink-inverse hover:bg-danger-hover active:translate-y-px disabled:bg-line disabled:text-ink-muted",
       },
       size: {
         sm: "h-9 px-4 text-[14px]",
@@ -87,8 +87,12 @@ function Button({
     <button
       data-slot="button"
       data-loading={loading || undefined}
+      aria-disabled={disabled || undefined}
       aria-busy={loading || undefined}
-      disabled={disabled || loading}
+      // `disabled` seul : en chargement le bouton garde sa couleur pleine,
+      // sinon il vire au gris et le libellé tombe à 2,6:1.
+      disabled={disabled}
+      onClick={loading ? undefined : props.onClick}
       className={cn(buttonVariants({ variant, size, block, className }))}
       {...props}
     >

@@ -44,7 +44,7 @@ function Stepper({ steps, current, className, ...props }: StepperProps) {
                   "grid size-[26px] shrink-0 place-items-center rounded-pill border-2 text-[13px] leading-none font-semibold",
                   done && "border-accent-base bg-accent-base text-ink-inverse",
                   active && "border-accent-base bg-transparent text-accent-ink",
-                  !done && !active && "border-line bg-transparent text-ink-faint"
+                  !done && !active && "border-line bg-transparent text-ink-muted"
                 )}
               >
                 {done ? "✓" : index + 1}

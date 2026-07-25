@@ -51,6 +51,9 @@
   --c-danger-hover: oklch(0.47 0.18 25);
   --c-danger-ink: oklch(0.45 0.17 25);
   --c-info-ink: oklch(0.42 0.09 205);
+  /* Accent posé sur un fond encre (billet, toast, jour sélectionné) : la
+     version foncée y tombe à 2,2:1. On remonte la clarté. */
+  --c-accent-on-ink: oklch(0.78 0.12 257);
 
   /* — Typographie — */
   --font-ui: "Schibsted Grotesk Variable", "Schibsted Grotesk", system-ui,
@@ -144,6 +147,7 @@
   --c-danger-hover: oklch(0.78 0.15 25);
   --c-danger-ink: oklch(0.8 0.14 25);
   --c-info-ink: oklch(0.84 0.09 205);
+  --c-accent-on-ink: oklch(0.82 0.11 257);
 
   --sh-sm: 0 1px 2px oklch(0 0 0 / 0.4);
   --sh-md: 0 4px 12px oklch(0 0 0 / 0.45);

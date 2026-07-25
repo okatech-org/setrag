@@ -19,6 +19,20 @@ export function formatPrice(
   }).format(amount)
 }
 
+/**
+ * Montant sans code devise — pour les colonnes étroites (calendrier des prix),
+ * où « 18 000 FCFA » déborde de sa cellule. La devise est alors portée par le
+ * contexte, jamais par la cellule elle-même.
+ */
+export function formatPriceCompact(
+  amount: number,
+  { locale = DEFAULT_LOCALE } = {}
+): string {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(
+    amount
+  )
+}
+
 /** Heure « 07:42 » sur le fuseau donné. */
 export function formatTime(
   value: number | Date,
