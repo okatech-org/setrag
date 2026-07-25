@@ -147,6 +147,20 @@ Débordement : `PriceCalendar` affichait « 18 000 FCFA » dans un septième de
 largeur. `formatPriceCompact()` retire le code devise, porté une seule fois par
 la légende.
 
+### Aplats de fond — ne pas en ajouter « au cas où »
+
+`ThemeScope` a un temps peint `bg-canvas` en plus de poser la couleur de
+texte. Seul `text-ink` était nécessaire : le fond `canvas` (blanc bleuté)
+posé sur la surface blanche d'une carte d'aperçu s'y voit comme un
+rectangle grisé. Le fond n'est peint que lorsqu'il est nécessaire — en
+`theme="dark"`, sinon le texte clair tomberait sur la surface claire de
+l'hôte — ou sur demande via `surface`.
+
+Règle générale : **un composant ne peint un fond que s'il porte une
+surface**. Les aplats gris légitimes du design system sont les
+sous-surfaces (`bg-surface-sunk` des lignes de squelette, pastilles
+neutres, survols, jour indisponible) — jamais un conteneur technique.
+
 ### Le garde-fou
 
 ```sh
@@ -155,7 +169,7 @@ node .design-sync/check-contrast.mjs --emit    # imprime le script d'audit
 
 À coller dans la console sur `/.review.html`. Il mesure le ratio WCAG de chaque
 nœud de texte contre son fond réel, et détecte les débordements horizontaux.
-**Verdict attendu : `{ contraste: 0, debordement: 0 }`** — vérifié aussi sous
+**Verdict attendu : `{ contraste: 0, debordement: 0, aplatsParasites: 0 }`** — vérifié aussi sous
 hôte hostile (`.dark` + `data-theme="dark"` + `body{color}` imposé).
 À passer avant chaque upload.
 
