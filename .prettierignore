@@ -1,0 +1,8 @@
+node_modules
+.next
+.expo
+.turbo
+dist
+build
+convex/_generated
+bun.lock

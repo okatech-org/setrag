@@ -1,0 +1,5 @@
+[install]
+# Metro (React Native) ne suit pas les liens du linker isolé de Bun 1.3 :
+# les dépendances transitives (@expo/metro-runtime, whatwg-fetch…) deviennent
+# introuvables au bundling. Le layout hoisted reproduit celui de npm.
+linker = "hoisted"
