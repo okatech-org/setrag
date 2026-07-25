@@ -42,6 +42,21 @@
     },
     "ToastBar": {
       "cardMode": "column"
+    },
+    "AppHeader": {
+      "cardMode": "column"
+    },
+    "BoardingPass": {
+      "cardMode": "column"
+    },
+    "WalletPass": {
+      "cardMode": "column"
+    },
+    "FilterGroup": {
+      "cardMode": "column"
+    },
+    "ResultsToolbar": {
+      "cardMode": "column"
     }
   },
   "readmeHeader": ".design-sync/conventions.md",

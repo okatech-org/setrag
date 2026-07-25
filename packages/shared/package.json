@@ -9,7 +9,8 @@
     "./schemas/profile": "./src/schemas/profile.ts",
     "./utils/format": "./src/utils/format.ts",
     "./utils/fare": "./src/utils/fare.ts",
-    "./constants": "./src/constants.ts"
+    "./constants": "./src/constants.ts",
+    "./wallet": "./src/wallet.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

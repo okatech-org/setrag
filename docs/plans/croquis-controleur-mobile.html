@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETRAG — Croquis controleur-mobile</title>
+<link rel="stylesheet" href="plan.css">
+<link rel="stylesheet" href="croquis.css">
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <div class="brand">SETRAG · Croquis</div>
+  <div class="sub"><a href="index.html" style="color:var(--accent)">← Vue d'ensemble</a><br>controleur-mobile — 11 écrans<br>26 juillet 2026</div>
+  <a href="#flux">Flux de navigation</a>
+  <a href="#CM-01">CM-01 · Connexion + MFA</a>
+  <a href="#CM-02">CM-02 · Tableau de bord</a>
+  <a href="#CM-03">CM-03 · Manifeste embarqué</a>
+  <a href="#CM-04">CM-04 · Scanner</a>
+  <a href="#CM-05">CM-05 · Résultat de scan</a>
+  <a href="#CM-06">CM-06 · Recherche manuelle</a>
+  <a href="#CM-07">CM-07 · Vente à bord</a>
+  <a href="#CM-08">CM-08 · Procès-verbal</a>
+  <a href="#CM-09">CM-09 · Signalement d'incident</a>
+  <a href="#CM-10">CM-10 · Historique &amp; synchronisation</a>
+  <a href="#CM-11">CM-11 · Conflits</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <h1>controleur-mobile — croquis d'écrans</h1>
+  <p>Croquis en fil de fer des 11 écrans de l'application des contrôleurs du Transgabonais
+  (Owendo ↔ Franceville, 648 km, 22 gares, environ 700 voyageurs par départ). Le hors-ligne y est
+  le <b>mode nominal</b> et non un mode dégradé : entre les tunnels et la forêt équatoriale, le
+  terminal passe des heures sans réseau. Chaque écran est donc pensé pour rendre un verdict sans
+  serveur, journaliser localement et se synchroniser plus tard. Volontairement en niveaux de gris :
+  la forme reste à la main du designer, ce document fixe la structure et le comportement.</p>
+  <div class="hero-meta">
+    <span class="chip">11 écrans</span>
+    <span class="chip">Expo · build natif</span>
+    <span class="chip">Hors ligne par conception</span>
+    <span class="chip">SQLite chiffré (SQLCipher)</span>
+    <span class="chip">Aztec signé Ed25519</span>
+    <a class="chip" href="controleur-mobile.html">→ plan applicatif</a>
+    <a class="chip" href="croquis-agent-web.html">→ croquis agent-web</a>
+    <a class="chip" href="backend.html">→ plan backend</a>
+  </div>
+</header>
+
+<section id="flux">
+  <h2>Flux de navigation — le cycle d'une tournée</h2>
+  <p class="lede">Trois temps distincts, séparés par la disponibilité du réseau : on embarque tout
+  avant le départ, on produit tout localement à bord, on réconcilie à la reconnexion. Les traits
+  pleins sont le parcours nominal, les pointillés les branches de régularisation et d'exception.</p>
+  <pre class="mermaid">
+flowchart TB
+  L["CM-01<br/>Connexion + TOTP"] --> D["CM-02<br/>Tableau de bord"]
+
+  subgraph AVANT["Avant le départ — réseau disponible en gare"]
+    D --> M["CM-03<br/>Téléchargement du manifeste"]
+    M -.->|données périmées ou échec| M
+  end
+
+  M --> S["CM-04<br/>Scanner"]
+
+  subgraph BORD["À bord — hors ligne, vérification 100 pour cent locale"]
+    S --> R["CM-05<br/>Résultat de scan"]
+    S -.->|code illisible ou billet SMS| Q["CM-06<br/>Recherche manuelle"]
+    Q -.-> R
+    R -->|titre valide| S
+    R -.->|hors segment ou sans titre| V["CM-07<br/>Vente à bord"]
+    R -.->|refus de régulariser| P["CM-08<br/>Procès-verbal"]
+    V --> S
+    P --> S
+    S -.->|évènement à signaler| I["CM-09<br/>Incident"]
+    I --> S
+  end
+
+  S --> H["CM-10<br/>Historique et file d'envoi"]
+
+  subgraph APRES["Retour du réseau — synchronisation puis purge"]
+    H -->|lots idempotents| C["CM-11<br/>Conflits à arbitrer"]
+    C -.->|PV a posteriori| P
+    H -->|tournée synchronisée| Z["Purge des données locales"]
+  end
+  </pre>
+  <div class="scr-index">
+    <a href="#CM-01"><b>CM-01</b> Connexion + MFA</a>
+    <a href="#CM-02"><b>CM-02</b> Tableau de bord</a>
+    <a href="#CM-03"><b>CM-03</b> Manifeste embarqué</a>
+    <a href="#CM-04"><b>CM-04</b> Scanner</a>
+    <a href="#CM-05"><b>CM-05</b> Résultat de scan</a>
+    <a href="#CM-06"><b>CM-06</b> Recherche manuelle</a>
+    <a href="#CM-07"><b>CM-07</b> Vente à bord</a>
+    <a href="#CM-08"><b>CM-08</b> Procès-verbal</a>
+    <a href="#CM-09"><b>CM-09</b> Signalement d'incident</a>
+    <a href="#CM-10"><b>CM-10</b> Historique &amp; synchronisation</a>
+    <a href="#CM-11"><b>CM-11</b> Conflits</a>
+  </div>
+  <div class="card">
+    <p style="margin-bottom:0"><b>Règles transverses applicables à tous les écrans.</b> Terminal
+    tenu d'une seule main, en mouvement, parfois en faible luminosité : cibles tactiles d'au moins
+    56 px de haut sur les actions de contrôle (le plancher Cadence de 44 px est un minimum, pas une
+    cible), un seul bouton primaire par écran, aucune information portée par la couleur seule — le
+    verdict est toujours écrit en toutes lettres, heures et montants en police tabulaire, anneau de
+    focus jamais supprimé. L'indicateur de réseau et le compteur de la file d'envoi sont présents en
+    permanence : le contrôleur doit savoir à tout instant ce qui est encore sur son terminal.</p>
+  </div>
+</section>
+
+<section>
+
+<!-- ============================ CM-01 ============================ -->
+<div class="screen-block" id="CM-01">
+  <div class="sb-head"><span class="sb-id">CM-01</span><h3>Connexion et double authentification</h3><span class="sb-role">contrôleur · réseau requis en gare</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">étape 1 : identifiant</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">SETRAG · Contrôle</div>
+              <div class="wf-step"><i class="on">1</i><span class="ln"></span><i>2</i><span class="ln"></span><i>3</i></div>
+              <div class="wf-lbl">Identifiant interne</div>
+              <div class="wf-fld filled">CTRL-0428</div>
+              <div class="wf-lbl">Mot de passe</div>
+              <div class="wf-fld">Saisir le mot de passe</div>
+              <div class="wf-btn pri wide">Continuer <span class="n">1</span></div>
+              <div class="wf-row mid"><span class="wf-tag ok">réseau</span><span style="font-size:9px">Connexion possible depuis la gare</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">étape 2 : code TOTP</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Code de vérification</div>
+              <div class="wf-step"><i>1</i><span class="ln"></span><i class="on">2</i><span class="ln"></span><i>3</i></div>
+              <div style="font-size:9px;line-height:1.7">Saisir le code à six chiffres affiché par votre application d'authentification.</div>
+              <div class="wf-row mid">
+                <div class="wf-fld filled g1">4</div><div class="wf-fld filled g1">1</div><div class="wf-fld filled g1">7</div>
+                <div class="wf-fld g1">·</div><div class="wf-fld g1">·</div><div class="wf-fld g1">·</div>
+              </div>
+              <div class="wf-btn pri wide">Ouvrir la session <span class="n">2</span></div>
+              <div class="wf-btn gho wide">Code perdu — appeler le régulateur</div>
+              <div style="font-size:9px;opacity:.75">Session valable 12 h, jusqu'à 21:40</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : code refusé</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Code de vérification</div>
+              <div class="wf-alert err"><b>CODE REFUSÉ</b> — 2 essais restants avant blocage</div>
+              <div class="wf-row mid">
+                <div class="wf-fld g1">·</div><div class="wf-fld g1">·</div><div class="wf-fld g1">·</div>
+                <div class="wf-fld g1">·</div><div class="wf-fld g1">·</div><div class="wf-fld g1">·</div>
+              </div>
+              <div style="font-size:9px;line-height:1.7">Vérifiez que l'heure du terminal est correcte : un décalage horaire invalide le code.</div>
+              <div class="wf-btn pri wide">Réessayer</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : verrouillage après inactivité</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Terminal verrouillé</div>
+              <div style="font-size:9px;line-height:1.7">Session ouverte, inactive depuis 5 min.<br>CTRL-0428 · desserte TR-201</div>
+              <div class="wf-row mid"><div class="wf-fld filled g1">•</div><div class="wf-fld filled g1">•</div><div class="wf-fld g1">·</div><div class="wf-fld g1">·</div></div>
+              <div class="wf-btn pri wide">Déverrouiller <span class="n">3</span></div>
+              <div class="wf-row mid"><span class="wf-tag warn">hors ligne</span><span style="font-size:9px">12 contrôles en attente d'envoi</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">identification</span> — identifiant interne et mot de passe, saisis en gare avant le départ</li>
+        <li><span class="st">second facteur</span> — code TOTP à six chiffres, obligatoire sans exception</li>
+        <li><span class="st">code refusé</span> — compteur d'essais visible, message sur la dérive d'horloge du terminal</li>
+        <li><span class="st">compte bloqué</span> — après trois échecs, déblocage par le régulateur uniquement</li>
+        <li><span class="st">hors ligne</span> — l'ouverture de session exige le réseau : le message le dit explicitement et propose de se rapprocher de la gare</li>
+        <li><span class="st">verrouillage</span> — code court après inactivité, sans refaire le TOTP : la session reste ouverte et la file d'envoi intacte</li>
+        <li><span class="st">session expirée</span> — au-delà de 8 à 12 h, retour à l'identification, les données locales sont conservées</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Identifiant interne de l'agent, jamais une adresse de courriel personnelle</li>
+        <li>Progression en trois étapes, pour que l'agent sache où il en est</li>
+        <li>Durée de validité de la session, affichée en clair avec son heure de fin</li>
+        <li>Au verrouillage : rappel de la desserte en cours et du nombre d'écritures encore locales — le contrôleur ne doit jamais croire son terminal vide</li>
+        <li>Aucune donnée voyageur visible avant l'ouverture complète de la session</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>TextInput</code>, <code>InputOTP</code>, <code>Button</code> pleine largeur, <code>Stepper</code>, <code>SessionBanner</code> (composant à créer), <code>LockScreen</code> (composant à créer), <code>KeyboardAvoidingView</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Vérifie les identifiants auprès de Better Auth et enchaîne sur le second facteur</li>
+        <li><span class="n">2</span> Valide le TOTP, ouvre la session courte, dérive la clé de la base chiffrée et la dépose dans le magasin sécurisé du terminal</li>
+        <li><span class="n">3</span> Déverrouille sans appel réseau : le code court est vérifié localement, ce qui reste possible en pleine voie</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>→ <a href="#CM-02">CM-02</a> (tableau de bord) après ouverture de session</li>
+        <li>Le verrouillage peut survenir depuis n'importe quel écran et y ramène une fois le code saisi</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CM-02 ============================ -->
+<div class="screen-block" id="CM-02">
+  <div class="sb-head"><span class="sb-id">CM-02</span><h3>Tableau de bord et choix de la desserte</h3><span class="sb-role">contrôleur · point de départ de la tournée</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : données embarquées à jour</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Bonjour, CTRL-0428</span><span class="wf-tag ok">réseau</span></div>
+              <div class="wf-box fill">
+                <div class="wf-h">TR-201 · Owendo → Franceville</div>
+                <div style="font-size:9px;line-height:1.7">Départ 14/08 à 18:20 · 22 gares · 648 km<br>Voitures 1 à 6 · 694 voyageurs attendus</div>
+                <div class="wf-row mid"><span class="wf-tag ok">manifeste à jour</span><span class="wf-tag neutral">il y a 6 min</span></div>
+              </div>
+              <div class="wf-row">
+                <div class="wf-kpi"><b>0</b><span>contrôlés</span></div>
+                <div class="wf-kpi"><b>694</b><span>attendus</span></div>
+                <div class="wf-kpi"><b>0</b><span>en attente</span></div>
+              </div>
+              <div class="wf-btn pri wide">Commencer le contrôle <span class="n">1</span></div>
+              <div class="wf-btn gho wide">Détail des données embarquées <span class="n">2</span></div>
+              <div class="wf-tabbar"><div class="tb on">Accueil</div><div class="tb">Scan</div><div class="tb">Historique</div><div class="tb">Incident</div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : données périmées, hors ligne</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Bonjour, CTRL-0428</span><span class="wf-tag err">hors ligne</span></div>
+              <div class="wf-alert warn"><b>DONNÉES PÉRIMÉES</b> — manifeste vieux de 31 h</div>
+              <div class="wf-box fill">
+                <div class="wf-h">TR-201 · Owendo → Franceville</div>
+                <div style="font-size:9px;line-height:1.7">Les annulations et remboursements survenus depuis ne sont pas connus du terminal.<br>La vérification de signature, elle, reste fiable.</div>
+              </div>
+              <div class="wf-btn pri wide">Contrôler quand même <span class="n">3</span></div>
+              <div class="wf-btn gho wide">Réessayer le téléchargement</div>
+              <div class="wf-tabbar"><div class="tb on">Accueil</div><div class="tb">Scan</div><div class="tb">Historique</div><div class="tb">Incident</div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : aucune desserte affectée</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Bonjour, CTRL-0428</span><span class="wf-tag ok">réseau</span></div>
+              <div class="wf-box dash">
+                <div class="wf-h">Aucune desserte pour aujourd'hui</div>
+                <div style="font-size:9px;line-height:1.7">Vous n'êtes affecté à aucun train. Contactez le régulateur si c'est une erreur.</div>
+              </div>
+              <div class="wf-lbl">Dessertes à venir</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">TR-204 · 16/08 · 07:40</span><span style="font-size:9px">Franceville → Owendo</span></div><span class="wf-tag neutral">non affecté</span></div>
+              </div>
+              <div class="wf-btn gho wide">Rafraîchir</div>
+              <div class="wf-tabbar"><div class="tb on">Accueil</div><div class="tb">Scan</div><div class="tb">Historique</div><div class="tb">Incident</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">prêt</span> — desserte affectée, manifeste frais, réseau disponible : cas nominal au départ d'Owendo</li>
+        <li><span class="st">à télécharger</span> — desserte connue mais aucune donnée embarquée, l'action primaire devient le téléchargement</li>
+        <li><span class="st">périmé</span> — manifeste antérieur à la dernière mise à jour connue : le contrôle reste possible, l'écran dit précisément ce que l'on perd</li>
+        <li><span class="st">hors ligne</span> — indicateur explicite, aucune action réseau proposée en action primaire</li>
+        <li><span class="st">tournée en cours</span> — compteurs de contrôles et de file d'envoi vivants, reprise directe du scan</li>
+        <li><span class="st">vide</span> — aucune desserte affectée, avec la marche à suivre</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Desserte du jour : numéro de train, origine et destination, date et heure de départ, nombre de voitures et de voyageurs attendus</li>
+        <li>Fraîcheur des données embarquées, exprimée en durée depuis la dernière mise à jour plutôt qu'en horodatage brut</li>
+        <li>Indicateur de réseau permanent, doublé d'un libellé — jamais une pastille de couleur seule</li>
+        <li>Trois compteurs : contrôlés, attendus, écritures en attente d'envoi</li>
+        <li>Barre d'onglets basse : accueil, scan, historique, incident — atteignable au pouce</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>SafeAreaView</code>, <code>Card</code>, <code>StatTile</code>, <code>NetworkBadge</code> (composant à créer), <code>FreshnessBadge</code> (composant à créer), <code>Button</code>, <code>BottomTabs</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Ouvre le scanner directement — depuis le tableau de bord, le contrôle doit être à un seul geste</li>
+        <li><span class="n">2</span> Ouvre le détail des données embarquées : contenu, taille, clé publique, barème</li>
+        <li><span class="n">3</span> Poursuit avec un manifeste périmé, après confirmation explicite ; l'avertissement reste ensuite visible dans la bandeau du scanner</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>→ <a href="#CM-04">CM-04</a> (scanner) · <a href="#CM-03">CM-03</a> (manifeste) · <a href="#CM-10">CM-10</a> (historique)</li>
+        <li>← <a href="#CM-01">CM-01</a> (connexion)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CM-03 ============================ -->
+<div class="screen-block" id="CM-03">
+  <div class="sb-head"><span class="sb-id">CM-03</span><h3>Téléchargement du manifeste de la desserte</h3><span class="sb-role">contrôleur · dernière étape avec réseau</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : à télécharger</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Données embarquées</div>
+              <div class="wf-box dash">
+                <div class="wf-h">Rien d'embarqué pour TR-201</div>
+                <div style="font-size:9px;line-height:1.7">Téléchargez avant le départ : au-delà de Ntoum, le réseau devient très irrégulier.</div>
+              </div>
+              <div class="wf-tbl">
+                <div class="r head"><span class="lg">Contenu</span><span class="sm">Taille</span></div>
+                <div class="r"><span class="lg">Titres de la desserte</span><span class="sm">—</span></div>
+                <div class="r"><span class="lg">Clé publique de signature</span><span class="sm">—</span></div>
+                <div class="r"><span class="lg">Barème kilométrique</span><span class="sm">—</span></div>
+                <div class="r"><span class="lg">Barème des amendes</span><span class="sm">—</span></div>
+              </div>
+              <div class="wf-btn pri wide">Télécharger (environ 4,2 Mo) <span class="n">1</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : en cours</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Téléchargement…</div>
+              <div class="wf-box fill">
+                <div class="wf-row mid"><span class="wf-h">Titres</span><span class="wf-tag neutral">612 / 694</span></div>
+                <div class="wf-t w90" style="margin:6px 0"></div>
+                <div style="font-size:9px;line-height:1.7">Lot 7 sur 8 · 3,4 Mo reçus<br>Ne quittez pas la gare avant la fin.</div>
+              </div>
+              <div class="wf-step"><i class="on">1</i><span class="ln"></span><i class="on">2</i><span class="ln"></span><i>3</i><span class="ln"></span><i>4</i></div>
+              <div class="wf-btn gho wide">Interrompre <span class="n">2</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : à jour</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Données embarquées</div>
+              <div class="wf-alert ok"><b>À JOUR</b> — mis à jour il y a 6 min</div>
+              <div class="wf-tbl">
+                <div class="r head"><span class="lg">Contenu</span><span class="sm">Volume</span></div>
+                <div class="r"><span class="lg">Titres de la desserte</span><span class="sm">694</span></div>
+                <div class="r"><span class="lg">Abonnements actifs</span><span class="sm">128</span></div>
+                <div class="r"><span class="lg">Clé publique</span><span class="sm">Ed25519</span></div>
+                <div class="r"><span class="lg">Barème kilométrique</span><span class="sm">22 gares</span></div>
+                <div class="r"><span class="lg">Barème des amendes</span><span class="sm">v4</span></div>
+              </div>
+              <div class="wf-row mid"><span class="wf-tag ok">base chiffrée</span><span class="wf-tag neutral">4,2 Mo</span></div>
+              <div class="wf-btn gho wide">Mettre à jour maintenant <span class="n">3</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : échec en cours de route</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Téléchargement interrompu</div>
+              <div class="wf-alert err"><b>ÉCHEC</b> — réseau perdu au lot 7 sur 8</div>
+              <div class="wf-box fill">
+                <div style="font-size:9px;line-height:1.7">612 titres sur 694 sont embarqués. Les 82 restants seront refusés faute de données de manifeste, mais leur signature restera vérifiable.</div>
+              </div>
+              <div class="wf-btn pri wide">Reprendre où l'on s'est arrêté <span class="n">4</span></div>
+              <div class="wf-btn gho wide">Continuer avec ce qui est embarqué</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">à télécharger</span> — aucune donnée locale pour la desserte, volume annoncé avant de lancer</li>
+        <li><span class="st">en cours</span> — progression par lot, avec le nombre de titres reçus et l'avertissement de ne pas quitter la gare</li>
+        <li><span class="st">à jour</span> — inventaire complet de ce qui est embarqué et date de fraîcheur</li>
+        <li><span class="st">périmé</span> — au-delà du seuil de fraîcheur, la mise à jour redevient l'action primaire</li>
+        <li><span class="st">échec</span> — reprise au lot interrompu, avec l'énoncé net de ce qui manquera au contrôle</li>
+        <li><span class="st">hors ligne</span> — le téléchargement est désactivé et l'écran explique qu'il faut du réseau, sans faire miroiter un bouton inopérant</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Inventaire du paquet embarqué : titres de la desserte, cartes d'abonnement actives, clé publique de signature, barème kilométrique des 22 gares, barème des amendes et sa version</li>
+        <li>Volume en mégaoctets — la donnée compte quand la connexion est facturée et lente</li>
+        <li>Mention que la base locale est chiffrée : c'est un argument de conformité à rappeler à l'agent</li>
+        <li>Conséquence explicite d'un téléchargement partiel : la signature reste vérifiable hors ligne, seul le statut fin (annulé, remboursé) manque</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>ProgressBar</code>, <code>Stepper</code>, <code>DataTable</code> compacte, <code>Badge</code>, <code>Alert</code>, <code>ManifestSummary</code> (composant à créer), <code>Button</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Lance le téléchargement paginé et l'écriture dans la base SQLite chiffrée, en arrière-plan si l'écran est quitté</li>
+        <li><span class="n">2</span> Interrompt proprement : les lots déjà écrits restent utilisables, rien n'est perdu</li>
+        <li><span class="n">3</span> Récupère le différentiel depuis la dernière mise à jour plutôt que l'ensemble du manifeste</li>
+        <li><span class="n">4</span> Reprend au dernier lot confirmé, sans retélécharger ce qui est déjà en base</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#CM-02">CM-02</a> (tableau de bord) · → <a href="#CM-04">CM-04</a> (scanner) une fois les données embarquées</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CM-04 ============================ -->
+<div class="screen-block" id="CM-04">
+  <div class="sb-head"><span class="sb-id">CM-04</span><h3>Scanner</h3><span class="sb-role">contrôleur · écran le plus utilisé de la tournée</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : viseur prêt, hors ligne</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Voiture 3</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-scan"><span>Présentez le code Aztec dans le cadre</span></div>
+              <div class="wf-row mid">
+                <div class="wf-kpi"><b>218</b><span>contrôlés</span></div>
+                <div class="wf-kpi"><b>18</b><span>à envoyer</span></div>
+              </div>
+              <div class="wf-row">
+                <span class="wf-chip">Lampe <span class="n">1</span></span>
+                <span class="wf-chip">Voiture 3</span>
+                <span class="wf-chip">Recherche <span class="n">2</span></span>
+              </div>
+              <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb on">Scan</div><div class="tb">Historique</div><div class="tb">Incident</div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : lampe allumée, lecture en cours</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Voiture 3</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-scan"><span>Lecture… maintenez le terminal stable</span></div>
+              <div class="wf-row mid">
+                <div class="wf-kpi"><b>218</b><span>contrôlés</span></div>
+                <div class="wf-kpi"><b>18</b><span>à envoyer</span></div>
+              </div>
+              <div class="wf-row">
+                <span class="wf-chip on">Lampe allumée</span>
+                <span class="wf-chip">Voiture 3</span>
+                <span class="wf-chip">Recherche</span>
+              </div>
+              <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb on">Scan</div><div class="tb">Historique</div><div class="tb">Incident</div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : caméra refusée</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Scanner</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-box dash">
+                <div class="wf-h">Caméra indisponible</div>
+                <div style="font-size:9px;line-height:1.7">L'autorisation d'accès à la caméra a été refusée. Le contrôle reste possible par recherche manuelle.</div>
+              </div>
+              <div class="wf-btn pri wide">Autoriser la caméra <span class="n">3</span></div>
+              <div class="wf-btn gho wide">Rechercher manuellement <span class="n">2</span></div>
+              <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb on">Scan</div><div class="tb">Historique</div><div class="tb">Incident</div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : manifeste périmé</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert warn"><b>MANIFESTE PÉRIMÉ</b> — statuts fins inconnus</div>
+              <div class="wf-scan"><span>Présentez le code Aztec dans le cadre</span></div>
+              <div class="wf-row mid">
+                <div class="wf-kpi"><b>4</b><span>contrôlés</span></div>
+                <div class="wf-kpi"><b>4</b><span>à envoyer</span></div>
+              </div>
+              <div class="wf-row"><span class="wf-chip">Lampe</span><span class="wf-chip">Voiture 1</span><span class="wf-chip">Recherche</span></div>
+              <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb on">Scan</div><div class="tb">Historique</div><div class="tb">Incident</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">prêt</span> — viseur actif dès l'ouverture, sans écran intermédiaire ni chargement perceptible</li>
+        <li><span class="st">lecture en cours</span> — retour visuel bref pendant le décodage Aztec ; le verdict suit en moins d'une seconde</li>
+        <li><span class="st">lampe allumée</span> — bascule persistante d'une tournée à l'autre : les voitures sont sombres de nuit</li>
+        <li><span class="st">caméra refusée ou indisponible</span> — repli immédiat sur la recherche manuelle, jamais d'impasse</li>
+        <li><span class="st">manifeste périmé</span> — bandeau permanent au-dessus du viseur, pour que le doute soit conscient</li>
+        <li><span class="st">hors ligne</span> — état nominal : l'indicateur informe, il n'alarme pas et ne bloque rien</li>
+        <li><span class="st">code illisible</span> — après plusieurs secondes sans décodage, invitation explicite à passer par la recherche manuelle</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Viseur occupant l'essentiel de la hauteur, cadre de visée dessiné pour un billet papier froissé comme pour un écran de téléphone</li>
+        <li>Voiture en cours de contrôle, modifiable — elle qualifie les contrôles enregistrés</li>
+        <li>Compteur de contrôles de la tournée et compteur d'écritures en attente d'envoi</li>
+        <li>Trois commandes seulement sous le viseur : lampe, voiture, recherche manuelle</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>CameraView</code> (expo-camera) avec décodeur Aztec, <code>TorchToggle</code> (composant à créer), <code>ScanCounter</code> (composant à créer), <code>Chip</code>, <code>BottomTabs</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Bascule la lampe du terminal ; l'état est mémorisé pour les scans suivants</li>
+        <li><span class="n">2</span> Ouvre la recherche manuelle, pour un billet reçu par SMS ou un code abîmé</li>
+        <li><span class="n">3</span> Redemande l'autorisation caméra, ou renvoie vers les réglages du terminal si elle a été refusée définitivement</li>
+        <li>Un décodage réussi enchaîne automatiquement sur le résultat, sans validation intermédiaire : aucun geste superflu en mouvement</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>→ <a href="#CM-05">CM-05</a> (résultat de scan) · <a href="#CM-06">CM-06</a> (recherche manuelle)</li>
+        <li>← <a href="#CM-02">CM-02</a> (tableau de bord) · barre basse vers <a href="#CM-10">CM-10</a> et <a href="#CM-09">CM-09</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CM-05 ============================ -->
+<div class="screen-block" id="CM-05">
+  <div class="sb-head"><span class="sb-id">CM-05</span><h3>Résultat de scan</h3><span class="sb-role">contrôleur · vérification 100 % locale</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : titre valide</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert ok"><b>VALIDE</b> — titre authentique</div>
+              <div class="wf-box fill">
+                <div class="wf-h">MBADINGA Paul</div>
+                <div style="font-size:9px;line-height:1.7">Owendo → Franceville<br>2e classe · voiture 1 · place 12A<br>N° B-4821 · TR-201 du 14/08</div>
+              </div>
+              <div class="wf-row"><span class="wf-tag neutral">segment couvert</span><span class="wf-tag neutral">1er contrôle</span></div>
+              <div class="wf-btn pri wide">Valider et scanner le suivant <span class="n">1</span></div>
+              <div class="wf-btn gho wide">Voir le détail</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : hors segment</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert err"><b>INVALIDE</b> — hors du parcours payé</div>
+              <div class="wf-box fill">
+                <div class="wf-h">OBAME Jean</div>
+                <div style="font-size:9px;line-height:1.7">Titre valable Owendo → Booué<br>Contrôle effectué après Booué</div>
+              </div>
+              <div class="wf-btn pri wide">Régulariser — vendre le complément <span class="n">2</span></div>
+              <div class="wf-btn wide">Établir un procès-verbal <span class="n">3</span></div>
+              <div class="wf-btn gho wide">Ignorer</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : déjà contrôlé</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert warn"><b>DÉJÀ CONTRÔLÉ</b> — ce terminal, 09:12</div>
+              <div class="wf-box fill"><div class="wf-h">MBADINGA Paul</div><div style="font-size:9px">Place 12A · contrôlé il y a 34 min</div></div>
+              <div class="wf-btn gho wide">Continuer <span class="n">4</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : signature non valide</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert err"><b>INVALIDE</b> — signature non valide</div>
+              <div class="wf-box fill">
+                <div class="wf-h">Titre non émis par la SETRAG</div>
+                <div style="font-size:9px;line-height:1.7">Le code présenté n'est pas signé par la clé de la SETRAG. Verdict certain, y compris sans réseau.</div>
+              </div>
+              <div class="wf-btn pri wide">Établir un procès-verbal <span class="n">3</span></div>
+              <div class="wf-btn gho wide">Vendre un titre à bord <span class="n">2</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : abonnement valide</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert ok"><b>VALIDE</b> — carte d'abonnement</div>
+              <div class="wf-box fill">
+                <div class="wf-h">NZE Antoinette</div>
+                <div style="font-size:9px;line-height:1.7">Abonnement mensuel Ndjolé → Lopé<br>Valable du 01/08 au 31/08 · 2e classe<br>Carte A-0912</div>
+              </div>
+              <div class="wf-row"><span class="wf-tag neutral">segment couvert</span><span class="wf-tag neutral">1er contrôle</span></div>
+              <div class="wf-btn pri wide">Valider et scanner le suivant <span class="n">1</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : titre annulé (manifeste)</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert err"><b>INVALIDE</b> — titre annulé puis remboursé</div>
+              <div class="wf-box fill">
+                <div class="wf-h">NDONG Sylvain</div>
+                <div style="font-size:9px;line-height:1.7">N° B-4402 · remboursé le 13/08<br>Source : manifeste embarqué, mis à jour il y a 6 min</div>
+              </div>
+              <div class="wf-btn pri wide">Régulariser — vendre un titre <span class="n">2</span></div>
+              <div class="wf-btn wide">Établir un procès-verbal <span class="n">3</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">valide</span> — signature authentique, desserte et segment corrects, titre non expiré</li>
+        <li><span class="st">signature invalide</span> — titre contrefait ou altéré : le verdict est certain, même sans réseau</li>
+        <li><span class="st">mauvaise desserte</span> — titre émis pour un autre train ou une autre date</li>
+        <li><span class="st">hors segment</span> — le voyageur circule au-delà du parcours payé</li>
+        <li><span class="st">expiré</span> — date de validité dépassée</li>
+        <li><span class="st">déjà contrôlé</span> — anti-repassage local, avec l'heure du premier contrôle</li>
+        <li><span class="st">annulé ou remboursé</span> — connu par le manifeste embarqué, avec la fraîcheur de la source citée</li>
+        <li><span class="st">abonnement</span> — carte d'abonnement valide, avec sa période de validité</li>
+        <li><span class="st">statut inconnu</span> — titre absent du manifeste partiel : la signature est bonne, l'écran le dit et laisse l'agent trancher</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Verdict en tête, lisible d'un coup d'œil, énoncé en toutes lettres et jamais par la couleur seule</li>
+        <li>Identité du voyageur, trajet payé, classe, voiture et place, numéro de titre, desserte</li>
+        <li>Motif précis en cas de refus — c'est lui qui détermine la régularisation proposée</li>
+        <li>Indicateurs : segment couvert, rang du contrôle</li>
+        <li>Origine de l'information quand elle vient du manifeste et non de la signature, avec sa date de fraîcheur</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>VerdictBanner</code> (composant à créer), <code>Card</code> voyageur, <code>Badge</code>, <code>Button</code> pleine largeur, <code>BottomSheet</code> détail</li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Enregistre le contrôle dans la file locale et rouvre immédiatement le viseur — le geste doit rester d'une seule main</li>
+        <li><span class="n">2</span> Ouvre la vente à bord, pré-remplie avec le trajet restant à régulariser</li>
+        <li><span class="n">3</span> Ouvre la rédaction du procès-verbal, pré-remplie avec le motif et le titre scanné</li>
+        <li><span class="n">4</span> Referme sans créer de second contrôle</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>→ <a href="#CM-07">CM-07</a> (vente à bord) · <a href="#CM-08">CM-08</a> (procès-verbal) · retour <a href="#CM-04">CM-04</a> (scanner)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CM-06 ============================ -->
+<div class="screen-block" id="CM-06">
+  <div class="sb-head"><span class="sb-id">CM-06</span><h3>Recherche manuelle dans le manifeste embarqué</h3><span class="sb-role">contrôleur · aucune requête réseau</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : recherche par référence</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Recherche</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-tabs"><div class="tb on">Référence</div><div class="tb">Nom</div><div class="tb">Place</div></div>
+              <div class="wf-fld filled">B-48</div>
+              <div style="font-size:9px;line-height:1.7">Référence reçue par SMS, telle que le voyageur vous la montre.</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">B-4821 · MBADINGA Paul</span><span style="font-size:9px">Owendo → Franceville · 12A</span></div><span class="wf-tag ok">valide</span></div>
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">B-4830 · KOUMBA Alice</span><span style="font-size:9px">Owendo → Lopé · 04C</span></div><span class="wf-tag ok">valide</span></div>
+              </div>
+              <div class="wf-btn gho wide">Revenir au scanner <span class="n">3</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : recherche par nom</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Recherche</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-tabs"><div class="tb">Référence</div><div class="tb on">Nom</div><div class="tb">Place</div></div>
+              <div class="wf-fld filled">OBAME</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">OBAME Jean</span><span style="font-size:9px">B-4655 · Owendo → Booué · 07B</span></div><span class="wf-tag warn">à vérifier</span></div>
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">OBAME Marie</span><span style="font-size:9px">B-4702 · Ndjolé → Lopé · 09A</span></div><span class="wf-tag ok">valide</span></div>
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">OBAME NGUEMA Paul</span><span style="font-size:9px">B-4711 · Owendo → Moanda · 02D</span></div><span class="wf-tag err">annulé</span></div>
+              </div>
+              <div style="font-size:9px;opacity:.75">3 résultats · recherche locale, aucune donnée envoyée</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : aucun résultat</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Recherche</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-tabs"><div class="tb on">Référence</div><div class="tb">Nom</div><div class="tb">Place</div></div>
+              <div class="wf-fld filled">B-9910</div>
+              <div class="wf-box dash">
+                <div class="wf-h">Aucun titre trouvé</div>
+                <div style="font-size:9px;line-height:1.7">Cette référence n'existe pas dans le manifeste de TR-201. Elle peut concerner une autre desserte, ou n'avoir jamais été émise.</div>
+              </div>
+              <div class="wf-btn pri wide">Vendre un titre à bord <span class="n">1</span></div>
+              <div class="wf-btn wide">Établir un procès-verbal <span class="n">2</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">saisie</span> — trois entrées possibles : référence SMS, nom du voyageur, numéro de place</li>
+        <li><span class="st">résultats</span> — liste filtrée au fil de la frappe, chaque ligne portant déjà son statut</li>
+        <li><span class="st">résultat unique</span> — ouverture directe du résultat de contrôle, sans étape de sélection</li>
+        <li><span class="st">homonymes</span> — plusieurs voyageurs de même nom : la place et le trajet permettent de trancher</li>
+        <li><span class="st">aucun résultat</span> — état vide qui explique pourquoi et propose immédiatement la régularisation</li>
+        <li><span class="st">manifeste partiel</span> — avertissement si le téléchargement a été interrompu : l'absence n'y vaut pas preuve</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Référence du titre, nom du voyageur, trajet, voiture et place, statut issu du manifeste</li>
+        <li>Nombre de résultats et rappel que la recherche est purement locale — aucune donnée ne quitte le terminal</li>
+        <li>Statut annoncé par un libellé autant que par la teinte du badge</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>SearchInput</code>, <code>SegmentedControl</code>, <code>FlatList</code> virtualisée sur les 694 titres, <code>ListItem</code>, <code>Badge</code>, <code>EmptyState</code> (composant à créer)</li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Ouvre la vente à bord pour un voyageur absent du manifeste</li>
+        <li><span class="n">2</span> Ouvre le procès-verbal, motif « sans titre de transport » pré-sélectionné</li>
+        <li><span class="n">3</span> Revient au viseur ; la recherche reste accessible d'un geste depuis le scanner</li>
+        <li>Toucher une ligne de résultat ouvre le même écran de verdict qu'un scan, avec la mention du mode de recherche employé</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#CM-04">CM-04</a> (scanner) · → <a href="#CM-05">CM-05</a> (résultat) · <a href="#CM-07">CM-07</a> · <a href="#CM-08">CM-08</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CM-07 ============================ -->
+<div class="screen-block" id="CM-07">
+  <div class="sb-head"><span class="sb-id">CM-07</span><h3>Vente à bord</h3><span class="sb-role">contrôleur · tarif calculé localement</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">étape 1 : trajet restant et classe</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Vente à bord</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-step"><i class="on">1</i><span class="ln"></span><i>2</i><span class="ln"></span><i>3</i></div>
+              <div class="wf-lbl">Départ du trajet restant</div>
+              <div class="wf-sel">Booué (gare atteinte)</div>
+              <div class="wf-lbl">Destination</div>
+              <div class="wf-sel">Franceville</div>
+              <div class="wf-lbl">Classe</div>
+              <div class="wf-row"><span class="wf-chip on">2e classe</span><span class="wf-chip">1re classe</span></div>
+              <div class="wf-box fill">
+                <div class="wf-row split mid"><span style="font-size:9px">338 km · barème v4</span><span class="wf-h">12 500 FCFA</span></div>
+              </div>
+              <div class="wf-btn pri wide">Encaisser <span class="n">1</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">étape 2 : encaissement</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Encaissement</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-step"><i class="on">1</i><span class="ln"></span><i class="on">2</i><span class="ln"></span><i>3</i></div>
+              <div class="wf-box fill"><div class="wf-row split mid"><span style="font-size:9px">Montant dû</span><span class="wf-h big">12 500 FCFA</span></div></div>
+              <div class="wf-lbl">Mode de paiement</div>
+              <div class="wf-row"><span class="wf-chip on">Espèces</span><span class="wf-chip">Mobile money</span></div>
+              <div class="wf-alert warn">Le mobile money exige le réseau : la demande partira à la reconnexion, le titre reste dû.</div>
+              <div class="wf-lbl">Montant remis</div>
+              <div class="wf-fld filled">15 000</div>
+              <div class="wf-box"><div class="wf-row split mid"><span style="font-size:9px">À rendre</span><span class="wf-h">2 500 FCFA</span></div></div>
+              <div class="wf-btn pri wide">Confirmer le paiement <span class="n">2</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">étape 3 : titre délivré</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert ok"><b>TITRE DÉLIVRÉ</b> — encaissé en espèces</div>
+              <div class="wf-row mid"><div class="wf-qr"></div>
+                <div class="wf-col"><span class="wf-h">B-9002</span><span style="font-size:9px;line-height:1.7">Booué → Franceville<br>2e classe · 12 500 FCFA<br>14/08 · 22:14</span></div>
+              </div>
+              <div class="wf-row mid"><span class="wf-tag neutral">en attente d'envoi</span><span style="font-size:9px">sera synchronisé</span></div>
+              <div class="wf-btn pri wide">Terminer et scanner le suivant <span class="n">4</span></div>
+              <div class="wf-btn gho wide">Envoyer la référence par SMS <span class="n">3</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">saisie du trajet</span> — départ pré-rempli avec la dernière gare atteinte, destination à choisir parmi les gares restantes</li>
+        <li><span class="st">régularisation</span> — écran ouvert depuis un verdict : trajet restant et motif déjà remplis, l'agent n'a qu'à confirmer</li>
+        <li><span class="st">encaissement espèces</span> — calcul de la monnaie à rendre, exécuté localement</li>
+        <li><span class="st">mobile money hors ligne</span> — la demande est mise en file, l'écran ne laisse pas croire au paiement immédiat</li>
+        <li><span class="st">titre délivré</span> — code affiché à l'écran, avec la mention qu'il sera synchronisé</li>
+        <li><span class="st">envoi SMS impossible</span> — sans réseau, le SMS est mis en file et le code reste montré à l'écran comme preuve</li>
+        <li><span class="st">barème indisponible</span> — si le barème n'a pas été embarqué, la vente est refusée et l'écran renvoie au téléchargement</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Trajet restant en gares réelles, jamais en kilomètres seuls : le voyageur doit reconnaître sa destination</li>
+        <li>Distance et version du barème employé — la traçabilité du tarif appliqué compte pour la recette</li>
+        <li>Montant en francs CFA, en police tabulaire, montant remis et monnaie à rendre</li>
+        <li>Numéro du titre créé et son état dans la file d'envoi</li>
+        <li>Aucun blocage de place préalable : la vente à bord ne réserve rien, elle constate</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>Stepper</code>, <code>Select</code> de gares, <code>SegmentedControl</code> de classe, <code>NumericKeypad</code> (composant à créer), <code>FareSummary</code> (composant à créer), <code>QRCodeView</code>, <code>Button</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Calcule le tarif depuis le barème kilométrique embarqué et passe à l'encaissement</li>
+        <li><span class="n">2</span> Écrit la vente, le paiement et le titre signé localement, et les inscrit dans la file d'envoi dans la même transaction</li>
+        <li><span class="n">3</span> Met en file l'envoi du SMS ; il partira au retour du réseau, le voyageur garde le code affiché entre-temps</li>
+        <li><span class="n">4</span> Referme et rouvre le viseur : la vente ne doit pas interrompre la progression dans la voiture</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#CM-05">CM-05</a> (résultat) · <a href="#CM-06">CM-06</a> (recherche) · → <a href="#CM-04">CM-04</a> (scanner) · <a href="#CM-10">CM-10</a> (file d'envoi)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CM-08 ============================ -->
+<div class="screen-block" id="CM-08">
+  <div class="sb-head"><span class="sb-id">CM-08</span><h3>Procès-verbal</h3><span class="sb-role">contrôleur · barème embarqué</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">étape 1 : motif et identité</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Procès-verbal</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-step"><i class="on">1</i><span class="ln"></span><i>2</i><span class="ln"></span><i>3</i></div>
+              <div class="wf-lbl">Motif</div>
+              <div class="wf-row wrap">
+                <span class="wf-chip on">Sans titre</span><span class="wf-chip">Titre invalide</span>
+                <span class="wf-chip">Classe supérieure</span><span class="wf-chip">Autre</span>
+              </div>
+              <div class="wf-lbl">Identité déclarée</div>
+              <div class="wf-fld filled">NGUEMA Serge</div>
+              <div class="wf-fld filled">Pièce : CNI 04-889-231</div>
+              <div class="wf-fld">Téléphone (facultatif)</div>
+              <div class="wf-alert warn">Identité <b>déclarée</b> par le contrevenant, non vérifiée par le terminal.</div>
+              <div class="wf-btn pri wide">Continuer <span class="n">1</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">étape 2 : montant et encaissement</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Montant</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-step"><i class="on">1</i><span class="ln"></span><i class="on">2</i><span class="ln"></span><i>3</i></div>
+              <div class="wf-box fill">
+                <div class="wf-row split mid"><span style="font-size:9px">Amende — sans titre</span><span class="wf-h big">25 000 FCFA</span></div>
+                <div style="font-size:9px;line-height:1.7">Barème v4 embarqué · non modifiable par l'agent<br>Trajet dû en sus : Booué → Lastourville</div>
+              </div>
+              <div class="wf-lbl">Encaissement</div>
+              <div class="wf-row"><span class="wf-chip on">Immédiat, espèces</span><span class="wf-chip">Différé</span></div>
+              <div class="wf-box"><div class="wf-row split mid"><span style="font-size:9px">Total à percevoir</span><span class="wf-h">32 000 FCFA</span></div></div>
+              <div class="wf-btn pri wide">Enregistrer le procès-verbal <span class="n">2</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">étape 3 : signature et récapitulatif</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert ok"><b>PROCÈS-VERBAL ENREGISTRÉ</b> — n° PV-0117</div>
+              <div class="wf-print">
+                <div class="wf-h">NGUEMA Serge · CNI 04-889-231</div>
+                <div style="font-size:9px;line-height:1.7">Sans titre de transport<br>TR-201 · voiture 3 · 14/08 à 22:41<br>Amende 25 000 + trajet 7 000 = 32 000 FCFA<br>Encaissé en espèces</div>
+              </div>
+              <div class="wf-box dash">
+                <div class="wf-lbl">Signature du contrevenant</div>
+                <div class="wf-t w60" style="margin:6px 0"></div>
+                <div style="font-size:9px">Facultative — le refus de signer est consigné</div>
+              </div>
+              <div class="wf-row mid"><span class="wf-tag neutral">en attente d'envoi</span><span style="font-size:9px">sera synchronisé</span></div>
+              <div class="wf-btn pri wide">Terminer <span class="n">4</span></div>
+              <div class="wf-btn gho wide">Envoyer une copie par SMS <span class="n">3</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : encaissement différé</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert warn"><b>PAIEMENT DIFFÉRÉ</b> — recouvrement à la descente</div>
+              <div class="wf-box fill">
+                <div class="wf-h">PV-0118 · 32 000 FCFA dus</div>
+                <div style="font-size:9px;line-height:1.7">Le contrevenant descend à Lastourville. Le dossier part au back-office pour recouvrement.</div>
+              </div>
+              <div class="wf-btn pri wide">Terminer <span class="n">4</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">motif</span> — sans titre, titre invalide, classe supérieure, autre ; pré-sélectionné quand l'écran vient d'un verdict</li>
+        <li><span class="st">identité déclarée</span> — nom, pièce présentée, téléphone facultatif, avec la mention explicite que rien n'est vérifié à bord</li>
+        <li><span class="st">montant</span> — issu du barème embarqué et de sa version, non modifiable par l'agent</li>
+        <li><span class="st">encaissement immédiat</span> — espèces, avec le trajet dû ajouté à l'amende</li>
+        <li><span class="st">encaissement différé</span> — dossier transmis au back-office pour recouvrement</li>
+        <li><span class="st">signature refusée</span> — le refus est consigné, il ne bloque pas l'enregistrement</li>
+        <li><span class="st">brouillon</span> — un procès-verbal interrompu est conservé localement et repris au même point</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Numéro de procès-verbal attribué localement, immédiatement opposable</li>
+        <li>Motif, identité déclarée, desserte, voiture, gare et horodatage du constat</li>
+        <li>Décomposition du montant : amende du barème plus trajet dû, total en police tabulaire</li>
+        <li>Version du barème appliqué — indispensable si le barème évolue en cours de saison</li>
+        <li>État dans la file d'envoi, affiché sans ambiguïté : le procès-verbal existe même s'il n'est pas encore parti</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>Stepper</code>, <code>ChipGroup</code>, <code>TextInput</code>, <code>FineSummary</code> (composant à créer), <code>SignaturePad</code> (composant à créer), <code>Alert</code>, <code>Button</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Valide motif et identité, puis calcule le montant depuis le barème embarqué</li>
+        <li><span class="n">2</span> Écrit le procès-verbal, l'encaissement éventuel et l'entrée de file d'envoi dans une seule transaction locale</li>
+        <li><span class="n">3</span> Met en file l'envoi d'une copie au contrevenant, si un téléphone a été déclaré</li>
+        <li><span class="n">4</span> Referme et rouvre le viseur : le contrôle de la voiture doit reprendre sans détour</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#CM-05">CM-05</a> (résultat) · <a href="#CM-11">CM-11</a> (procès-verbal a posteriori sur conflit)</li>
+        <li>→ <a href="#CM-04">CM-04</a> (scanner) · <a href="#CM-10">CM-10</a> (file d'envoi)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CM-09 ============================ -->
+<div class="screen-block" id="CM-09">
+  <div class="sb-head"><span class="sb-id">CM-09</span><h3>Signalement d'incident</h3><span class="sb-role">contrôleur · priorité à la reconnexion</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">étape 1 : catégorie et gravité</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Signaler un incident</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-lbl">Catégorie</div>
+              <div class="wf-row wrap">
+                <span class="wf-chip">Sécurité</span><span class="wf-chip on">Technique</span>
+                <span class="wf-chip">Comportement</span><span class="wf-chip">Médical</span><span class="wf-chip">Autre</span>
+              </div>
+              <div class="wf-lbl">Gravité</div>
+              <div class="wf-row">
+                <span class="wf-chip">Information</span><span class="wf-chip on">Important</span><span class="wf-chip">Critique</span>
+              </div>
+              <div class="wf-lbl">Localisation</div>
+              <div class="wf-sel">Voiture 3 · entre Booué et Lopé</div>
+              <div class="wf-btn pri wide">Continuer <span class="n">1</span></div>
+              <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb">Scan</div><div class="tb">Historique</div><div class="tb on">Incident</div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">étape 2 : description et photos</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Description</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-box">
+                <div style="font-size:9px;line-height:1.7">Porte de la voiture 3 bloquée en position ouverte depuis Booué. Voyageurs écartés de la zone.</div>
+              </div>
+              <div class="wf-lbl">Photos</div>
+              <div class="wf-row">
+                <div class="wf-box fill" style="width:52px;height:52px"></div>
+                <div class="wf-box fill" style="width:52px;height:52px"></div>
+                <div class="wf-box dash" style="width:52px;height:52px;align-items:center">+</div>
+              </div>
+              <div style="font-size:9px;line-height:1.7">Les photos sont stockées chiffrées sur le terminal et envoyées à la reconnexion.</div>
+              <div class="wf-btn pri wide">Enregistrer le signalement <span class="n">2</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : incident critique en file</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert err"><b>INCIDENT CRITIQUE ENREGISTRÉ</b> — n° INC-042</div>
+              <div class="wf-box fill">
+                <div class="wf-h">Médical · voiture 5</div>
+                <div style="font-size:9px;line-height:1.7">Enregistré à 23:07, hors couverture réseau.<br>Partira en <b>tête de file</b> dès le premier signal, avant les scans et les ventes.</div>
+              </div>
+              <div class="wf-row mid"><span class="wf-tag err">priorité haute</span><span class="wf-tag neutral">en attente d'envoi</span></div>
+              <div class="wf-btn pri wide">Prévenir le chef de train <span class="n">3</span></div>
+              <div class="wf-btn gho wide">Retour au contrôle</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : liste vide</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Incidents de la tournée</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-box dash">
+                <div class="wf-h">Aucun incident signalé</div>
+                <div style="font-size:9px;line-height:1.7">Signalez tout évènement de sécurité, technique, médical ou de comportement, même mineur.</div>
+              </div>
+              <div class="wf-btn pri wide">Nouveau signalement <span class="n">4</span></div>
+              <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb">Scan</div><div class="tb">Historique</div><div class="tb on">Incident</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">catégorie</span> — sécurité, technique, comportement, médical, autre</li>
+        <li><span class="st">gravité</span> — information, important, critique ; le niveau détermine la priorité d'envoi</li>
+        <li><span class="st">description</span> — texte libre et photos, saisis hors ligne</li>
+        <li><span class="st">critique en file</span> — l'écran dit clairement que le signalement partira en tête de file, avant les scans et les ventes</li>
+        <li><span class="st">envoyé</span> — accusé de réception du back-office une fois la reconnexion faite</li>
+        <li><span class="st">vide</span> — aucun incident sur la tournée, avec un rappel de ce qui mérite un signalement</li>
+        <li><span class="st">stockage saturé</span> — au-delà d'un volume de photos, l'écran demande de synchroniser ou de réduire les pièces jointes</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Catégorie, gravité, localisation (voiture et inter-gare, complétée par la position si elle est disponible)</li>
+        <li>Description libre, photos horodatées, auteur du signalement</li>
+        <li>Mention du chiffrement local des photos et de la date d'envoi prévue</li>
+        <li>Numéro d'incident attribué localement, communicable au chef de train immédiatement</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>ChipGroup</code>, <code>SeveritySelector</code> (composant à créer), <code>TextArea</code>, <code>ImagePicker</code> (expo-image-picker), <code>PhotoGrid</code> (composant à créer), <code>Button</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Valide la qualification et passe à la description ; la gravité critique fait remonter l'élément en tête de la file d'envoi</li>
+        <li><span class="n">2</span> Écrit l'incident, ses photos et l'entrée de file dans la même transaction locale</li>
+        <li><span class="n">3</span> Ouvre les coordonnées du chef de train — la radio de bord reste le canal immédiat, l'application n'est pas un canal d'alerte temps réel hors réseau</li>
+        <li><span class="n">4</span> Ouvre un nouveau signalement depuis la liste</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>Accessible depuis la barre basse de tous les écrans de contrôle</li>
+        <li>→ <a href="#CM-10">CM-10</a> (file d'envoi) · retour <a href="#CM-04">CM-04</a> (scanner)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CM-10 ============================ -->
+<div class="screen-block" id="CM-10">
+  <div class="sb-head"><span class="sb-id">CM-10</span><h3>Historique et synchronisation</h3><span class="sb-role">contrôleur · fin de tournée</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : file en attente, hors ligne</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Tournée TR-201</span><span class="wf-tag warn">hors ligne</span></div>
+              <div class="wf-tabs"><div class="tb on">File d'envoi</div><div class="tb">Contrôles</div></div>
+              <div class="wf-tbl">
+                <div class="r head"><span class="lg">Élément</span><span class="sm">Nb</span><span class="sm">État</span></div>
+                <div class="r"><span class="lg">Contrôles</span><span class="sm">218</span><span class="sm">en attente</span></div>
+                <div class="r"><span class="lg">Ventes à bord</span><span class="sm">11</span><span class="sm">en attente</span></div>
+                <div class="r"><span class="lg">Procès-verbaux</span><span class="sm">3</span><span class="sm">en attente</span></div>
+                <div class="r"><span class="lg">Incidents</span><span class="sm">1</span><span class="sm">priorité</span></div>
+              </div>
+              <div class="wf-alert warn"><b>AUCUN RÉSEAU</b> — l'envoi partira automatiquement dès le retour du signal</div>
+              <div class="wf-btn gho wide">Réessayer maintenant <span class="n">1</span></div>
+              <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb">Scan</div><div class="tb on">Historique</div><div class="tb">Incident</div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : synchronisation en cours</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Synchronisation</span><span class="wf-tag ok">réseau</span></div>
+              <div class="wf-box fill">
+                <div class="wf-row split mid"><span class="wf-h">Lot 3 sur 5</span><span class="wf-tag neutral">176 / 233</span></div>
+                <div class="wf-t w75" style="margin:6px 0"></div>
+                <div style="font-size:9px;line-height:1.7">Incidents critiques envoyés en premier.<br>Lots idempotents : une reprise ne crée pas de doublon.</div>
+              </div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">Incidents</span><span style="font-size:9px">1 élément</span></div><span class="wf-tag ok">envoyé</span></div>
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">Procès-verbaux</span><span style="font-size:9px">3 éléments</span></div><span class="wf-tag ok">envoyé</span></div>
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">Contrôles</span><span style="font-size:9px">176 sur 218</span></div><span class="wf-tag neutral">en cours</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : échecs à reprendre</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Synchronisation</span><span class="wf-tag ok">réseau</span></div>
+              <div class="wf-alert err"><b>4 ÉLÉMENTS EN ÉCHEC</b> — non perdus, conservés localement</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">Vente B-9002</span><span style="font-size:9px">refus serveur · 3 tentatives</span></div><span class="wf-tag err">échec</span></div>
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">Contrôle B-4655</span><span style="font-size:9px">délai dépassé</span></div><span class="wf-tag err">échec</span></div>
+              </div>
+              <div class="wf-alert warn"><b>2 CONFLITS SIGNALÉS</b> — à arbitrer</div>
+              <div class="wf-btn pri wide">Relancer les envois en échec <span class="n">2</span></div>
+              <div class="wf-btn gho wide">Voir les conflits <span class="n">3</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : fin de tournée, purge</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert ok"><b>TOURNÉE SYNCHRONISÉE</b> — 233 éléments confirmés</div>
+              <div class="wf-row mid">
+                <div class="wf-kpi"><b>218</b><span>contrôles</span></div>
+                <div class="wf-kpi"><b>11</b><span>ventes</span></div>
+                <div class="wf-kpi"><b>3</b><span>PV</span></div>
+              </div>
+              <div class="wf-modal">
+                <div class="wf-h">Purger les données locales ?</div>
+                <div style="font-size:9px;line-height:1.7">Le manifeste et les données voyageurs seront effacés du terminal. Action irréversible, possible uniquement parce que tout est confirmé côté serveur.</div>
+                <div class="wf-row end" style="margin:6px 0 0"><div class="wf-btn gho">Plus tard</div><div class="wf-btn pri">Purger <span class="n">4</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">en attente</span> — hors ligne, file détaillée par nature d'écriture, sans dramatisation : c'est le cas nominal en pleine voie</li>
+        <li><span class="st">en cours</span> — envoi par lots, incidents critiques d'abord, progression visible</li>
+        <li><span class="st">envoyé</span> — élément confirmé par le serveur, seul état qui autorise la purge</li>
+        <li><span class="st">en échec</span> — motif et nombre de tentatives, relance manuelle possible ; rien n'est jamais supprimé après un échec</li>
+        <li><span class="st">conflits signalés</span> — signalés ici, arbitrés dans l'écran dédié</li>
+        <li><span class="st">tournée synchronisée</span> — bilan de la tournée et proposition de purge</li>
+        <li><span class="st">purge refusée</span> — tant qu'un élément reste non confirmé, la purge est indisponible et l'écran dit lequel</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Deux vues : la file d'envoi par nature d'écriture, et la liste chronologique des contrôles de la tournée</li>
+        <li>Compteurs de la tournée : contrôles, ventes, procès-verbaux, incidents</li>
+        <li>Rappel du caractère idempotent des lots — une reprise ne crée pas de doublon, message utile à un agent qui hésite à relancer</li>
+        <li>Purge présentée comme une exigence de minimisation des données personnelles, pas comme un simple nettoyage</li>
+        <li>Heures des contrôles en police tabulaire, pour un alignement lisible dans une liste longue</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>SegmentedControl</code>, <code>DataTable</code>, <code>FlatList</code>, <code>SyncQueuePanel</code> (composant à créer), <code>ProgressBar</code>, <code>ConfirmDialog</code>, <code>Badge</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Force une tentative de synchronisation, sans attendre la détection automatique du réseau</li>
+        <li><span class="n">2</span> Rejoue les lots en échec ; l'identifiant client de chaque écriture garantit l'absence de doublon</li>
+        <li><span class="n">3</span> Ouvre la liste des conflits remontés par le serveur</li>
+        <li><span class="n">4</span> Purge la base locale après double confirmation, uniquement si tous les éléments sont confirmés</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>→ <a href="#CM-11">CM-11</a> (conflits) · <a href="#CM-02">CM-02</a> (tableau de bord) après purge</li>
+        <li>Accessible depuis la barre basse de tous les écrans de contrôle</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CM-11 ============================ -->
+<div class="screen-block" id="CM-11">
+  <div class="sb-head"><span class="sb-id">CM-11</span><h3>Conflits à arbitrer</h3><span class="sb-role">contrôleur · signalé, jamais bloqué</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : liste des conflits</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Conflits</span><span class="wf-tag ok">réseau</span></div>
+              <div class="wf-alert warn"><b>2 TITRES EN CONFLIT</b> — arbitrage humain requis</div>
+              <div style="font-size:9px;line-height:1.7">Un même titre a été contrôlé sur deux terminaux. Le système ne peut pas distinguer une fraude d'un second contrôle légitime.</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">B-4821 · MBADINGA Paul</span><span style="font-size:9px">CTRL-0428 à 21:04 · CTRL-0512 à 21:39</span></div><span class="wf-tag warn">à arbitrer</span></div>
+                <div class="wf-item"><div class="wf-col"><span class="wf-h">A-0912 · NZE Antoinette</span><span style="font-size:9px">CTRL-0428 à 22:10 · CTRL-0512 à 22:12</span></div><span class="wf-tag warn">à arbitrer</span></div>
+              </div>
+              <div class="wf-btn gho wide">Ouvrir le premier conflit <span class="n">1</span></div>
+              <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb">Scan</div><div class="tb on">Historique</div><div class="tb">Incident</div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : détail des deux contrôles</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">B-4821 · MBADINGA Paul</div>
+              <div style="font-size:9px;line-height:1.7">Owendo → Franceville · 2e classe · 12A</div>
+              <div class="wf-tbl">
+                <div class="r head"><span class="sm">Agent</span><span class="sm">Heure</span><span>Lieu</span></div>
+                <div class="r"><span class="sm">0428</span><span class="sm">21:04</span><span>Voiture 1, après Ndjolé</span></div>
+                <div class="r"><span class="sm">0512</span><span class="sm">21:39</span><span>Voiture 4, après Lopé</span></div>
+              </div>
+              <div class="wf-box dash">
+                <div style="font-size:9px;line-height:1.7">35 min et 3 voitures d'écart : un second contrôle en tournée croisée est plausible.</div>
+              </div>
+              <div class="wf-btn pri wide">Accepter — double contrôle légitime <span class="n">2</span></div>
+              <div class="wf-btn wide">Signaler pour enquête <span class="n">3</span></div>
+              <div class="wf-btn gho wide">Établir un PV a posteriori <span class="n">4</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : conflit suspect</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">B-4655 · OBAME Jean</div>
+              <div class="wf-alert err"><b>ÉCART SUSPECT</b> — 2 min, voitures éloignées</div>
+              <div class="wf-tbl">
+                <div class="r head"><span class="sm">Agent</span><span class="sm">Heure</span><span>Lieu</span></div>
+                <div class="r"><span class="sm">0428</span><span class="sm">22:10</span><span>Voiture 1</span></div>
+                <div class="r"><span class="sm">0512</span><span class="sm">22:12</span><span>Voiture 6</span></div>
+              </div>
+              <div style="font-size:9px;line-height:1.7">Deux personnes ont vraisemblablement présenté le même titre. L'application signale, elle ne tranche pas.</div>
+              <div class="wf-btn pri wide">Signaler pour enquête <span class="n">3</span></div>
+              <div class="wf-btn gho wide">Accepter malgré tout</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : aucun conflit</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><span class="wf-h">Conflits</span><span class="wf-tag ok">réseau</span></div>
+              <div class="wf-box dash">
+                <div class="wf-h">Aucun conflit sur cette tournée</div>
+                <div style="font-size:9px;line-height:1.7">Les 233 éléments de la tournée ont été acceptés sans doublon.</div>
+              </div>
+              <div class="wf-btn gho wide">Retour à l'historique <span class="n">5</span></div>
+              <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb">Scan</div><div class="tb on">Historique</div><div class="tb">Incident</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">liste</span> — titres remontés en conflit après synchronisation, avec les deux agents et les deux heures</li>
+        <li><span class="st">plausible</span> — écart de temps et de voiture compatible avec une tournée croisée : l'écran le dit sans décider</li>
+        <li><span class="st">suspect</span> — écart très court entre deux voitures éloignées : le même titre a vraisemblablement servi deux fois</li>
+        <li><span class="st">arbitré — accepté</span> — double contrôle reconnu légitime, le conflit est clos</li>
+        <li><span class="st">arbitré — signalé</span> — dossier transmis au back-office pour enquête</li>
+        <li><span class="st">procès-verbal a posteriori</span> — le contrôleur établit le procès-verbal après coup, si le voyageur est encore à bord</li>
+        <li><span class="st">vide</span> — aucun conflit, avec le nombre d'éléments acceptés</li>
+        <li><span class="st">hors ligne</span> — la liste des conflits n'existe qu'après synchronisation : l'écran l'explique plutôt que d'afficher un vide trompeur</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Titre concerné, voyageur, trajet, classe et place</li>
+        <li>Les deux contrôles côte à côte : agent, heure en police tabulaire, voiture et position dans le parcours</li>
+        <li>Lecture assistée de l'écart — durée et distance entre les deux contrôles — présentée comme une aide, jamais comme un verdict</li>
+        <li>Rappel du principe : l'application signale, l'humain arbitre ; aucun voyageur n'est bloqué automatiquement</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>FlatList</code>, <code>ConflictCard</code> (composant à créer), <code>ComparisonTable</code> (composant à créer), <code>Badge</code>, <code>Button</code>, <code>EmptyState</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Ouvre le détail du conflit, avec les deux contrôles et l'analyse de l'écart</li>
+        <li><span class="n">2</span> Clôt le conflit comme double contrôle légitime ; la décision est tracée avec son auteur</li>
+        <li><span class="n">3</span> Transmet le dossier au back-office pour enquête, sans effet immédiat pour le voyageur</li>
+        <li><span class="n">4</span> Ouvre la rédaction d'un procès-verbal a posteriori, pré-remplie avec le titre et le motif du conflit</li>
+        <li><span class="n">5</span> Revient à l'historique de la tournée</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#CM-10">CM-10</a> (historique et synchronisation) · → <a href="#CM-08">CM-08</a> (procès-verbal a posteriori)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<footer style="margin-top:26px">
+  Croquis controleur-mobile · 26 juillet 2026 · 11 écrans. Voir aussi les croquis
+  <a href="croquis-agent-web.html">agent-web</a>,
+  le <a href="controleur-mobile.html">plan applicatif controleur-mobile</a>,
+  le <a href="backend.html">plan backend</a>,
+  le <a href="billetterie-web.html">plan billetterie-web</a>,
+  le <a href="voyageur-mobile.html">plan voyageur-mobile</a>
+  et la <a href="index.html">vue d'ensemble</a>.
+</footer>
+
+</section>
+
+</main>
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", themeVariables: { fontSize: "13px" } });
+</script>
+</body>
+</html>

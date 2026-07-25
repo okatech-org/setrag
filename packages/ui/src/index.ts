@@ -7,6 +7,8 @@
  */
 
 // ── Primitives ──
+export { AppHeader } from "./components/app-header"
+export { Avatar } from "./components/avatar"
 export { Badge, badgeVariants } from "./components/badge"
 export { Button, buttonVariants } from "./components/button"
 export {
@@ -19,12 +21,14 @@ export {
 } from "./components/card"
 export { Checkbox, Radio, RadioGroup, Switch } from "./components/choice"
 export { EmptyState, SkeletonLines } from "./components/empty-state"
+export { FilterGroup, RangeFilter, ResultsToolbar } from "./components/filter-group"
 export { Field, Input, Textarea, SelectNative } from "./components/field"
 export {
   InlineMessage,
   ToastBar,
   inlineMessageVariants,
 } from "./components/inline-message"
+export { SegmentedControl } from "./components/segmented-control"
 export { Separator } from "./components/separator"
 export { Skeleton } from "./components/skeleton"
 export { Stepper } from "./components/stepper"
@@ -39,12 +43,14 @@ export {
 } from "./components/tabs"
 
 // ── Composants métier voyage ──
+export { BoardingPass } from "./components/voyage/boarding-pass"
 export { CheckoutSummary } from "./components/voyage/checkout-summary"
 export { PriceCalendar } from "./components/voyage/price-calendar"
 export { Ticket, TICKET_STATE_LABELS } from "./components/voyage/ticket"
 export { TrafficBanner } from "./components/voyage/traffic-banner"
 export { TripResultCard } from "./components/voyage/trip-result-card"
 export { TripSearchBar, SearchSlot } from "./components/voyage/trip-search-bar"
+export { WalletPass } from "./components/voyage/wallet-pass"
 
 // ── Utilitaires ──
 export { cn } from "./lib/utils"
@@ -61,6 +67,12 @@ export {
 // ── Types ──
 export type { ButtonProps } from "./components/button"
 export type { TagProps } from "./components/tag"
+export type { AppHeaderProps, AppHeaderLink } from "./components/app-header"
+export type { AvatarProps } from "./components/avatar"
+export type { SegmentedControlProps, SegmentedOption } from "./components/segmented-control"
+export type { FilterGroupProps, RangeFilterProps, ResultsToolbarProps } from "./components/filter-group"
+export type { BoardingPassProps } from "./components/voyage/boarding-pass"
+export type { WalletPassProps, WalletField } from "./components/voyage/wallet-pass"
 export type { ThemeScopeProps } from "./components/theme-scope"
 export type { FieldProps } from "./components/field"
 export type { InlineMessageProps } from "./components/inline-message"

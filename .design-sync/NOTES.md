@@ -173,6 +173,29 @@ nœud de texte contre son fond réel, et détecte les débordements horizontaux.
 hôte hostile (`.dark` + `data-theme="dark"` + `body{color}` imposé).
 À passer avant chaque upload.
 
+## Couverture de la source
+
+43 composants. La section « Patterns » du `.dc.html` (écrans en situation) a été
+dépouillée après coup : elle contenait 7 composants réutilisables que la lecture
+initiale, centrée sur les sections « composants », avait manqués —
+`SegmentedControl`, `FilterGroup`, `RangeFilter`, `ResultsToolbar`, `Avatar`,
+`AppHeader`, `BoardingPass`.
+
+**Leçon pour une resynchro** : les maquettes d'écrans d'un design system
+contiennent des composants que les sections « composants » ne montrent pas.
+Les dépouiller aussi.
+
+## Wallet — conçu ici, absent de la source
+
+`WalletPass` (aperçu) + `@workspace/shared/wallet` (mapping). La source ne
+montrait qu'un bouton « Ajouter au wallet » ; la carte elle-même a été conçue
+d'après les contraintes réelles des deux plateformes.
+
+Ce qui reste à faire côté serveur pour émettre réellement : certificat Apple
+Pass Type ID, signature du `.pkpass`, images `logo.png`/`icon.png` (+ `@2x`),
+service web de mise à jour. Le mapping et les plafonds de champs sont déjà
+codés, avec leurs raisons.
+
 ## Risques pour la prochaine synchro
 
 - **Le CSS peut silencieusement se vider.** Tailwind ne génère que les classes

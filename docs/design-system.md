@@ -68,6 +68,11 @@ le clair. Les applications configurent next-themes avec `attribute="data-theme"`
 | `inline-message`              | messages en ligne (info/succès/alerte/erreur) + `ToastBar` |
 | `stepper`                     | progression du tunnel                                      |
 | `empty-state`                 | `EmptyState` (avec porte de sortie) et `SkeletonLines`      |
+| `segmented-control`           | choix exclusif en pastilles — créneau, type de trajet     |
+| `filter-group`                | `FilterGroup`, `RangeFilter` (curseur de prix), `ResultsToolbar` |
+| `avatar`                      | initiales sur pastille acier, ou photo                    |
+| `app-header`                  | marque, navigation, compte                                |
+| `theme-scope`                 | épingle un thème sur une sous-arborescence (voir plus bas) |
 | `card`, `dialog`, `select`, `separator`, `skeleton`, `table`, `tabs`, `badge` | registre shadcn, à la charte |
 
 ### Métier — `@workspace/ui/voyage/*`
@@ -80,6 +85,8 @@ le clair. Les applications configurent next-themes avec `attribute="data-theme"`
 | `trip-result-card`  | résultat de recherche — états `default`, `selected`, `cancelled` |
 | `ticket`            | billet fond encre, QR fourni par l'app, 5 états                |
 | `checkout-summary`  | récapitulatif, moyens de paiement, total                       |
+| `boarding-pass`     | carte d'embarquement — compte à rebours, voiture/place/quai, QR |
+| `wallet-pass`       | aperçu de la carte Apple Wallet / Google Wallet                |
 
 Les montants sont formatés en XAF par `@workspace/ui/lib/format`
 (`formatPrice`, `formatTime`, `formatDuration`, `spellTime`).
@@ -115,6 +122,39 @@ Les libellés d'accessibilité annoncent les heures en clair
 | `.tabular` + `text-time`| `<Text variant="time">`        |
 | `rounded-lg`            | `theme.radius.lg`              |
 | `gap-s-6`               | `theme.spacing[6]`             |
+
+## Cartes de wallet
+
+`WalletPass` **n'émet pas** le pass : celui-ci est signé côté serveur — `.pkpass`
+avec un certificat Pass Type ID pour Apple, objet REST pour Google. Le composant
+en restitue le rendu, pour valider la charte avant émission et montrer au
+voyageur ce qu'il ajoute.
+
+Le mapping vit dans `@workspace/shared/wallet` :
+
+| Fonction                     | Produit                                              |
+| ---------------------------- | ---------------------------------------------------- |
+| `buildApplePass(ticket, …)`  | le `pass.json` complet — type `boardingPass`, `transitType: PKTransitTypeTrain` |
+| `buildGoogleWalletObject(…)` | le `TransitObject` Google Wallet                      |
+| `toWalletPreview(ticket)`    | les champs de l'aperçu `WalletPass`                   |
+
+Contraintes de plateforme reprises dans les types, et à ne pas dépasser sous
+peine de troncature silencieuse côté téléphone : **3 champs d'en-tête,
+2 principaux, 4 secondaires, 5 auxiliaires**. Les deux bornes du trajet
+occupent les champs principaux — c'est ce qu'affiche l'écran verrouillé.
+
+Deux réglages qui font la différence à l'usage :
+
+- `relevantDate` (Apple) fait remonter le pass sur l'écran verrouillé à
+  l'approche du départ ;
+- `locations` déclenche la même remontée à proximité de la gare.
+
+Le `serialNumber` est la référence du billet : réémettre le même numéro **met à
+jour** le pass déjà installé au lieu d'en créer un second — c'est le mécanisme
+à utiliser pour un changement de quai ou un retard.
+
+Reste à faire côté serveur : certificat Apple, signature du `.pkpass`, images
+(`logo.png`, `icon.png` et leurs `@2x`), et le service web de mise à jour.
 
 ## Accessibilité
 

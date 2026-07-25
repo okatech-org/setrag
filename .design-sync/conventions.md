@@ -87,7 +87,14 @@ identique aux tokens `--s-*`.
 
 Deux groupes : `general` (primitives) et `voyage` (métier ferroviaire —
 `TripSearchBar`, `TripResultCard`, `PriceCalendar`, `TrafficBanner`, `Ticket`,
-`CheckoutSummary`).
+`CheckoutSummary`, `BoardingPass`, `WalletPass`).
+
+Pour un écran de résultats complet : `AppHeader` + `Avatar` en haut,
+`FilterGroup` / `SegmentedControl` / `RangeFilter` dans la colonne de filtres,
+`ResultsToolbar` au-dessus de la liste de `TripResultCard`.
+
+`BoardingPass` est la carte du quai (compte à rebours, voiture/place/quai) ;
+`WalletPass` l'aperçu de la carte ajoutée à Apple Wallet ou Google Wallet.
 
 ## Exemple idiomatique
 
