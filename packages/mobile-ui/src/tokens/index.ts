@@ -24,6 +24,9 @@ export const colors = {
     accentSoft: "#E2F0FF",
     accentLine: "#B2CDF2",
     accentInk: "#013C82",
+    /* Accent posé sur un fond encre (billet, toast) : la version foncée y
+       tombe à 2,2:1. On remonte la clarté. */
+    accentOnInk: "#85BAFF",
 
     second: "#627485",
     secondSoft: "#E9EFF5",
@@ -60,6 +63,7 @@ export const colors = {
     accentSoft: "#1B2E49",
     accentLine: "#324E76",
     accentInk: "#90C0FF",
+    accentOnInk: "#96C7FF",
 
     second: "#94A7BA",
     secondSoft: "#282F35",

@@ -102,8 +102,17 @@ pas une seconde source de vérité. Toute évolution part de `tokens.css`.
 | ----------------------------------- | ---------------------------------------------------------- |
 | `@workspace/mobile-ui/tokens`       | `colors` (clair/sombre), `typography`, `spacing`, `radius`, `controlHeight`, `shadows`, `motion` |
 | `@workspace/mobile-ui/fonts`        | `useSetragFonts()` — charge Schibsted Grotesk et IBM Plex Mono |
-| `@workspace/mobile-ui/components`   | `Screen`, `Text`, `Button`, `Card`, `Tag`, `InlineMessage`, `useTheme` |
-| `@workspace/mobile-ui/voyage`       | `TripResultCard`, `Ticket`                                  |
+| `@workspace/mobile-ui/components`   | `Screen`, `Text`, `Button`, `Card`, `Tag`, `Badge`, `Avatar`, `Separator`, `Field`/`Input`/`Textarea`, `Checkbox`/`Radio`/`RadioGroup`/`Switch`, `SegmentedControl`, `Stepper`, `EmptyState`/`SkeletonLines`, `InlineMessage`, `ToastBar`, `useTheme` |
+| `@workspace/mobile-ui/voyage`       | `TripSearchBar`, `TripResultCard`, `PriceCalendar`, `TrafficBanner`, `Ticket`, `BoardingPass`, `WalletPass`, `CheckoutSummary` |
+
+Les huit composants métier sont à parité avec le web. Référence vivante :
+l'écran `design-system` de l'application mobile (`apps/voyageur-mobile`), qui
+monte chaque composant — s'il cesse de compiler ou de rendre, l'écran le montre.
+
+Ce qui reste web-seulement, à dessein : `AppHeader` (le mobile a sa barre
+d'onglets), `Tabs`, `FilterGroup`/`RangeFilter`/`ResultsToolbar` (les filtres
+mobiles passent par une feuille modale, pas une colonne latérale) et les
+composants du registre shadcn (`Dialog`, `Select`, `Table`).
 
 `useSetragFonts()` s'appelle à la racine (`app/_layout.tsx`) et l'écran de
 démarrage reste affiché tant que les familles ne sont pas prêtes — sinon la
