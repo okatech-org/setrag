@@ -1,0 +1,42 @@
+{
+  "name": "@workspace/backend",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy",
+    "seed": "convex run seeds/seed:run",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:once": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=text"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./generated": "./convex/_generated/api.js",
+    "./schema": "./convex/schema.ts"
+  },
+  "dependencies": {
+    "@convex-dev/aggregate": "^0.2.2",
+    "@convex-dev/better-auth": "^0.12.5",
+    "@convex-dev/rate-limiter": "^0.3.2",
+    "@convex-dev/resend": "^0.2.5",
+    "@workspace/shared": "workspace:*",
+    "better-auth": "^1.6.25",
+    "convex": "^1.42.3",
+    "convex-helpers": "^0.1.120",
+    "react": "19.2.8",
+    "resend": "^6.18.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.10",
+    "@workspace/tsconfig": "workspace:*",
+    "convex-test": "^0.0.54",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

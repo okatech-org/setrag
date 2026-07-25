@@ -1,0 +1,14 @@
+{
+  "extends": "@workspace/tsconfig/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "lib": ["ES2022"],
+    "allowJs": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "convex"]
+}
