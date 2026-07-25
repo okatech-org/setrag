@@ -1,0 +1,48 @@
+{
+  "projectId": "05dbdc0c-c466-4b3a-9744-18c6b29e2c76",
+  "shape": "package",
+  "pkg": "@workspace/ui",
+  "globalName": "SetragUI",
+  "srcDir": "src",
+  "tsconfig": "tsconfig.json",
+  "buildCmd": "bun run build --filter=@workspace/ui",
+  "cssEntry": "dist/styles.css",
+  "tokensGlob": "src/styles/tokens.css",
+  "extraFonts": [
+    "../../node_modules/@fontsource-variable/schibsted-grotesk/index.css",
+    "../../node_modules/@fontsource/ibm-plex-mono/400.css",
+    "../../node_modules/@fontsource/ibm-plex-mono/500.css",
+    "../../node_modules/@fontsource/ibm-plex-mono/600.css",
+    "../../node_modules/@fontsource/schibsted-grotesk/400.css",
+    "../../node_modules/@fontsource/schibsted-grotesk/500.css",
+    "../../node_modules/@fontsource/schibsted-grotesk/600.css",
+    "../../node_modules/@fontsource/schibsted-grotesk/700.css"
+  ],
+  "overrides": {
+    "TripResultCard": {
+      "cardMode": "column"
+    },
+    "TripSearchBar": {
+      "cardMode": "column"
+    },
+    "CheckoutSummary": {
+      "cardMode": "column"
+    },
+    "PriceCalendar": {
+      "cardMode": "column"
+    },
+    "Ticket": {
+      "cardMode": "column"
+    },
+    "TrafficBanner": {
+      "cardMode": "column"
+    },
+    "Stepper": {
+      "cardMode": "column"
+    },
+    "ToastBar": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
