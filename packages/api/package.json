@@ -1,0 +1,33 @@
+{
+  "name": "@workspace/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./provider": "./src/provider.tsx",
+    "./auth-client": "./src/auth-client.ts",
+    "./hooks": "./src/hooks.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@convex-dev/better-auth": "^0.12.5",
+    "@convex-dev/react-query": "^0.1.0",
+    "better-auth": "^1.6.25",
+    "convex": "^1.42.3"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.101.4",
+    "@types/react": "^19.2.10",
+    "@workspace/tsconfig": "workspace:*",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "^5.9.3"
+  }
+}
