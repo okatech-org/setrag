@@ -1,4 +1,4 @@
-# Cadence — conventions de construction
+# SETRAG — conventions de construction
 
 Design system voyage de la billetterie SETRAG (ligne Owendo–Franceville).
 Tailwind CSS v4. Les composants sont exposés sur `window.SetragUI`.
@@ -9,15 +9,18 @@ Les composants ne lisent aucun contexte : ils s'utilisent directement, sans
 wrapper. Les tokens vivent dans `styles.css` (chargé par la page), pas dans un
 `ThemeProvider`.
 
-Thème sombre : ajouter `class="dark"` **ou** `data-theme="dark"` sur un ancêtre
-(`<html>` en général). Les deux sélecteurs sont supportés, rien d'autre à faire.
+Thème sombre : `data-theme="dark"` sur un ancêtre — **et uniquement cet
+attribut**. La classe `.dark` n'est volontairement pas reconnue : un hôte en
+thème sombre la pose pour sa propre interface, et le design system basculerait
+avec lui sans que la surface d'accueil suive. `data-theme="light"` force le
+clair sur n'importe quelle sous-arborescence.
 
 ## Le vocabulaire de classes — et sa limite
 
 ⚠️ **Point décisif.** Tailwind v4 ne génère que les classes effectivement
 présentes dans les sources scannées à la compilation. Le `styles.css` livré ici
 contient les utilitaires du design system — **une classe Tailwind arbitraire
-que vous inventez (`bg-teal-500`, `p-7`, `text-2xl`) n'y sera pas et ne stylera
+que vous inventez (`bg-blue-500`, `p-7`, `text-2xl`) n'y sera pas et ne stylera
 rien.**
 
 Deux règles qui en découlent :
@@ -34,8 +37,8 @@ Deux règles qui en découlent :
 | Fonds | `bg-canvas` (fond de page), `bg-surface` (carte), `bg-surface-sunk` (sous-carte) |
 | Texte | `text-ink`, `text-ink-muted`, `text-ink-faint`, `text-ink-inverse` |
 | Bordures | `border-line`, `border-line-strong`, `border-accent-base` |
-| Accent (teal) | `bg-accent-base`, `bg-accent-soft`, `text-accent-ink` |
-| Secondaire (orange) | `bg-second-soft`, `text-second-ink` |
+| Accent (bleu logo #0F52A0) | `bg-accent-base`, `bg-accent-soft`, `text-accent-ink` |
+| Secondaire (acier) | `bg-second-soft`, `text-second-ink` |
 | Statuts | `bg-success-soft`/`text-success-ink`, `bg-warning-soft`/`text-warning-ink`, `bg-danger-soft`/`text-danger-ink`, `bg-info-soft`/`text-info-ink` |
 
 Règle de paire : un fond `*-soft` va toujours avec un texte `*-ink`. Le contraste

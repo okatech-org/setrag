@@ -1,5 +1,5 @@
 /**
- * Barrel du design system Cadence.
+ * Barrel du design system SETRAG.
  *
  * Point d'entrée unique consommé par le bundle claude.ai/design. Les
  * applications continuent d'importer par chemin (`@workspace/ui/components/*`)

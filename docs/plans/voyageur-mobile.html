@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETRAG — Plan voyageur-mobile</title>
+<link rel="stylesheet" href="plan.css">
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <div class="brand">SETRAG · Billettique</div>
+  <div class="sub"><a href="index.html" style="color:var(--accent)">← Vue d'ensemble</a><br>Plan application — voyageur-mobile<br>25 juillet 2026</div>
+  <a href="#mission">1 · Mission &amp; contraintes</a>
+  <a href="#ecrans">2 · Écrans</a>
+  <a href="#offline">3 · Billet hors-ligne &amp; anti-fraude</a>
+  <a href="#notifications">4 · Notifications</a>
+  <a href="#phases">5 · Rattachement aux phases</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <h1>voyageur-mobile — application voyageur</h1>
+  <p>L'application Expo du voyageur : acheter, porter et présenter son billet — y compris sans
+  réseau, dans le train. Même parcours d'achat que le web, adapté au contexte gabonais : paiement
+  mobile money natif, billet par SMS, consommation de données minimale.</p>
+  <div class="hero-meta">
+    <span class="chip">Expo SDK 57</span>
+    <span class="chip">iOS + Android</span>
+    <span class="chip">OTP téléphone</span>
+    <a class="chip" href="backend.html">→ plan backend</a>
+  </div>
+</header>
+
+<section id="mission">
+  <h2><span class="num">1</span>Mission &amp; contraintes</h2>
+  <ul>
+    <li><b>Le billet vit dans le téléphone</b> : une fois émis, il est consultable et présentable
+    sans aucune connexion — cache local systématique, exigence explicite du CDC front-office
+    (« utilisation hors ligne partielle »).</li>
+    <li><b>Application légère</b> : taille d'installation limitée et faible consommation de
+    données et de batterie (exigences CDC) — pas de bibliothèque lourde, images compressées,
+    temps réel WebSocket plutôt que polling.</li>
+    <li><b>Le téléphone est l'identité</b> : session par OTP SMS via Better Auth
+    (<code>phoneNumber</code> + client Expo, jeton en <code>expo-secure-store</code>) ; l'état de
+    session se lit via <code>useConvexAuth()</code>, le profil via la query <code>users:me</code>.</li>
+  </ul>
+</section>
+
+<section id="ecrans">
+  <h2><span class="num">2</span>Écrans</h2>
+  <div class="card">
+    <div class="screen"><span class="sname">Accueil</span> — recherche rapide (gares mémorisées), prochains départs, statut temps réel des dessertes du jour
+      <span class="sfn">trips.search · trips.listUpcoming</span></div>
+    <div class="screen"><span class="sname">Tunnel d'achat</span> — mêmes étapes que le web (résultats → passagers → paiement) en navigation native ; paiement mobile money avec écran d'attente réactif du push USSD ; option « payer au guichet »
+      <span class="sfn">bookings.create · payments.initiate · fares.quote</span></div>
+    <div class="screen"><span class="sname">Mes billets</span> — onglet central : billets à venir et passés, <b>code-barres Aztec plein écran</b> avec luminosité forcée, disponible hors-ligne
+      <span class="sfn">tickets.listMine + cache local</span></div>
+    <div class="screen"><span class="sname">Suivi du voyage</span> — statut de la desserte (retard, annulation) en temps réel, rappels de départ
+      <span class="sfn">trips.get (abonnement réactif)</span></div>
+    <div class="screen"><span class="sname">Notifications</span> — centre de notifications, préférences par canal
+      <span class="sfn">notifications.list · pushTokens.register</span></div>
+    <div class="screen"><span class="sname">Compte</span> — profil, consentements, langue ; connexion OTP SMS
+      <span class="sfn">users.me · consents.*</span></div>
+  </div>
+</section>
+
+<section id="offline">
+  <h2><span class="num">3</span>Billet hors-ligne &amp; anti-fraude</h2>
+  <ul>
+    <li><b>Cache local des billets</b> : payload, signature et rendu Aztec stockés au moment de
+    l'émission — le billet s'affiche dans le train sans réseau, le contrôleur le vérifie par
+    signature (voir <a href="controleur-mobile.html">plan contrôleur</a>).</li>
+    <li><b>Code dynamique</b> : en ligne, le code affiché est régénéré périodiquement ; hors-ligne,
+    le dernier code émis reste valable — le partage d'une capture est détectable par
+    l'anti-repassage du contrôleur.</li>
+    <li><b>Capture d'écran bloquée</b> sur l'écran du billet (<code>FLAG_SECURE</code> Android,
+    détection iOS).</li>
+    <li><b>Billet par SMS</b> en secours : la référence + lien court arrivent aussi par SMS à
+    l'achat — un voyageur sans l'application (ou avec un téléphone simple) présente la référence,
+    contrôlable via le manifeste embarqué du contrôleur.</li>
+  </ul>
+</section>
+
+<section id="notifications">
+  <h2><span class="num">4</span>Notifications</h2>
+  <div class="table-scroll"><table>
+    <tr><th style="width:220px">Événement</th><th>Canaux</th></tr>
+    <tr><td>Confirmation d'achat</td><td>Push + SMS (+ e-mail si fourni, avec PDF)</td></tr>
+    <tr><td>Rappel de départ (veille + H-2)</td><td>Push (cron planifié par billet)</td></tr>
+    <tr><td>Retard / annulation de desserte</td><td>Push à tous les porteurs de billets (envoi de masse via workpool) + SMS</td></tr>
+    <tr><td>Remboursement traité</td><td>Push + SMS</td></tr>
+  </table></div>
+</section>
+
+<section id="phases">
+  <h2><span class="num">5</span>Rattachement aux phases</h2>
+  <div class="table-scroll"><table>
+    <tr><th style="width:120px">Phase</th><th>Livré dans voyageur-mobile</th></tr>
+    <tr><td>Phase 3</td><td>Application complète : achat, billets hors-ligne, notifications, suivi temps réel</td></tr>
+    <tr><td>Chantier A</td><td>Paiement mobile money réel — sans changement de parcours</td></tr>
+  </table></div>
+  <footer>Plan voyageur-mobile · 25 juillet 2026 · voir le <a href="backend.html">plan backend</a>.</footer>
+</section>
+
+</main>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+</script>
+</body>
+</html>

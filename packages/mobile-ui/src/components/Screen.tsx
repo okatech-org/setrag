@@ -10,7 +10,7 @@ export interface ScreenProps extends ViewProps {
   tone?: "canvas" | "surface"
 }
 
-/** Conteneur d'écran : zone sûre, fond Cadence, défilement optionnel. */
+/** Conteneur d'écran : zone sûre, fond SETRAG, défilement optionnel. */
 export function Screen({
   scroll = false,
   padded = true,

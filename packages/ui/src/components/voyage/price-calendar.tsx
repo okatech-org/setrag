@@ -91,7 +91,7 @@ function PriceCalendar({
               aria-pressed={isSelected}
               onClick={() => onSelect?.(day.value)}
               className={cn(
-                "grid justify-items-center gap-[3px] rounded-md px-1 py-2.5 transition-colors duration-200 ease-cadence",
+                "grid justify-items-center gap-[3px] rounded-md px-1 py-2.5 transition-colors duration-200 ease-setrag",
                 isSelected
                   ? "bg-ink"
                   : unavailable

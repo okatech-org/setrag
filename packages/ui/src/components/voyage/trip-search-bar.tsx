@@ -72,7 +72,7 @@ function TripSearchBar({
               aria-selected={active}
               onClick={() => onKindChange?.(item.id)}
               className={cn(
-                "rounded-pill px-3.5 py-2.5 text-[13px] leading-none transition-colors duration-200 ease-cadence",
+                "rounded-pill px-3.5 py-2.5 text-[13px] leading-none transition-colors duration-200 ease-setrag",
                 active
                   ? "bg-ink font-semibold text-ink-inverse"
                   : "font-medium text-ink-muted hover:bg-surface-sunk"

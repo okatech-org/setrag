@@ -95,7 +95,7 @@ function CheckoutSummary({
             <label
               key={option.id}
               className={cn(
-                "flex min-h-target cursor-pointer items-center gap-3 rounded-md border p-4 transition-colors duration-200 ease-cadence",
+                "flex min-h-target cursor-pointer items-center gap-3 rounded-md border p-4 transition-colors duration-200 ease-setrag",
                 checked
                   ? "border-[1.5px] border-accent-base bg-accent-soft"
                   : "border-line hover:bg-surface-sunk"

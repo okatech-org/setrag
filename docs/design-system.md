@@ -1,7 +1,7 @@
-# Cadence — design system voyage
+# SETRAG — design system voyage
 
 Charte de la plateforme SETRAG, importée du projet Claude Design
-« Train App design system » (`f60a756a-ca30-4f1a-a4fb-72f6d205633a`), v1.0.0.
+« SETRAG Design System » (`f60a756a-ca30-4f1a-a4fb-72f6d205633a`), v1.1.0.
 
 Référence vivante : `/design-system` sur la billetterie (`bun run dev:billetterie`).
 
@@ -27,7 +27,7 @@ répercuter côté design.
 | Famille    | Exemples                                              |
 | ---------- | ----------------------------------------------------- |
 | Neutres    | `--c-canvas`, `--c-surface`, `--c-line`, `--c-ink`     |
-| Accents    | `--c-accent` (teal 168), `--c-second` (orange 45)      |
+| Accents    | `--c-accent` (bleu logo, teinte 257), `--c-second` (acier 248) |
 | Sémantique | `--c-success`, `--c-warning`, `--c-danger`, `--c-info` |
 | Typo       | `--t-display` … `--t-caption`, `--t-time`              |
 | Espacement | `--s-1` (4) … `--s-20` (80), base 4                    |
@@ -48,11 +48,12 @@ localement via `@fontsource`, jamais par CDN.
 ```
 
 Les variables shadcn (`--primary`, `--background`, `--border`…) sont branchées
-sur les tokens Cadence : les composants du registre shadcn héritent de la charte
+sur les tokens SETRAG : les composants du registre shadcn héritent de la charte
 sans réécriture.
 
-**Mode sombre** : `.dark` (next-themes) et `[data-theme="dark"]` (Cadence) sont
-tous deux supportés.
+**Mode sombre** : `[data-theme="dark"]` uniquement — jamais `.dark`, qu'un hôte
+en thème sombre poserait pour sa propre interface. `[data-theme="light"]` force
+le clair. Les applications configurent next-themes avec `attribute="data-theme"`.
 
 ## Composants
 
@@ -93,11 +94,11 @@ pas une seconde source de vérité. Toute évolution part de `tokens.css`.
 | Entrée                              | Contenu                                                    |
 | ----------------------------------- | ---------------------------------------------------------- |
 | `@workspace/mobile-ui/tokens`       | `colors` (clair/sombre), `typography`, `spacing`, `radius`, `controlHeight`, `shadows`, `motion` |
-| `@workspace/mobile-ui/fonts`        | `useCadenceFonts()` — charge Schibsted Grotesk et IBM Plex Mono |
+| `@workspace/mobile-ui/fonts`        | `useSetragFonts()` — charge Schibsted Grotesk et IBM Plex Mono |
 | `@workspace/mobile-ui/components`   | `Screen`, `Text`, `Button`, `Card`, `Tag`, `InlineMessage`, `useTheme` |
 | `@workspace/mobile-ui/voyage`       | `TripResultCard`, `Ticket`                                  |
 
-`useCadenceFonts()` s'appelle à la racine (`app/_layout.tsx`) et l'écran de
+`useSetragFonts()` s'appelle à la racine (`app/_layout.tsx`) et l'écran de
 démarrage reste affiché tant que les familles ne sont pas prêtes — sinon la
 typographie retombe une fraction de seconde sur la police système.
 
@@ -134,4 +135,4 @@ cd packages/ui && bunx shadcn@latest add <composant>
 ```
 
 ⚠️ Le CLI écrase les fichiers de même nom : `button.tsx` est une implémentation
-Cadence, ne pas le régénérer sans réappliquer les variantes.
+SETRAG, ne pas le régénérer sans réappliquer les variantes.

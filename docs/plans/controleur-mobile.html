@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETRAG — Plan controleur-mobile</title>
+<link rel="stylesheet" href="plan.css">
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <div class="brand">SETRAG · Billettique</div>
+  <div class="sub"><a href="index.html" style="color:var(--accent)">← Vue d'ensemble</a><br>Plan application — controleur-mobile<br>25 juillet 2026</div>
+  <a href="#mission">1 · Mission &amp; principe</a>
+  <a href="#pile">2 · Pile technique</a>
+  <a href="#tournee">3 · Cycle d'une tournée</a>
+  <a href="#ecrans">4 · Écrans</a>
+  <a href="#conflits">5 · Conflits &amp; sécurité</a>
+  <a href="#phases">6 · Rattachement aux phases</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <h1>controleur-mobile — application contrôleur</h1>
+  <p>Nouvelle application Expo, offline-first par conception : le hors-ligne est le mode nominal
+  en pleine voie (tunnels, forêt), pas un mode dégradé. Scan des billets et abonnements, vente à
+  bord, procès-verbaux avec encaissement d'amendes, signalement d'incidents — le tout en file
+  locale synchronisée au retour du réseau.</p>
+  <div class="hero-meta">
+    <span class="chip">Expo (build natif)</span>
+    <span class="chip">Offline-first</span>
+    <span class="chip">MFA obligatoire</span>
+    <a class="chip" href="backend.html">→ plan backend</a>
+  </div>
+</header>
+
+<section id="mission">
+  <h2><span class="num">1</span>Mission &amp; principe</h2>
+  <p class="lede">Convex ne fournit pas de mode hors-ligne persistant : la couche locale est
+  construite. Principe directeur — <b>tout ce qui est nécessaire au contrôle est embarqué avant le
+  départ, tout ce qui est produit à bord est journalisé localement puis synchronisé de manière
+  idempotente</b>.</p>
+  <ul>
+    <li>Le billet est <b>auto-porteur</b> : signature Ed25519 vérifiable localement (authenticité,
+    desserte, segment, expiration) sans aucune donnée réseau.</li>
+    <li>Le manifeste embarqué complète la vérification : statut fin (annulé, remboursé), voyageurs
+    attendus, référence présentée par SMS.</li>
+    <li>Chaque écriture locale (scan, vente, PV, incident) porte un <code>clientId</code> unique et
+    entre dans la file d'envoi <b>dans la même transaction SQLite</b> que l'écriture métier.</li>
+  </ul>
+</section>
+
+<section id="pile">
+  <h2><span class="num">2</span>Pile technique</h2>
+  <div class="table-scroll"><table>
+    <tr><th style="width:220px">Brique</th><th>Choix</th><th>Motif</th></tr>
+    <tr><td>Base locale</td><td><code>expo-sqlite</code> + Drizzle ORM</td><td>File d'envoi sur mesure vers des mutations Convex précises ; migrations embarquées ; typage fort.</td></tr>
+    <tr><td>Chiffrement</td><td>SQLCipher (greffon expo-sqlite)</td><td>Données voyageurs sur un terminal perdable — impose un build natif (pas d'Expo Go), contrainte assumée.</td></tr>
+    <tr><td>Clé de chiffrement</td><td><code>expo-secure-store</code></td><td>Keystore Android / Trousseau iOS. Purge explicite à la réaffectation d'un terminal (le Trousseau iOS survit à la désinstallation).</td></tr>
+    <tr><td>Vérification de signature</td><td><code>react-native-quick-crypto</code></td><td>Ed25519 natif — scan en rafale sans latence ; le build natif est déjà requis par SQLCipher.</td></tr>
+    <tr><td>Scanner</td><td>Caméra + décodage Aztec (famille ZXing)</td><td>Lecture rapide en mouvement et faible luminosité ; compatible terminaux durcis à lecteur intégré si retenu.</td></tr>
+    <tr><td>Réseau &amp; fond</td><td><code>expo-network</code> · <code>expo-background-task</code></td><td>Synchronisation déclenchée à la reconnexion, y compris app en arrière-plan.</td></tr>
+    <tr><td>Authentification</td><td>Better Auth + TOTP obligatoire</td><td>Session courte (8-12 h). L'intégration TOTP sur Expo n'est pas documentée par Better Auth — <b>prototype en phase 1</b> pour lever le risque tôt.</td></tr>
+  </table></div>
+</section>
+
+<section id="tournee">
+  <h2><span class="num">3</span>Cycle d'une tournée</h2>
+  <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor C as Contrôleur
+  participant APP as App (SQLite chiffré)
+  participant CX as Convex
+
+  Note over C,CX: Avant le départ — réseau disponible
+  C->>APP: connexion + TOTP · sélection de la desserte
+  APP->>CX: tickets.manifest(tripId) — paginé
+  CX-->>APP: manifeste + clé publique + barème amendes + stock vente à bord
+  APP->>APP: stockage local chiffré
+
+  Note over C,APP: En voyage — souvent sans réseau
+  C->>APP: scan Aztec (billet ou abonnement)
+  APP->>APP: vérif Ed25519 + desserte/segment + expiration
+  APP->>APP: anti-repassage + croisement manifeste
+  APP->>APP: résultat net : VALIDE / INVALIDE (+ motif)
+  C->>APP: régularisation : vente à bord OU procès-verbal
+  APP->>APP: écriture métier + file d'envoi (même transaction, clientId)
+
+  Note over APP,CX: Retour du réseau — automatique
+  APP->>CX: scans/pv/ventes/incidents .syncBatch (idempotent)
+  CX-->>APP: états consolidés · conflits signalés
+  APP->>APP: purge locale après desserte terminée + sync confirmée
+  </pre>
+</section>
+
+<section id="ecrans">
+  <h2><span class="num">4</span>Écrans</h2>
+  <div class="card">
+    <div class="screen"><span class="sname">Connexion + MFA</span> — identifiant interne, TOTP, session courte ; verrouillage par code après inactivité
+      <span class="sfn">Better Auth twoFactor</span></div>
+    <div class="screen"><span class="sname">Tableau de bord</span> — desserte du jour, téléchargement du manifeste, état de synchronisation, indicateur de fraîcheur des données embarquées
+      <span class="sfn">trips.listUpcoming · tickets.manifest</span></div>
+    <div class="screen"><span class="sname">Scanner</span> — plein écran, résultat en une seconde : VALIDE (vert, nom du voyageur, destination) ou INVALIDE (rouge, motif : signature, desserte, segment, expiré, déjà contrôlé, annulé)
+      <span class="sfn">vérification locale + scans.syncBatch</span></div>
+    <div class="screen"><span class="sname">Recherche manuelle</span> — par référence (billet SMS) ou nom, dans le manifeste embarqué
+      <span class="sfn">manifeste local</span></div>
+    <div class="screen"><span class="sname">Vente à bord</span> — trajet restant, classe, tarif du barème, encaissement espèces (ou mobile money à la reconnexion), billet affiché à l'écran ou référence transmise par SMS
+      <span class="sfn">sales.createOnboard (via sync)</span></div>
+    <div class="screen"><span class="sname">Procès-verbal</span> — motif (sans titre, titre invalide, classe), identité du contrevenant, montant du barème embarqué, encaissement immédiat ou différé
+      <span class="sfn">pv.syncBatch</span></div>
+    <div class="screen"><span class="sname">Signalement d'incident</span> — catégorie, gravité, description, photos ; les incidents critiques partent en priorité à la reconnexion
+      <span class="sfn">incidents.syncBatch</span></div>
+    <div class="screen"><span class="sname">Historique &amp; synchronisation</span> — contrôles de la tournée, file d'envoi (en attente / envoyé / en échec), <b>écran de conflits</b> à arbitrer
+      <span class="sfn">scans.listByAgent</span></div>
+  </div>
+</section>
+
+<section id="conflits">
+  <h2><span class="num">5</span>Conflits &amp; sécurité</h2>
+  <ul>
+    <li><b>Conflits : signaler, ne pas bloquer.</b> Un billet validé hors-ligne sur deux terminaux
+    remonte en <code>conflit</code> à la synchronisation — le système ne peut pas distinguer une
+    fraude d'un second contrôle légitime, l'arbitrage est humain (écran dédié, PV possible a
+    posteriori).</li>
+    <li><b>Anti-repassage local</b> : un même titre scanné deux fois sur le même terminal dans la
+    fenêtre de la tournée est signalé immédiatement.</li>
+    <li><b>Minimisation</b> : le manifeste embarqué ne contient que le nécessaire au contrôle ;
+    purge complète après tournée synchronisée ; base chiffrée ; aucune donnée voyageur dans les
+    journaux applicatifs.</li>
+    <li><b>Traçabilité</b> : chaque contrôle est horodaté, géolocalisé si disponible, rattaché à
+    l'agent et au terminal — la journalisation des contrôles est une exigence des deux CDC.</li>
+  </ul>
+</section>
+
+<section id="phases">
+  <h2><span class="num">6</span>Rattachement aux phases</h2>
+  <div class="table-scroll"><table>
+    <tr><th style="width:120px">Phase</th><th>Livré dans controleur-mobile</th></tr>
+    <tr><td>Phase 1</td><td>Prototype MFA TOTP sur Expo (levée de risque)</td></tr>
+    <tr><td>Phase 4</td><td>Application complète : scan hors-ligne, vente à bord, PV, incidents, synchronisation, conflits, contrôle des abonnements</td></tr>
+    <tr><td>Chantier A</td><td>Encaissement mobile money des ventes à bord et amendes</td></tr>
+  </table></div>
+  <footer>Plan controleur-mobile · 25 juillet 2026 · voir le <a href="backend.html">plan backend</a>.</footer>
+</section>
+
+</main>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", themeVariables: { fontSize: "13px" } });
+</script>
+</body>
+</html>

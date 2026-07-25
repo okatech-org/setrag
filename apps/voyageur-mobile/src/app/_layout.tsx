@@ -5,7 +5,7 @@ import * as SplashScreen from "expo-splash-screen"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 
-import { useCadenceFonts } from "@workspace/mobile-ui/fonts"
+import { useSetragFonts } from "@workspace/mobile-ui/fonts"
 import { colors } from "@workspace/mobile-ui/tokens"
 
 import { ConvexProvider } from "@/lib/convex"
@@ -13,10 +13,10 @@ import { ConvexProvider } from "@/lib/convex"
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useCadenceFonts()
+  const [fontsLoaded, fontError] = useSetragFonts()
 
   useEffect(() => {
-    // On garde l'écran de démarrage tant que Cadence n'est pas prêt : sans ses
+    // On garde l'écran de démarrage tant que SETRAG n'est pas prêt : sans ses
     // familles, la typographie retomberait sur la police système.
     if (fontsLoaded || fontError) SplashScreen.hideAsync()
   }, [fontsLoaded, fontError])

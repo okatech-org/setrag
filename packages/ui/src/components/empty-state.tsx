@@ -10,7 +10,7 @@ export interface EmptyStateProps extends React.ComponentProps<"div"> {
 }
 
 /**
- * État vide Cadence — contour pointillé, et systématiquement une porte de
+ * État vide SETRAG — contour pointillé, et systématiquement une porte de
  * sortie : « Essayez le jour suivant » plutôt qu'un simple « Aucun résultat ».
  */
 function EmptyState({

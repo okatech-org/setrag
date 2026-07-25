@@ -12,10 +12,10 @@ import {
 } from "@expo-google-fonts/ibm-plex-mono"
 
 /**
- * Charge les familles Cadence. À appeler à la racine de l'application : tant
+ * Charge les familles SETRAG. À appeler à la racine de l'application : tant
  * que `loaded` est faux, on garde l'écran de démarrage affiché.
  */
-export function useCadenceFonts(): [boolean, Error | null] {
+export function useSetragFonts(): [boolean, Error | null] {
   const [loaded, error] = useFonts({
     SchibstedGrotesk_400Regular,
     SchibstedGrotesk_500Medium,

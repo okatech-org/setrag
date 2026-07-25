@@ -2,6 +2,32 @@
 
 Projet cible : **SETRAG Billetterie** — https://claude.ai/design/p/05dbdc0c-c466-4b3a-9744-18c6b29e2c76
 Shape : `package` (aucun Storybook dans le dépôt).
+Source amont : projet Claude Design `f60a756a-…`, fichier **SETRAG Design
+System.dc.html** (anciennement « Cadence »).
+
+## Historique des versions de la charte
+
+- **v1.1.0** — palette redérivée du logo : accent bleu `#0F52A0`
+  (oklch teinte 257), neutres teintés 257, `second` passé de l'orange à un
+  acier désaturé (248), sémantiques réaccordées (success 146, warning 92,
+  info 205). Aucune spécification de composant n'a bougé : le diff amont ne
+  portait que sur les couleurs, le branding (logo, v1.1.0) et le nom de
+  l'animation (`cadence-slide` → `setrag-slide`). Le logo est versionné dans
+  `packages/ui/src/assets/setrag-logo.png` et les `public/` des apps web.
+- **v1.0.0** — « Cadence », accent teal 168.
+
+**Méthode de resynchro amont** : récupérer `tokens.css` + `tokens.json` du
+projet source, puis diffusion. Pour savoir si les composants ont changé,
+neutraliser les couleurs avant de comparer les deux `.dc.html` — sinon le diff
+est noyé sous les changements de teinte :
+
+```sh
+python3 - <<'EOF'
+import re,difflib
+norm=lambda p: [l.strip() for l in re.sub(r'#[0-9a-fA-F]{3,8}|oklch\([^)]*\)','C',open(p).read()).split('\n')]
+print('\n'.join(l for l in difflib.unified_diff(norm('ancien.html'),norm('nouveau.html'),lineterm='',n=0) if l[:1] in '+-'))
+EOF
+```
 
 ## Ce qu'il a fallu mettre en place (première synchro)
 
@@ -65,7 +91,7 @@ fond blanc, cases à cocher noires, champs sombres.
 Trois garde-fous depuis :
 
 1. `tokens.css` ne réagit **qu'à** `[data-theme="dark"]`, comme la source
-   Cadence. **Ne jamais y rajouter `.dark`.**
+   SETRAG. **Ne jamais y rajouter `.dark`.**
 2. `[data-theme="light"]` remet explicitement le mode clair : n'importe quel
    conteneur peut forcer le clair sous un hôte sombre.
 3. `ThemeScope` (exporté, exclu de la liste des composants via
@@ -82,7 +108,7 @@ dans chaque iframe, puis vérifier que `--c-ink` reste `oklch(0.22 …)` et
 
 ## Ombres — ce que la source autorise
 
-La source Cadence ne met d'ombre que sur : la barre de recherche (`--sh-md`),
+La source SETRAG ne met d'ombre que sur : la barre de recherche (`--sh-md`),
 le billet et le toast (`--sh-lg`), et la carte de résultat au survol. Les
 panneaux sont `border: 1px solid`, **sans ombre**. `card.tsx` et le déclencheur
 de `select.tsx` arrivaient du registre shadcn avec `shadow-xs` : retiré.

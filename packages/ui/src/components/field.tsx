@@ -5,13 +5,13 @@ import * as React from "react"
 import { cn } from "@workspace/ui/lib/utils"
 
 /**
- * Champs de saisie Cadence — hauteur 52, rayon 12, anneau de focus à
+ * Champs de saisie SETRAG — hauteur 52, rayon 12, anneau de focus à
  * l'extérieur. L'erreur porte toujours un libellé écrit : l'information
  * n'est jamais portée par la couleur seule.
  */
 
 const controlBase =
-  "w-full rounded-md border bg-surface px-4 text-[16px] text-ink transition-[border-color,box-shadow] duration-200 ease-cadence outline-none placeholder:text-ink-faint focus-visible:border-accent-base disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunk disabled:text-ink-faint"
+  "w-full rounded-md border bg-surface px-4 text-[16px] text-ink transition-[border-color,box-shadow] duration-200 ease-setrag outline-none placeholder:text-ink-faint focus-visible:border-accent-base disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunk disabled:text-ink-faint"
 
 const controlTone = {
   default: "border-line-strong",

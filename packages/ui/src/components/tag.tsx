@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@workspace/ui/lib/utils"
 
 /**
- * Tag / pastille Cadence — pill, libellé 12/600.
+ * Tag / pastille SETRAG — pill, libellé 12/600.
  *
  * Un statut n'est jamais porté par la couleur seule : le libellé dit toujours
  * l'information (« +12 min », « Supprimé »), la teinte ne fait que la renforcer.

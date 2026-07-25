@@ -1,51 +1,56 @@
 /* ============================================================================
-   Cadence — design system voyage · v1.0.0
-   Tokens importés depuis le projet Claude Design « Train App design system ».
+   SETRAG — design system voyage · v1.1.0
+   Tokens importés du projet Claude Design « SETRAG Design System ».
+   Accent = bleu du logo #0F52A0 → oklch(0.441 0.144 257).
    Source de vérité : ne pas modifier une valeur ici sans la répercuter côté
-   design. Mode clair par défaut, mode sombre via [data-theme="dark"] ou .dark.
+   design. Mode clair par défaut, mode sombre via [data-theme="dark"].
    ============================================================================ */
 
 /* `[data-theme="light"]` permet à un conteneur de forcer le mode clair, même
    sous un hôte en thème sombre (panneau d'outil, aperçu embarqué). */
 :root,
 [data-theme="light"] {
-  /* — Couleur : neutres (teinte 175, chroma très bas) — */
-  --c-canvas: oklch(0.98 0.008 95);
+  /* — Couleur : neutres (teinte 257, chroma très bas) — */
+  --c-canvas: oklch(0.985 0.004 257);
   --c-surface: #ffffff;
-  --c-surface-sunk: oklch(0.96 0.008 95);
-  --c-line: oklch(0.9 0.008 175);
-  --c-line-strong: oklch(0.82 0.01 175);
-  --c-ink: oklch(0.22 0.02 175);
-  --c-ink-muted: oklch(0.48 0.015 175);
-  --c-ink-faint: oklch(0.62 0.012 175);
-  --c-ink-inverse: oklch(0.98 0.008 95);
+  --c-surface-sunk: oklch(0.965 0.008 257);
+  --c-line: oklch(0.905 0.012 257);
+  --c-line-strong: oklch(0.84 0.014 257);
+  --c-ink: oklch(0.22 0.025 257);
+  --c-ink-muted: oklch(0.5 0.02 257);
+  --c-ink-faint: oklch(0.63 0.016 257);
+  --c-ink-inverse: oklch(0.985 0.004 257);
 
-  /* — Couleur : accents (même L/C, teinte variable) — */
-  --c-accent: oklch(0.55 0.13 168);
-  --c-accent-hover: oklch(0.48 0.13 168);
-  --c-accent-active: oklch(0.42 0.12 168);
-  --c-accent-soft: oklch(0.95 0.03 168);
-  --c-accent-line: oklch(0.84 0.06 168);
-  /* Accent lisible sur fond clair (texte sur accent-soft) */
-  --c-accent-ink: oklch(0.38 0.12 168);
-  --c-second: oklch(0.55 0.13 45);
-  --c-second-soft: oklch(0.95 0.03 45);
-  --c-second-ink: oklch(0.4 0.13 45);
+  /* — Couleur : accents — */
+  --c-accent: oklch(0.441 0.144 257);
+  --c-accent-hover: oklch(0.37 0.13 257);
+  --c-accent-soft: oklch(0.95 0.03 257);
+  --c-accent-line: oklch(0.84 0.06 257);
+  --c-second: oklch(0.55 0.035 248);
+  --c-second-soft: oklch(0.95 0.01 248);
 
   /* — Couleur : sémantique — */
-  --c-success: oklch(0.55 0.13 152);
-  --c-success-soft: oklch(0.95 0.03 152);
-  --c-success-ink: oklch(0.38 0.12 152);
-  --c-warning: oklch(0.72 0.14 75);
-  --c-warning-soft: oklch(0.96 0.05 75);
-  --c-warning-ink: oklch(0.42 0.1 75);
-  --c-danger: oklch(0.55 0.16 25);
-  --c-danger-hover: oklch(0.47 0.16 25);
-  --c-danger-soft: oklch(0.96 0.03 25);
-  --c-danger-ink: oklch(0.45 0.16 25);
-  --c-info: oklch(0.55 0.11 245);
-  --c-info-soft: oklch(0.95 0.03 245);
-  --c-info-ink: oklch(0.35 0.09 245);
+  --c-success: oklch(0.56 0.13 146);
+  --c-success-soft: oklch(0.95 0.03 146);
+  --c-warning: oklch(0.76 0.14 92);
+  --c-warning-soft: oklch(0.96 0.05 92);
+  --c-danger: oklch(0.55 0.18 25);
+  --c-danger-soft: oklch(0.96 0.025 25);
+  --c-info: oklch(0.6 0.095 205);
+  --c-info-soft: oklch(0.95 0.03 205);
+
+  /* — Dérivées (hors source) —
+     Teintes foncées pour le texte posé sur les fonds `*-soft`, et états
+     pressés. La source ne les définit pas : elle les applique en dur dans ses
+     maquettes. Elles sont nommées ici pour rester une seule décision. */
+  --c-accent-active: oklch(0.31 0.115 257);
+  --c-accent-ink: oklch(0.37 0.13 257);
+  --c-second-ink: oklch(0.42 0.035 248);
+  --c-success-ink: oklch(0.4 0.12 146);
+  --c-warning-ink: oklch(0.45 0.1 92);
+  --c-danger-hover: oklch(0.47 0.18 25);
+  --c-danger-ink: oklch(0.45 0.17 25);
+  --c-info-ink: oklch(0.42 0.09 205);
 
   /* — Typographie — */
   --font-ui: "Schibsted Grotesk Variable", "Schibsted Grotesk", system-ui,
@@ -84,10 +89,10 @@
   --r-pill: 999px;
 
   /* — Ombres — */
-  --sh-sm: 0 1px 2px oklch(0.22 0.02 175 / 0.08);
-  --sh-md: 0 4px 12px oklch(0.22 0.02 175 / 0.1);
-  --sh-lg: 0 12px 32px oklch(0.22 0.02 175 / 0.14);
-  --focus-ring: 0 0 0 3px oklch(0.55 0.13 168 / 0.35);
+  --sh-sm: 0 1px 2px oklch(0.22 0.025 257 / 0.08);
+  --sh-md: 0 4px 12px oklch(0.22 0.025 257 / 0.1);
+  --sh-lg: 0 12px 32px oklch(0.22 0.025 257 / 0.14);
+  --focus-ring: 0 0 0 3px oklch(0.441 0.144 257 / 0.35);
 
   /* — Mouvement — */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -104,42 +109,44 @@
    aperçu embarqué) pose cette classe pour sa propre interface, et le design
    system basculerait avec lui sans que la surface d'accueil suive. */
 [data-theme="dark"] {
-  --c-canvas: oklch(0.19 0.015 250);
-  --c-surface: oklch(0.24 0.015 250);
-  --c-surface-sunk: oklch(0.17 0.015 250);
-  --c-line: oklch(0.33 0.015 250);
-  --c-line-strong: oklch(0.42 0.015 250);
-  --c-ink: oklch(0.96 0.005 250);
-  --c-ink-muted: oklch(0.76 0.012 250);
-  --c-ink-faint: oklch(0.62 0.012 250);
-  --c-ink-inverse: oklch(0.19 0.015 250);
+  --c-canvas: oklch(0.18 0.02 257);
+  --c-surface: oklch(0.23 0.022 257);
+  --c-surface-sunk: oklch(0.15 0.018 257);
+  --c-line: oklch(0.32 0.022 257);
+  --c-line-strong: oklch(0.42 0.025 257);
+  --c-ink: oklch(0.96 0.008 257);
+  --c-ink-muted: oklch(0.76 0.016 257);
+  --c-ink-faint: oklch(0.62 0.016 257);
+  --c-ink-inverse: oklch(0.18 0.02 257);
 
-  --c-accent: oklch(0.75 0.13 168);
-  --c-accent-hover: oklch(0.82 0.12 168);
-  --c-accent-active: oklch(0.68 0.13 168);
-  --c-accent-soft: oklch(0.3 0.05 168);
-  --c-accent-line: oklch(0.42 0.07 168);
-  --c-accent-ink: oklch(0.82 0.12 168);
-  --c-second: oklch(0.75 0.13 45);
-  --c-second-soft: oklch(0.3 0.05 45);
-  --c-second-ink: oklch(0.82 0.12 45);
+  --c-accent: oklch(0.72 0.13 257);
+  --c-accent-hover: oklch(0.8 0.11 257);
+  --c-accent-soft: oklch(0.3 0.055 257);
+  --c-accent-line: oklch(0.42 0.075 257);
+  --c-second: oklch(0.72 0.035 248);
+  --c-second-soft: oklch(0.3 0.015 248);
 
-  --c-success: oklch(0.75 0.13 152);
-  --c-success-soft: oklch(0.3 0.05 152);
-  --c-success-ink: oklch(0.82 0.12 152);
-  --c-warning: oklch(0.8 0.13 75);
-  --c-warning-soft: oklch(0.32 0.06 75);
-  --c-warning-ink: oklch(0.86 0.12 75);
-  --c-danger: oklch(0.7 0.15 25);
-  --c-danger-hover: oklch(0.78 0.14 25);
+  --c-success: oklch(0.74 0.13 146);
+  --c-success-soft: oklch(0.3 0.05 146);
+  --c-warning: oklch(0.82 0.13 92);
+  --c-warning-soft: oklch(0.32 0.06 92);
+  --c-danger: oklch(0.7 0.16 25);
   --c-danger-soft: oklch(0.3 0.06 25);
-  --c-danger-ink: oklch(0.8 0.13 25);
-  --c-info: oklch(0.75 0.11 245);
-  --c-info-soft: oklch(0.3 0.05 245);
-  --c-info-ink: oklch(0.84 0.1 245);
+  --c-info: oklch(0.74 0.095 205);
+  --c-info-soft: oklch(0.3 0.045 205);
+
+  /* Dérivées — en sombre le texte sur `*-soft` doit être clair, pas foncé. */
+  --c-accent-active: oklch(0.65 0.13 257);
+  --c-accent-ink: oklch(0.8 0.11 257);
+  --c-second-ink: oklch(0.8 0.035 248);
+  --c-success-ink: oklch(0.82 0.12 146);
+  --c-warning-ink: oklch(0.88 0.12 92);
+  --c-danger-hover: oklch(0.78 0.15 25);
+  --c-danger-ink: oklch(0.8 0.14 25);
+  --c-info-ink: oklch(0.84 0.09 205);
 
   --sh-sm: 0 1px 2px oklch(0 0 0 / 0.4);
   --sh-md: 0 4px 12px oklch(0 0 0 / 0.45);
   --sh-lg: 0 12px 32px oklch(0 0 0 / 0.55);
-  --focus-ring: 0 0 0 3px oklch(0.75 0.13 168 / 0.45);
+  --focus-ring: 0 0 0 3px oklch(0.72 0.13 257 / 0.45);
 }

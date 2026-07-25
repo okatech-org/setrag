@@ -27,7 +27,7 @@ export interface ButtonProps extends Omit<PressableProps, "children" | "style"> 
 }
 
 /**
- * Bouton Cadence — pill, hauteurs 36 / 44 / 52.
+ * Bouton SETRAG — pill, hauteurs 36 / 44 / 52.
  * Un seul bouton `primary` par écran : celui qui fait avancer le voyage.
  */
 export function Button({

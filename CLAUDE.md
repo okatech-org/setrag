@@ -30,7 +30,7 @@ Convex packagé (`packages/backend`).
   survente. Les contrôles d'accès passent par `convex/lib/auth.ts`
   (`requireUser`, `requireRole`, `requireAgent`, `requireAdmin`).
 - **Audit** : toute action sensible du back-office appelle `audit()`.
-- **Design system** : le web suit **Cadence** — voir [docs/design-system.md](docs/design-system.md)
+- **Design system** : le web suit **SETRAG** — voir [docs/design-system.md](docs/design-system.md)
   et la référence vivante sur `/design-system` (billetterie). Source de vérité
   des tokens : `packages/ui/src/styles/tokens.css`, copie du projet Claude
   Design. Pas de valeur hexadécimale en dur dans les composants applicatifs :
@@ -39,7 +39,7 @@ Convex packagé (`packages/backend`).
   Le mobile (`packages/mobile-ui`) porte la même charte : les couleurs y sont
   la conversion sRGB des valeurs oklch du CSS. C'est un portage, pas une
   seconde source de vérité — toute évolution part de `tokens.css`.
-- **Règles Cadence non négociables** : hauteur d'action ≥ 44 px, un seul bouton
+- **Règles SETRAG non négociables** : hauteur d'action ≥ 44 px, un seul bouton
   `primary` par écran, jamais d'information portée par la couleur seule,
   anneau de focus jamais supprimé, heures en mono via `.tabular`.
 - **shadcn** : les composants web s'ajoutent depuis `packages/ui`, jamais

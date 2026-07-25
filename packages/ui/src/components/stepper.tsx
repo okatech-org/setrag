@@ -13,7 +13,7 @@ export interface StepperProps extends React.ComponentProps<"div"> {
 }
 
 /**
- * Progression Cadence — pastilles 26 px reliées par un filet de 2 px.
+ * Progression SETRAG — pastilles 26 px reliées par un filet de 2 px.
  * Les étapes franchies portent une coche, la courante son numéro.
  */
 function Stepper({ steps, current, className, ...props }: StepperProps) {

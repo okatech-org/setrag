@@ -42,7 +42,7 @@ export interface TicketProps extends React.ComponentProps<"article"> {
 }
 
 /**
- * Billet Cadence — fond encre, chiffres en mono, séparation pointillée avant
+ * Billet SETRAG — fond encre, chiffres en mono, séparation pointillée avant
  * le QR code. Pensé pour être lu debout, en gare, à contre-jour.
  */
 function Ticket({

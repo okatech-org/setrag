@@ -6,13 +6,13 @@ import { Checkbox as CheckboxPrimitive, RadioGroup, Switch as SwitchPrimitive } 
 import { cn } from "@workspace/ui/lib/utils"
 
 /**
- * Contrôles de sélection Cadence — case 22 px (rayon 6), radio 22 px,
+ * Contrôles de sélection SETRAG — case 22 px (rayon 6), radio 22 px,
  * interrupteur 44 × 26. La zone cliquable englobe le libellé pour atteindre
  * la cible tactile de 44 px.
  */
 
 const box =
-  "grid size-[22px] shrink-0 place-items-center rounded-[6px] border-[1.5px] border-line-strong bg-surface text-ink-inverse transition-colors duration-200 ease-cadence outline-none data-[state=checked]:border-accent-base data-[state=checked]:bg-accent-base data-[disabled]:border-line data-[disabled]:bg-surface-sunk"
+  "grid size-[22px] shrink-0 place-items-center rounded-[6px] border-[1.5px] border-line-strong bg-surface text-ink-inverse transition-colors duration-200 ease-setrag outline-none data-[state=checked]:border-accent-base data-[state=checked]:bg-accent-base data-[disabled]:border-line data-[disabled]:bg-surface-sunk"
 
 const row =
   "flex min-h-target items-center gap-3 text-[15px] text-ink data-[disabled]:text-ink-faint"
@@ -75,10 +75,10 @@ function Switch({
     <label className={cn(row, className)} data-disabled={props.disabled || undefined}>
       <SwitchPrimitive.Root
         data-slot="switch"
-        className="inline-flex h-[26px] w-11 shrink-0 items-center rounded-pill bg-line p-[3px] transition-colors duration-200 ease-cadence outline-none data-[state=checked]:bg-accent-base data-[disabled]:opacity-60"
+        className="inline-flex h-[26px] w-11 shrink-0 items-center rounded-pill bg-line p-[3px] transition-colors duration-200 ease-setrag outline-none data-[state=checked]:bg-accent-base data-[disabled]:opacity-60"
         {...props}
       >
-        <SwitchPrimitive.Thumb className="block size-5 rounded-pill bg-surface transition-transform duration-200 ease-cadence data-[state=checked]:translate-x-[18px]" />
+        <SwitchPrimitive.Thumb className="block size-5 rounded-pill bg-surface transition-transform duration-200 ease-setrag data-[state=checked]:translate-x-[18px]" />
       </SwitchPrimitive.Root>
       <span>{label}</span>
     </label>

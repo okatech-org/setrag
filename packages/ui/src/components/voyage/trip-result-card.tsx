@@ -8,7 +8,7 @@ import { Tag } from "@workspace/ui/components/tag"
 /**
  * Carte de résultat trajet — la brique centrale de la recherche.
  *
- * Règle de hiérarchie Cadence : l'heure d'abord (mono, 25 px), le prix
+ * Règle de hiérarchie SETRAG : l'heure d'abord (mono, 25 px), le prix
  * ensuite, le reste en gris. Les heures sont annoncées en clair aux lecteurs
  * d'écran.
  */
@@ -65,7 +65,7 @@ function TripResultCard({
       data-slot="trip-result-card"
       data-state={state}
       className={cn(
-        "grid items-center gap-6 rounded-[16px] border p-5 px-6 transition-[box-shadow,border-color] duration-200 ease-cadence md:grid-cols-[1fr_auto]",
+        "grid items-center gap-6 rounded-[16px] border p-5 px-6 transition-[box-shadow,border-color] duration-200 ease-setrag md:grid-cols-[1fr_auto]",
         selected
           ? "border-[1.5px] border-accent-base bg-accent-soft"
           : "border-line bg-surface",

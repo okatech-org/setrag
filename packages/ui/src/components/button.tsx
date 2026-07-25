@@ -5,7 +5,7 @@ import { Slot } from "radix-ui"
 import { cn } from "@workspace/ui/lib/utils"
 
 /**
- * Bouton Cadence.
+ * Bouton SETRAG.
  *
  * Règles du design system :
  * — hauteur d'action minimale 44 px (taille `md`, valeur par défaut) ;
@@ -13,7 +13,7 @@ import { cn } from "@workspace/ui/lib/utils"
  * — rayon pill, libellé 600, anneau de focus jamais supprimé.
  */
 const buttonVariants = cva(
-  "relative inline-flex shrink-0 items-center justify-center gap-2 rounded-pill border font-semibold whitespace-nowrap transition-colors duration-200 ease-cadence outline-none select-none disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
+  "relative inline-flex shrink-0 items-center justify-center gap-2 rounded-pill border font-semibold whitespace-nowrap transition-colors duration-200 ease-setrag outline-none select-none disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
   {
     variants: {
       variant: {

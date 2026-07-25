@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@workspace/ui/lib/utils"
 
 /**
- * Message en ligne Cadence — fond teinté, filet de 3 px à gauche.
+ * Message en ligne SETRAG — fond teinté, filet de 3 px à gauche.
  *
  * Ton : on écrit « Votre train partira 12 min plus tard. Votre place est
  * conservée. », jamais « Incident d'exploitation : perturbation prévisionnelle ».

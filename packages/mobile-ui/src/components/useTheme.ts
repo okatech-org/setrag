@@ -24,7 +24,7 @@ export interface Theme {
   isDark: boolean
 }
 
-/** Thème Cadence actif, selon l'apparence système. */
+/** Thème SETRAG actif, selon l'apparence système. */
 export function useTheme(): Theme {
   const scheme = useColorScheme()
   const isDark = scheme === "dark"

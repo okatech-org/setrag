@@ -36,7 +36,7 @@ ce paquet. Aucune application ne référence `convex/` par chemin relatif.
 
 - **Monorepo** — Bun workspaces 1.3 + Turborepo 2.10 (linker `hoisted`, requis par Metro)
 - **Web** — Next.js 16 (App Router, React Compiler), React 19.2, Tailwind CSS 4, shadcn (style `radix-vega`)
-- **Design system** — Cadence v1.0.0, voir [docs/design-system.md](docs/design-system.md)
+- **Design system** — SETRAG v1.1.0, voir [docs/design-system.md](docs/design-system.md)
 - **Mobile** — Expo SDK 57, React Native 0.86, Expo Router, nouvelle architecture
 - **Backend** — Convex 1.42 (base temps réel, fonctions, crons, composants)
 - **Authentification** — Better Auth 1.6 via `@convex-dev/better-auth` (OTP e-mail et SMS)

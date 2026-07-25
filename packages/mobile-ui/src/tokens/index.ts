@@ -1,5 +1,5 @@
 /**
- * Cadence — design system voyage · tokens React Native · v1.0.0
+ * SETRAG — design system voyage · tokens React Native · v1.1.0
  *
  * Portage exact de `packages/ui/src/styles/tokens.css`. React Native ne lit pas
  * `oklch()` : les couleurs sont converties en sRGB hexadécimal depuis les
@@ -8,76 +8,76 @@
 
 export const colors = {
   light: {
-    canvas: "#FAF8F3",
+    canvas: "#F8FAFD",
     surface: "#FFFFFF",
-    surfaceSunk: "#F3F2EC",
-    line: "#D9E0DE",
-    lineStrong: "#BEC6C4",
-    ink: "#101E1A",
-    inkMuted: "#55615D",
-    inkFaint: "#7F8986",
-    inkInverse: "#FAF8F3",
+    surfaceSunk: "#F0F4F9",
+    line: "#DBE0E8",
+    lineStrong: "#C5CBD4",
+    ink: "#131B26",
+    inkMuted: "#5C646F",
+    inkFaint: "#838A93",
+    inkInverse: "#F8FAFD",
 
-    accent: "#008963",
-    accentHover: "#00744F",
-    accentActive: "#006040",
-    accentSoft: "#DCF5EB",
-    accentLine: "#A5D8C3",
-    accentInk: "#005536",
+    accent: "#0F50A0",
+    accentHover: "#013C82",
+    accentActive: "#002D69",
+    accentSoft: "#E2F0FF",
+    accentLine: "#B2CDF2",
+    accentInk: "#013C82",
 
-    second: "#AE5528",
-    secondSoft: "#FFE9DE",
-    secondInk: "#7D2800",
+    second: "#627485",
+    secondSoft: "#E9EFF5",
+    secondInk: "#3E4F60",
 
-    success: "#22864A",
-    successSoft: "#E0F5E5",
-    successInk: "#00531E",
-    warning: "#D79628",
-    warningSoft: "#FFEECD",
-    warningInk: "#6C4300",
-    danger: "#BD413F",
-    dangerHover: "#A12628",
-    dangerSoft: "#FFEBE8",
-    dangerInk: "#9B1E22",
-    info: "#3077AD",
-    infoSoft: "#DFF1FF",
-    infoInk: "#003E66",
+    success: "#388842",
+    successSoft: "#E2F4E3",
+    successInk: "#045819",
+    warning: "#D1AD32",
+    warningSoft: "#FEF2CC",
+    warningInk: "#695200",
+    danger: "#C53637",
+    dangerHover: "#A9131F",
+    dangerSoft: "#FFECE9",
+    dangerInk: "#9E141E",
+    info: "#20909B",
+    infoSoft: "#D8F5F8",
+    infoInk: "#005A64",
   },
   dark: {
-    canvas: "#0F141A",
-    surface: "#1A2026",
-    surfaceSunk: "#0A1016",
-    line: "#30363D",
-    lineStrong: "#474E55",
-    ink: "#EFF2F5",
-    inkMuted: "#ACB2B9",
-    inkFaint: "#81878D",
-    inkInverse: "#0F141A",
+    canvas: "#0C121A",
+    surface: "#161D27",
+    surfaceSunk: "#070B13",
+    line: "#2C333E",
+    lineStrong: "#454E5B",
+    ink: "#EEF2F7",
+    inkMuted: "#ABB2BB",
+    inkFaint: "#808790",
+    inkInverse: "#0C121A",
 
-    accent: "#44C89E",
-    accentHover: "#6BDDB5",
-    accentActive: "#23B189",
-    accentSoft: "#0E3629",
-    accentLine: "#1D5946",
-    accentInk: "#6BDDB5",
+    accent: "#6EA6F5",
+    accentHover: "#90C0FF",
+    accentActive: "#5990DD",
+    accentSoft: "#1B2E49",
+    accentLine: "#324E76",
+    accentInk: "#90C0FF",
 
-    second: "#F19266",
-    secondSoft: "#422518",
-    secondInk: "#FFAB82",
+    second: "#94A7BA",
+    secondSoft: "#282F35",
+    secondInk: "#ADC0D4",
 
-    success: "#68C584",
-    successSoft: "#193521",
-    successInk: "#86DB9D",
-    warning: "#EEB154",
-    warningSoft: "#442E09",
-    warningInk: "#FFC573",
-    danger: "#ED756E",
-    dangerHover: "#FF9189",
+    success: "#71C178",
+    successSoft: "#1C341E",
+    successInk: "#90D995",
+    warning: "#E2C157",
+    warningSoft: "#3E3207",
+    warningInk: "#F4D576",
+    danger: "#F2716A",
+    dangerHover: "#FF8E86",
     dangerSoft: "#47211E",
-    dangerInk: "#FF9B93",
-    info: "#6FB5EF",
-    infoSoft: "#163045",
-    infoInk: "#92D2FF",
+    dangerInk: "#FF9890",
+    info: "#57BCC7",
+    infoSoft: "#0A3438",
+    infoInk: "#7FDCE6",
   },
 } as const
 
@@ -85,7 +85,7 @@ export type ColorScheme = keyof typeof colors
 /** Palette d'un thème : mêmes clés en clair et en sombre, valeurs libres. */
 export type ThemeColors = Record<keyof (typeof colors)["light"], string>
 
-/** Familles chargées par `useCadenceFonts()`. */
+/** Familles chargées par `useSetragFonts()`. */
 export const fonts = {
   regular: "SchibstedGrotesk_400Regular",
   medium: "SchibstedGrotesk_500Medium",
@@ -97,7 +97,7 @@ export const fonts = {
 } as const
 
 /**
- * Échelle typographique Cadence. Les `lineHeight` sont calculés depuis les
+ * Échelle typographique SETRAG. Les `lineHeight` sont calculés depuis les
  * ratios du CSS (1.05 / 1.2 / 1.55) et arrondis au pixel.
  */
 export const typography = {
@@ -158,21 +158,21 @@ export const targetMin = 44
 
 export const shadows = {
   sm: {
-    shadowColor: "#101E1A",
+    shadowColor: "#131B26",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 1,
   },
   md: {
-    shadowColor: "#101E1A",
+    shadowColor: "#131B26",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 3,
   },
   lg: {
-    shadowColor: "#101E1A",
+    shadowColor: "#131B26",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.14,
     shadowRadius: 32,
