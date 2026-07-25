@@ -29,6 +29,7 @@ export { Separator } from "./components/separator"
 export { Skeleton } from "./components/skeleton"
 export { Stepper } from "./components/stepper"
 export { Tag, tagVariants } from "./components/tag"
+export { ThemeScope } from "./components/theme-scope"
 export {
   Tabs,
   TabsList,
@@ -59,6 +60,7 @@ export {
 // ── Types ──
 export type { ButtonProps } from "./components/button"
 export type { TagProps } from "./components/tag"
+export type { ThemeScopeProps } from "./components/theme-scope"
 export type { FieldProps } from "./components/field"
 export type { InlineMessageProps } from "./components/inline-message"
 export type { StepperProps, StepperStep } from "./components/stepper"

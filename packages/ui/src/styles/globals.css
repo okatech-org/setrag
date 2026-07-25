@@ -11,7 +11,7 @@
 /* Tokens du design system (source de vérité) */
 @import "./tokens.css";
 
-@custom-variant dark (&:is(.dark *, [data-theme="dark"] *));
+@custom-variant dark (&:is([data-theme="dark"] *));
 
 /* Scan des sources du monorepo pour le JIT Tailwind.
    Chemin résolu depuis packages/ui/src/styles/ → ../../../ = packages/ */
@@ -70,7 +70,6 @@
   --sidebar-ring: var(--c-accent);
 }
 
-.dark,
 [data-theme="dark"] {
   --sidebar: var(--c-surface-sunk);
   --sidebar-accent: var(--c-surface);

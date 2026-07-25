@@ -5,7 +5,10 @@
    design. Mode clair par défaut, mode sombre via [data-theme="dark"] ou .dark.
    ============================================================================ */
 
-:root {
+/* `[data-theme="light"]` permet à un conteneur de forcer le mode clair, même
+   sous un hôte en thème sombre (panneau d'outil, aperçu embarqué). */
+:root,
+[data-theme="light"] {
   /* — Couleur : neutres (teinte 175, chroma très bas) — */
   --c-canvas: oklch(0.98 0.008 95);
   --c-surface: #ffffff;
@@ -96,9 +99,10 @@
   --target-min: 44px;
 }
 
-/* Mode sombre. Cadence cible [data-theme="dark"] ; next-themes pose `.dark`.
-   Les deux sélecteurs sont supportés pour éviter d'imposer un choix aux apps. */
-.dark,
+/* Mode sombre — opt-in explicite via [data-theme="dark"], comme la source.
+   NE PAS ajouter `.dark` ici : un hôte en thème sombre (panneau d'outil,
+   aperçu embarqué) pose cette classe pour sa propre interface, et le design
+   system basculerait avec lui sans que la surface d'accueil suive. */
 [data-theme="dark"] {
   --c-canvas: oklch(0.19 0.015 250);
   --c-surface: oklch(0.24 0.015 250);

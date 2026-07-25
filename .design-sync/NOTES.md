@@ -54,6 +54,39 @@ node .ds-sync/storybook/http-serve.mjs ./ds-bundle   # sert le bundle
   l'exécution ; `--tw` est interne à Tailwind. Attendu.
 - `[RENDER_SKIPPED]` — conséquence directe du choix ci-dessus.
 
+## Piège du thème — corrigé, ne pas réintroduire
+
+La première version des tokens faisait réagir le mode sombre à `.dark` **et**
+`[data-theme="dark"]`, pour next-themes. Le panneau claude.ai/design est en
+thème sombre et pose `.dark` : le design system basculait avec lui, alors que
+la carte d'aperçu force `background:#fff` en dur. Résultat — texte clair sur
+fond blanc, cases à cocher noires, champs sombres.
+
+Trois garde-fous depuis :
+
+1. `tokens.css` ne réagit **qu'à** `[data-theme="dark"]`, comme la source
+   Cadence. **Ne jamais y rajouter `.dark`.**
+2. `[data-theme="light"]` remet explicitement le mode clair : n'importe quel
+   conteneur peut forcer le clair sous un hôte sombre.
+3. `ThemeScope` (exporté, exclu de la liste des composants via
+   `componentSrcMap`) est le `cfg.provider` : il enveloppe chaque aperçu dans
+   `data-theme="light"`. Les cartes ne dépendent donc plus du thème de l'hôte.
+
+Les applications Next pilotent le thème par `attribute="data-theme"` dans
+next-themes — pas `class`.
+
+Test de non-régression : servir le bundle, ouvrir `.review.html`, forcer
+`documentElement.classList.add('dark')` **et** `setAttribute('data-theme','dark')`
+dans chaque iframe, puis vérifier que `--c-ink` reste `oklch(0.22 …)` et
+`--c-surface` `#ffffff` dans les 35 cartes.
+
+## Ombres — ce que la source autorise
+
+La source Cadence ne met d'ombre que sur : la barre de recherche (`--sh-md`),
+le billet et le toast (`--sh-lg`), et la carte de résultat au survol. Les
+panneaux sont `border: 1px solid`, **sans ombre**. `card.tsx` et le déclencheur
+de `select.tsx` arrivaient du registre shadcn avec `shadow-xs` : retiré.
+
 ## Risques pour la prochaine synchro
 
 - **Le CSS peut silencieusement se vider.** Tailwind ne génère que les classes

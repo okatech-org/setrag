@@ -44,5 +44,14 @@
       "cardMode": "column"
     }
   },
-  "readmeHeader": ".design-sync/conventions.md"
+  "readmeHeader": ".design-sync/conventions.md",
+  "provider": {
+    "component": "ThemeScope",
+    "props": {
+      "theme": "light"
+    }
+  },
+  "componentSrcMap": {
+    "ThemeScope": null
+  }
 }
