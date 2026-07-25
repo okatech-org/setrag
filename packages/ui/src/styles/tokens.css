@@ -1,0 +1,141 @@
+/* ============================================================================
+   Cadence — design system voyage · v1.0.0
+   Tokens importés depuis le projet Claude Design « Train App design system ».
+   Source de vérité : ne pas modifier une valeur ici sans la répercuter côté
+   design. Mode clair par défaut, mode sombre via [data-theme="dark"] ou .dark.
+   ============================================================================ */
+
+:root {
+  /* — Couleur : neutres (teinte 175, chroma très bas) — */
+  --c-canvas: oklch(0.98 0.008 95);
+  --c-surface: #ffffff;
+  --c-surface-sunk: oklch(0.96 0.008 95);
+  --c-line: oklch(0.9 0.008 175);
+  --c-line-strong: oklch(0.82 0.01 175);
+  --c-ink: oklch(0.22 0.02 175);
+  --c-ink-muted: oklch(0.48 0.015 175);
+  --c-ink-faint: oklch(0.62 0.012 175);
+  --c-ink-inverse: oklch(0.98 0.008 95);
+
+  /* — Couleur : accents (même L/C, teinte variable) — */
+  --c-accent: oklch(0.55 0.13 168);
+  --c-accent-hover: oklch(0.48 0.13 168);
+  --c-accent-active: oklch(0.42 0.12 168);
+  --c-accent-soft: oklch(0.95 0.03 168);
+  --c-accent-line: oklch(0.84 0.06 168);
+  /* Accent lisible sur fond clair (texte sur accent-soft) */
+  --c-accent-ink: oklch(0.38 0.12 168);
+  --c-second: oklch(0.55 0.13 45);
+  --c-second-soft: oklch(0.95 0.03 45);
+  --c-second-ink: oklch(0.4 0.13 45);
+
+  /* — Couleur : sémantique — */
+  --c-success: oklch(0.55 0.13 152);
+  --c-success-soft: oklch(0.95 0.03 152);
+  --c-success-ink: oklch(0.38 0.12 152);
+  --c-warning: oklch(0.72 0.14 75);
+  --c-warning-soft: oklch(0.96 0.05 75);
+  --c-warning-ink: oklch(0.42 0.1 75);
+  --c-danger: oklch(0.55 0.16 25);
+  --c-danger-hover: oklch(0.47 0.16 25);
+  --c-danger-soft: oklch(0.96 0.03 25);
+  --c-danger-ink: oklch(0.45 0.16 25);
+  --c-info: oklch(0.55 0.11 245);
+  --c-info-soft: oklch(0.95 0.03 245);
+  --c-info-ink: oklch(0.35 0.09 245);
+
+  /* — Typographie — */
+  --font-ui: "Schibsted Grotesk Variable", "Schibsted Grotesk", system-ui,
+    sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --t-display: 700 49px/1.05 var(--font-ui);
+  --t-h1: 700 39px/1.1 var(--font-ui);
+  --t-h2: 700 31px/1.15 var(--font-ui);
+  --t-h3: 600 25px/1.2 var(--font-ui);
+  --t-h4: 600 20px/1.3 var(--font-ui);
+  --t-body-lg: 400 18px/1.55 var(--font-ui);
+  --t-body: 400 16px/1.55 var(--font-ui);
+  --t-small: 400 14px/1.5 var(--font-ui);
+  --t-caption: 500 12px/1.4 var(--font-ui);
+  /* Heures et durées : mono, pour aligner les chiffres d'une ligne à l'autre */
+  --t-time: 600 25px/1 var(--font-mono);
+
+  /* — Espacement (base 4) — */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+  --s-20: 80px;
+
+  /* — Rayons — */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+
+  /* — Ombres — */
+  --sh-sm: 0 1px 2px oklch(0.22 0.02 175 / 0.08);
+  --sh-md: 0 4px 12px oklch(0.22 0.02 175 / 0.1);
+  --sh-lg: 0 12px 32px oklch(0.22 0.02 175 / 0.14);
+  --focus-ring: 0 0 0 3px oklch(0.55 0.13 168 / 0.35);
+
+  /* — Mouvement — */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  /* — Cibles tactiles — */
+  --target-min: 44px;
+}
+
+/* Mode sombre. Cadence cible [data-theme="dark"] ; next-themes pose `.dark`.
+   Les deux sélecteurs sont supportés pour éviter d'imposer un choix aux apps. */
+.dark,
+[data-theme="dark"] {
+  --c-canvas: oklch(0.19 0.015 250);
+  --c-surface: oklch(0.24 0.015 250);
+  --c-surface-sunk: oklch(0.17 0.015 250);
+  --c-line: oklch(0.33 0.015 250);
+  --c-line-strong: oklch(0.42 0.015 250);
+  --c-ink: oklch(0.96 0.005 250);
+  --c-ink-muted: oklch(0.76 0.012 250);
+  --c-ink-faint: oklch(0.62 0.012 250);
+  --c-ink-inverse: oklch(0.19 0.015 250);
+
+  --c-accent: oklch(0.75 0.13 168);
+  --c-accent-hover: oklch(0.82 0.12 168);
+  --c-accent-active: oklch(0.68 0.13 168);
+  --c-accent-soft: oklch(0.3 0.05 168);
+  --c-accent-line: oklch(0.42 0.07 168);
+  --c-accent-ink: oklch(0.82 0.12 168);
+  --c-second: oklch(0.75 0.13 45);
+  --c-second-soft: oklch(0.3 0.05 45);
+  --c-second-ink: oklch(0.82 0.12 45);
+
+  --c-success: oklch(0.75 0.13 152);
+  --c-success-soft: oklch(0.3 0.05 152);
+  --c-success-ink: oklch(0.82 0.12 152);
+  --c-warning: oklch(0.8 0.13 75);
+  --c-warning-soft: oklch(0.32 0.06 75);
+  --c-warning-ink: oklch(0.86 0.12 75);
+  --c-danger: oklch(0.7 0.15 25);
+  --c-danger-hover: oklch(0.78 0.14 25);
+  --c-danger-soft: oklch(0.3 0.06 25);
+  --c-danger-ink: oklch(0.8 0.13 25);
+  --c-info: oklch(0.75 0.11 245);
+  --c-info-soft: oklch(0.3 0.05 245);
+  --c-info-ink: oklch(0.84 0.1 245);
+
+  --sh-sm: 0 1px 2px oklch(0 0 0 / 0.4);
+  --sh-md: 0 4px 12px oklch(0 0 0 / 0.45);
+  --sh-lg: 0 12px 32px oklch(0 0 0 / 0.55);
+  --focus-ring: 0 0 0 3px oklch(0.75 0.13 168 / 0.45);
+}

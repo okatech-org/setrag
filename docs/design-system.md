@@ -1,0 +1,137 @@
+# Cadence — design system voyage
+
+Charte de la plateforme SETRAG, importée du projet Claude Design
+« Train App design system » (`f60a756a-ca30-4f1a-a4fb-72f6d205633a`), v1.0.0.
+
+Référence vivante : `/design-system` sur la billetterie (`bun run dev:billetterie`).
+
+## Principes
+
+1. **L'heure d'abord, le prix ensuite, le reste en gris.** La hiérarchie d'une
+   carte de résultat ne se discute pas : heure en mono 25 px, prix en 25 px
+   gras, contexte en 13 px `ink-muted`.
+2. **Hauteur d'action minimale 44 px**, 8 px d'écart entre deux cibles.
+3. **Un seul bouton `primary` par écran** — celui qui fait avancer le voyage.
+4. **Aucune information portée par la couleur seule** : un retard porte toujours
+   un libellé chiffré (« +12 min »), une suppression toujours un mot.
+5. **Ton concret.** « Votre train partira 12 min plus tard. Votre place est
+   conservée. » plutôt que « Incident d'exploitation ».
+6. **L'anneau de focus (3 px) n'est jamais supprimé**, et reste à l'extérieur.
+
+## Tokens
+
+`packages/ui/src/styles/tokens.css` est la source de vérité — copie fidèle du
+`tokens.css` du projet Claude Design. Ne pas y modifier une valeur sans la
+répercuter côté design.
+
+| Famille    | Exemples                                              |
+| ---------- | ----------------------------------------------------- |
+| Neutres    | `--c-canvas`, `--c-surface`, `--c-line`, `--c-ink`     |
+| Accents    | `--c-accent` (teal 168), `--c-second` (orange 45)      |
+| Sémantique | `--c-success`, `--c-warning`, `--c-danger`, `--c-info` |
+| Typo       | `--t-display` … `--t-caption`, `--t-time`              |
+| Espacement | `--s-1` (4) … `--s-20` (80), base 4                    |
+| Rayons     | `--r-xs` 4 · `--r-sm` 8 · `--r-md` 12 · `--r-lg` 20 · `--r-pill` |
+| Mouvement  | `--ease`, `--dur-fast|base|slow` (120/200/320 ms)      |
+
+Polices : **Schibsted Grotesk** (UI) et **IBM Plex Mono** (chiffres), servies
+localement via `@fontsource`, jamais par CDN.
+
+### Utilisation dans le code
+
+`globals.css` expose ces tokens de trois façons :
+
+```tsx
+<p className="text-h2">Titre</p>                    {/* échelle typographique */}
+<span className="tabular text-time">07:42</span>     {/* chiffres alignés */}
+<div className="bg-surface text-ink-muted border-line rounded-lg" />
+```
+
+Les variables shadcn (`--primary`, `--background`, `--border`…) sont branchées
+sur les tokens Cadence : les composants du registre shadcn héritent de la charte
+sans réécriture.
+
+**Mode sombre** : `.dark` (next-themes) et `[data-theme="dark"]` (Cadence) sont
+tous deux supportés.
+
+## Composants
+
+### Primitives — `@workspace/ui/components/*`
+
+| Composant                     | Notes                                                     |
+| ----------------------------- | --------------------------------------------------------- |
+| `button`                      | pill · `sm` 36 / `md` 44 / `lg` 52 · primary, secondary, ghost, danger · état `loading` avec barre indéterminée |
+| `field`                       | `Field` + `Input` / `Textarea` / `SelectNative`, liens ARIA et message d'erreur écrits |
+| `choice`                      | `Checkbox`, `Radio`, `Switch` — libellé inclus dans la cible tactile |
+| `tag`                         | pastilles de statut et filtres retirables                  |
+| `inline-message`              | messages en ligne (info/succès/alerte/erreur) + `ToastBar` |
+| `stepper`                     | progression du tunnel                                      |
+| `empty-state`                 | `EmptyState` (avec porte de sortie) et `SkeletonLines`      |
+| `card`, `dialog`, `select`, `separator`, `skeleton`, `table`, `tabs`, `badge` | registre shadcn, à la charte |
+
+### Métier — `@workspace/ui/voyage/*`
+
+| Composant           | Rôle                                                          |
+| ------------------- | ------------------------------------------------------------- |
+| `trip-search-bar`   | recherche : type de trajet, gares, dates, voyageurs. Les champs sont injectés par l'app |
+| `price-calendar`    | prix par jour, meilleur prix mis en avant automatiquement      |
+| `traffic-banner`    | info trafic / travaux                                          |
+| `trip-result-card`  | résultat de recherche — états `default`, `selected`, `cancelled` |
+| `ticket`            | billet fond encre, QR fourni par l'app, 5 états                |
+| `checkout-summary`  | récapitulatif, moyens de paiement, total                       |
+
+Les montants sont formatés en XAF par `@workspace/ui/lib/format`
+(`formatPrice`, `formatTime`, `formatDuration`, `spellTime`).
+
+## Mobile — `@workspace/mobile-ui`
+
+Le portage React Native suit les mêmes valeurs. React Native ne lisant pas
+`oklch()`, les couleurs sont converties en sRGB hexadécimal depuis les valeurs
+oklch de référence : `packages/mobile-ui/src/tokens/index.ts` est un portage,
+pas une seconde source de vérité. Toute évolution part de `tokens.css`.
+
+| Entrée                              | Contenu                                                    |
+| ----------------------------------- | ---------------------------------------------------------- |
+| `@workspace/mobile-ui/tokens`       | `colors` (clair/sombre), `typography`, `spacing`, `radius`, `controlHeight`, `shadows`, `motion` |
+| `@workspace/mobile-ui/fonts`        | `useCadenceFonts()` — charge Schibsted Grotesk et IBM Plex Mono |
+| `@workspace/mobile-ui/components`   | `Screen`, `Text`, `Button`, `Card`, `Tag`, `InlineMessage`, `useTheme` |
+| `@workspace/mobile-ui/voyage`       | `TripResultCard`, `Ticket`                                  |
+
+`useCadenceFonts()` s'appelle à la racine (`app/_layout.tsx`) et l'écran de
+démarrage reste affiché tant que les familles ne sont pas prêtes — sinon la
+typographie retombe une fraction de seconde sur la police système.
+
+Les libellés d'accessibilité annoncent les heures en clair
+(`accessibilityLabel` construit avec `spellTime`), comme sur le web.
+
+Équivalences de nommage :
+
+| Web (Tailwind)          | Mobile (`useTheme()`)          |
+| ----------------------- | ------------------------------ |
+| `bg-surface`            | `theme.colors.surface`         |
+| `text-ink-muted`        | `<Text tone="muted">`          |
+| `text-h2`               | `<Text variant="h2">`          |
+| `.tabular` + `text-time`| `<Text variant="time">`        |
+| `rounded-lg`            | `theme.radius.lg`              |
+| `gap-s-6`               | `theme.spacing[6]`             |
+
+## Accessibilité
+
+- Contrastes vérifiés à la source : `ink/canvas` 14,2:1 · `ink-muted/canvas`
+  6,9:1 · `blanc/accent` 4,8:1. `ink-faint` réservé au texte ≥ 18 px.
+- Les heures sont annoncées en clair aux lecteurs d'écran (`spellTime` produit
+  « 7 heures 42 » dans un `sr-only`, l'affichage visuel restant « 07:42 »).
+- Ordre de tabulation attendu : recherche → filtres → résultats → panier.
+- `prefers-reduced-motion` coupe tout mouvement décoratif ; les barres de
+  progression (`data-motion="progress"`) sont conservées.
+
+## Faire évoluer la charte
+
+Les composants shadcn s'ajoutent depuis `packages/ui` et héritent des tokens :
+
+```bash
+cd packages/ui && bunx shadcn@latest add <composant>
+```
+
+⚠️ Le CLI écrase les fichiers de même nom : `button.tsx` est une implémentation
+Cadence, ne pas le régénérer sans réappliquer les variantes.
