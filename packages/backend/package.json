@@ -6,11 +6,15 @@
   "scripts": {
     "dev": "convex dev",
     "deploy": "convex deploy",
-    "seed": "convex run seeds/seed:run",
+    "seed": "convex run seeds/referential:run",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:once": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.reporter=text"
+    "test:coverage": "vitest run --coverage --coverage.reporter=text",
+    "seed:reset": "convex run seeds/referential:reset",
+    "itest:up": "bash docker/up.sh",
+    "itest:down": "bash docker/down.sh",
+    "itest": "vitest run --config vitest.integration.config.ts"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -22,10 +26,14 @@
     "@convex-dev/better-auth": "^0.12.5",
     "@convex-dev/rate-limiter": "^0.3.2",
     "@convex-dev/resend": "^0.2.5",
+    "@noble/ed25519": "^2",
+    "@noble/hashes": "^1",
     "@workspace/shared": "workspace:*",
     "better-auth": "^1.6.25",
+    "bwip-js": "^4.11.2",
     "convex": "^1.42.3",
     "convex-helpers": "^0.1.120",
+    "pdf-lib": "^1.17.1",
     "react": "19.2.8",
     "resend": "^6.18.0",
     "zod": "^4.4.3"
@@ -34,9 +42,11 @@
     "@edge-runtime/vm": "^5.0.0",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.10",
+    "@vitest/coverage-v8": "4.1.10",
     "@workspace/tsconfig": "workspace:*",
     "convex-test": "^0.0.54",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "zxing-wasm": "^3.1.2"
   }
 }

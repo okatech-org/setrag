@@ -1,0 +1,56 @@
+# Backend Convex open source, pour les tests d'intégration et de concurrence.
+#
+# `convex-test` exécute les mutations séquentiellement en JavaScript : il ne
+# reproduit NI les écritures concurrentes, NI les conflits de contrôle de
+# concurrence optimiste. Il ne peut donc pas démontrer l'absence de survente.
+# Ce backend-là, lui, est le vrai moteur — c'est le seul endroit où cette
+# garantie peut être prouvée.
+#
+#   bun run itest:up      démarre le backend et déploie le code
+#   bun run itest         lance les tests d'intégration
+#   bun run itest:down    arrête et purge
+
+services:
+  backend:
+    image: ghcr.io/get-convex/convex-backend:latest
+    container_name: setrag-convex-backend
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    ports:
+      - "3210:3210"
+      - "3211:3211"
+    volumes:
+      - data:/convex/data
+    environment:
+      - INSTANCE_NAME=setrag-test
+      - CONVEX_CLOUD_ORIGIN=http://127.0.0.1:3210
+      - CONVEX_SITE_ORIGIN=http://127.0.0.1:3211
+      # Base SQLite embarquée : suffisante pour des tests, et sans dépendance.
+      - DISABLE_BEACON=true
+      - DO_NOT_REQUIRE_SSL=true
+      - RUST_LOG=warn
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3210/version"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  # Tableau de bord facultatif, utile pour inspecter l'état après un échec.
+  #   docker compose --profile dashboard up -d
+  dashboard:
+    image: ghcr.io/get-convex/convex-dashboard:latest
+    container_name: setrag-convex-dashboard
+    profiles: ["dashboard"]
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    ports:
+      - "6791:6791"
+    environment:
+      - NEXT_PUBLIC_DEPLOYMENT_URL=http://127.0.0.1:3210
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  data:
