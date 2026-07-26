@@ -1,119 +1,416 @@
 import { v } from "convex/values"
-import { mutation, query } from "../_generated/server"
-import { audit, requireRole } from "../lib/auth"
-import { serviceClass, tripStatus } from "../schema"
+import { internalMutation, mutation, query } from "../_generated/server"
+import type { Id } from "../_generated/dataModel"
+import { audit, requirePermission } from "../lib/auth"
+import { tripStatus } from "../schema"
+import { fromServiceDate, isWithinSaleWindow, toServiceDate } from "../model/calendar"
+import { segmentCountFor } from "../model/network"
+import { availableForRange, segmentMask, isRangeFree } from "../model/inventory"
 
-const CLASS_MULTIPLIER = {
-  economique: 1,
-  confort: 1.5,
-  vip: 2.25,
-} as const
+/**
+ * Dessertes — génération et consultation.
+ *
+ * Engendrer une desserte, c'est créer d'un seul tenant son horaire, ses
+ * arrêts et TOUT son inventaire : une occupation par place et un compteur par
+ * classe et par segment. Ces trois écritures sont indissociables — une
+ * desserte sans inventaire serait vendable à l'infini.
+ */
 
-function seatPrice(base: number, cls: keyof typeof CLASS_MULTIPLIER): number {
-  return Math.round((base * CLASS_MULTIPLIER[cls]) / 100) * 100
-}
+/**
+ * Engendre une desserte à partir d'un horaire de livret et d'une date.
+ *
+ * Mutation interne : elle est planifiée par l'activation du livret, jamais
+ * appelée depuis une interface. Idempotente — une desserte déjà engendrée
+ * pour ce couple (horaire, date) n'est pas recréée, ce qui rend l'opération
+ * rejouable après un incident.
+ */
+export const generateOne = internalMutation({
+  args: {
+    scheduleId: v.id("bookletSchedules"),
+    serviceDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const schedule = await ctx.db.get(args.scheduleId)
+    if (!schedule) throw new Error("Horaire de livret introuvable")
 
-/** Recherche de dessertes sur une journée donnée. */
+    const booklet = await ctx.db.get(schedule.bookletId)
+    if (!booklet) throw new Error("Livret horaire introuvable")
+    if (booklet.status !== "actif") {
+      throw new Error(
+        `Livret « ${booklet.status} » : génération refusée`,
+      )
+    }
+
+    // Idempotence : ne pas recréer une desserte déjà engendrée.
+    const existing = await ctx.db
+      .query("trips")
+      .withIndex("by_train_date", (q) =>
+        q.eq("trainId", schedule.trainId).eq("serviceDate", args.serviceDate),
+      )
+      .collect()
+    if (existing.some((t) => t.scheduleId === args.scheduleId)) {
+      return { created: false, tripId: existing[0]!._id }
+    }
+
+    const stops = [...schedule.stops].sort((a, b) => a.sequence - b.sequence)
+    if (stops.length < 2) {
+      throw new Error("Desserte invalide : au moins deux arrêts attendus")
+    }
+    const segmentCount = segmentCountFor(stops.length)
+
+    const departureAt = fromServiceDate(
+      args.serviceDate,
+      schedule.departureTime,
+    )
+    const lastStop = stops[stops.length - 1]!
+    const arrivalOffset =
+      lastStop.arrivalOffsetMinutes ?? lastStop.departureOffsetMinutes ?? 0
+    const arrivalAt = departureAt + arrivalOffset * 60_000
+
+    /* ── La desserte ──────────────────────────────────────────────────── */
+    const tripId = await ctx.db.insert("trips", {
+      bookletId: schedule.bookletId,
+      scheduleId: args.scheduleId,
+      trainId: schedule.trainId,
+      trainNumber: schedule.trainNumber,
+      trainType: schedule.trainType,
+      serviceDate: args.serviceDate,
+      departureAt,
+      arrivalAt,
+      originStationId: stops[0]!.stationId,
+      destinationStationId: lastStop.stationId,
+      status: "planifie",
+      delayMinutes: 0,
+      segmentCount,
+      isOpenForSale: isWithinSaleWindow(
+        args.serviceDate,
+        toServiceDate(Date.now()),
+      ),
+    })
+
+    /* ── Les arrêts ───────────────────────────────────────────────────── */
+    for (const stop of stops) {
+      const station = await ctx.db.get(stop.stationId)
+      if (!station) throw new Error("Gare introuvable dans la desserte")
+      await ctx.db.insert("tripStops", {
+        tripId,
+        stationId: stop.stationId,
+        sequence: stop.sequence,
+        kilometerPoint: station.kilometerPoint,
+        arrivalAt:
+          stop.arrivalOffsetMinutes !== undefined
+            ? departureAt + stop.arrivalOffsetMinutes * 60_000
+            : undefined,
+        departureAt:
+          stop.departureOffsetMinutes !== undefined
+            ? departureAt + stop.departureOffsetMinutes * 60_000
+            : undefined,
+      })
+    }
+
+    /* ── L'inventaire ─────────────────────────────────────────────────── */
+    const coaches = await ctx.db
+      .query("coaches")
+      .withIndex("by_train", (q) => q.eq("trainId", schedule.trainId))
+      .collect()
+    if (coaches.length === 0) {
+      throw new Error(
+        `Train ${schedule.trainNumber} sans composition : inventaire ` +
+          `impossible`,
+      )
+    }
+
+    let seatCount = 0
+    const capacityByClass = new Map<string, number>()
+
+    for (const coach of coaches) {
+      const seats = await ctx.db
+        .query("seats")
+        .withIndex("by_coach", (q) => q.eq("coachId", coach._id))
+        .collect()
+
+      for (const seat of seats) {
+        if (!seat.isActive) continue
+        await ctx.db.insert("seatOccupancy", {
+          tripId,
+          seatId: seat._id,
+          coachId: coach._id,
+          serviceClass: coach.serviceClass,
+          soldMask: 0,
+          heldMask: 0,
+          blockedMask: 0,
+        })
+        seatCount += 1
+      }
+
+      // Les places debout consomment de l'inventaire sans siège attribué.
+      const total =
+        seats.filter((s) => s.isActive).length + coach.standingCapacity
+      capacityByClass.set(
+        coach.serviceClass,
+        (capacityByClass.get(coach.serviceClass) ?? 0) + total,
+      )
+    }
+
+    let counterCount = 0
+    for (const [serviceClass, capacity] of capacityByClass) {
+      for (let segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++) {
+        await ctx.db.insert("segmentCounters", {
+          tripId,
+          serviceClass: serviceClass as "DEUXIEME" | "PREMIERE" | "VIP",
+          segmentIndex,
+          capacity,
+          sold: 0,
+          held: 0,
+          reserved: 0,
+          available: capacity,
+        })
+        counterCount += 1
+      }
+    }
+
+    return {
+      created: true,
+      tripId,
+      stops: stops.length,
+      segments: segmentCount,
+      seats: seatCount,
+      counters: counterCount,
+    }
+  },
+})
+
+/**
+ * Recherche de dessertes pour un trajet et une date.
+ *
+ * La disponibilité est lue sur les compteurs dénormalisés, pas sur les
+ * places : c'est le segment le plus chargé du parcours qui commande, et une
+ * page de résultats reste sous la limite d'une seconde par requête.
+ */
 export const search = query({
   args: {
     originStationId: v.id("stations"),
     destinationStationId: v.id("stations"),
-    /** Début de la journée recherchée (ms epoch, fuseau Africa/Libreville). */
-    dayStart: v.number(),
+    serviceDate: v.string(),
     passengers: v.optional(v.number()),
-    serviceClass: v.optional(serviceClass),
   },
   handler: async (ctx, args) => {
-    const dayEnd = args.dayStart + 24 * 3600_000
-    const seatsNeeded = args.passengers ?? 1
+    const passengers = args.passengers ?? 1
+    if (!Number.isInteger(passengers) || passengers < 1) {
+      throw new Error(`Nombre de voyageurs invalide : ${passengers}`)
+    }
 
-    const trips = await ctx.db
+    const candidates = await ctx.db
       .query("trips")
-      .withIndex("by_route_departure", (q) =>
-        q
-          .eq("originStationId", args.originStationId)
-          .eq("destinationStationId", args.destinationStationId)
-          .gte("departureAt", args.dayStart)
-          .lt("departureAt", dayEnd)
-      )
+      .withIndex("by_departure")
       .collect()
 
-    const classes = args.serviceClass
-      ? [args.serviceClass]
-      : (["economique", "confort", "vip"] as const)
+    const results = []
+    for (const trip of candidates) {
+      if (trip.serviceDate !== args.serviceDate) continue
+      if (!trip.isOpenForSale) continue
+      if (trip.status === "annule") continue
 
-    return trips
-      .filter((t) => t.status !== "annule" && t.status !== "termine")
-      .map((trip) => ({
-        ...trip,
-        availability: classes
-          .map((cls) => ({
-            serviceClass: cls,
-            seatsAvailable: trip.seatsAvailable[cls],
-            priceXaf: seatPrice(trip.basePriceXaf, cls),
-          }))
-          .filter((a) => a.seatsAvailable >= seatsNeeded),
-      }))
-      .filter((t) => t.availability.length > 0)
+      const stops = await ctx.db
+        .query("tripStops")
+        .withIndex("by_trip_sequence", (q) => q.eq("tripId", trip._id))
+        .collect()
+      const ordered = stops.sort((a, b) => a.sequence - b.sequence)
+
+      const fromIndex = ordered.findIndex(
+        (s) => s.stationId === args.originStationId,
+      )
+      const toIndex = ordered.findIndex(
+        (s) => s.stationId === args.destinationStationId,
+      )
+      if (fromIndex === -1 || toIndex === -1 || toIndex <= fromIndex) continue
+
+      const counters = await ctx.db
+        .query("segmentCounters")
+        .withIndex("by_trip_class", (q) => q.eq("tripId", trip._id))
+        .collect()
+
+      const byClass: Record<string, number> = {}
+      for (const serviceClass of ["DEUXIEME", "PREMIERE", "VIP"] as const) {
+        const rows = counters
+          .filter((c) => c.serviceClass === serviceClass)
+          .sort((a, b) => a.segmentIndex - b.segmentIndex)
+        if (rows.length === 0) continue
+        byClass[serviceClass] = availableForRange(
+          rows.map((r) => r.available),
+          { fromIndex, toIndex },
+        )
+      }
+
+      const origin = ordered[fromIndex]!
+      const destination = ordered[toIndex]!
+      results.push({
+        trip,
+        fromIndex,
+        toIndex,
+        distanceKm: Math.abs(
+          destination.kilometerPoint - origin.kilometerPoint,
+        ),
+        departureAt: origin.departureAt ?? trip.departureAt,
+        arrivalAt: destination.arrivalAt ?? trip.arrivalAt,
+        availableByClass: byClass,
+        hasAvailability: Object.values(byClass).some((n) => n >= passengers),
+      })
+    }
+
+    return results.sort((a, b) => a.departureAt - b.departureAt)
   },
 })
 
+/** Détail d'une desserte : arrêts et disponibilité par classe. */
 export const get = query({
   args: { tripId: v.id("trips") },
-  handler: async (ctx, { tripId }) => {
-    const trip = await ctx.db.get(tripId)
-    if (!trip) return null
+  handler: async (ctx, args) => {
+    const trip = await ctx.db.get(args.tripId)
+    if (!trip) throw new Error("Desserte introuvable")
 
-    const [origin, destination, stops] = await Promise.all([
-      ctx.db.get(trip.originStationId),
-      ctx.db.get(trip.destinationStationId),
-      ctx.db
-        .query("tripStops")
-        .withIndex("by_trip", (q) => q.eq("tripId", tripId))
-        .collect(),
-    ])
-
-    return { ...trip, origin, destination, stops }
-  },
-})
-
-/** Dessertes du jour — tableau de bord agent. */
-export const listUpcoming = query({
-  args: { from: v.number(), to: v.number() },
-  handler: async (ctx, { from, to }) => {
-    await requireRole(ctx, [
-      "agent_guichet",
-      "controleur",
-      "chef_gare",
-      "superviseur",
-      "admin",
-    ])
-
-    return ctx.db
-      .query("trips")
-      .withIndex("by_departure", (q) =>
-        q.gte("departureAt", from).lte("departureAt", to)
-      )
+    const stops = await ctx.db
+      .query("tripStops")
+      .withIndex("by_trip_sequence", (q) => q.eq("tripId", args.tripId))
       .collect()
+
+    const counters = await ctx.db
+      .query("segmentCounters")
+      .withIndex("by_trip_class", (q) => q.eq("tripId", args.tripId))
+      .collect()
+
+    return {
+      trip,
+      stops: stops.sort((a, b) => a.sequence - b.sequence),
+      counters: counters.sort(
+        (a, b) =>
+          a.serviceClass.localeCompare(b.serviceClass) ||
+          a.segmentIndex - b.segmentIndex,
+      ),
+    }
   },
 })
 
+/** Places libres d'une desserte sur un trajet donné, pour le plan de voiture. */
+export const availableSeats = query({
+  args: {
+    tripId: v.id("trips"),
+    fromIndex: v.number(),
+    toIndex: v.number(),
+    serviceClass: v.optional(
+      v.union(v.literal("DEUXIEME"), v.literal("PREMIERE"), v.literal("VIP")),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const trip = await ctx.db.get(args.tripId)
+    if (!trip) throw new Error("Desserte introuvable")
+
+    const request = segmentMask(
+      { fromIndex: args.fromIndex, toIndex: args.toIndex },
+      trip.segmentCount,
+    )
+
+    const occupancy = await ctx.db
+      .query("seatOccupancy")
+      .withIndex("by_trip_class", (q) => q.eq("tripId", args.tripId))
+      .collect()
+
+    const filtered = args.serviceClass
+      ? occupancy.filter((o) => o.serviceClass === args.serviceClass)
+      : occupancy
+
+    const seats = []
+    for (const row of filtered) {
+      const taken = row.soldMask | row.heldMask | row.blockedMask
+      const seat = await ctx.db.get(row.seatId)
+      if (!seat) continue
+      seats.push({
+        seatId: row.seatId,
+        coachId: row.coachId,
+        label: seat.label,
+        row: seat.row,
+        column: seat.column,
+        serviceClass: row.serviceClass,
+        isFree: isRangeFree(taken, request),
+      })
+    }
+    return seats.sort((a, b) => a.row - b.row || a.column - b.column)
+  },
+})
+
+/** Déclare un retard, une annulation ou la fin d'une desserte. */
 export const setStatus = mutation({
   args: {
     tripId: v.id("trips"),
     status: tripStatus,
     delayMinutes: v.optional(v.number()),
   },
-  handler: async (ctx, { tripId, status, delayMinutes }) => {
-    const actor = await requireRole(ctx, ["chef_gare", "superviseur", "admin"])
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "livrets_horaires", "modifier")
+    const trip = await ctx.db.get(args.tripId)
+    if (!trip) throw new Error("Desserte introuvable")
 
-    await ctx.db.patch(tripId, { status, delayMinutes })
+    const delayMinutes = args.delayMinutes ?? trip.delayMinutes
+    if (delayMinutes < 0) {
+      throw new Error(`Retard invalide : ${delayMinutes} minutes`)
+    }
+
+    await ctx.db.patch(args.tripId, {
+      status: args.status,
+      delayMinutes,
+      // Une desserte annulée ou terminée sort de la vente.
+      isOpenForSale:
+        args.status === "annule" || args.status === "termine"
+          ? false
+          : trip.isOpenForSale,
+    })
+
     await audit(ctx, {
       actorId: actor._id,
-      action: "trip.setStatus",
+      action: "desserte.statut",
       entityTable: "trips",
-      entityId: tripId,
-      metadata: { status, delayMinutes },
+      entityId: args.tripId,
+      before: { status: trip.status, delayMinutes: trip.delayMinutes },
+      after: { status: args.status, delayMinutes },
     })
+  },
+})
+
+/** Dessertes d'une journée, pour le tableau de bord et le contrôleur. */
+export const listByDate = query({
+  args: { serviceDate: v.string() },
+  handler: async (ctx, args) => {
+    const trips = await ctx.db
+      .query("trips")
+      .withIndex("by_departure")
+      .collect()
+    return trips
+      .filter((t) => t.serviceDate === args.serviceDate)
+      .sort((a, b) => a.departureAt - b.departureAt)
+  },
+})
+
+/**
+ * Ouvre à la vente les dessertes entrées dans la fenêtre glissante.
+ * Appelée par un cron quotidien : la fenêtre avance d'un jour chaque jour.
+ */
+export const rollSaleWindow = internalMutation({
+  args: { windowDays: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const today = toServiceDate(Date.now())
+    const trips = await ctx.db
+      .query("trips")
+      .withIndex("by_status", (q) => q.eq("status", "planifie"))
+      .collect()
+
+    let opened = 0
+    for (const trip of trips) {
+      if (trip.isOpenForSale) continue
+      if (isWithinSaleWindow(trip.serviceDate, today, args.windowDays)) {
+        await ctx.db.patch(trip._id, { isOpenForSale: true })
+        opened += 1
+      }
+    }
+    return { opened }
   },
 })

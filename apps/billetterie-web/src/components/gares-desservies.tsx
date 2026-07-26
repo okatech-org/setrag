@@ -7,7 +7,7 @@ import { Badge } from "@workspace/ui/components/badge"
 
 /** Gares actives du réseau, servies en temps réel par Convex. */
 export function GaresDesservies() {
-  const gares = useQuery(api.functions.stations.list)
+  const gares = useQuery(api.functions.referential.listStations, {})
 
   if (gares === undefined) {
     return (
