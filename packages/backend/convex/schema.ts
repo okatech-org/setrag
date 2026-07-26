@@ -1,48 +1,116 @@
 import { defineSchema, defineTable } from "convex/server"
 import { v } from "convex/values"
 
-// ============================================================================
-// Énumérations partagées — miroir de packages/shared/src/constants.ts
-// ============================================================================
+/**
+ * Schéma du système billettique unifié SETRAG.
+ *
+ * Couvre les deux cahiers des charges : le système central de vente
+ * (remplaçant de MOBIPASS — cinq produits voyageurs, points de vente, caisse,
+ * comptabilité, yield management) et le front-office qu'il alimente (vente en
+ * ligne, application contrôleur).
+ *
+ * Référence : docs/plans/backend.html §6 « Modèle de données ».
+ */
 
-export const serviceClass = v.union(
-  v.literal("economique"),
-  v.literal("confort"),
-  v.literal("vip")
+/* ═══════════════════════ Énumérations du domaine ════════════════════════ */
+
+/** Types de train commercialisés (CDC §7.3). */
+export const trainType = v.union(
+  v.literal("EXPRESS"),
+  v.literal("OMNIBUS"),
+  v.literal("AUTORAIL"),
+  v.literal("SPECIAL"),
 )
 
-export const bookingStatus = v.union(
+/** Classes de service (CDC §7.1.1). */
+export const serviceClass = v.union(
+  v.literal("DEUXIEME"),
+  v.literal("PREMIERE"),
+  v.literal("VIP"),
+)
+
+/**
+ * Rôles applicatifs. Les rôles internes sont dérivés des groupes de
+ * l'annuaire ERAMET ; `voyageur` est le seul rôle client.
+ */
+export const role = v.union(
+  v.literal("voyageur"),
+  v.literal("vendeur_guichet"),
+  v.literal("vendeur_agence"),
+  v.literal("taxateur"),
+  v.literal("controleur_train"),
+  v.literal("controleur_recettes"),
+  v.literal("chef_gare"),
+  v.literal("comptable"),
+  v.literal("responsable_kpi"),
+  v.literal("admin_fonctionnel"),
+  v.literal("admin_it"),
+)
+
+/** Canal de vente — détermine le circuit d'encaissement et les contrôles. */
+export const saleChannel = v.union(
+  v.literal("guichet"),
+  v.literal("ligne"),
+  v.literal("agence"),
+  v.literal("bord"),
+  v.literal("manuel"),
+)
+
+/** Produits voyageurs commercialisés (CDC §7.1). */
+export const productType = v.union(
+  v.literal("billet"),
+  v.literal("bagage"),
+  v.literal("colis"),
+  v.literal("taa"),
+  v.literal("funeraire"),
+)
+
+/**
+ * Nature de l'écriture commerciale. Les annulations et remboursements sont
+ * des écritures liées, jamais des suppressions — le CDC cite explicitement
+ * leur indétectabilité actuelle comme faille de fraude.
+ */
+export const saleKind = v.union(
+  v.literal("vente"),
+  v.literal("annulation"),
+  v.literal("remboursement"),
+)
+
+export const saleStatus = v.union(
   v.literal("brouillon"),
   v.literal("en_attente_paiement"),
   v.literal("confirmee"),
   v.literal("annulee"),
+  v.literal("remboursee"),
   v.literal("expiree"),
-  v.literal("remboursee")
-)
-
-export const ticketStatus = v.union(
-  v.literal("valide"),
-  v.literal("utilise"),
-  v.literal("annule"),
-  v.literal("rembourse"),
-  v.literal("expire")
 )
 
 export const paymentMethod = v.union(
-  v.literal("mobile_money_airtel"),
-  v.literal("mobile_money_moov"),
-  v.literal("carte_bancaire"),
-  v.literal("especes_guichet"),
-  v.literal("virement")
+  v.literal("especes"),
+  v.literal("airtel_money"),
+  v.literal("moov_money"),
+  v.literal("clickpay"),
+  v.literal("visa"),
+  v.literal("mastercard"),
+  v.literal("en_compte"),
 )
 
-export const role = v.union(
-  v.literal("voyageur"),
-  v.literal("agent_guichet"),
-  v.literal("controleur"),
-  v.literal("chef_gare"),
-  v.literal("superviseur"),
-  v.literal("admin")
+export const paymentStatus = v.union(
+  v.literal("initie"),
+  v.literal("en_attente"),
+  v.literal("confirme"),
+  v.literal("echoue"),
+  v.literal("expire"),
+  v.literal("rembourse"),
+)
+
+/** Cycle de validation partagé par les livrets horaires et les tarifs. */
+export const approvalStatus = v.union(
+  v.literal("brouillon"),
+  v.literal("a_valider"),
+  v.literal("actif"),
+  v.literal("rejete"),
+  v.literal("expire"),
 )
 
 export const tripStatus = v.union(
@@ -50,42 +118,91 @@ export const tripStatus = v.union(
   v.literal("a_lheure"),
   v.literal("retarde"),
   v.literal("annule"),
-  v.literal("termine")
+  v.literal("termine"),
 )
 
-const identityDocument = v.object({
-  type: v.union(
-    v.literal("cni"),
-    v.literal("passeport"),
-    v.literal("carte_sejour")
-  ),
-  number: v.string(),
+export const ticketStatus = v.union(
+  /** Réservé en ligne, en attente de règlement. */
+  v.literal("en_attente"),
+  v.literal("valide"),
+  v.literal("utilise"),
+  v.literal("annule"),
+  v.literal("rembourse"),
+  v.literal("expire"),
+)
+
+export const pointOfSaleType = v.union(
+  v.literal("gare"),
+  v.literal("agence_accreditee"),
+  v.literal("agence_premium"),
+)
+
+/** Résultat d'un contrôle à bord — motifs exigés par l'écran CM-05. */
+export const scanResult = v.union(
+  v.literal("valide"),
+  v.literal("signature_invalide"),
+  v.literal("mauvaise_desserte"),
+  v.literal("hors_segment"),
+  v.literal("expire"),
+  v.literal("deja_controle"),
+  v.literal("annule"),
+)
+
+/* ════════════════════════ Objets composés réutilisés ════════════════════ */
+
+/** Ventilation fiscale portée par toute vente (CDC §7.1.1, §7.8). */
+const amounts = v.object({
+  ht: v.number(),
+  vat: v.number(),
+  css: v.number(),
+  ttc: v.number(),
+  /** Montant effectivement perçu — peut différer du TTC (paiement partiel). */
+  received: v.number(),
 })
 
+/** Identité d'un voyageur, champs minimaux imposés par le CDC §7.1.1. */
 const passenger = v.object({
-  firstName: v.string(),
   lastName: v.string(),
-  birthDate: v.optional(v.string()),
-  document: v.optional(identityDocument),
+  firstName: v.string(),
+  gender: v.union(v.literal("M"), v.literal("F")),
   phone: v.optional(v.string()),
+  /** Contact téléphonique en cas d'urgence, exigé par le CDC. */
+  emergencyPhone: v.optional(v.string()),
+  birthDate: v.optional(v.string()),
+  nationality: v.optional(v.string()),
+  documentNumber: v.optional(v.string()),
 })
 
-// ============================================================================
-// Schéma
-// ============================================================================
+/** Trace du calcul tarifaire, conservée pour l'audit et les remboursements. */
+const fareTrace = v.object({
+  distanceKm: v.number(),
+  chargeableKm: v.number(),
+  ratePerKm: v.number(),
+  fareCode: v.optional(v.string()),
+  discountCode: v.optional(v.string()),
+  discountPct: v.number(),
+  /** Règles de yield appliquées, dans l'ordre de priorité. */
+  appliedRules: v.array(v.string()),
+  roundingStep: v.number(),
+})
 
 export default defineSchema({
-  /** Profil applicatif, adossé à l'identité Better Auth (`authId`). */
+  /* ══════════════════ Identités & habilitations ═════════════════════════ */
+
   users: defineTable({
+    /** Identifiant fourni par Better Auth. */
     authId: v.string(),
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
-    role: role,
-    /** Gare de rattachement — agents uniquement. */
-    stationId: v.optional(v.id("stations")),
+    role,
+    /** Matricule interne, pour le personnel. */
     matricule: v.optional(v.string()),
+    /** Point de vente de rattachement, pour le personnel de vente. */
+    pointOfSaleId: v.optional(v.id("pointsOfSale")),
+    /** Source de l'identité : annuaire ERAMET ou compte local de repli. */
+    identitySource: v.union(v.literal("annuaire"), v.literal("local")),
     isActive: v.boolean(),
     lastSeenAt: v.optional(v.number()),
   })
@@ -93,185 +210,898 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_phone", ["phone"])
     .index("by_role", ["role"])
-    .index("by_station", ["stationId"]),
+    .index("by_pointOfSale", ["pointOfSaleId"]),
 
-  /** Gares du réseau Transgabonais. */
+  /* ══════════════════ Réseau & matériel roulant ═════════════════════════ */
+
   stations: defineTable({
-    code: v.string(), // ex. "OWE", "NDJ", "FCV"
+    code: v.string(),
     name: v.string(),
     province: v.string(),
-    /** Position sur la ligne, en kilomètres depuis Owendo (PK). */
+    /** Point kilométrique depuis Owendo — base du calcul de distance. */
     kilometerPoint: v.number(),
     latitude: v.optional(v.number()),
     longitude: v.optional(v.number()),
+    /** Gare équipée d'un point de vente (19 sur 22 à l'ouverture). */
+    isEquipped: v.boolean(),
     isActive: v.boolean(),
   })
     .index("by_code", ["code"])
     .index("by_kilometerPoint", ["kilometerPoint"]),
 
-  /** Matériel roulant et plan de composition. */
   trains: defineTable({
     number: v.string(),
-    name: v.optional(v.string()),
-    capacityByClass: v.object({
-      economique: v.number(),
-      confort: v.number(),
-      vip: v.number(),
-    }),
+    name: v.string(),
+    description: v.optional(v.string()),
+    type: trainType,
     isActive: v.boolean(),
   }).index("by_number", ["number"]),
 
-  /** Desserte commerciale : un train circulant à une date donnée. */
-  trips: defineTable({
+  coaches: defineTable({
+    trainId: v.id("trains"),
+    /** Repère de la voiture dans la composition, ex. « V1 ». */
+    label: v.string(),
+    serviceClass,
+    serialNumber: v.optional(v.string()),
+    /** Plan de sièges importé : rangées × colonnes. */
+    rowCount: v.number(),
+    columnCount: v.number(),
+    seatCount: v.number(),
+    /** Contingent de places debout, sans numéro de siège. */
+    standingCapacity: v.number(),
+    position: v.number(),
+  })
+    .index("by_train", ["trainId"])
+    .index("by_train_class", ["trainId", "serviceClass"]),
+
+  seats: defineTable({
+    coachId: v.id("coaches"),
+    trainId: v.id("trains"),
+    /** Numéro affiché au voyageur, ex. « 12A ». */
+    label: v.string(),
+    row: v.number(),
+    column: v.number(),
+    isActive: v.boolean(),
+  })
+    .index("by_coach", ["coachId"])
+    .index("by_train", ["trainId"]),
+
+  /* ══════════════════ Offre & horaires ══════════════════════════════════ */
+
+  timetableBooklets: defineTable({
+    label: v.string(),
+    description: v.optional(v.string()),
+    validFrom: v.number(),
+    validUntil: v.number(),
+    status: approvalStatus,
+    createdBy: v.id("users"),
+    approvedBy: v.optional(v.id("users")),
+    approvedAt: v.optional(v.number()),
+    rejectionReason: v.optional(v.string()),
+  })
+    .index("by_status", ["status"])
+    .index("by_validity", ["validFrom"]),
+
+  /**
+   * Horaire d'un train dans un livret : l'« itinéraire détaillé » du CDC
+   * §7.9.1. C'est le gabarit à partir duquel les dessertes sont engendrées
+   * pour chaque jour de circulation.
+   */
+  bookletSchedules: defineTable({
+    bookletId: v.id("timetableBooklets"),
     trainId: v.id("trains"),
     trainNumber: v.string(),
-    originStationId: v.id("stations"),
-    destinationStationId: v.id("stations"),
+    trainType,
+    /** Heure de départ locale, format HH:MM (fuseau Africa/Libreville). */
+    departureTime: v.string(),
+    /** Jours de circulation, 0 = dimanche. Tableau vide = tous les jours. */
+    daysOfWeek: v.array(v.number()),
+    /** Arrêts desservis, avec décalages en minutes depuis le départ. */
+    stops: v.array(
+      v.object({
+        stationId: v.id("stations"),
+        sequence: v.number(),
+        arrivalOffsetMinutes: v.optional(v.number()),
+        departureOffsetMinutes: v.optional(v.number()),
+      }),
+    ),
+  })
+    .index("by_booklet", ["bookletId"])
+    .index("by_booklet_train", ["bookletId", "trainId"]),
+
+  trips: defineTable({
+    bookletId: v.id("timetableBooklets"),
+    scheduleId: v.optional(v.id("bookletSchedules")),
+    trainId: v.id("trains"),
+    trainNumber: v.string(),
+    trainType,
+    /** Jour de circulation, au format AAAA-MM-JJ (fuseau Africa/Libreville). */
+    serviceDate: v.string(),
     departureAt: v.number(),
     arrivalAt: v.number(),
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
     status: tripStatus,
-    delayMinutes: v.optional(v.number()),
-    /** Prix de référence classe économique, en XAF. */
-    basePriceXaf: v.number(),
-    seatsAvailable: v.object({
-      economique: v.number(),
-      confort: v.number(),
-      vip: v.number(),
-    }),
+    delayMinutes: v.number(),
+    /** Nombre de segments — borne les masques d'occupation. */
+    segmentCount: v.number(),
+    isOpenForSale: v.boolean(),
   })
     .index("by_departure", ["departureAt"])
-    .index("by_route_departure", [
+    .index("by_route_date", [
       "originStationId",
       "destinationStationId",
-      "departureAt",
+      "serviceDate",
     ])
     .index("by_status", ["status"])
-    .index("by_train", ["trainId", "departureAt"]),
+    .index("by_train_date", ["trainId", "serviceDate"])
+    .index("by_booklet", ["bookletId"]),
 
-  /** Arrêts intermédiaires d'une desserte. */
   tripStops: defineTable({
     tripId: v.id("trips"),
     stationId: v.id("stations"),
+    /** Rang de l'arrêt, à partir de 0 — indice utilisé par les masques. */
     sequence: v.number(),
+    kilometerPoint: v.number(),
     arrivalAt: v.optional(v.number()),
     departureAt: v.optional(v.number()),
   })
-    .index("by_trip", ["tripId", "sequence"])
+    .index("by_trip", ["tripId"])
+    .index("by_trip_sequence", ["tripId", "sequence"])
+    .index("by_trip_station", ["tripId", "stationId"])
     .index("by_station", ["stationId"]),
 
-  /** Réservation : panier puis dossier confirmé. */
-  bookings: defineTable({
-    reference: v.string(),
-    userId: v.optional(v.id("users")),
-    /** Agent ayant émis la réservation au guichet, le cas échéant. */
-    issuedByAgentId: v.optional(v.id("users")),
+  /* ══════════════════ Tarification ══════════════════════════════════════ */
+
+  fareSchedules: defineTable({
+    label: v.string(),
+    status: approvalStatus,
+    validFrom: v.number(),
+    validUntil: v.number(),
+    /** Assiette de l'arrondi réglementaire. */
+    roundingBasis: v.union(v.literal("HT"), v.literal("TTC")),
+    vatPct: v.number(),
+    cssPct: v.number(),
+    createdBy: v.id("users"),
+    approvedBy: v.optional(v.id("users")),
+    approvedAt: v.optional(v.number()),
+    rejectionReason: v.optional(v.string()),
+  })
+    .index("by_status", ["status"])
+    .index("by_validity", ["validFrom"]),
+
+  fareBases: defineTable({
+    scheduleId: v.id("fareSchedules"),
+    trainType,
+    serviceClass,
+    /** Taux au kilomètre de 0 à 99 km. */
+    shortDistanceRate: v.number(),
+    /** Taux au kilomètre à partir de 100 km. */
+    longDistanceRate: v.number(),
+  })
+    .index("by_schedule", ["scheduleId"])
+    .index("by_schedule_train_class", [
+      "scheduleId",
+      "trainType",
+      "serviceClass",
+    ]),
+
+  discounts: defineTable({
+    scheduleId: v.id("fareSchedules"),
+    code: v.string(),
+    label: v.string(),
+    ratePct: v.number(),
+    /** Effectif minimal, pour les tarifs de groupe. */
+    minPassengers: v.optional(v.number()),
+    maxPassengers: v.optional(v.number()),
+    minAge: v.optional(v.number()),
+    maxAge: v.optional(v.number()),
+    requiresProof: v.boolean(),
+    isActive: v.boolean(),
+  })
+    .index("by_schedule", ["scheduleId"])
+    .index("by_schedule_code", ["scheduleId", "code"]),
+
+  /** Barèmes des produits non kilométriques (bagages, colis, tonnage). */
+  ancillaryFares: defineTable({
+    scheduleId: v.id("fareSchedules"),
+    product: productType,
+    /** Zone kilométrique — sept zones pour les colis (annexe 2 §9.8.4). */
+    zone: v.optional(v.number()),
+    /** Palier de poids par tranche de 10 kg, pour les colis. */
+    weightTier: v.optional(v.number()),
+    /**
+     * Montant hors taxes. Sa nature dépend du produit : prix de la tranche
+     * pour un colis, prix du kilogramme excédentaire pour un bagage, prix de
+     * la tonne pour un transport au tonnage.
+     */
+    amountHt: v.number(),
+    /** Franchise de poids incluse, en kilogrammes (CDC §7.9.2). */
+    franchiseKg: v.optional(v.number()),
+    label: v.string(),
+    /**
+     * Barème provisoire, non fourni par SETRAG.
+     * Marque les valeurs de démonstration : elles ne doivent jamais servir à
+     * facturer un client réel.
+     */
+    isProvisional: v.optional(v.boolean()),
+  })
+    .index("by_schedule_product", ["scheduleId", "product"])
+    .index("by_schedule_product_zone", ["scheduleId", "product", "zone"]),
+
+  /* ══════════════════ Yield management ══════════════════════════════════ */
+
+  fareClassQuotas: defineTable({
     tripId: v.id("trips"),
-    serviceClass: serviceClass,
-    status: bookingStatus,
-    passengerCount: v.number(),
-    totalXaf: v.number(),
-    contactEmail: v.optional(v.string()),
-    contactPhone: v.string(),
-    /** Expiration du blocage des places avant paiement. */
-    holdExpiresAt: v.optional(v.number()),
+    serviceClass,
+    /** Libellé du contingent : bas prix, standard, flexible. */
+    label: v.string(),
+    priority: v.number(),
+    seatCount: v.number(),
+    soldCount: v.number(),
+    /** Multiplicateur appliqué au prix de base. */
+    coefficient: v.number(),
+    isActive: v.boolean(),
+  })
+    .index("by_trip_class", ["tripId", "serviceClass"])
+    .index("by_trip_class_priority", ["tripId", "serviceClass", "priority"]),
+
+  pricingRules: defineTable({
+    scope: v.union(
+      v.literal("reseau"),
+      v.literal("ligne"),
+      v.literal("desserte"),
+    ),
+    tripId: v.optional(v.id("trips")),
+    serviceClass: v.optional(serviceClass),
+    type: v.union(
+      v.literal("remplissage"),
+      v.literal("anticipation"),
+      v.literal("periode"),
+      v.literal("canal"),
+      v.literal("promotion"),
+    ),
+    /** Seuil de déclenchement : taux de remplissage, jours d'anticipation… */
+    threshold: v.optional(v.number()),
+    modifierPct: v.number(),
+    priority: v.number(),
+    validFrom: v.optional(v.number()),
+    validUntil: v.optional(v.number()),
+    /** Bornes de sécurité appliquées après cumul des règles. */
+    floorXaf: v.optional(v.number()),
+    capXaf: v.optional(v.number()),
+    code: v.optional(v.string()),
+    isActive: v.boolean(),
+    createdBy: v.id("users"),
+  })
+    .index("by_active_priority", ["isActive", "priority"])
+    .index("by_trip", ["tripId"]),
+
+  /* ══════════════════ Inventaire par segment ════════════════════════════ */
+
+  /**
+   * Occupation d'une place sur une desserte, par masque de bits.
+   * Le bit i vaut 1 si la place est occupée sur le segment i.
+   */
+  seatOccupancy: defineTable({
+    tripId: v.id("trips"),
+    seatId: v.id("seats"),
+    coachId: v.id("coaches"),
+    serviceClass,
+    /** Masque des segments vendus. */
+    soldMask: v.number(),
+    /** Masque des segments réservés temporairement (hold en ligne). */
+    heldMask: v.number(),
+    /** Masque des segments bloqués par l'exploitation. */
+    blockedMask: v.number(),
+  })
+    .index("by_trip_seat", ["tripId", "seatId"])
+    .index("by_trip_class", ["tripId", "serviceClass"])
+    .index("by_trip_coach", ["tripId", "coachId"]),
+
+  /**
+   * Compteurs de disponibilité dénormalisés, un document par
+   * (desserte, classe, segment).
+   *
+   * Ce découpage est délibéré : il répartit les écritures de vente sur une
+   * soixantaine de documents par desserte au lieu d'un seul, ce qui évite le
+   * point chaud décrit dans le plan (§7) et limite la contention aux ventes
+   * qui se chevauchent réellement.
+   */
+  segmentCounters: defineTable({
+    tripId: v.id("trips"),
+    serviceClass,
+    segmentIndex: v.number(),
+    capacity: v.number(),
+    sold: v.number(),
+    held: v.number(),
+    /** Places retirées de la vente par blocage ou quota d'agence. */
+    reserved: v.number(),
+    available: v.number(),
+  })
+    .index("by_trip_class_segment", ["tripId", "serviceClass", "segmentIndex"])
+    .index("by_trip_class", ["tripId", "serviceClass"]),
+
+  seatBlocks: defineTable({
+    tripId: v.id("trips"),
+    seatId: v.id("seats"),
+    mask: v.number(),
+    reason: v.union(
+      v.literal("maintenance"),
+      v.literal("exploitation"),
+      v.literal("protocole"),
+      v.literal("autre"),
+    ),
+    comment: v.optional(v.string()),
+    createdBy: v.id("users"),
+    releasedBy: v.optional(v.id("users")),
+    releasedAt: v.optional(v.number()),
+    isActive: v.boolean(),
+  })
+    .index("by_trip", ["tripId"])
+    .index("by_trip_active", ["tripId", "isActive"]),
+
+  agencyQuotas: defineTable({
+    pointOfSaleId: v.id("pointsOfSale"),
+    tripId: v.id("trips"),
+    serviceClass,
+    allocated: v.number(),
+    sold: v.number(),
+    isActive: v.boolean(),
+    createdBy: v.id("users"),
+    cancelledBy: v.optional(v.id("users")),
     cancelledAt: v.optional(v.number()),
   })
-    .index("by_reference", ["reference"])
-    .index("by_user", ["userId"])
-    .index("by_trip", ["tripId"])
-    .index("by_status", ["status"])
-    .index("by_hold_expiry", ["status", "holdExpiresAt"]),
+    .index("by_pos_trip", ["pointOfSaleId", "tripId"])
+    .index("by_trip", ["tripId"]),
 
-  /** Billet nominatif rattaché à une réservation. */
+  /* ══════════════════ Points de vente & clients ═════════════════════════ */
+
+  pointsOfSale: defineTable({
+    code: v.string(),
+    name: v.string(),
+    type: pointOfSaleType,
+    stationId: v.optional(v.id("stations")),
+    /** Nombre de guichets par produit, pour le dimensionnement. */
+    counters: v.object({
+      passengers: v.number(),
+      baggage: v.number(),
+      parcels: v.number(),
+    }),
+    /** Taux de royalties pour les agences accréditées, en pourcentage. */
+    royaltyPct: v.optional(v.number()),
+    isActive: v.boolean(),
+  })
+    .index("by_code", ["code"])
+    .index("by_station", ["stationId"])
+    .index("by_type", ["type"]),
+
+  corporateAccounts: defineTable({
+    code: v.string(),
+    name: v.string(),
+    contactEmail: v.optional(v.string()),
+    contactPhone: v.optional(v.string()),
+    creditLimitXaf: v.number(),
+    outstandingXaf: v.number(),
+    isActive: v.boolean(),
+  }).index("by_code", ["code"]),
+
+  /**
+   * Compteurs de numérotation.
+   *
+   * Le CDC §7.1.1 exige une identification unique et une numérotation
+   * continue. La clé inclut le point de vente et la journée, ce qui donne
+   * une séquence par guichet et par jour : la continuité reste vérifiable
+   * pour le contrôle des recettes, et la contention reste faible puisque
+   * deux guichets n'écrivent jamais le même compteur.
+   */
+  sequences: defineTable({
+    key: v.string(),
+    value: v.number(),
+  }).index("by_key", ["key"]),
+
+  /* ══════════════════ Ventes — socle commun ═════════════════════════════ */
+
+  sales: defineTable({
+    /** Numéro unique et continu, exigé par le CDC §7.1.1. */
+    number: v.string(),
+    kind: saleKind,
+    product: productType,
+    channel: saleChannel,
+    status: saleStatus,
+    pointOfSaleId: v.optional(v.id("pointsOfSale")),
+    sellerId: v.optional(v.id("users")),
+    /** Appareil émetteur — champ obligatoire sur chaque opération. */
+    deviceId: v.optional(v.string()),
+    customerId: v.optional(v.id("users")),
+    corporateAccountId: v.optional(v.id("corporateAccounts")),
+    contactPhone: v.optional(v.string()),
+    contactEmail: v.optional(v.string()),
+    amounts,
+    accountingDayId: v.optional(v.id("accountingDays")),
+    cashSessionId: v.optional(v.id("cashSessions")),
+    /** Vente d'origine, pour une annulation ou un remboursement. */
+    originSaleId: v.optional(v.id("sales")),
+    refundReason: v.optional(v.string()),
+    penaltyPct: v.optional(v.number()),
+    /** Prix figé pendant le hold de la vente en ligne. */
+    priceLockedUntil: v.optional(v.number()),
+    soldAt: v.number(),
+    cancelledAt: v.optional(v.number()),
+  })
+    .index("by_number", ["number"])
+    .index("by_status", ["status"])
+    .index("by_customer", ["customerId"])
+    .index("by_pos_day", ["pointOfSaleId", "accountingDayId"])
+    .index("by_accounting_day", ["accountingDayId"])
+    .index("by_cash_session", ["cashSessionId"])
+    .index("by_origin", ["originSaleId"])
+    .index("by_status_hold", ["status", "priceLockedUntil"]),
+
   tickets: defineTable({
-    bookingId: v.id("bookings"),
+    saleId: v.id("sales"),
+    number: v.string(),
     tripId: v.id("trips"),
-    reference: v.string(),
-    passenger: passenger,
-    serviceClass: serviceClass,
-    seatNumber: v.optional(v.string()),
-    coachNumber: v.optional(v.string()),
+    passenger,
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
+    /** Indices d'arrêts, base des masques d'occupation. */
+    fromStopIndex: v.number(),
+    toStopIndex: v.number(),
+    serviceClass,
+    seatId: v.optional(v.id("seats")),
+    seatLabel: v.optional(v.string()),
+    coachLabel: v.optional(v.string()),
+    /** Billet debout, sans siège attribué. */
+    isStanding: v.boolean(),
+    fare: fareTrace,
+    unitPriceTtc: v.number(),
     status: ticketStatus,
-    /** Charge utile signée encodée dans le QR code. */
-    qrPayload: v.string(),
+    /** Charge utile signée du code-barres Aztec. */
+    barcodePayload: v.optional(v.string()),
+    barcodeSignature: v.optional(v.string()),
+    keyVersion: v.optional(v.number()),
+    pdfStorageId: v.optional(v.id("_storage")),
+    /** Nombre de réimpressions — chacune est un duplicata tracé. */
+    duplicateCount: v.number(),
     usedAt: v.optional(v.number()),
   })
-    .index("by_booking", ["bookingId"])
-    .index("by_reference", ["reference"])
-    .index("by_qrPayload", ["qrPayload"])
-    .index("by_trip_status", ["tripId", "status"]),
+    .index("by_sale", ["saleId"])
+    .index("by_number", ["number"])
+    .index("by_trip", ["tripId"])
+    .index("by_trip_status", ["tripId", "status"])
+    .index("by_barcode", ["barcodePayload"]),
 
-  /** Transaction de paiement associée à une réservation. */
-  payments: defineTable({
-    bookingId: v.id("bookings"),
-    method: paymentMethod,
-    amountXaf: v.number(),
-    status: v.union(
-      v.literal("initie"),
-      v.literal("en_cours"),
-      v.literal("reussi"),
-      v.literal("echoue"),
-      v.literal("rembourse")
-    ),
-    providerReference: v.optional(v.string()),
-    payerPhone: v.optional(v.string()),
-    failureReason: v.optional(v.string()),
-    settledAt: v.optional(v.number()),
-  })
-    .index("by_booking", ["bookingId"])
-    .index("by_provider_reference", ["providerReference"])
-    .index("by_status", ["status"]),
+  /* ══════════════════ Ventes — produits fret voyageur ═══════════════════ */
 
-  /** Journal des contrôles de billets à bord ou en gare. */
-  ticketScans: defineTable({
+  baggages: defineTable({
+    saleId: v.id("sales"),
+    /** Numéro d'étiquette unique. */
+    tagNumber: v.string(),
     ticketId: v.id("tickets"),
     tripId: v.id("trips"),
-    agentId: v.id("users"),
-    stationId: v.optional(v.id("stations")),
-    result: v.union(
-      v.literal("valide"),
-      v.literal("deja_utilise"),
-      v.literal("invalide"),
-      v.literal("expire"),
-      v.literal("mauvaise_desserte")
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
+    distanceKm: v.number(),
+    weightKg: v.number(),
+    senderName: v.string(),
+    recipientName: v.optional(v.string()),
+    fareCode: v.optional(v.string()),
+    amounts,
+  })
+    .index("by_sale", ["saleId"])
+    .index("by_tag", ["tagNumber"])
+    .index("by_ticket", ["ticketId"]),
+
+  parcels: defineTable({
+    saleId: v.id("sales"),
+    /** Numéro d'expédition unique. */
+    shipmentNumber: v.string(),
+    tripId: v.optional(v.id("trips")),
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
+    distanceKm: v.number(),
+    zone: v.number(),
+    senderName: v.string(),
+    senderPhone: v.string(),
+    recipientName: v.string(),
+    recipientPhone: v.string(),
+    totalWeightKg: v.number(),
+    status: v.union(
+      v.literal("enregistre"),
+      v.literal("en_transport"),
+      v.literal("arrive"),
+      v.literal("retire"),
     ),
+    amounts,
+  })
+    .index("by_sale", ["saleId"])
+    .index("by_shipment", ["shipmentNumber"])
+    .index("by_status", ["status"]),
+
+  parcelItems: defineTable({
+    parcelId: v.id("parcels"),
+    /** Numéro de vignette apposé sur l'article. */
+    stickerNumber: v.string(),
+    description: v.string(),
+    weightKg: v.number(),
+    weightTier: v.number(),
+    amountTtc: v.number(),
+  })
+    .index("by_parcel", ["parcelId"])
+    .index("by_sticker", ["stickerNumber"]),
+
+  vehicleTransports: defineTable({
+    saleId: v.id("sales"),
+    shipmentNumber: v.string(),
+    ticketId: v.id("tickets"),
+    tripId: v.id("trips"),
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
+    distanceKm: v.number(),
+    tonnage: v.number(),
+    senderName: v.string(),
+    fareCode: v.optional(v.string()),
+    validFrom: v.number(),
+    validUntil: v.number(),
+    amounts,
+  })
+    .index("by_sale", ["saleId"])
+    .index("by_shipment", ["shipmentNumber"]),
+
+  funeralTransports: defineTable({
+    saleId: v.id("sales"),
+    shipmentNumber: v.string(),
+    tripId: v.id("trips"),
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
+    distanceKm: v.number(),
+    tonnage: v.number(),
+    senderName: v.string(),
+    fareCode: v.optional(v.string()),
+    amounts,
+  })
+    .index("by_sale", ["saleId"])
+    .index("by_shipment", ["shipmentNumber"]),
+
+  /* ══════════════════ Abonnements ═══════════════════════════════════════ */
+
+  subscriptions: defineTable({
+    saleId: v.optional(v.id("sales")),
+    customerId: v.id("users"),
+    cardNumber: v.string(),
+    kind: v.union(
+      v.literal("AN"),
+      v.literal("SIX_MOIS"),
+      v.literal("TROIS_MOIS"),
+      v.literal("DEMI_TARIF"),
+    ),
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
+    distanceKm: v.number(),
+    serviceClass,
+    validFrom: v.number(),
+    validUntil: v.number(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("expiree"),
+      v.literal("suspendue"),
+    ),
+    barcodePayload: v.optional(v.string()),
+    barcodeSignature: v.optional(v.string()),
+    keyVersion: v.optional(v.number()),
+  })
+    .index("by_customer", ["customerId"])
+    .index("by_card", ["cardNumber"])
+    .index("by_barcode", ["barcodePayload"]),
+
+  /* ══════════════════ Paiements ═════════════════════════════════════════ */
+
+  payments: defineTable({
+    saleId: v.optional(v.id("sales")),
+    /** Encaissement d'une amende de procès-verbal. */
+    penaltyId: v.optional(v.id("procesVerbaux")),
+    method: paymentMethod,
+    provider: v.optional(v.string()),
+    status: paymentStatus,
+    amountXaf: v.number(),
+    payerPhone: v.optional(v.string()),
+    providerReference: v.optional(v.string()),
+    checkoutUrl: v.optional(v.string()),
+    failureReason: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    lastPolledAt: v.optional(v.number()),
+    settledAt: v.optional(v.number()),
+  })
+    .index("by_sale", ["saleId"])
+    .index("by_penalty", ["penaltyId"])
+    .index("by_provider_reference", ["providerReference"])
+    .index("by_status", ["status"])
+    .index("by_status_expiry", ["status", "expiresAt"]),
+
+  /**
+   * Journal brut des notifications de paiement.
+   * Garantit l'idempotence : un webhook rejoué, ou doublé par le polling de
+   * réconciliation, ne règle jamais deux fois la même vente.
+   */
+  paymentEvents: defineTable({
+    paymentId: v.id("payments"),
+    provider: v.string(),
+    externalId: v.string(),
+    source: v.union(v.literal("webhook"), v.literal("polling")),
+    payload: v.string(),
+    signatureValid: v.boolean(),
+    processedAt: v.optional(v.number()),
+  })
+    .index("by_payment", ["paymentId"])
+    .index("by_provider_external", ["provider", "externalId"]),
+
+  /* ══════════════════ Caisse & comptabilité ═════════════════════════════ */
+
+  accountingDays: defineTable({
+    /** Journée comptable au format AAAA-MM-JJ. */
+    date: v.string(),
+    status: v.union(v.literal("ouverte"), v.literal("cloturee")),
+    openedAt: v.number(),
+    closedAt: v.optional(v.number()),
+    closedBy: v.optional(v.id("users")),
+    totalTtc: v.number(),
+    totalReceived: v.number(),
+    exportStatus: v.optional(
+      v.union(
+        v.literal("en_attente"),
+        v.literal("envoye"),
+        v.literal("integre"),
+        v.literal("echec"),
+      ),
+    ),
+    exportError: v.optional(v.string()),
+  })
+    .index("by_date", ["date"])
+    .index("by_status", ["status"]),
+
+  cashSessions: defineTable({
+    sellerId: v.id("users"),
+    pointOfSaleId: v.id("pointsOfSale"),
+    accountingDayId: v.id("accountingDays"),
+    openedAt: v.number(),
+    closedAt: v.optional(v.number()),
+    openingFloatXaf: v.number(),
+    /** Totaux théoriques et comptés, par mode de règlement. */
+    expectedByMethod: v.array(
+      v.object({ method: paymentMethod, amountXaf: v.number() }),
+    ),
+    countedByMethod: v.optional(
+      v.array(v.object({ method: paymentMethod, amountXaf: v.number() })),
+    ),
+    varianceXaf: v.optional(v.number()),
+    varianceReason: v.optional(v.string()),
+    status: v.union(
+      v.literal("ouverte"),
+      v.literal("cloturee"),
+      v.literal("validee"),
+    ),
+    validatedBy: v.optional(v.id("users")),
+  })
+    .index("by_seller", ["sellerId"])
+    .index("by_day", ["accountingDayId"])
+    .index("by_pos_day", ["pointOfSaleId", "accountingDayId"])
+    .index("by_status", ["status"]),
+
+  /** Écritures au format d'export V65 attendu par SAGE X3. */
+  journalEntries: defineTable({
+    accountingDayId: v.id("accountingDays"),
+    journalCode: v.string(),
+    pieceNumber: v.string(),
+    saleDate: v.string(),
+    financialSite: v.string(),
+    pointOfSaleCode: v.string(),
+    analyticAccount: v.string(),
+    costCenter: v.optional(v.string()),
+    ht: v.number(),
+    vat: v.number(),
+    css: v.number(),
+    ttc: v.number(),
+  })
+    .index("by_day", ["accountingDayId"])
+    .index("by_piece", ["pieceNumber"]),
+
+  /** Ventes réalisées sur billets pré-imprimés pendant une indisponibilité. */
+  manualTickets: defineTable({
+    saleId: v.id("sales"),
+    /** Numéro du carnet papier — contrôle d'unicité strict. */
+    preprintedNumber: v.string(),
+    systemNumber: v.string(),
+    soldAt: v.number(),
+    recordedAt: v.number(),
+    originalSellerId: v.id("users"),
+    recordedBy: v.id("users"),
+  })
+    .index("by_preprinted", ["preprintedNumber"])
+    .index("by_sale", ["saleId"]),
+
+  /* ══════════════════ Contrôle & terrain ════════════════════════════════ */
+
+  ticketScans: defineTable({
+    ticketId: v.optional(v.id("tickets")),
+    subscriptionId: v.optional(v.id("subscriptions")),
+    tripId: v.id("trips"),
+    agentId: v.id("users"),
+    result: scanResult,
+    stopIndex: v.optional(v.number()),
     scannedAt: v.number(),
+    /** Contrôle effectué hors ligne, synchronisé plus tard. */
+    offline: v.boolean(),
+    /** Identifiant généré sur le terminal — garantit l'idempotence. */
+    clientScanId: v.string(),
+    syncedAt: v.optional(v.number()),
+    /** Titre validé sur deux terminaux : à arbitrer humainement. */
+    conflict: v.boolean(),
   })
     .index("by_ticket", ["ticketId"])
-    .index("by_trip", ["tripId", "scannedAt"])
-    .index("by_agent", ["agentId", "scannedAt"]),
+    .index("by_trip", ["tripId"])
+    .index("by_agent", ["agentId"])
+    .index("by_client_id", ["clientScanId"])
+    .index("by_conflict", ["conflict"]),
 
-  /** Journal d'audit des actions sensibles du back-office. */
+  procesVerbaux: defineTable({
+    number: v.string(),
+    agentId: v.id("users"),
+    tripId: v.id("trips"),
+    ticketId: v.optional(v.id("tickets")),
+    scanId: v.optional(v.id("ticketScans")),
+    offender: v.object({
+      lastName: v.optional(v.string()),
+      firstName: v.optional(v.string()),
+      documentNumber: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      declined: v.boolean(),
+    }),
+    reason: v.union(
+      v.literal("sans_titre"),
+      v.literal("titre_invalide"),
+      v.literal("classe_superieure"),
+      v.literal("autre"),
+    ),
+    notes: v.optional(v.string()),
+    amountXaf: v.number(),
+    status: v.union(
+      v.literal("emis"),
+      v.literal("paye"),
+      v.literal("conteste"),
+      v.literal("annule"),
+    ),
+    paymentId: v.optional(v.id("payments")),
+    issuedAt: v.number(),
+    offline: v.boolean(),
+    clientId: v.string(),
+    resolvedBy: v.optional(v.id("users")),
+    resolutionNote: v.optional(v.string()),
+  })
+    .index("by_number", ["number"])
+    .index("by_trip", ["tripId"])
+    .index("by_agent", ["agentId"])
+    .index("by_status", ["status"])
+    .index("by_client_id", ["clientId"]),
+
+  incidents: defineTable({
+    reporterId: v.id("users"),
+    tripId: v.optional(v.id("trips")),
+    stationId: v.optional(v.id("stations")),
+    category: v.union(
+      v.literal("securite"),
+      v.literal("technique"),
+      v.literal("comportement"),
+      v.literal("medical"),
+      v.literal("autre"),
+    ),
+    severity: v.union(
+      v.literal("information"),
+      v.literal("important"),
+      v.literal("critique"),
+    ),
+    description: v.string(),
+    photoStorageIds: v.array(v.id("_storage")),
+    status: v.union(
+      v.literal("ouvert"),
+      v.literal("en_cours"),
+      v.literal("resolu"),
+    ),
+    reportedAt: v.number(),
+    offline: v.boolean(),
+    clientId: v.string(),
+    resolvedBy: v.optional(v.id("users")),
+    resolvedAt: v.optional(v.number()),
+    resolutionNote: v.optional(v.string()),
+  })
+    .index("by_trip", ["tripId"])
+    .index("by_status", ["status"])
+    .index("by_severity", ["severity"])
+    .index("by_client_id", ["clientId"]),
+
+  /* ══════════════════ Interopérabilité & conformité ═════════════════════ */
+
+  /**
+   * File d'envoi vers les systèmes tiers. Journal métier consultable et
+   * rejouable ; les tentatives elles-mêmes sont déléguées au composant
+   * action-retrier.
+   */
+  outboxEvents: defineTable({
+    type: v.union(
+      v.literal("sage_export"),
+      v.literal("colirail_status"),
+      v.literal("notification"),
+    ),
+    entityId: v.string(),
+    payload: v.string(),
+    status: v.union(
+      v.literal("en_attente"),
+      v.literal("envoye"),
+      v.literal("echec"),
+    ),
+    attempts: v.number(),
+    lastError: v.optional(v.string()),
+    retrierRunId: v.optional(v.string()),
+    createdAt: v.number(),
+    sentAt: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_type_status", ["type", "status"]),
+
+  consents: defineTable({
+    userId: v.id("users"),
+    type: v.union(
+      v.literal("cgv"),
+      v.literal("donnees"),
+      v.literal("marketing"),
+    ),
+    /** Version du texte accepté, ex. « cgv-2026-07 ». */
+    version: v.string(),
+    grantedAt: v.number(),
+    revokedAt: v.optional(v.number()),
+    channel: v.union(
+      v.literal("web"),
+      v.literal("mobile"),
+      v.literal("guichet"),
+    ),
+    ipAddress: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_type", ["userId", "type"]),
+
   auditLogs: defineTable({
     actorId: v.optional(v.id("users")),
     action: v.string(),
     entityTable: v.string(),
     entityId: v.string(),
-    metadata: v.optional(v.any()),
+    /** Valeurs avant et après, pour les modifications de paramétrage. */
+    before: v.optional(v.string()),
+    after: v.optional(v.string()),
+    metadata: v.optional(v.string()),
     ipAddress: v.optional(v.string()),
+    deviceId: v.optional(v.string()),
     createdAt: v.number(),
   })
-    .index("by_actor", ["actorId", "createdAt"])
+    .index("by_actor", ["actorId"])
     .index("by_entity", ["entityTable", "entityId"])
-    .index("by_action", ["action", "createdAt"]),
+    .index("by_action", ["action"])
+    .index("by_createdAt", ["createdAt"]),
 
-  /** Notifications applicatives (push mobile, e-mail, SMS). */
   notifications: defineTable({
     userId: v.id("users"),
     channel: v.union(
       v.literal("push"),
       v.literal("email"),
       v.literal("sms"),
-      v.literal("in_app")
+      v.literal("in_app"),
     ),
     title: v.string(),
     body: v.string(),
-    data: v.optional(v.any()),
-    readAt: v.optional(v.number()),
+    data: v.optional(v.string()),
     sentAt: v.optional(v.number()),
+    readAt: v.optional(v.number()),
   }).index("by_user", ["userId"]),
 
-  /** Jetons de notification push Expo, par appareil. */
   pushTokens: defineTable({
     userId: v.id("users"),
     token: v.string(),
