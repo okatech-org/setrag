@@ -212,7 +212,7 @@ describe("Clôture de la journée comptable", () => {
       c.db.query("accountingDays").first(),
     )
     const controleur = await asUser(t, "controleur_recettes", pos)
-    return { vendeur, controleur, dayId: jour!._id }
+    return { vendeur, controleur, dayId: jour!._id as Id<"accountingDays"> }
   }
 
   it("refuse de clôturer tant qu'une caisse est ouverte", async () => {

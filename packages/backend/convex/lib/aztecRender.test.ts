@@ -33,6 +33,9 @@ beforeAll(async () => {
   }
   if (!chemin) throw new Error("zxing_reader.wasm introuvable")
   const wasm = await readFile(chemin)
+  // Les typages de zxing-wasm ne décrivent pas `instantiateWasm`, hérité
+  // d'Emscripten, ni l'objet image brut accepté à l'exécution. On force le
+  // typage ici plutôt que de renoncer à charger le module depuis le disque.
   prepareZXingModule({
     overrides: {
       instantiateWasm(
@@ -45,7 +48,7 @@ beforeAll(async () => {
       },
     },
     fireImmediately: true,
-  })
+  } as Parameters<typeof prepareZXingModule>[0])
 })
 
 /**
@@ -77,7 +80,7 @@ function toImage(symbol: AztecSymbol, zoom = 4, quiet = 4) {
 }
 
 async function decode(symbol: AztecSymbol): Promise<string[]> {
-  const results = await readBarcodes(toImage(symbol), {
+  const results = await readBarcodes(toImage(symbol) as unknown as ImageData, {
     formats: ["Aztec"],
     tryHarder: true,
   })

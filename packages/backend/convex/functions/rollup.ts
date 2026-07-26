@@ -1,5 +1,6 @@
 import { v } from "convex/values"
 import { internalMutation } from "../_generated/server"
+import { internal } from "../_generated/api"
 import type { Doc, Id, DataModel } from "../_generated/dataModel"
 import type { GenericMutationCtx } from "convex/server"
 import { absAmounts, loadFactor, type SegmentLoad } from "../model/kpi"
@@ -150,24 +151,52 @@ function estOpposable(status: Doc<"tickets">["status"]): boolean {
  *
  * Sert après un changement de définition d'indicateur, ou pour amorcer un
  * déploiement dont les journées ont été clôturées avant la mise en place des
- * cumuls. Borné : une mutation ne parcourt pas une table entière.
+ * cumuls.
+ *
+ * Le traitement est réparti sur UNE MUTATION PAR JOURNÉE, enchaînées en
+ * cascade. Une première version bouclait sur les journées dans une seule
+ * transaction : chaque journée coûtant plusieurs centaines de lectures, le
+ * plafond de 4 096 tombait dès la dixième. Borner le nombre de jours ne
+ * bornait rien — c'est le nombre de ventes qui compte.
  */
 export const backfillDailyMetrics = internalMutation({
   args: { limit: v.optional(v.number()) },
-  handler: async (ctx, args): Promise<{ processed: number; dates: string[] }> => {
-    const limite = Math.min(args.limit ?? 30, 90)
+  handler: async (ctx, args) => {
+    const restant = Math.min(Math.max(args.limit ?? 30, 1), 400)
 
     const days = await ctx.db
       .query("accountingDays")
       .withIndex("by_status", (q) => q.eq("status", "cloturee"))
-      .take(limite)
+      .take(restant)
 
-    const dates: string[] = []
-    for (const day of days) {
-      await rollupDay(ctx, day)
-      dates.push(day.date)
-    }
-    return { processed: dates.length, dates }
+    if (days.length === 0) return { scheduled: 0 }
+
+    await ctx.scheduler.runAfter(0, internal.functions.rollup.backfillFrom, {
+      dates: days.map((d) => d.date),
+      index: 0,
+    })
+    return { scheduled: days.length }
+  },
+})
+
+/** Traite une journée de la file de reprise, puis passe à la suivante. */
+export const backfillFrom = internalMutation({
+  args: { dates: v.array(v.string()), index: v.number() },
+  handler: async (ctx, args) => {
+    const date = args.dates[args.index]
+    if (date === undefined) return { done: true, processed: args.index }
+
+    const day = await ctx.db
+      .query("accountingDays")
+      .withIndex("by_date", (q) => q.eq("date", date))
+      .unique()
+    if (day) await rollupDay(ctx, day)
+
+    await ctx.scheduler.runAfter(0, internal.functions.rollup.backfillFrom, {
+      dates: args.dates,
+      index: args.index + 1,
+    })
+    return { done: false, processed: args.index + 1 }
   },
 })
 

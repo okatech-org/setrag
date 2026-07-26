@@ -176,7 +176,14 @@ async function sellAndClose(t: ReturnType<typeof convexTest>) {
   // Le comptable produit le journal : le contrôleur de recettes clôture,
   // il ne déverse pas. Séparation des tâches du circuit de recettes.
   const comptable = await asUser(t, "comptable", fx.pos)
-  return { fx, vendeur, controleur, comptable, dayId: day!._id, ttc: vente.amounts.ttc }
+  return {
+    fx,
+    vendeur,
+    controleur,
+    comptable,
+    dayId: day!._id as Id<"accountingDays">,
+    ttc: vente.amounts.ttc,
+  }
 }
 
 /* ═══════════════════════ Journal comptable ═══════════════════════════════ */

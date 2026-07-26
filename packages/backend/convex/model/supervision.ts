@@ -197,8 +197,25 @@ export function classifyStaleHolds(
 export function classifyDemoConfiguration(input: {
   usingDemoSigningKey: boolean
   provisionalFareCount: number
+  devSigninEnabled?: boolean
 }): Finding[] {
   const findings: Finding[] = []
+
+  if (input.devSigninEnabled === true) {
+    // Le seul constat critique de cette famille : les autres sont des risques
+    // de crédibilité, celui-ci est une porte ouverte. Qui lit les codes à
+    // usage unique se connecte au nom de n'importe qui.
+    findings.push({
+      code: "connexion_developpement_ouverte",
+      severity: "critique",
+      label: "La récupération des codes de connexion est ouverte",
+      action:
+        "Retirer DEV_SIGNIN_ENABLED du déploiement. Tant qu'elle est posée, " +
+        "n'importe quel appelant peut relire un code à usage unique et " +
+        "ouvrir une session au nom de son destinataire.",
+      count: 1,
+    })
+  }
 
   if (input.usingDemoSigningKey) {
     findings.push({

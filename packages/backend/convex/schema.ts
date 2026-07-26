@@ -1069,6 +1069,28 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_type", ["userId", "type"]),
 
+  /**
+   * Codes à usage unique retenus pour le développement.
+   *
+   * Cette table est une PORTE DÉROBÉE : qui la lit peut se connecter au nom de
+   * n'importe qui. Elle n'est alimentée et lisible que si
+   * `DEV_SIGNIN_ENABLED` vaut « true », variable qui ne doit jamais être posée
+   * en production. La supervision remonte un constat critique tant qu'elle
+   * l'est — on ne compte pas sur la seule discipline pour cela.
+   *
+   * Sa raison d'être : sans fournisseur d'e-mail ni de SMS branché, le code
+   * part dans les journaux du serveur. Développer et démontrer l'écran de
+   * connexion suppose de pouvoir le relire.
+   */
+  devOtpCodes: defineTable({
+    /** Adresse e-mail ou numéro de téléphone destinataire. */
+    identifier: v.string(),
+    code: v.string(),
+    channel: v.union(v.literal("email"), v.literal("sms")),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  }).index("by_identifier", ["identifier"]),
+
   /* ═══════════════════════ Indicateurs pré-agrégés ═══════════════════════ */
 
   /**

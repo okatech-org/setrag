@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { api, internal } from "../_generated/api"
 import schema from "../schema"
 import { modules } from "../test.setup"
@@ -27,6 +27,19 @@ async function asUser(t: ReturnType<typeof convexTest>, role: AppRole) {
   )
   return t.withIdentity({ subject: authId })
 }
+
+/**
+ * Vide la file du planificateur.
+ *
+ * La reprise enchaîne une mutation par journée ; sans cela le test observerait
+ * l'état d'avant la cascade et croirait à une reprise qui ne fait rien.
+ */
+async function drainScheduler(t: ReturnType<typeof convexTest>) {
+  await t.finishAllScheduledFunctions(vi.runAllTimers)
+}
+
+beforeEach(() => vi.useFakeTimers())
+afterEach(() => vi.useRealTimers())
 
 /** Journée close portant les ventes décrites. */
 async function seedDay(
@@ -252,8 +265,16 @@ describe("Cumuls journaliers", () => {
       internal.functions.rollup.backfillDailyMetrics,
       {},
     )
-    expect(r.processed).toBe(2)
-    expect(r.dates.sort()).toEqual(["2026-06-04", "2026-06-05"])
+    await drainScheduler(t)
+    // La reprise planifie une mutation par journée : boucler dans une seule
+    // transaction ferait sauter le plafond de lectures dès la dixième.
+    expect(r.scheduled).toBe(2)
+
+    const lignes = await t.run(async (c) => c.db.query("dailyMetrics").collect())
+    expect(lignes.map((l) => l.date).sort()).toEqual([
+      "2026-06-04",
+      "2026-06-05",
+    ])
   })
 })
 
@@ -268,6 +289,7 @@ describe("Tableau de bord", () => {
       { kind: "vente", channel: "guichet", ttc: 1_500 },
     ])
     await t.mutation(internal.functions.rollup.backfillDailyMetrics, {})
+    await drainScheduler(t)
 
     const ctx = await asUser(t, "responsable_kpi")
     const b = await ctx.query(api.functions.reporting.dashboard, {
@@ -314,6 +336,7 @@ describe("Ventilations", () => {
       { kind: "vente", channel: "guichet", product: "bagage", ttc: 1_300 },
     ])
     await t.mutation(internal.functions.rollup.backfillDailyMetrics, {})
+    await drainScheduler(t)
     return await asUser(t, "responsable_kpi")
   }
 
@@ -372,6 +395,7 @@ describe("Export CSV", () => {
       { kind: "vente", channel: "guichet", ttc: 42_200, tickets: 1 },
     ])
     await t.mutation(internal.functions.rollup.backfillDailyMetrics, {})
+    await drainScheduler(t)
     const ctx = await asUser(t, "responsable_kpi")
 
     const csv = await ctx.query(api.functions.reporting.exportDailyCsv, {

@@ -1,7 +1,10 @@
 import { v } from "convex/values"
 import { internalMutation, query } from "../_generated/server"
+import type { DataModel } from "../_generated/dataModel"
+import type { GenericQueryCtx } from "convex/server"
 import { audit, requirePermission } from "../lib/auth"
 import { isUsingDemoKey } from "../lib/signature"
+import { isDevSigninEnabled } from "./devAuth"
 import {
   classifyAccountingDays,
   classifyCashSessions,
@@ -72,7 +75,14 @@ export const runHealthCheck = internalMutation({
 
 /* ───────────────────────────── Collecte ────────────────────────────────── */
 
-type Ctx = Parameters<Parameters<typeof query>[0]["handler"]>[0]
+/**
+ * Le contexte de lecture, nommé explicitement.
+ *
+ * L'inférer depuis la signature de `query` produit un type inexploitable :
+ * les paramètres des requêtes retombent silencieusement en `any`, et le
+ * typage cesse de protéger là où on croit qu'il protège.
+ */
+type Ctx = GenericQueryCtx<DataModel>
 
 async function collectFindings(ctx: Ctx) {
   const now = Date.now()
@@ -110,6 +120,7 @@ async function collectFindings(ctx: Ctx) {
     ...classifyDemoConfiguration({
       usingDemoSigningKey: isUsingDemoKey(),
       provisionalFareCount: provisionalFares.length,
+      devSigninEnabled: isDevSigninEnabled(),
     }),
   ]
 

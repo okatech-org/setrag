@@ -7,7 +7,7 @@
     "dev": "convex dev",
     "deploy": "convex deploy",
     "seed": "convex run seeds/referential:run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p convex",
     "test": "vitest",
     "test:once": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=text",
