@@ -1,0 +1,793 @@
+import { v } from "convex/values"
+import { mutation, query } from "../_generated/server"
+import type { Doc, Id } from "../_generated/dataModel"
+import { audit, requirePermission } from "../lib/auth"
+import { scanResult, serviceClass } from "../schema"
+import { performSale } from "./sales"
+import { segmentMask } from "../model/inventory"
+import { verifyScope, type ScopeVerdict } from "../model/barcode"
+import {
+  CURRENT_KEY_VERSION,
+  isUsingDemoKey,
+  publicKeyHex,
+  verifyBarcode,
+} from "../lib/signature"
+
+/**
+ * Application contrôleur — contrôle à bord, régularisation et signalements.
+ *
+ * Toutes les écritures venant du terrain sont IDEMPOTENTES par identifiant
+ * client : le terminal travaille hors ligne, accumule ses opérations dans une
+ * file locale, et rejoue tout le lot à la reconnexion. Un lot renvoyé deux
+ * fois après une coupure ne doit rien dupliquer.
+ */
+
+/* ──────────────────────── Manifeste embarqué ───────────────────────────── */
+
+/**
+ * Manifeste d'une desserte, à télécharger avant le départ.
+ *
+ * C'est le paquet que le terminal emporte : tous les titres valides, la liste
+ * des arrêts et le barème des amendes. Une fois chargé, le contrôle
+ * fonctionne sans réseau.
+ */
+export const manifest = query({
+  args: { tripId: v.id("trips") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "controles", "consulter")
+
+    const trip = await ctx.db.get(args.tripId)
+    if (!trip) throw new Error("Desserte introuvable")
+
+    const stops = (
+      await ctx.db
+        .query("tripStops")
+        .withIndex("by_trip_sequence", (q) => q.eq("tripId", args.tripId))
+        .collect()
+    ).sort((a, b) => a.sequence - b.sequence)
+
+    const stations = await Promise.all(
+      stops.map(async (s) => {
+        const station = await ctx.db.get(s.stationId)
+        return {
+          sequence: s.sequence,
+          stationId: s.stationId,
+          code: station?.code ?? "?",
+          name: station?.name ?? "?",
+          kilometerPoint: s.kilometerPoint,
+          arrivalAt: s.arrivalAt,
+          departureAt: s.departureAt,
+        }
+      }),
+    )
+
+    const tickets = await ctx.db
+      .query("tickets")
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
+      .collect()
+
+    // Seuls les titres opposables partent sur le terminal : un billet annulé
+    // ou remboursé doit être refusé à bord, il est donc transmis avec son
+    // statut plutôt qu'omis.
+    const embarquables = tickets.filter((t) =>
+      ["valide", "utilise", "annule", "rembourse"].includes(t.status),
+    )
+
+    const scans = await ctx.db
+      .query("ticketScans")
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
+      .collect()
+
+    return {
+      trip,
+      stops: stations,
+      tickets: embarquables.map((t) => ({
+        _id: t._id,
+        number: t.number,
+        passenger: t.passenger,
+        serviceClass: t.serviceClass,
+        seatLabel: t.seatLabel,
+        coachLabel: t.coachLabel,
+        fromStopIndex: t.fromStopIndex,
+        toStopIndex: t.toStopIndex,
+        status: t.status,
+        barcodePayload: t.barcodePayload,
+      })),
+      alreadyScanned: scans.map((s) => ({
+        ticketId: s.ticketId,
+        scannedAt: s.scannedAt,
+        result: s.result,
+      })),
+      generatedAt: Date.now(),
+      /** Barème des amendes, embarqué pour la rédaction hors ligne. */
+      penalties: PENALTY_SCALE,
+      /**
+       * Clé publique de vérification des codes-barres.
+       *
+       * C'est elle qui rend le contrôle hors ligne réellement sûr : sans
+       * elle, le terminal ne pourrait que comparer le code présenté à la
+       * liste embarquée, et accepterait donc n'importe quelle contrefaçon
+       * recopiant un code légitime aperçu ailleurs. Avec elle, il établit
+       * lui-même que le titre a bien été émis par SETRAG.
+       */
+      signing: {
+        publicKey: publicKeyHex(),
+        keyVersion: CURRENT_KEY_VERSION,
+        /** Vrai si le déploiement tourne encore sur la clé du dépôt. */
+        isDemoKey: isUsingDemoKey(),
+      },
+    }
+  },
+})
+
+/* ─────────────────────── Vérification d'un code-barres ─────────────────── */
+
+/** Verdict complet rendu au terminal, motif de refus compris. */
+export type TicketVerdict =
+  | "valide"
+  | "contrefait"
+  | "illisible"
+  | "cle_hors_service"
+  | ScopeVerdict
+  | "annule"
+  | "rembourse"
+  | "deja_controle"
+  | "non_paye"
+  | "inconnu"
+
+/**
+ * Vérifie un code-barres présenté au contrôle.
+ *
+ * Cette query est le recours EN LIGNE : hors réseau, le terminal fait la même
+ * chose avec la clé publique et le manifeste. Elle sert quand le titre est
+ * absent du manifeste — acheté après le téléchargement, ou sur une autre
+ * desserte — et pour lever un doute.
+ *
+ * L'ordre des contrôles suit celui de leur utilité pour l'agent : d'abord
+ * l'authenticité, qui distingue la fraude de l'erreur, puis la portée, puis
+ * le statut administratif.
+ */
+export const verifyTicket = query({
+  args: {
+    barcode: v.string(),
+    tripId: v.id("trips"),
+    currentStopIndex: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "controles", "consulter")
+
+    const check = verifyBarcode(args.barcode)
+    if (!check.authentic || !check.payload) {
+      // Trois échecs bien différents, qui n'appellent pas la même conduite :
+      // un code étranger ou abîmé se represente ou se saisit à la main ; une
+      // clé retirée du service est un problème d'exploitation, pas de
+      // voyageur ; une signature fausse, elle, est une contrefaçon.
+      const motif = check.error ?? ""
+      const verdict: TicketVerdict = /hors service/.test(motif)
+        ? "cle_hors_service"
+        : /étranger|Base45|tronqué|CBOR|charge utile|Version de format/.test(
+              motif,
+            )
+          ? "illisible"
+          : "contrefait"
+      return { verdict, reason: check.error, ticket: null }
+    }
+
+    const payload = check.payload
+    const scope = verifyScope(payload, {
+      tripId: args.tripId,
+      currentStopIndex: args.currentStopIndex,
+      nowSeconds: Math.floor(Date.now() / 1000),
+    })
+
+    const ticket = await ctx.db
+      .query("tickets")
+      .withIndex("by_number", (q) => q.eq("number", payload.ref))
+      .unique()
+
+    const résumé = ticket
+      ? {
+          _id: ticket._id,
+          number: ticket.number,
+          passenger: ticket.passenger,
+          serviceClass: ticket.serviceClass,
+          seatLabel: ticket.seatLabel,
+          coachLabel: ticket.coachLabel,
+          fromStopIndex: ticket.fromStopIndex,
+          toStopIndex: ticket.toStopIndex,
+          status: ticket.status,
+        }
+      : null
+
+    if (scope !== "valide") {
+      return { verdict: scope as TicketVerdict, reason: null, ticket: résumé }
+    }
+
+    // Un code authentique dont le titre est introuvable trahit une base
+    // désynchronisée, pas une fraude : la signature, elle, est bonne.
+    if (!ticket) {
+      return {
+        verdict: "inconnu" as TicketVerdict,
+        reason: `Titre ${payload.ref} absent de la base`,
+        ticket: null,
+      }
+    }
+
+    const parStatut: Partial<Record<string, TicketVerdict>> = {
+      annule: "annule",
+      rembourse: "rembourse",
+      utilise: "deja_controle",
+      en_attente: "non_paye",
+    }
+    const verdict = parStatut[ticket.status] ?? "valide"
+    return { verdict, reason: null, ticket: résumé }
+  },
+})
+
+/**
+ * Barème des amendes.
+ * Valeurs provisoires : le CDC prévoit la rédaction de procès-verbaux sans
+ * fixer les montants. À arrêter par la direction commerciale.
+ */
+export const PENALTY_SCALE = [
+  { reason: "sans_titre", label: "Voyage sans titre de transport", amountXaf: 25000 },
+  { reason: "titre_invalide", label: "Titre invalide ou expiré", amountXaf: 15000 },
+  { reason: "classe_superieure", label: "Classe supérieure à celle payée", amountXaf: 8000 },
+  { reason: "autre", label: "Autre motif", amountXaf: 10000 },
+] as const
+
+/* ──────────────────────── Synchronisation des scans ────────────────────── */
+
+/**
+ * Remonte un lot de contrôles effectués à bord.
+ *
+ * Idempotent : un `clientScanId` déjà connu est ignoré. Un titre validé sur
+ * deux terminaux différents est marqué en CONFLIT plutôt que rejeté — le
+ * système ne peut pas distinguer une fraude d'un second contrôle légitime,
+ * l'arbitrage est humain.
+ */
+export const syncScans = mutation({
+  args: {
+    scans: v.array(
+      v.object({
+        clientScanId: v.string(),
+        tripId: v.id("trips"),
+        ticketId: v.optional(v.id("tickets")),
+        subscriptionId: v.optional(v.id("subscriptions")),
+        result: scanResult,
+        stopIndex: v.optional(v.number()),
+        scannedAt: v.number(),
+        offline: v.boolean(),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "controles", "creer")
+
+    let created = 0
+    let duplicates = 0
+    let conflicts = 0
+    const conflictIds: Id<"ticketScans">[] = []
+
+    for (const scan of args.scans) {
+      const existing = await ctx.db
+        .query("ticketScans")
+        .withIndex("by_client_id", (q) =>
+          q.eq("clientScanId", scan.clientScanId),
+        )
+        .unique()
+      if (existing) {
+        duplicates += 1
+        continue
+      }
+
+      // Conflit : le même titre a déjà été validé par un autre terminal.
+      let conflict = false
+      if (scan.ticketId && scan.result === "valide") {
+        const previous = await ctx.db
+          .query("ticketScans")
+          .withIndex("by_ticket", (q) => q.eq("ticketId", scan.ticketId))
+          .collect()
+        conflict = previous.some(
+          (p) => p.result === "valide" && p.agentId !== actor._id,
+        )
+      }
+
+      const id = await ctx.db.insert("ticketScans", {
+        ticketId: scan.ticketId,
+        subscriptionId: scan.subscriptionId,
+        tripId: scan.tripId,
+        agentId: actor._id,
+        result: scan.result,
+        stopIndex: scan.stopIndex,
+        scannedAt: scan.scannedAt,
+        offline: scan.offline,
+        clientScanId: scan.clientScanId,
+        syncedAt: Date.now(),
+        conflict,
+      })
+      created += 1
+      if (conflict) {
+        conflicts += 1
+        conflictIds.push(id)
+      }
+
+      // Un contrôle valide marque le titre comme utilisé.
+      if (scan.ticketId && scan.result === "valide" && !conflict) {
+        const ticket = await ctx.db.get(scan.ticketId)
+        if (ticket && ticket.status === "valide") {
+          await ctx.db.patch(scan.ticketId, {
+            status: "utilise",
+            usedAt: scan.scannedAt,
+          })
+        }
+      }
+    }
+
+    await audit(ctx, {
+      actorId: actor._id,
+      action: "controle.synchroniser",
+      entityTable: "ticketScans",
+      entityId: "*",
+      after: { received: args.scans.length, created, duplicates, conflicts },
+    })
+
+    return { received: args.scans.length, created, duplicates, conflicts, conflictIds }
+  },
+})
+
+/** Contrôles d'un agent, pour l'écran d'historique du terminal. */
+export const myScans = query({
+  args: { tripId: v.optional(v.id("trips")) },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "controles", "consulter")
+    const scans = await ctx.db
+      .query("ticketScans")
+      .withIndex("by_agent", (q) => q.eq("agentId", actor._id))
+      .collect()
+    const filtered = args.tripId
+      ? scans.filter((s) => s.tripId === args.tripId)
+      : scans
+    return filtered.sort((a, b) => b.scannedAt - a.scannedAt)
+  },
+})
+
+/** Contrôles en conflit, à arbitrer par un superviseur. */
+export const listConflicts = query({
+  args: {},
+  handler: async (ctx) => {
+    await requirePermission(ctx, "controles", "consulter")
+    const scans = await ctx.db
+      .query("ticketScans")
+      .withIndex("by_conflict", (q) => q.eq("conflict", true))
+      .collect()
+
+    return await Promise.all(
+      scans.map(async (scan) => {
+        const [ticket, agent, trip] = await Promise.all([
+          scan.ticketId ? ctx.db.get(scan.ticketId) : null,
+          ctx.db.get(scan.agentId),
+          ctx.db.get(scan.tripId),
+        ])
+        const siblings = scan.ticketId
+          ? await ctx.db
+              .query("ticketScans")
+              .withIndex("by_ticket", (q) => q.eq("ticketId", scan.ticketId))
+              .collect()
+          : []
+        return { scan, ticket, agent, trip, allScans: siblings }
+      }),
+    )
+  },
+})
+
+/** Tranche un conflit : le contrôle est accepté ou signalé comme fraude. */
+export const resolveConflict = mutation({
+  args: {
+    scanId: v.id("ticketScans"),
+    accept: v.boolean(),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "proces_verbaux", "modifier")
+    const scan = await ctx.db.get(args.scanId)
+    if (!scan) throw new Error("Contrôle introuvable")
+
+    await ctx.db.patch(args.scanId, { conflict: false })
+    await audit(ctx, {
+      actorId: actor._id,
+      action: "controle.arbitrer",
+      entityTable: "ticketScans",
+      entityId: args.scanId,
+      after: { accept: args.accept, note: args.note },
+    })
+  },
+})
+
+/* ─────────────────────────── Vente à bord ──────────────────────────────── */
+
+/**
+ * Vend un titre à bord, sans blocage préalable.
+ *
+ * Le contrôleur encaisse immédiatement : la vente est ferme dès l'écriture.
+ * Elle emprunte le même chemin que la vente au guichet, donc la garantie
+ * anti-survente s'applique aussi à bord.
+ */
+export const sellOnboard = mutation({
+  args: {
+    tripId: v.id("trips"),
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
+    serviceClass,
+    passengers: v.array(
+      v.object({
+        lastName: v.string(),
+        firstName: v.string(),
+        gender: v.union(v.literal("M"), v.literal("F")),
+        phone: v.optional(v.string()),
+      }),
+    ),
+    deviceId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "ventes", "creer")
+    return await performSale(
+      ctx,
+      { actor, channel: "bord", mode: "ferme" },
+      {
+        tripId: args.tripId,
+        originStationId: args.originStationId,
+        destinationStationId: args.destinationStationId,
+        serviceClass: args.serviceClass,
+        passengers: args.passengers,
+        method: "especes",
+        deviceId: args.deviceId,
+      },
+    )
+  },
+})
+
+/* ────────────────────────── Procès-verbaux ─────────────────────────────── */
+
+/**
+ * Remonte un lot de procès-verbaux rédigés à bord.
+ * Idempotent par `clientId`, comme les contrôles.
+ */
+export const syncPenalties = mutation({
+  args: {
+    penalties: v.array(
+      v.object({
+        clientId: v.string(),
+        tripId: v.id("trips"),
+        ticketId: v.optional(v.id("tickets")),
+        offender: v.object({
+          lastName: v.optional(v.string()),
+          firstName: v.optional(v.string()),
+          documentNumber: v.optional(v.string()),
+          phone: v.optional(v.string()),
+          declined: v.boolean(),
+        }),
+        reason: v.union(
+          v.literal("sans_titre"),
+          v.literal("titre_invalide"),
+          v.literal("classe_superieure"),
+          v.literal("autre"),
+        ),
+        notes: v.optional(v.string()),
+        amountXaf: v.number(),
+        paidOnBoard: v.boolean(),
+        issuedAt: v.number(),
+        offline: v.boolean(),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "proces_verbaux", "creer")
+
+    let created = 0
+    let duplicates = 0
+    const numbers: string[] = []
+
+    for (const pv of args.penalties) {
+      const existing = await ctx.db
+        .query("procesVerbaux")
+        .withIndex("by_client_id", (q) => q.eq("clientId", pv.clientId))
+        .unique()
+      if (existing) {
+        duplicates += 1
+        continue
+      }
+      if (pv.amountXaf < 0) {
+        throw new Error(`Montant d'amende invalide : ${pv.amountXaf}`)
+      }
+
+      const seq = await nextPenaltyNumber(ctx)
+      const number = `PV-${String(seq).padStart(6, "0")}`
+
+      const id = await ctx.db.insert("procesVerbaux", {
+        number,
+        agentId: actor._id,
+        tripId: pv.tripId,
+        ticketId: pv.ticketId,
+        offender: pv.offender,
+        reason: pv.reason,
+        notes: pv.notes,
+        amountXaf: pv.amountXaf,
+        status: pv.paidOnBoard ? "paye" : "emis",
+        issuedAt: pv.issuedAt,
+        offline: pv.offline,
+        clientId: pv.clientId,
+      })
+
+      if (pv.paidOnBoard) {
+        const paymentId = await ctx.db.insert("payments", {
+          penaltyId: id,
+          method: "especes",
+          status: "confirme",
+          amountXaf: pv.amountXaf,
+          settledAt: pv.issuedAt,
+        })
+        await ctx.db.patch(id, { paymentId })
+      }
+
+      created += 1
+      numbers.push(number)
+    }
+
+    await audit(ctx, {
+      actorId: actor._id,
+      action: "pv.synchroniser",
+      entityTable: "procesVerbaux",
+      entityId: "*",
+      after: { received: args.penalties.length, created, duplicates, numbers },
+    })
+
+    return { received: args.penalties.length, created, duplicates, numbers }
+  },
+})
+
+/** Numérotation continue des procès-verbaux, à l'échelle du réseau. */
+async function nextPenaltyNumber(
+  ctx: Parameters<typeof audit>[0],
+): Promise<number> {
+  const key = "reseau:pv"
+  const existing = await ctx.db
+    .query("sequences")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .unique()
+  if (existing) {
+    const value = existing.value + 1
+    await ctx.db.patch(existing._id, { value })
+    return value
+  }
+  await ctx.db.insert("sequences", { key, value: 1 })
+  return 1
+}
+
+/** Procès-verbaux, filtrables par statut pour l'écran de suivi. */
+export const listPenalties = query({
+  args: {
+    status: v.optional(
+      v.union(
+        v.literal("emis"),
+        v.literal("paye"),
+        v.literal("conteste"),
+        v.literal("annule"),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "proces_verbaux", "consulter")
+    const all = args.status
+      ? await ctx.db
+          .query("procesVerbaux")
+          .withIndex("by_status", (q) => q.eq("status", args.status!))
+          .collect()
+      : await ctx.db.query("procesVerbaux").collect()
+
+    return await Promise.all(
+      all
+        .sort((a, b) => b.issuedAt - a.issuedAt)
+        .map(async (pv) => ({
+          penalty: pv,
+          agent: await ctx.db.get(pv.agentId),
+          trip: await ctx.db.get(pv.tripId),
+        })),
+    )
+  },
+})
+
+/** Conteste, annule ou solde un procès-verbal. */
+export const setPenaltyStatus = mutation({
+  args: {
+    penaltyId: v.id("procesVerbaux"),
+    status: v.union(
+      v.literal("emis"),
+      v.literal("paye"),
+      v.literal("conteste"),
+      v.literal("annule"),
+    ),
+    resolutionNote: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "proces_verbaux", "modifier")
+    const pv = await ctx.db.get(args.penaltyId)
+    if (!pv) throw new Error("Procès-verbal introuvable")
+    if (args.status === "annule" && !args.resolutionNote?.trim()) {
+      throw new Error("Un motif est obligatoire pour annuler un procès-verbal")
+    }
+
+    await ctx.db.patch(args.penaltyId, {
+      status: args.status,
+      resolvedBy: actor._id,
+      resolutionNote: args.resolutionNote,
+    })
+    await audit(ctx, {
+      actorId: actor._id,
+      action: "pv.statut",
+      entityTable: "procesVerbaux",
+      entityId: args.penaltyId,
+      before: { status: pv.status },
+      after: { status: args.status, note: args.resolutionNote },
+    })
+  },
+})
+
+/* ──────────────────────────── Incidents ────────────────────────────────── */
+
+/** Remonte un lot de signalements. Idempotent par `clientId`. */
+export const syncIncidents = mutation({
+  args: {
+    incidents: v.array(
+      v.object({
+        clientId: v.string(),
+        tripId: v.optional(v.id("trips")),
+        stationId: v.optional(v.id("stations")),
+        category: v.union(
+          v.literal("securite"),
+          v.literal("technique"),
+          v.literal("comportement"),
+          v.literal("medical"),
+          v.literal("autre"),
+        ),
+        severity: v.union(
+          v.literal("information"),
+          v.literal("important"),
+          v.literal("critique"),
+        ),
+        description: v.string(),
+        photoStorageIds: v.optional(v.array(v.id("_storage"))),
+        reportedAt: v.number(),
+        offline: v.boolean(),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "incidents", "creer")
+
+    let created = 0
+    let duplicates = 0
+    let critical = 0
+
+    for (const incident of args.incidents) {
+      const existing = await ctx.db
+        .query("incidents")
+        .withIndex("by_client_id", (q) => q.eq("clientId", incident.clientId))
+        .unique()
+      if (existing) {
+        duplicates += 1
+        continue
+      }
+      if (!incident.description.trim()) {
+        throw new Error("La description d'un incident est obligatoire")
+      }
+
+      const id = await ctx.db.insert("incidents", {
+        reporterId: actor._id,
+        tripId: incident.tripId,
+        stationId: incident.stationId,
+        category: incident.category,
+        severity: incident.severity,
+        description: incident.description,
+        photoStorageIds: incident.photoStorageIds ?? [],
+        status: "ouvert",
+        reportedAt: incident.reportedAt,
+        offline: incident.offline,
+        clientId: incident.clientId,
+      })
+      created += 1
+
+      // Un incident critique alerte immédiatement les superviseurs.
+      if (incident.severity === "critique") {
+        critical += 1
+        const superviseurs = await ctx.db
+          .query("users")
+          .withIndex("by_role", (q) => q.eq("role", "chef_gare"))
+          .collect()
+        for (const chef of superviseurs) {
+          await ctx.db.insert("notifications", {
+            userId: chef._id,
+            channel: "push",
+            title: "Incident critique signalé",
+            body: incident.description.slice(0, 140),
+            data: JSON.stringify({ incidentId: id }),
+          })
+        }
+      }
+    }
+
+    await audit(ctx, {
+      actorId: actor._id,
+      action: "incident.synchroniser",
+      entityTable: "incidents",
+      entityId: "*",
+      after: { received: args.incidents.length, created, duplicates, critical },
+    })
+
+    return { received: args.incidents.length, created, duplicates, critical }
+  },
+})
+
+/** Incidents, filtrables par statut. */
+export const listIncidents = query({
+  args: {
+    status: v.optional(
+      v.union(v.literal("ouvert"), v.literal("en_cours"), v.literal("resolu")),
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "incidents", "consulter")
+    const all = args.status
+      ? await ctx.db
+          .query("incidents")
+          .withIndex("by_status", (q) => q.eq("status", args.status!))
+          .collect()
+      : await ctx.db.query("incidents").collect()
+
+    return await Promise.all(
+      all
+        .sort((a, b) => b.reportedAt - a.reportedAt)
+        .map(async (incident) => ({
+          incident,
+          reporter: await ctx.db.get(incident.reporterId),
+          trip: incident.tripId ? await ctx.db.get(incident.tripId) : null,
+        })),
+    )
+  },
+})
+
+/** Fait progresser un incident jusqu'à sa résolution. */
+export const setIncidentStatus = mutation({
+  args: {
+    incidentId: v.id("incidents"),
+    status: v.union(
+      v.literal("ouvert"),
+      v.literal("en_cours"),
+      v.literal("resolu"),
+    ),
+    resolutionNote: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "incidents", "modifier")
+    const incident = await ctx.db.get(args.incidentId)
+    if (!incident) throw new Error("Incident introuvable")
+    if (args.status === "resolu" && !args.resolutionNote?.trim()) {
+      throw new Error("Une note de résolution est obligatoire")
+    }
+
+    await ctx.db.patch(args.incidentId, {
+      status: args.status,
+      resolvedBy: args.status === "resolu" ? actor._id : incident.resolvedBy,
+      resolvedAt: args.status === "resolu" ? Date.now() : incident.resolvedAt,
+      resolutionNote: args.resolutionNote,
+    })
+    await audit(ctx, {
+      actorId: actor._id,
+      action: "incident.statut",
+      entityTable: "incidents",
+      entityId: args.incidentId,
+      before: { status: incident.status },
+      after: { status: args.status, note: args.resolutionNote },
+    })
+  },
+})
