@@ -1069,6 +1069,74 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_type", ["userId", "type"]),
 
+  /* ═══════════════════════ Indicateurs pré-agrégés ═══════════════════════ */
+
+  /**
+   * Cumuls journaliers de vente.
+   *
+   * Écrits à la clôture de journée comptable, jamais à la volée. Une ligne à
+   * 250 000 voyageurs par an produit environ 20 000 ventes par mois : les
+   * parcourir à chaque ouverture d'un tableau de bord coûterait plus cher que
+   * la vente elle-même, pour un résultat qui ne bouge plus.
+   *
+   * Grain : jour × point de vente × canal × produit. Assez fin pour toutes les
+   * ventilations demandées au CDC, assez grossier pour rester en dizaines de
+   * lignes par jour.
+   */
+  dailyMetrics: defineTable({
+    /** Journée comptable au format AAAA-MM-JJ. */
+    date: v.string(),
+    pointOfSaleId: v.optional(v.id("pointsOfSale")),
+    channel: saleChannel,
+    product: productType,
+    salesCount: v.number(),
+    ticketCount: v.number(),
+    cancelledCount: v.number(),
+    refundedCount: v.number(),
+    grossHt: v.number(),
+    grossVat: v.number(),
+    grossCss: v.number(),
+    grossTtc: v.number(),
+    grossReceived: v.number(),
+    refundedHt: v.number(),
+    refundedVat: v.number(),
+    refundedCss: v.number(),
+    refundedTtc: v.number(),
+    refundedReceived: v.number(),
+    computedAt: v.number(),
+  })
+    .index("by_date", ["date"])
+    .index("by_date_pos", ["date", "pointOfSaleId"])
+    .index("by_date_channel", ["date", "channel"]),
+
+  /**
+   * Remplissage d'une desserte, en sièges-kilomètres.
+   *
+   * Un comptage de billets serait trompeur sur une ligne où le même siège se
+   * vend par tronçon : deux billets courts ne remplissent pas un train, un
+   * billet de bout en bout non plus. Le siège-kilomètre est la mesure du
+   * secteur et la seule qui rende justice au modèle par segments.
+   */
+  tripMetrics: defineTable({
+    tripId: v.id("trips"),
+    serviceDate: v.string(),
+    trainNumber: v.string(),
+    trainType,
+    serviceClass,
+    seatKmOffered: v.number(),
+    seatKmSold: v.number(),
+    loadFactorPct: v.number(),
+    /** Tronçon le plus chargé : celui qui borne la vente. */
+    peakSegmentIndex: v.optional(v.number()),
+    peakPct: v.number(),
+    ticketCount: v.number(),
+    revenueTtc: v.number(),
+    computedAt: v.number(),
+  })
+    .index("by_trip", ["tripId"])
+    .index("by_service_date", ["serviceDate"])
+    .index("by_trip_class", ["tripId", "serviceClass"]),
+
   auditLogs: defineTable({
     actorId: v.optional(v.id("users")),
     action: v.string(),

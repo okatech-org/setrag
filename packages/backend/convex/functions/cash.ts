@@ -1,5 +1,6 @@
 import { v } from "convex/values"
 import { mutation, query } from "../_generated/server"
+import { internal } from "../_generated/api"
 import { audit, requirePermission } from "../lib/auth"
 import { paymentMethod } from "../schema"
 import { toServiceDate } from "../model/calendar"
@@ -244,6 +245,13 @@ export const closeAccountingDay = mutation({
       closedAt: Date.now(),
       closedBy: actor._id,
       exportStatus: "en_attente",
+    })
+
+    // Les indicateurs se calculent une fois la journée figée, et hors de
+    // cette mutation : ils parcourent toutes les ventes du jour, ce qui n'a
+    // rien à faire dans la transaction de clôture.
+    await ctx.scheduler.runAfter(0, internal.functions.rollup.rollupAccountingDay, {
+      accountingDayId: args.accountingDayId,
     })
 
     await audit(ctx, {
