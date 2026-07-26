@@ -10,15 +10,41 @@
 
 import type * as betterAuth_auth from "../betterAuth/auth.js";
 import type * as crons from "../crons.js";
+import type * as functions_accounting from "../functions/accounting.js";
+import type * as functions_ancillaries from "../functions/ancillaries.js";
 import type * as functions_bookings from "../functions/bookings.js";
-import type * as functions_maintenance from "../functions/maintenance.js";
-import type * as functions_stations from "../functions/stations.js";
-import type * as functions_tickets from "../functions/tickets.js";
+import type * as functions_booklets from "../functions/booklets.js";
+import type * as functions_cash from "../functions/cash.js";
+import type * as functions_control from "../functions/control.js";
+import type * as functions_customers from "../functions/customers.js";
+import type * as functions_documents from "../functions/documents.js";
+import type * as functions_manualSales from "../functions/manualSales.js";
+import type * as functions_referential from "../functions/referential.js";
+import type * as functions_sales from "../functions/sales.js";
 import type * as functions_trips from "../functions/trips.js";
-import type * as functions_users from "../functions/users.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
-import type * as seeds_seed from "../seeds/seed.js";
+import type * as lib_aztecRender from "../lib/aztecRender.js";
+import type * as lib_saleContext from "../lib/saleContext.js";
+import type * as lib_signature from "../lib/signature.js";
+import type * as lib_ticketPdf from "../lib/ticketPdf.js";
+import type * as model_accounting from "../model/accounting.js";
+import type * as model_ancillary from "../model/ancillary.js";
+import type * as model_approval from "../model/approval.js";
+import type * as model_aztec from "../model/aztec.js";
+import type * as model_barcode from "../model/barcode.js";
+import type * as model_calendar from "../model/calendar.js";
+import type * as model_fares from "../model/fares.js";
+import type * as model_inventory from "../model/inventory.js";
+import type * as model_network from "../model/network.js";
+import type * as model_permissions from "../model/permissions.js";
+import type * as model_pricing from "../model/pricing.js";
+import type * as model_sales from "../model/sales.js";
+import type * as model_seating from "../model/seating.js";
+import type * as seeds_demo from "../seeds/demo.js";
+import type * as seeds_provisionalFares from "../seeds/provisionalFares.js";
+import type * as seeds_referential from "../seeds/referential.js";
+import type * as testing from "../testing.js";
 
 import type {
   ApiFromModules,
@@ -29,15 +55,41 @@ import type {
 declare const fullApi: ApiFromModules<{
   "betterAuth/auth": typeof betterAuth_auth;
   crons: typeof crons;
+  "functions/accounting": typeof functions_accounting;
+  "functions/ancillaries": typeof functions_ancillaries;
   "functions/bookings": typeof functions_bookings;
-  "functions/maintenance": typeof functions_maintenance;
-  "functions/stations": typeof functions_stations;
-  "functions/tickets": typeof functions_tickets;
+  "functions/booklets": typeof functions_booklets;
+  "functions/cash": typeof functions_cash;
+  "functions/control": typeof functions_control;
+  "functions/customers": typeof functions_customers;
+  "functions/documents": typeof functions_documents;
+  "functions/manualSales": typeof functions_manualSales;
+  "functions/referential": typeof functions_referential;
+  "functions/sales": typeof functions_sales;
   "functions/trips": typeof functions_trips;
-  "functions/users": typeof functions_users;
   http: typeof http;
   "lib/auth": typeof lib_auth;
-  "seeds/seed": typeof seeds_seed;
+  "lib/aztecRender": typeof lib_aztecRender;
+  "lib/saleContext": typeof lib_saleContext;
+  "lib/signature": typeof lib_signature;
+  "lib/ticketPdf": typeof lib_ticketPdf;
+  "model/accounting": typeof model_accounting;
+  "model/ancillary": typeof model_ancillary;
+  "model/approval": typeof model_approval;
+  "model/aztec": typeof model_aztec;
+  "model/barcode": typeof model_barcode;
+  "model/calendar": typeof model_calendar;
+  "model/fares": typeof model_fares;
+  "model/inventory": typeof model_inventory;
+  "model/network": typeof model_network;
+  "model/permissions": typeof model_permissions;
+  "model/pricing": typeof model_pricing;
+  "model/sales": typeof model_sales;
+  "model/seating": typeof model_seating;
+  "seeds/demo": typeof seeds_demo;
+  "seeds/provisionalFares": typeof seeds_provisionalFares;
+  "seeds/referential": typeof seeds_referential;
+  testing: typeof testing;
 }>;
 
 /**
@@ -70,8 +122,8 @@ export declare const components: {
   betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
   rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
-  bookingsByTrip: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"bookingsByTrip">;
-  bookingsByStatus: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"bookingsByStatus">;
+  salesByDay: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"salesByDay">;
+  salesByPointOfSale: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"salesByPointOfSale">;
   ticketsByTrip: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"ticketsByTrip">;
-  revenueByDay: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"revenueByDay">;
+  revenueByTrip: import("@convex-dev/aggregate/_generated/component.js").ComponentApi<"revenueByTrip">;
 };
