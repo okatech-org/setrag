@@ -775,11 +775,26 @@ sequenceDiagram
       <li><b>Aztec plutôt que QR</b> : standard de fait du ferroviaire (UIC) — pas de marge
       blanche obligatoire, meilleure lecture en mouvement, sur écran fissuré ou papier froissé.
       Le scan se fait dans une app dédiée, la reconnaissance grand public n'est pas un critère.</li>
-      <li><b>Charge utile</b> : CBOR → zlib → Base45, modèle du certificat COVID européen
+      <li><b>Charge utile</b> : CBOR canonique → Base45, modèle du certificat COVID européen
       simplifié pour un émetteur unique. Champs : version, version de clé (rotation), type
-      (billet | abonnement), numéro, desserte + date, classe, siège, expiration.</li>
+      (billet | abonnement), numéro, desserte + date, classe, siège, expiration. Aucune donnée
+      personnelle : le nom vient du manifeste embarqué, un titre perdu ne révèle rien de son
+      porteur.
+      <br><span class="note"><b>Écart assumé à l'implémentation :</b> la compression zlib
+      initialement prévue a été abandonnée. La charge utile mesurée fait moins de 120 octets ;
+      à cette taille l'en-tête de compression coûte plus qu'il ne rapporte.</span></li>
       <li><b>Signature Ed25519</b> (64 octets, déterministe) — clé privée en variable
-      d'environnement Convex, clé publique embarquée dans l'app contrôleur.</li>
+      d'environnement Convex (<code>BARCODE_SIGNING_KEY_V1</code>), clé publique distribuée
+      par le manifeste embarqué. Le déterminisme n'est pas qu'une commodité : une mutation
+      Convex rejouée après conflit doit reproduire exactement la même signature. Faute de clé
+      configurée, une clé de démonstration prend le relais et le billet imprimé porte la
+      mention <b>SPÉCIMEN</b> — une démonstration ne doit jamais pouvoir circuler pour un vrai
+      titre.</li>
+      <li><b>Rotation</b> : un titre signé sous une version de clé retirée est refusé pour
+      « clé hors service », jamais pour contrefaçon — sans quoi une rotation ferait passer d'un
+      coup tous les titres en circulation pour des faux. La reprise
+      (<code>documents:resignTickets</code>) re-signe ce qui ne se vérifie plus, le critère
+      étant la vérification effective et non la comparaison des numéros de version.</li>
       <li><b>Billets papier du guichet</b> : même code-barres imprimé — c'est ce qui rend les
       billets « facilement imitables » d'aujourd'hui infalsifiables demain, y compris pour les
       ventes purement guichet.</li>
@@ -928,13 +943,14 @@ stateDiagram-v2
   <h2><span class="num">17</span>Modules backend</h2>
   <div class="table-scroll"><table>
     <tr><th style="width:300px">Module</th><th>Contenu</th></tr>
-    <tr><td><code>convex/model/</code></td><td>Logique métier en TypeScript pur, testable sans Convex : <code>fares.ts</code> (barème kilométrique, arrondis, réductions, abonnements), <code>yield.ts</code> (quotas tarifaires, règles), <code>inventory.ts</code> (masques de sièges, compteurs de segments, quotas agences), <code>sales.ts</code> (vente commune multi-produits, annulation, remboursement), <code>cash.ts</code> (sessions, écarts, journée comptable), <code>accounting.ts</code> (écritures V65), <code>barcode.ts</code> (CBOR + Base45 + Ed25519).</td></tr>
+    <tr><td><code>convex/model/</code></td><td>Logique métier en TypeScript pur, testable sans Convex : <code>fares.ts</code> (barème kilométrique, arrondis, réductions, abonnements), <code>yield.ts</code> (quotas tarifaires, règles), <code>inventory.ts</code> (masques de sièges, compteurs de segments, quotas agences), <code>sales.ts</code> (vente commune multi-produits, annulation, remboursement), <code>cash.ts</code> (sessions, écarts, journée comptable), <code>accounting.ts</code> (écritures V65), <code>barcode.ts</code> (CBOR canonique + Base45 + portée du titre), <code>aztec.ts</code> (rastérisation du symbole en grille de modules).</td></tr>
     <tr><td><code>functions/referential.ts</code></td><td>Gares, trains, voitures, plans de sièges (import), points de vente, agences.</td></tr>
     <tr><td><code>functions/booklets.ts</code> · <code>functions/fares.ts</code></td><td>Livrets horaires et tarifs : CRUD + cycle de validation + import/export en masse + génération des dessertes.</td></tr>
     <tr><td><code>functions/inventory.ts</code></td><td>Disponibilités par segment, blocage/déblocage, quotas agences, rapport de traçabilité des places.</td></tr>
     <tr><td><code>functions/sales.ts</code> + <code>bookings.ts</code></td><td>Vente guichet/agence/bord (ferme) et réservation en ligne (hold) ; annulations, remboursements avec motifs et pénalités ; proformas ; ressaisie des ventes manuelles.</td></tr>
     <tr><td><code>functions/baggages.ts</code> · <code>parcels.ts</code> · <code>vehicles.ts</code> · <code>funeral.ts</code></td><td>Les quatre produits fret voyageur, avec étiquettes/vignettes et statuts.</td></tr>
     <tr><td><code>functions/payments.ts</code> + <code>lib/payment/</code></td><td>Machine à états, interface <code>PaymentProvider</code>, simulateur pilotable, webhooks + réconciliation.</td></tr>
+    <tr><td><code>functions/documents.ts</code> + <code>lib/ticketPdf.ts</code> · <code>lib/aztecRender.ts</code> · <code>lib/signature.ts</code></td><td>Billet imprimable A5 : signature Ed25519, encodage Aztec, composition PDF et stockage. La génération est une <em>action</em>, hors de la transaction de vente ; le fichier est mis en cache sur le titre et refabriqué à la demande. <code>resignTickets</code> assure la reprise après rotation de clé.</td></tr>
     <tr><td><code>functions/cash.ts</code> · <code>functions/accounting.ts</code></td><td>Sessions de caisse, états de contrôle, clôture de journée, export SAGE (outbox).</td></tr>
     <tr><td><code>functions/tickets.ts</code> · <code>scans.ts</code> · <code>pv.ts</code> · <code>incidents.ts</code></td><td>Titres, manifestes paginés, synchronisation par lots idempotents, PV, incidents.</td></tr>
     <tr><td><code>functions/reports.ts</code> · <code>admin.ts</code></td><td>États réglementaires du CDC, KPI, extractions voyageurs, exports paginés.</td></tr>

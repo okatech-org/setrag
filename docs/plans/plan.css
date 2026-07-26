@@ -55,6 +55,8 @@ p { max-width: 80ch; margin-bottom: 10px; }
 ul, ol { margin: 0 0 12px 22px; max-width: 78ch; }
 li { margin-bottom: 5px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+/* Remarque secondaire dans une liste : écart d'implémentation, précision. */
+.note { display: block; margin-top: 6px; padding-left: 10px; border-left: 2px solid var(--border); color: var(--ink-muted); font-size: 12.5px; }
 table { border-collapse: collapse; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 13.5px; margin-bottom: 16px; }
 .table-scroll { overflow-x: auto; margin-bottom: 16px; }
 .table-scroll table { margin-bottom: 0; }
