@@ -18,13 +18,23 @@ import { buildProvisionalFares } from "./provisionalFares"
  * CDC « Projet billettique SETRAG » (§7.4), qui suit la ligne d'Owendo vers
  * Franceville. Il est fiable.
  *
- * Les points kilométriques, eux, ne figurent PAS dans le cahier des charges.
- * Seuls les extrêmes sont certains : Owendo au PK 0 et Franceville au PK 648.
- * Les valeurs intermédiaires marquées `approx: true` sont des interpolations
- * de travail destinées à faire tourner le système ; elles NE DOIVENT PAS
- * servir à facturer un voyageur, puisque le barème kilométrique en dépend
- * directement. Le tableau officiel des distances doit être obtenu auprès de
- * SETRAG avant toute mise en service.
+ * Les points kilométriques ne figurent PAS dans le cahier des charges. Ils
+ * proviennent du schéma de ligne public du Transgabonais (Wikipédia FR/EN),
+ * seule source donnant les points intermédiaires. C'est mieux qu'une
+ * interpolation — les écarts entre gares y sont irréguliers, comme sur le
+ * terrain — mais ce n'est pas le tableau officiel de SETRAG.
+ *
+ * Une contradiction reste ouverte : SETRAG communique une ligne de 648 km,
+ * alors que le schéma totalise 669 km d'Owendo à Franceville. Le référentiel
+ * retient 669, parce que c'est la seule série cohérente gare par gare. L'écart
+ * de 21 km porte sur environ 3 % du prix d'un trajet complet.
+ *
+ * Ces valeurs NE DOIVENT PAS servir à facturer un voyageur : le barème
+ * kilométrique en dépend directement. Le tableau officiel des distances reste
+ * à obtenir auprès de SETRAG avant toute mise en service.
+ *
+ * La gare d'Essassa (PK ~41, ouverte après le schéma) n'est pas reprise : son
+ * état d'exploitation n'a pas pu être établi.
  */
 
 /** Gare du réseau, avec l'origine de son point kilométrique. */
@@ -33,8 +43,8 @@ interface StationSeed {
   name: string
   province: string
   kilometerPoint: number
-  /** Vrai si le PK est une interpolation de travail, faux s'il est certain. */
-  approx: boolean
+  /** Origine du point kilométrique : le CDC, ou le schéma de ligne public. */
+  pkSource: "cdc" | "schema_public"
   /** Nombre de guichets déclarés au CDC §7.4 — détermine l'équipement. */
   counters: { passengers: number; baggage: number; parcels: number }
 }
@@ -45,23 +55,23 @@ const STATIONS: StationSeed[] = [
     name: "Owendo Virié",
     province: "Estuaire",
     kilometerPoint: 0,
-    approx: false,
+    pkSource: "cdc",
     counters: { passengers: 4, baggage: 2, parcels: 2 },
   },
   {
     code: "NTM",
     name: "Ntoum",
     province: "Estuaire",
-    kilometerPoint: 40,
-    approx: true,
+    kilometerPoint: 35,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "AND",
     name: "Andem",
     province: "Estuaire",
-    kilometerPoint: 62,
-    approx: true,
+    kilometerPoint: 57,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
@@ -69,159 +79,159 @@ const STATIONS: StationSeed[] = [
     name: "Mbel",
     province: "Estuaire",
     kilometerPoint: 85,
-    approx: true,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "OYA",
     name: "Oyan",
     province: "Moyen-Ogooué",
-    kilometerPoint: 108,
-    approx: true,
+    kilometerPoint: 118,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "ABA",
     name: "Abanga",
     province: "Moyen-Ogooué",
-    kilometerPoint: 140,
-    approx: true,
+    kilometerPoint: 148,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "NDJ",
     name: "Ndjolé",
     province: "Moyen-Ogooué",
-    kilometerPoint: 175,
-    approx: true,
+    kilometerPoint: 182,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "ALE",
     name: "Alembé",
     province: "Moyen-Ogooué",
-    kilometerPoint: 205,
-    approx: true,
+    kilometerPoint: 202,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "OTO",
     name: "Otoumbi",
     province: "Moyen-Ogooué",
-    kilometerPoint: 232,
-    approx: true,
+    kilometerPoint: 226,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "BIS",
     name: "Bissouma",
     province: "Ogooué-Ivindo",
-    kilometerPoint: 258,
-    approx: true,
+    kilometerPoint: 244,
+    pkSource: "schema_public",
     counters: { passengers: 0, baggage: 0, parcels: 0 },
   },
   {
     code: "AYE",
     name: "Ayem",
     province: "Ogooué-Ivindo",
-    kilometerPoint: 282,
-    approx: true,
+    kilometerPoint: 267,
+    pkSource: "schema_public",
     counters: { passengers: 0, baggage: 0, parcels: 0 },
   },
   {
     code: "LOP",
     name: "Lopé",
     province: "Ogooué-Ivindo",
-    kilometerPoint: 308,
-    approx: true,
+    kilometerPoint: 290,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "OFF",
     name: "Offoué",
     province: "Ogooué-Ivindo",
-    kilometerPoint: 325,
-    approx: true,
+    kilometerPoint: 312,
+    pkSource: "schema_public",
     counters: { passengers: 0, baggage: 0, parcels: 0 },
   },
   {
     code: "BOO",
     name: "Booué",
     province: "Ogooué-Ivindo",
-    kilometerPoint: 340,
-    approx: true,
+    kilometerPoint: 338,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "IVI",
     name: "Ivindo",
     province: "Ogooué-Ivindo",
-    kilometerPoint: 390,
-    approx: true,
+    kilometerPoint: 375,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "MOU",
     name: "Mouyabi",
     province: "Ogooué-Lolo",
-    kilometerPoint: 430,
-    approx: true,
+    kilometerPoint: 411,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "MIL",
     name: "Milolé",
     province: "Ogooué-Lolo",
-    kilometerPoint: 470,
-    approx: true,
+    kilometerPoint: 448,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 0, parcels: 0 },
   },
   {
     code: "LTV",
     name: "Lastourville",
     province: "Ogooué-Lolo",
-    kilometerPoint: 508,
-    approx: true,
+    kilometerPoint: 484,
+    pkSource: "schema_public",
     counters: { passengers: 2, baggage: 2, parcels: 2 },
   },
   {
     code: "DOU",
     name: "Doumé",
     province: "Ogooué-Lolo",
-    kilometerPoint: 540,
-    approx: true,
+    kilometerPoint: 514,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 0, parcels: 0 },
   },
   {
     code: "LIF",
     name: "Lifouta",
     province: "Ogooué-Lolo",
-    kilometerPoint: 565,
-    approx: true,
+    kilometerPoint: 549,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 0, parcels: 0 },
   },
   {
     code: "MBA",
     name: "Mboungou Badouma",
     province: "Ogooué-Lolo",
-    kilometerPoint: 588,
-    approx: true,
+    kilometerPoint: 584,
+    pkSource: "schema_public",
     counters: { passengers: 0, baggage: 0, parcels: 0 },
   },
   {
     code: "MOA",
     name: "Moanda",
     province: "Haut-Ogooué",
-    kilometerPoint: 612,
-    approx: true,
+    kilometerPoint: 619,
+    pkSource: "schema_public",
     counters: { passengers: 1, baggage: 1, parcels: 1 },
   },
   {
     code: "FCV",
     name: "Franceville",
     province: "Haut-Ogooué",
-    kilometerPoint: 648,
-    approx: false,
+    kilometerPoint: 669,
+    pkSource: "schema_public",
     counters: { passengers: 3, baggage: 2, parcels: 2 },
   },
 ]
@@ -342,6 +352,57 @@ const FARE_BASES = [
   { trainType: "AUTORAIL", serviceClass: "PREMIERE", short: 60.1, long: 54.93 },
   { trainType: "AUTORAIL", serviceClass: "DEUXIEME", short: 37.54, long: 34.31 },
 ] as const
+
+/**
+ * Tarifs Owendo–Franceville réellement pratiqués, relevés en sources
+ * publiques (grille SETRAG 2025, recoupée par seat61.com).
+ *
+ * Ils ne servent à RIEN dans le calcul : le barème du CDC fait foi. Ils
+ * servent de repère — et ce repère dit quelque chose. Le barème de l'annexe 2
+ * produit des prix inférieurs de 30 à 39 % aux tarifs affichés, et l'écart est
+ * systématique sur les cinq combinaisons. Une différence de cet ordre, aussi
+ * régulière, ressemble à un barème antérieur à plusieurs revalorisations —
+ * la presse gabonaise documente déjà une hausse en 2017.
+ *
+ * À confirmer auprès de SETRAG : le barème de l'annexe 2 est-il celui en
+ * vigueur, ou une base historique ? La question relève du client, pas du
+ * prestataire.
+ */
+const TARIFS_PUBLICS_2025: ReadonlyArray<{
+  trainType: string
+  serviceClass: string
+  ttcXaf: number
+}> = [
+  { trainType: "EXPRESS", serviceClass: "VIP", ttcXaf: 64_300 },
+  { trainType: "EXPRESS", serviceClass: "PREMIERE", ttcXaf: 56_300 },
+  { trainType: "EXPRESS", serviceClass: "DEUXIEME", ttcXaf: 42_200 },
+  { trainType: "OMNIBUS", serviceClass: "PREMIERE", ttcXaf: 47_200 },
+  { trainType: "OMNIBUS", serviceClass: "DEUXIEME", ttcXaf: 33_100 },
+]
+
+/** Rapproche le barème du CDC des tarifs affichés, sur le trajet complet. */
+export function compareFaresToPublished(distanceKm: number): Array<{
+  label: string
+  cdcXaf: number
+  publishedXaf: number
+  gapPct: number
+}> {
+  return TARIFS_PUBLICS_2025.map((ref) => {
+    const base = FARE_BASES.find(
+      (b) =>
+        b.trainType === ref.trainType && b.serviceClass === ref.serviceClass,
+    )
+    // Approximation volontaire : taux long uniquement, sans arrondi ni taxes.
+    // On cherche un ordre de grandeur, pas un prix.
+    const cdc = base ? Math.round(distanceKm * base.long) : 0
+    return {
+      label: `${ref.trainType}/${ref.serviceClass}`,
+      cdcXaf: cdc,
+      publishedXaf: ref.ttcXaf,
+      gapPct: Math.round(((cdc - ref.ttcXaf) / ref.ttcXaf) * 100),
+    }
+  })
+}
 
 /** Réductions de l'annexe 2. Les tarifs en projet restent désactivés. */
 const DISCOUNTS = [
@@ -510,12 +571,33 @@ export const run = internalMutation({
       }
     }
 
-    const approximate = STATIONS.filter((s) => s.approx).length
+    const nonOfficiels = STATIONS.filter(
+      (s) => s.pkSource !== "cdc",
+    ).length
     report.warnings.push(
-      `${approximate} gares sur ${STATIONS.length} portent un point ` +
-        `kilométrique INTERPOLÉ. Le barème kilométrique en dépend : ` +
-        `obtenir le tableau officiel des distances auprès de SETRAG avant ` +
-        `toute vente réelle.`,
+      `${nonOfficiels} gares sur ${STATIONS.length} portent un point ` +
+        `kilométrique issu du SCHÉMA DE LIGNE PUBLIC, non du référentiel ` +
+        `SETRAG. Le total Owendo–Franceville y vaut 669 km, alors que ` +
+        `SETRAG communique 648 km. Le barème kilométrique en dépend : ` +
+        `obtenir le tableau officiel des distances avant toute vente réelle.`,
+    )
+
+    // Rapprochement avec les tarifs affichés : signalé au seed pour que
+    // l'écart soit vu, pas découvert à la démonstration devant le client.
+    const distanceTotale =
+      Math.max(...STATIONS.map((s) => s.kilometerPoint)) -
+      Math.min(...STATIONS.map((s) => s.kilometerPoint))
+    const ecarts = compareFaresToPublished(distanceTotale)
+    const ecartMoyen = Math.round(
+      ecarts.reduce((t, e) => t + e.gapPct, 0) / ecarts.length,
+    )
+    report.warnings.push(
+      `Le barème de l'annexe 2 produit des prix Owendo–Franceville en ` +
+        `moyenne ${Math.abs(ecartMoyen)} % ${ecartMoyen < 0 ? "SOUS" : "AU-DESSUS"} ` +
+        `des tarifs SETRAG affichés en 2025 (${ecarts
+          .map((e) => `${e.label} ${e.cdcXaf} vs ${e.publishedXaf}`)
+          .join(" ; ")}). Écart systématique : confirmer auprès de SETRAG ` +
+        `que l'annexe 2 est bien le barème en vigueur.`,
     )
 
     /* ── Trains et compositions ───────────────────────────────────────── */

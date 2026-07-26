@@ -54,7 +54,9 @@ describe("seed du référentiel — première exécution", () => {
     expect(gares[0]?.code).toBe("OWE")
     expect(gares[0]?.kilometerPoint).toBe(0)
     expect(gares[gares.length - 1]?.code).toBe("FCV")
-    expect(gares[gares.length - 1]?.kilometerPoint).toBe(648)
+    // Total du schéma de ligne public. SETRAG communique 648 km ; l'écart
+    // est documenté dans le seed et reste à trancher avec le client.
+    expect(gares[gares.length - 1]?.kilometerPoint).toBe(669)
 
     // Strictement croissant : indispensable au calcul de distance.
     for (let i = 1; i < gares.length; i += 1) {
@@ -98,14 +100,14 @@ describe("seed du référentiel — première exécution", () => {
     }
   })
 
-  it("signale explicitement les points kilométriques interpolés", async () => {
+  it("signale que les points kilométriques ne viennent pas de SETRAG", async () => {
     const t = convexTest(schema, modules)
     const rapport = await t.mutation(internal.seeds.referential.run, {})
     const avertissement = rapport.warnings.find((w) =>
-      w.includes("kilométrique INTERPOLÉ"),
+      w.includes("SCHÉMA DE LIGNE PUBLIC"),
     )
     expect(avertissement).toBeDefined()
-    expect(avertissement).toContain("21 gares sur 23")
+    expect(avertissement).toContain("22 gares sur 23")
   })
 
   it("journalise l'amorçage", async () => {
