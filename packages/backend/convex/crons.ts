@@ -35,4 +35,18 @@ crons.interval(
   {},
 )
 
+/**
+ * Contrôle de santé d'exploitation.
+ *
+ * Toutes les quatre heures : assez souvent pour qu'une anomalie critique soit
+ * datée à une demi-journée près, assez rare pour ne pas encombrer le journal
+ * d'audit. Le tableau de bord, lui, est réactif et n'attend pas ce cron.
+ */
+crons.interval(
+  "health check",
+  { hours: 4 },
+  internal.functions.monitoring.runHealthCheck,
+  {},
+)
+
 export default crons
