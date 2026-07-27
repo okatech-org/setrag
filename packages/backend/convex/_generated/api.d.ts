@@ -16,6 +16,7 @@ import type * as ai_rateLimiter from "../ai/rateLimiter.js";
 import type * as ai_realtime from "../ai/realtime.js";
 import type * as ai_tools from "../ai/tools.js";
 import type * as betterAuth_auth from "../betterAuth/auth.js";
+import type * as betterAuth_origins from "../betterAuth/origins.js";
 import type * as crons from "../crons.js";
 import type * as functions_accounting from "../functions/accounting.js";
 import type * as functions_ancillaries from "../functions/ancillaries.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   "ai/realtime": typeof ai_realtime;
   "ai/tools": typeof ai_tools;
   "betterAuth/auth": typeof betterAuth_auth;
+  "betterAuth/origins": typeof betterAuth_origins;
   crons: typeof crons;
   "functions/accounting": typeof functions_accounting;
   "functions/ancillaries": typeof functions_ancillaries;
