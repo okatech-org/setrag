@@ -152,7 +152,7 @@ async function seedSellableTrip(t: ReturnType<typeof convexTest>) {
         { stationId: net.boo, sequence: 2, arrivalOffsetMinutes: 380 },
         { stationId: net.fcv, sequence: 3, arrivalOffsetMinutes: 700 },
       ],
-    },
+    }
   )
   await adminCtx.mutation(api.functions.booklets.submit, { bookletId })
   await adminCtx.mutation(api.functions.booklets.approve, { bookletId })
@@ -168,7 +168,7 @@ async function seedSellableTrip(t: ReturnType<typeof convexTest>) {
 async function asSeller(
   t: ReturnType<typeof convexTest>,
   posId: Id<"pointsOfSale">,
-  options: { role?: AppRole; openCash?: boolean } = {},
+  options: { role?: AppRole; openCash?: boolean } = {}
 ) {
   const authId = `vendeur-${Math.floor(Math.random() * 1e9)}`
   const userId = await t.run(async (ctx) =>
@@ -180,7 +180,7 @@ async function asSeller(
       pointOfSaleId: posId,
       identitySource: "annuaire",
       isActive: true,
-    }),
+    })
   )
   const ctx = t.withIdentity({ subject: authId })
   if (options.openCash !== false) {
@@ -202,6 +202,33 @@ const VOYAGEUR = {
 /* ═══════════════════════ Vente nominale ══════════════════════════════════ */
 
 describe("Vente au guichet — cas nominal", () => {
+  it("annonce le même tarif guichet que la mutation de vente", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedSellableTrip(t)
+    const { ctx } = await asSeller(t, fx.pos)
+
+    const devis = await ctx.query(api.functions.sales.quoteCounterSale, {
+      tripId: fx.tripId,
+      originStationId: fx.owe,
+      destinationStationId: fx.fcv,
+      serviceClass: "DEUXIEME",
+      passengerCount: 1,
+    })
+    const vente = await ctx.mutation(api.functions.sales.createCounterSale, {
+      tripId: fx.tripId,
+      originStationId: fx.owe,
+      destinationStationId: fx.fcv,
+      serviceClass: "DEUXIEME",
+      passengers: [VOYAGEUR],
+      method: "especes",
+      tendered: 30_000,
+    })
+
+    expect(devis.hasAvailability).toBe(true)
+    expect(devis.distanceKm).toBe(648)
+    expect(devis.totalTtc).toBe(vente.amounts.ttc)
+  })
+
   it("émet un billet, l'attache à une place et calcule le prix du barème", async () => {
     const t = convexTest(schema, modules)
     const fx = await seedSellableTrip(t)
@@ -240,7 +267,7 @@ describe("Vente au guichet — cas nominal", () => {
     })
 
     const counters = await t.run(async (c) =>
-      c.db.query("segmentCounters").collect(),
+      c.db.query("segmentCounters").collect()
     )
     const parSegment = counters.sort((a, b) => a.segmentIndex - b.segmentIndex)
     // Owendo → Booué emprunte les segments 0 et 1, pas le 2.
@@ -266,7 +293,7 @@ describe("Vente au guichet — cas nominal", () => {
     })
 
     const occupancy = await t.run(async (c) =>
-      c.db.query("seatOccupancy").collect(),
+      c.db.query("seatOccupancy").collect()
     )
     const occupee = occupancy.find((o) => o.soldMask !== 0)
     // Segment 0 seulement.
@@ -292,7 +319,7 @@ describe("Vente au guichet — cas nominal", () => {
     })
     expect(detail.sale.amounts.ht + detail.sale.amounts.vat).toBeCloseTo(
       detail.sale.amounts.ttc,
-      2,
+      2
     )
     const billet = detail.tickets[0]!
     expect(billet.fare.distanceKm).toBe(648)
@@ -344,7 +371,9 @@ describe("Vente au guichet — cas nominal", () => {
       method: "especes",
     })
 
-    const prix = resultat.tickets.map((b) => b.unitPriceTtc).sort((a, b) => a - b)
+    const prix = resultat.tickets
+      .map((b) => b.unitPriceTtc)
+      .sort((a, b) => a - b)
     expect(prix[0]).toBe(14100) // 28 136,16 / 2 → arrondi
     expect(prix[1]).toBe(28100)
   })
@@ -354,17 +383,14 @@ describe("Vente au guichet — cas nominal", () => {
     const fx = await seedSellableTrip(t)
     const { ctx } = await asSeller(t, fx.pos)
 
-    const premiere = await ctx.mutation(
-      api.functions.sales.createCounterSale,
-      {
-        tripId: fx.tripId,
-        originStationId: fx.owe,
-        destinationStationId: fx.ndj,
-        serviceClass: "DEUXIEME",
-        passengers: [VOYAGEUR],
-        method: "especes",
-      },
-    )
+    const premiere = await ctx.mutation(api.functions.sales.createCounterSale, {
+      tripId: fx.tripId,
+      originStationId: fx.owe,
+      destinationStationId: fx.ndj,
+      serviceClass: "DEUXIEME",
+      passengers: [VOYAGEUR],
+      method: "especes",
+    })
     const seconde = await ctx.mutation(api.functions.sales.createCounterSale, {
       tripId: fx.tripId,
       originStationId: fx.owe,
@@ -399,7 +425,7 @@ describe("Vente au guichet — cas nominal", () => {
     expect(etat?.totalTtc).toBe(28100)
 
     const jours = await t.run(async (c) =>
-      c.db.query("accountingDays").collect(),
+      c.db.query("accountingDays").collect()
     )
     expect(jours[0]?.totalTtc).toBe(28100)
   })
@@ -455,7 +481,7 @@ describe("Garantie anti-survente", () => {
         serviceClass: "DEUXIEME",
         passengers: [VOYAGEUR],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/Places insuffisantes/)
   })
 
@@ -486,7 +512,7 @@ describe("Garantie anti-survente", () => {
         serviceClass: "DEUXIEME",
         passengers: [VOYAGEUR],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/Places insuffisantes/)
 
     // …mais les mêmes places se revendent au-delà de Booué.
@@ -520,13 +546,13 @@ describe("Garantie anti-survente", () => {
           firstName: `Trop${i}`,
         })),
         method: "especes",
-      }),
+      })
     ).rejects.toThrow()
 
     const ventes = await t.run(async (c) => c.db.query("sales").collect())
     const billets = await t.run(async (c) => c.db.query("tickets").collect())
     const counters = await t.run(async (c) =>
-      c.db.query("segmentCounters").collect(),
+      c.db.query("segmentCounters").collect()
     )
     expect(ventes).toHaveLength(0)
     expect(billets).toHaveLength(0)
@@ -550,7 +576,7 @@ describe("Garantie anti-survente", () => {
     }
 
     const counters = await t.run(async (c) =>
-      c.db.query("segmentCounters").collect(),
+      c.db.query("segmentCounters").collect()
     )
     for (const c of counters) {
       expect(c.available).toBeGreaterThanOrEqual(0)
@@ -563,17 +589,14 @@ describe("Garantie anti-survente", () => {
     const fx = await seedSellableTrip(t)
     const { ctx } = await asSeller(t, fx.pos)
 
-    const premiere = await ctx.mutation(
-      api.functions.sales.createCounterSale,
-      {
-        tripId: fx.tripId,
-        originStationId: fx.owe,
-        destinationStationId: fx.fcv,
-        serviceClass: "DEUXIEME",
-        passengers: [VOYAGEUR],
-        method: "especes",
-      },
-    )
+    const premiere = await ctx.mutation(api.functions.sales.createCounterSale, {
+      tripId: fx.tripId,
+      originStationId: fx.owe,
+      destinationStationId: fx.fcv,
+      serviceClass: "DEUXIEME",
+      passengers: [VOYAGEUR],
+      method: "especes",
+    })
     const detail = await ctx.query(api.functions.sales.get, {
       saleId: premiere.saleId as Id<"sales">,
     })
@@ -587,7 +610,7 @@ describe("Garantie anti-survente", () => {
         serviceClass: "DEUXIEME",
         passengers: [{ ...VOYAGEUR, seatId: placePrise }],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/Place indisponible/)
   })
 
@@ -633,7 +656,7 @@ describe("Contrôles avant vente", () => {
         serviceClass: "DEUXIEME",
         passengers: [VOYAGEUR],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/Accès refusé/)
   })
 
@@ -649,7 +672,7 @@ describe("Contrôles avant vente", () => {
         serviceClass: "DEUXIEME",
         passengers: [VOYAGEUR],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/Aucune session de caisse ouverte/)
   })
 
@@ -657,9 +680,7 @@ describe("Contrôles avant vente", () => {
     const t = convexTest(schema, modules)
     const fx = await seedSellableTrip(t)
     const { ctx } = await asSeller(t, fx.pos)
-    await t.run(async (c) =>
-      c.db.patch(fx.tripId, { isOpenForSale: false }),
-    )
+    await t.run(async (c) => c.db.patch(fx.tripId, { isOpenForSale: false }))
     await expect(
       ctx.mutation(api.functions.sales.createCounterSale, {
         tripId: fx.tripId,
@@ -668,7 +689,7 @@ describe("Contrôles avant vente", () => {
         serviceClass: "DEUXIEME",
         passengers: [VOYAGEUR],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/fermée à la vente/)
   })
 
@@ -685,7 +706,7 @@ describe("Contrôles avant vente", () => {
         serviceClass: "DEUXIEME",
         passengers: [VOYAGEUR],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/vente impossible/)
   })
 
@@ -701,7 +722,7 @@ describe("Contrôles avant vente", () => {
         serviceClass: "DEUXIEME",
         passengers: [VOYAGEUR],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/Sens de circulation incompatible/)
   })
 
@@ -717,7 +738,7 @@ describe("Contrôles avant vente", () => {
         serviceClass: "VIP",
         passengers: [VOYAGEUR],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/non commercialisée/)
   })
 
@@ -733,7 +754,7 @@ describe("Contrôles avant vente", () => {
         serviceClass: "DEUXIEME",
         passengers: [{ ...VOYAGEUR, discountCode: "INEXISTANTE" }],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/inconnue ou désactivée/)
   })
 
@@ -749,7 +770,7 @@ describe("Contrôles avant vente", () => {
         serviceClass: "DEUXIEME",
         passengers: [],
         method: "especes",
-      }),
+      })
     ).rejects.toThrow(/Aucun voyageur/)
   })
 
@@ -766,7 +787,7 @@ describe("Contrôles avant vente", () => {
         passengers: [VOYAGEUR],
         method: "especes",
         tendered: 1000,
-      }),
+      })
     ).rejects.toThrow(/Règlement insuffisant/)
   })
 
@@ -780,7 +801,7 @@ describe("Contrôles avant vente", () => {
         role: "vendeur_guichet",
         identitySource: "annuaire",
         isActive: true,
-      }),
+      })
     )
     await expect(
       t
@@ -792,7 +813,7 @@ describe("Contrôles avant vente", () => {
           serviceClass: "DEUXIEME",
           passengers: [VOYAGEUR],
           method: "especes",
-        }),
+        })
     ).rejects.toThrow(/non rattaché à un point de vente/)
   })
 })

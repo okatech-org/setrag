@@ -153,7 +153,7 @@ async function seedContext(t: ReturnType<typeof convexTest>) {
         { stationId: net.boo, sequence: 1, arrivalOffsetMinutes: 380 },
         { stationId: net.fcv, sequence: 2, arrivalOffsetMinutes: 700 },
       ],
-    },
+    }
   )
   await adminCtx.mutation(api.functions.booklets.submit, { bookletId })
   await adminCtx.mutation(api.functions.booklets.approve, { bookletId })
@@ -167,7 +167,7 @@ async function seedContext(t: ReturnType<typeof convexTest>) {
 async function asSeller(
   t: ReturnType<typeof convexTest>,
   posId: Id<"pointsOfSale">,
-  role: AppRole = "vendeur_guichet",
+  role: AppRole = "vendeur_guichet"
 ) {
   const authId = `${role}-${Math.floor(Math.random() * 1e9)}`
   await t.run(async (ctx) =>
@@ -177,7 +177,7 @@ async function asSeller(
       pointOfSaleId: posId,
       identitySource: "annuaire",
       isActive: true,
-    }),
+    })
   )
   const ctx = t.withIdentity({ subject: authId })
   await ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: 0 })
@@ -188,8 +188,8 @@ async function asSeller(
 async function sellTicket(
   t: ReturnType<typeof convexTest>,
   fx: Awaited<ReturnType<typeof seedContext>>,
-  seller: Awaited<ReturnType<typeof asSeller>>,
-) {
+  seller: Awaited<ReturnType<typeof asSeller>>
+): Promise<Id<"tickets">> {
   const vente = await seller.mutation(api.functions.sales.createCounterSale, {
     tripId: fx.tripId,
     originStationId: fx.owe,
@@ -201,12 +201,34 @@ async function sellTicket(
   const detail = await seller.query(api.functions.sales.get, {
     saleId: vente.saleId as Id<"sales">,
   })
-  return detail.tickets[0]!._id
+  return detail.tickets[0]!._id as Id<"tickets">
 }
 
 /* ═════════════════════════════ Bagages ═══════════════════════════════════ */
 
 describe("Vente de bagage", () => {
+  it("retrouve le billet et chiffre le bagage avant la vente", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedContext(t)
+    const seller = await asSeller(t, fx.pos)
+    const ticketId = await sellTicket(t, fx, seller)
+    const ticket = await t.run(async (ctx) => ctx.db.get(ticketId))
+
+    const found = await seller.query(api.functions.ancillaries.lookupTicket, {
+      number: ticket!.number,
+    })
+    const quote = await seller.query(api.functions.ancillaries.quoteBaggage, {
+      ticketId,
+      weightKg: 12,
+    })
+
+    expect(found?.ticket._id).toBe(ticketId)
+    expect(found?.origin?.code).toBe("OWE")
+    expect(found?.destination?.code).toBe("FCV")
+    expect(quote.distanceKm).toBe(648)
+    expect(quote.totalTtc).toBe(700)
+  })
+
   it("hérite du trajet du billet et facture les frais d'enregistrement", async () => {
     const t = convexTest(schema, modules)
     const fx = await seedContext(t)
@@ -254,7 +276,7 @@ describe("Vente de bagage", () => {
         ticketId,
         weightKg: 35,
         senderName: "MBADINGA Paul",
-      }),
+      })
     ).rejects.toThrow(/régime colis express/)
   })
 
@@ -270,7 +292,7 @@ describe("Vente de bagage", () => {
         ticketId,
         weightKg: 10,
         senderName: "X",
-      }),
+      })
     ).rejects.toThrow(/enregistrement de bagage impossible/)
   })
 
@@ -313,6 +335,20 @@ describe("Vente de bagage", () => {
 /* ═══════════════════════════ Colis express ═══════════════════════════════ */
 
 describe("Vente de colis express", () => {
+  it("chiffre les articles avant de créer l'expédition", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedContext(t)
+    const seller = await asSeller(t, fx.pos)
+    const quote = await seller.query(api.functions.ancillaries.quoteParcel, {
+      originStationId: fx.owe,
+      destinationStationId: fx.fcv,
+      items: [{ weightKg: 18 }, { weightKg: 7 }],
+    })
+    expect(quote.distanceKm).toBe(648)
+    expect(quote.zone).toBe(7)
+    expect(quote.totalTtc).toBeGreaterThan(0)
+  })
+
   it("crée une expédition autonome avec une vignette par article", async () => {
     const t = convexTest(schema, modules)
     const fx = await seedContext(t)
@@ -372,7 +408,7 @@ describe("Vente de colis express", () => {
         recipientName: "B",
         recipientPhone: "+241 2",
         items: [{ description: "Colis", weightKg: 5 }],
-      }),
+      })
     ).rejects.toThrow(/contacts téléphoniques/)
   })
 
@@ -389,7 +425,7 @@ describe("Vente de colis express", () => {
         recipientName: "B",
         recipientPhone: "+241 2",
         items: [],
-      }),
+      })
     ).rejects.toThrow(/sans article/)
   })
 
@@ -407,7 +443,7 @@ describe("Vente de colis express", () => {
         recipientName: "B",
         recipientPhone: "+241 2",
         items: [{ description: "Colis", weightKg: 5 }],
-      }),
+      })
     ).rejects.toThrow(/Barème colis absent pour la zone 4/)
   })
 
@@ -424,7 +460,7 @@ describe("Vente de colis express", () => {
         recipientName: "B",
         recipientPhone: "+241 2",
         items: [{ description: "Trop lourd", weightKg: 150 }],
-      }),
+      })
     ).rejects.toThrow(/limité à 100 kg/)
   })
 
@@ -448,7 +484,7 @@ describe("Vente de colis express", () => {
     })
 
     const outbox = await t.run(async (c) =>
-      c.db.query("outboxEvents").collect(),
+      c.db.query("outboxEvents").collect()
     )
     expect(outbox).toHaveLength(1)
     expect(outbox[0]?.type).toBe("colirail_status")
@@ -487,6 +523,20 @@ describe("Vente de colis express", () => {
 /* ══════════════ Transport auto accompagné et funéraire ═══════════════════ */
 
 describe("Transport auto accompagné", () => {
+  it("chiffre le transport avec le trajet hérité du billet", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedContext(t)
+    const seller = await asSeller(t, fx.pos)
+    const ticketId = await sellTicket(t, fx, seller)
+    const quote = await seller.query(
+      api.functions.ancillaries.quoteSpecialTransport,
+      { product: "taa", ticketId, tonnage: 1.4 }
+    )
+    expect(quote.distanceKm).toBe(648)
+    expect(quote.breakdown.zone).toBe(7)
+    expect(quote.totalTtc).toBeGreaterThan(0)
+  })
+
   it("se rattache à un billet et facture au tonnage", async () => {
     const t = convexTest(schema, modules)
     const fx = await seedContext(t)
@@ -500,7 +550,7 @@ describe("Transport auto accompagné", () => {
         tonnage: 1.4,
         senderName: "MBADINGA Paul",
         validUntil: Date.now() + 86_400_000,
-      },
+      }
     )
     expect(r.shipmentNumber).toMatch(/^A-OWE-PV-/)
     expect(r.amounts.ttc).toBe(168000)
@@ -517,7 +567,7 @@ describe("Transport auto accompagné", () => {
         tonnage: 0,
         senderName: "X",
         validUntil: Date.now(),
-      }),
+      })
     ).rejects.toThrow(RangeError)
   })
 })
@@ -536,7 +586,7 @@ describe("Transport funéraire", () => {
         destinationStationId: fx.fcv,
         tonnage: 1,
         senderName: "Famille OBAME",
-      },
+      }
     )
     expect(r.shipmentNumber).toMatch(/^F-OWE-PV-/)
     expect(r.amounts.ttc).toBe(95000)
@@ -554,7 +604,7 @@ describe("Transport funéraire", () => {
         destinationStationId: fx.fcv,
         tonnage: 1,
         senderName: "X",
-      }),
+      })
     ).rejects.toThrow(/transport impossible/)
   })
 })
@@ -573,7 +623,7 @@ describe("Enveloppe de vente partagée par les cinq produits", () => {
         pointOfSaleId: fx.pos,
         identitySource: "annuaire",
         isActive: true,
-      }),
+      })
     )
     const sansCaisse = t.withIdentity({ subject: authId })
 
@@ -586,7 +636,7 @@ describe("Enveloppe de vente partagée par les cinq produits", () => {
         recipientName: "B",
         recipientPhone: "+241 2",
         items: [{ description: "Colis", weightKg: 5 }],
-      }),
+      })
     ).rejects.toThrow(/Aucune session de caisse ouverte/)
   })
 

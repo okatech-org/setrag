@@ -25,7 +25,7 @@ async function asRole(t: ReturnType<typeof convexTest>, role: AppRole) {
       role,
       identitySource: "annuaire",
       isActive: true,
-    }),
+    })
   )
   return { ctx: t.withIdentity({ subject: authId }), userId }
 }
@@ -129,7 +129,7 @@ async function seedNetwork(t: ReturnType<typeof convexTest>) {
 async function seedBooklet(
   t: ReturnType<typeof convexTest>,
   net: Awaited<ReturnType<typeof seedNetwork>>,
-  options: { validFrom?: number; validUntil?: number } = {},
+  options: { validFrom?: number; validUntil?: number } = {}
 ) {
   const { ctx, userId } = await asRole(t, "admin_fonctionnel")
   const bookletId = await ctx.mutation(api.functions.booklets.create, {
@@ -196,7 +196,7 @@ describe("Génération d'une desserte", () => {
     })
 
     const counters = await t.run(async (c) =>
-      c.db.query("segmentCounters").collect(),
+      c.db.query("segmentCounters").collect()
     )
     const deuxieme = counters.filter((c) => c.serviceClass === "DEUXIEME")
     const premiere = counters.filter((c) => c.serviceClass === "PREMIERE")
@@ -225,7 +225,7 @@ describe("Génération d'une desserte", () => {
     })
 
     const occupancy = await t.run(async (c) =>
-      c.db.query("seatOccupancy").collect(),
+      c.db.query("seatOccupancy").collect()
     )
     expect(occupancy).toHaveLength(6)
     for (const o of occupancy) {
@@ -255,7 +255,7 @@ describe("Génération d'une desserte", () => {
     expect(detail.trip.arrivalAt - detail.trip.departureAt).toBe(700 * 60_000)
     expect(detail.stops).toHaveLength(4)
     expect(detail.stops[1]?.arrivalAt).toBe(
-      detail.trip.departureAt + 200 * 60_000,
+      detail.trip.departureAt + 200 * 60_000
     )
   })
 
@@ -278,7 +278,7 @@ describe("Génération d'une desserte", () => {
     expect(second.created).toBe(false)
     const trips = await t.run(async (c) => c.db.query("trips").collect())
     const occupancy = await t.run(async (c) =>
-      c.db.query("seatOccupancy").collect(),
+      c.db.query("seatOccupancy").collect()
     )
     expect(trips).toHaveLength(1)
     expect(occupancy).toHaveLength(6)
@@ -292,7 +292,7 @@ describe("Génération d'une desserte", () => {
       t.mutation(internal.functions.trips.generateOne, {
         scheduleId,
         serviceDate: "2026-08-14",
-      }),
+      })
     ).rejects.toThrow(/génération refusée/)
   })
 })
@@ -324,10 +324,10 @@ describe("Activation d'un livret et génération en lot", () => {
 
       // Chaque desserte a bien son inventaire complet.
       const occupancy = await t.run(async (c) =>
-        c.db.query("seatOccupancy").collect(),
+        c.db.query("seatOccupancy").collect()
       )
       const counters = await t.run(async (c) =>
-        c.db.query("segmentCounters").collect(),
+        c.db.query("segmentCounters").collect()
       )
       expect(occupancy).toHaveLength(3 * 6)
       expect(counters).toHaveLength(3 * 6)
@@ -362,7 +362,7 @@ describe("Activation d'un livret et génération en lot", () => {
     })
     await ctx.mutation(api.functions.booklets.submit, { bookletId })
     await expect(
-      ctx.mutation(api.functions.booklets.approve, { bookletId }),
+      ctx.mutation(api.functions.booklets.approve, { bookletId })
     ).rejects.toThrow(/au-delà du plafond/)
   })
 
@@ -387,7 +387,7 @@ describe("Activation d'un livret et génération en lot", () => {
     await expect(
       second.ctx.mutation(api.functions.booklets.approve, {
         bookletId: second.bookletId,
-      }),
+      })
     ).rejects.toThrow(/Chevauchement/)
   })
 
@@ -440,7 +440,7 @@ describe("Validation du livret", () => {
       validUntil: Date.UTC(2026, 7, 16),
     })
     await expect(
-      ctx.mutation(api.functions.booklets.submit, { bookletId }),
+      ctx.mutation(api.functions.booklets.submit, { bookletId })
     ).rejects.toThrow(/Livret vide/)
   })
 
@@ -452,7 +452,7 @@ describe("Validation du livret", () => {
         label: "Incohérent",
         validFrom: Date.UTC(2026, 7, 20),
         validUntil: Date.UTC(2026, 7, 10),
-      }),
+      })
     ).rejects.toThrow(/postérieure/)
   })
 
@@ -472,7 +472,7 @@ describe("Validation du livret", () => {
           { stationId: net.owe, sequence: 0, departureOffsetMinutes: 0 },
           { stationId: net.fcv, sequence: 1, arrivalOffsetMinutes: 700 },
         ],
-      }),
+      })
     ).rejects.toThrow(/n'est plus modifiable/)
   })
 
@@ -482,7 +482,7 @@ describe("Validation du livret", () => {
     const { ctx, bookletId } = await seedBooklet(t, net)
     await ctx.mutation(api.functions.booklets.submit, { bookletId })
     await expect(
-      ctx.mutation(api.functions.booklets.reject, { bookletId, reason: "  " }),
+      ctx.mutation(api.functions.booklets.reject, { bookletId, reason: "  " })
     ).rejects.toThrow(/motif de rejet est obligatoire/)
   })
 
@@ -506,7 +506,7 @@ describe("Validation du livret", () => {
           { stationId: net.boo, sequence: 1 },
           { stationId: net.ndj, sequence: 2 },
         ],
-      }),
+      })
     ).rejects.toThrow(/non monotones/)
   })
 
@@ -520,7 +520,7 @@ describe("Validation du livret", () => {
         name: "Sans voiture",
         type: "OMNIBUS",
         isActive: true,
-      }),
+      })
     )
     const bookletId = await ctx.mutation(api.functions.booklets.create, {
       label: "Sans composition",
@@ -537,7 +537,7 @@ describe("Validation du livret", () => {
           { stationId: net.owe, sequence: 0 },
           { stationId: net.fcv, sequence: 1 },
         ],
-      }),
+      })
     ).rejects.toThrow(/aucune voiture/)
   })
 
@@ -549,7 +549,7 @@ describe("Validation du livret", () => {
 
     const { ctx: chefGare } = await asRole(t, "chef_gare")
     await expect(
-      chefGare.mutation(api.functions.booklets.approve, { bookletId }),
+      chefGare.mutation(api.functions.booklets.approve, { bookletId })
     ).rejects.toThrow(/Accès refusé/)
   })
 })
@@ -580,6 +580,32 @@ describe("Recherche de dessertes", () => {
     expect(resultats[0]?.availableByClass.DEUXIEME).toBe(10)
     expect(resultats[0]?.availableByClass.PREMIERE).toBe(2)
     expect(resultats[0]?.hasAvailability).toBe(true)
+  })
+
+  it("retourne les prochains départs réellement ouverts depuis une gare", async () => {
+    const t = convexTest(schema, modules)
+    const { tripId } = await withGeneratedTrip(t)
+
+    const resultats = await t.query(api.functions.trips.nextDepartures, {
+      originCode: "OWE",
+      limit: 2,
+      after: Date.UTC(2026, 7, 14, 6),
+    })
+
+    expect(resultats).toHaveLength(1)
+    expect(resultats[0]).toMatchObject({
+      tripId,
+      trainNumber: "TR-201",
+      serviceDate: "2026-08-14",
+      origin: { code: "OWE", name: "Owendo" },
+      destination: { code: "FCV", name: "Franceville" },
+    })
+
+    const apresDepart = await t.query(api.functions.trips.nextDepartures, {
+      originCode: "OWE",
+      after: Date.UTC(2026, 7, 14, 8),
+    })
+    expect(apresDepart).toHaveLength(0)
   })
 
   it("trouve une desserte sur un trajet intermédiaire", async () => {
@@ -655,6 +681,14 @@ describe("Recherche de dessertes", () => {
     expect(places).toHaveLength(4)
     expect(places.every((p) => p.isFree)).toBe(true)
     expect(places[0]?.label).toBe("1A")
+    expect(places[0]).toMatchObject({
+      coachLabel: "V1",
+      coachPosition: 1,
+      coachRowCount: 2,
+      coachColumnCount: 2,
+      isBlocked: false,
+      isOccupied: false,
+    })
   })
 
   it("tient compte de l'occupation par segment pour le plan de voiture", async () => {
@@ -748,7 +782,7 @@ describe("Statut et fenêtre de vente", () => {
         tripId: rapport.tripId as Id<"trips">,
         status: "retarde",
         delayMinutes: -10,
-      }),
+      })
     ).rejects.toThrow(/Retard invalide/)
   })
 })

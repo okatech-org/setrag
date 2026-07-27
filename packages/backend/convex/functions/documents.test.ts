@@ -126,7 +126,7 @@ async function seedTrip(t: ReturnType<typeof convexTest>) {
         { stationId: net.boo, sequence: 1, arrivalOffsetMinutes: 380 },
         { stationId: net.fcv, sequence: 2, arrivalOffsetMinutes: 700 },
       ],
-    },
+    }
   )
   await adminCtx.mutation(api.functions.booklets.submit, { bookletId })
   await adminCtx.mutation(api.functions.booklets.approve, { bookletId })
@@ -146,7 +146,7 @@ async function asAgent(
   t: ReturnType<typeof convexTest>,
   role: AppRole,
   posId: Id<"pointsOfSale">,
-  suffix = "",
+  suffix = ""
 ) {
   const authId = `${role}${suffix}-${Math.floor(Math.random() * 1e9)}`
   const userId = await t.run(async (ctx) =>
@@ -158,7 +158,7 @@ async function asAgent(
       pointOfSaleId: posId,
       identitySource: "annuaire",
       isActive: true,
-    }),
+    })
   )
   return { ctx: t.withIdentity({ subject: authId }), userId }
 }
@@ -168,7 +168,7 @@ const TELEPHONE = "+241 06 11 22 33"
 /** Vend un billet en ligne et le règle, pour avoir un titre à imprimer. */
 async function issueTicket(
   t: ReturnType<typeof convexTest>,
-  fx: Awaited<ReturnType<typeof seedTrip>>,
+  fx: Awaited<ReturnType<typeof seedTrip>>
 ) {
   const r = await t.mutation(api.functions.bookings.create, {
     tripId: fx.tripId,
@@ -204,6 +204,47 @@ describe("Billet PDF", () => {
 
     const stocke = await t.run(async (c) => (await c.db.get(billet._id))!)
     expect(stocke.pdfStorageId).toBeDefined()
+  })
+
+  it("assemble tous les titres d'un dossier dans un PDF multi-pages", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    const billet = await issueTicket(t, fx)
+    const vente = await t.run(async (ctx) => ctx.db.get(billet.saleId))
+
+    const premier = await t.action(api.functions.documents.bookingPdf, {
+      reference: vente!.number,
+      contactPhone: TELEPHONE,
+    })
+    expect(premier.ticketCount).toBe(1)
+    expect(premier.filename).toBe(`billets-${vente!.number}.pdf`)
+    expect(premier.regenerated).toBe(true)
+    expect(premier.url).toBeTruthy()
+
+    const second = await t.action(api.functions.documents.bookingPdf, {
+      reference: vente!.number,
+      contactPhone: TELEPHONE,
+    })
+    expect(second.regenerated).toBe(false)
+    expect(second.url).toBe(premier.url)
+  })
+
+  it("désactive proprement l'e-mail tant que le fournisseur ne l'est pas", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    const billet = await issueTicket(t, fx)
+    const vente = await t.run(async (ctx) => ctx.db.get(billet.saleId))
+
+    const result = await t.action(api.functions.notifications.emailTickets, {
+      reference: vente!.number,
+      contactPhone: TELEPHONE,
+      email: "voyageur@example.ga",
+    })
+    expect(result).toMatchObject({
+      configured: false,
+      sent: false,
+      reason: "disabled",
+    })
   })
 
   it("resert le même fichier au second appel", async () => {
@@ -245,7 +286,7 @@ describe("Billet PDF", () => {
     expect(apres.pdfStorageId).not.toBe(avant.pdfStorageId)
     // L'ancien fichier ne doit pas rester orphelin dans le stockage.
     const ancien = await t.run(async (c) =>
-      c.storage.getUrl(avant.pdfStorageId!),
+      c.storage.getUrl(avant.pdfStorageId!)
     )
     expect(ancien).toBeNull()
   })
@@ -268,7 +309,7 @@ describe("Billet PDF", () => {
     const billet = await issueTicket(t, fx)
 
     await expect(
-      t.action(api.functions.documents.ticketPdf, { ticketId: billet._id }),
+      t.action(api.functions.documents.ticketPdf, { ticketId: billet._id })
     ).rejects.toThrow()
   })
 
@@ -281,7 +322,7 @@ describe("Billet PDF", () => {
       t.action(api.functions.documents.ticketPdf, {
         ticketId: billet._id,
         contactPhone: "+241 06 99 99 99",
-      }),
+      })
     ).rejects.toThrow()
   })
 
@@ -294,7 +335,7 @@ describe("Billet PDF", () => {
     await expect(
       comptable.action(api.functions.documents.ticketPdf, {
         ticketId: billet._id,
-      }),
+      })
     ).rejects.toThrow(/Accès refusé/)
   })
 
@@ -335,12 +376,12 @@ describe("Billet PDF", () => {
         barcodePayload: undefined,
         barcodeSignature: undefined,
         keyVersion: undefined,
-      }),
+      })
     )
 
     const rapport = await t.mutation(
       internal.functions.documents.resignTickets,
-      {},
+      {}
     )
     expect(rapport.resignes).toBe(1)
 
@@ -359,7 +400,7 @@ describe("Billet PDF", () => {
 
     const rapport = await t.mutation(
       internal.functions.documents.resignTickets,
-      {},
+      {}
     )
     expect(rapport.resignes).toBe(0)
 
@@ -373,14 +414,14 @@ describe("Billet PDF", () => {
     const billet = await issueTicket(t, fx)
     // Cas d'un titre antérieur à la mise en place de la signature.
     await t.run(async (c) =>
-      c.db.patch(billet._id, { barcodePayload: undefined }),
+      c.db.patch(billet._id, { barcodePayload: undefined })
     )
 
     await expect(
       t.action(api.functions.documents.ticketPdf, {
         ticketId: billet._id,
         contactPhone: TELEPHONE,
-      }),
+      })
     ).rejects.toThrow(/sans code-barres/)
   })
 })

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETRAG — Plan billetterie-web</title>
+<link rel="stylesheet" href="plan.css">
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <div class="brand">SETRAG · Billettique</div>
+  <div class="sub"><a href="index.html" style="color:var(--accent)">← Vue d'ensemble</a><br>Plan application — billetterie-web<br>25 juillet 2026</div>
+  <a href="#mission">1 · Mission &amp; contraintes</a>
+  <a href="#parcours">2 · Parcours d'achat</a>
+  <a href="#ecrans">3 · Écrans</a>
+  <a href="#nonfonctionnel">4 · Exigences non fonctionnelles</a>
+  <a href="#phases">5 · Rattachement aux phases</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <h1>billetterie-web — vente en ligne voyageur</h1>
+  <p>Le site public d'achat de billets du Transgabonais. Objectif du CDC front-office : acheter un
+  billet en moins de 5 minutes, sans passer par un guichet, avec paiement mobile money ou carte.
+  Next.js 16, design Cadence, port 3000.</p>
+  <div class="hero-meta">
+    <span class="chip">Next.js 16</span>
+    <span class="chip">Grand public</span>
+    <span class="chip">OTP téléphone / e-mail</span>
+    <a class="chip" href="backend.html">→ plan backend</a>
+  </div>
+</header>
+
+<section id="mission">
+  <h2><span class="num">1</span>Mission &amp; contraintes</h2>
+  <ul>
+    <li><b>Achat sans compte possible</b> : le compte (espace client, historique) est proposé,
+    jamais imposé — l'OTP téléphone crée le compte implicitement au premier achat si le voyageur
+    l'accepte.</li>
+    <li><b>Mobile d'abord</b> : la majorité du trafic sera sur smartphone en réseau 3G/4G
+    variable — pages légères, WCAG (contrastes, navigation clavier, lecteurs d'écran,
+    heures en police tabulaire lisible).</li>
+    <li><b>Prix affiché = prix payé</b> : la quote tarifaire (barème + réductions + yield) est
+    figée à la création de la réservation et tenue pendant tout le hold de 15 minutes.</li>
+    <li><b>Deux issues de paiement</b> : paiement électronique immédiat, ou <b>« réserver et payer
+    au guichet »</b> — la réservation tient jusqu'à une échéance paramétrable, ce qui rend la
+    vente en ligne utile avant même l'activation du partenaire de paiement.</li>
+  </ul>
+</section>
+
+<section id="parcours">
+  <h2><span class="num">2</span>Parcours d'achat</h2>
+  <pre class="mermaid">
+flowchart LR
+  A["Accueil<br/>recherche"] --> R["Résultats<br/>tri prix · durée · horaire"]
+  R --> D["Détail & passagers<br/>classe · réductions · places"]
+  D --> P["Paiement<br/>CGV bloquantes"]
+  P -->|mobile money / carte| C["Confirmation<br/>billet électronique"]
+  P -->|payer au guichet| G["Réservation<br/>référence + échéance"]
+  C --> M["Mes billets / e-mail / SMS"]
+  G -.->|encaissement guichet| C
+  </pre>
+  <p>Chaque étape est une page distincte avec état d'avancement visible ; le hold de 15 minutes
+  est affiché en compte à rebours dès la sélection des places ; l'attente de paiement mobile money
+  est un écran réactif qui suit le statut Convex en temps réel (pas de rechargement).</p>
+</section>
+
+<section id="ecrans">
+  <h2><span class="num">3</span>Écrans</h2>
+  <div class="card">
+    <div class="screen"><span class="sname">Accueil / recherche</span> — gares départ/arrivée, date aller (retour optionnel), passagers (adultes, enfants 4-11 ans) ; prochains départs
+      <span class="sfn">referential.stations · trips.search</span></div>
+    <div class="screen"><span class="sname">Résultats</span> — tri prix / durée / horaire, type de train (Express, Omnibus), places restantes par classe sur le segment demandé, prix « à partir de » par le moteur tarifaire
+      <span class="sfn">trips.search · inventory.availability · fares.quote</span></div>
+    <div class="screen"><span class="sname">Détail &amp; passagers</span> — récapitulatif du trajet et des arrêts, choix de classe, formulaire par passager (nom, prénom, sexe, téléphone, contact d'urgence — champs exigés par le CDC), réductions déclaratives (enfant, groupe, militaire)
+      <span class="sfn">trips.get · fares.quote</span></div>
+    <div class="screen"><span class="sname">Paiement</span> — récapitulatif, méthode (Airtel Money, Moov Money, carte, ou « payer au guichet »), numéro de téléphone payeur, case CGV bloquante versionnée, écran d'attente réactif
+      <span class="sfn">bookings.create · payments.initiate · consents.grant</span></div>
+    <div class="screen"><span class="sname">Confirmation</span> — référence, billets avec code-barres Aztec, téléchargement PDF, renvoi par SMS/e-mail
+      <span class="sfn">bookings.getByReference · tickets.downloadPdf</span></div>
+    <div class="screen"><span class="sname">Mes réservations</span> — historique, détail, annulation selon CGV (motif, pénalité affichée avant confirmation), suivi de remboursement
+      <span class="sfn">bookings.listMine · sales.cancel · sales.refund</span></div>
+    <div class="screen"><span class="sname">Suivi de desserte</span> — statut temps réel (à l'heure, retardé + minutes, annulé) par réactivité Convex
+      <span class="sfn">trips.get (abonnement réactif)</span></div>
+    <div class="screen"><span class="sname">Compte</span> — profil, consentements (révocables), export des données personnelles, suppression de compte
+      <span class="sfn">users.me · consents.* · users.exportData</span></div>
+    <div class="screen"><span class="sname">Connexion</span> — OTP par téléphone (par défaut) ou e-mail ; limité en débit par numéro et par IP
+      <span class="sfn">Better Auth phoneNumber / emailOTP</span></div>
+  </div>
+</section>
+
+<section id="nonfonctionnel">
+  <h2><span class="num">4</span>Exigences non fonctionnelles</h2>
+  <ul>
+    <li><b>&lt; 5 min de bout en bout</b> : 4 pages entre la recherche et la confirmation, aucun
+    champ non indispensable, formulaires à validation Zod partagée avec le backend.</li>
+    <li><b>&lt; 2 s de réponse</b> : recherches sur compteurs dénormalisés indexés, images
+    optimisées, pas de dépendance bloquante tierce au rendu.</li>
+    <li><b>Accessibilité</b> : cibles ≥ 44 px, un seul bouton primaire par écran, information
+    jamais portée par la couleur seule, focus visible — règles Cadence non négociables.</li>
+    <li><b>Multilingue préparé</b> (français par défaut), montants en XAF partout.</li>
+  </ul>
+</section>
+
+<section id="phases">
+  <h2><span class="num">5</span>Rattachement aux phases</h2>
+  <div class="table-scroll"><table>
+    <tr><th style="width:120px">Phase</th><th>Livré dans billetterie-web</th></tr>
+    <tr><td>Phase 3</td><td>Parcours complet avec « payer au guichet » + simulateur de paiement ; billets électroniques ; espace client ; suivi de desserte</td></tr>
+    <tr><td>Chantier A</td><td>Paiement électronique réel (mobile money, carte) — sans changement de parcours</td></tr>
+  </table></div>
+  <footer>Plan billetterie-web · 25 juillet 2026 · voir le <a href="backend.html">plan backend</a>.</footer>
+</section>
+
+</main>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", themeVariables: { fontSize: "13px" } });
+</script>
+</body>
+</html>

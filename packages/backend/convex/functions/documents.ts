@@ -16,6 +16,7 @@ import {
 } from "../lib/signature"
 import { PAYLOAD_VERSION, expiryFromArrival } from "../model/barcode"
 import { renderTicketPdf, type TicketPrintData } from "../lib/ticketPdf"
+import { PDFDocument } from "pdf-lib"
 
 /**
  * Documents imprimables — billets au format PDF.
@@ -53,9 +54,14 @@ export const printData = internalQuery({
     ticketId: v.id("tickets"),
     contactPhone: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<TicketPrintData & {
-    pdfStorageId?: Id<"_storage">
-  }> => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<
+    TicketPrintData & {
+      pdfStorageId?: Id<"_storage">
+    }
+  > => {
     const ticket = await ctx.db.get(args.ticketId)
     if (!ticket) throw new Error("Titre introuvable")
 
@@ -65,8 +71,7 @@ export const printData = internalQuery({
     const user = await getUser(ctx)
     const estProprietaire = user !== null && sale.customerId === user._id
     const contactConcorde =
-      args.contactPhone !== undefined &&
-      sale.contactPhone === args.contactPhone
+      args.contactPhone !== undefined && sale.contactPhone === args.contactPhone
 
     if (!estProprietaire && !contactConcorde) {
       // Peut lever : c'est bien le comportement voulu pour un tiers.
@@ -83,7 +88,7 @@ export const printData = internalQuery({
 
     if (!ticket.barcodePayload) {
       throw new Error(
-        `Titre ${ticket.number} sans code-barres : impression impossible`,
+        `Titre ${ticket.number} sans code-barres : impression impossible`
       )
     }
 
@@ -118,6 +123,104 @@ export const printData = internalQuery({
   },
 })
 
+/**
+ * Données de tous les titres d'un dossier, avec le même contrôle d'accès que
+ * le téléchargement individuel. Cette query interne alimente le PDF groupé
+ * et l'envoi par e-mail sans exposer les données d'impression au client.
+ */
+export const bookingPrintData = internalQuery({
+  args: {
+    reference: v.string(),
+    contactPhone: v.optional(v.string()),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    saleId: Id<"sales">
+    customerId?: Id<"users">
+    reference: string
+    contactEmail?: string
+    contactPhone?: string
+    bundlePdfStorageId?: Id<"_storage">
+    tickets: Array<TicketPrintData & { ticketId: Id<"tickets"> }>
+  }> => {
+    const sale = await ctx.db
+      .query("sales")
+      .withIndex("by_number", (q) => q.eq("number", args.reference))
+      .unique()
+    if (!sale) throw new Error("Réservation introuvable")
+
+    const user = await getUser(ctx)
+    const estProprietaire = user !== null && sale.customerId === user._id
+    const contactConcorde =
+      args.contactPhone !== undefined && sale.contactPhone === args.contactPhone
+    if (!estProprietaire && !contactConcorde) {
+      await requirePermission(ctx, "duplicatas", "consulter")
+    }
+
+    const tickets = await ctx.db
+      .query("tickets")
+      .withIndex("by_sale", (q) => q.eq("saleId", sale._id))
+      .collect()
+    if (tickets.length === 0) throw new Error("Réservation sans titre")
+
+    const printTickets = await Promise.all(
+      tickets.map(async (ticket) => {
+        const trip = await ctx.db.get(ticket.tripId)
+        if (!trip) throw new Error("Desserte introuvable")
+        const [origine, destination] = await Promise.all([
+          ctx.db.get(ticket.originStationId),
+          ctx.db.get(ticket.destinationStationId),
+        ])
+        if (!ticket.barcodePayload) {
+          throw new Error(
+            `Titre ${ticket.number} sans code-barres : impression impossible`
+          )
+        }
+        return {
+          ticketId: ticket._id,
+          number: ticket.number,
+          barcode: ticket.barcodePayload,
+          passenger: {
+            lastName: ticket.passenger.lastName,
+            firstName: ticket.passenger.firstName,
+          },
+          origin: {
+            code: origine?.code ?? "?",
+            name: origine?.name ?? "Gare inconnue",
+          },
+          destination: {
+            code: destination?.code ?? "?",
+            name: destination?.name ?? "Gare inconnue",
+          },
+          serviceDate: trip.serviceDate,
+          departureLabel: heureLocale(trip.departureAt),
+          arrivalLabel: heureLocale(trip.arrivalAt),
+          trainNumber: trip.trainNumber,
+          serviceClass: ticket.serviceClass,
+          coachLabel: ticket.coachLabel,
+          seatLabel: ticket.seatLabel,
+          priceTtc: ticket.unitPriceTtc,
+          saleNumber: sale.number,
+          status: ticket.status,
+          isDemoKey: isUsingDemoKey(),
+        } satisfies TicketPrintData & { ticketId: Id<"tickets"> }
+      })
+    )
+
+    return {
+      saleId: sale._id,
+      customerId: sale.customerId,
+      reference: sale.number,
+      contactEmail: sale.contactEmail,
+      contactPhone: sale.contactPhone,
+      bundlePdfStorageId: sale.bundlePdfStorageId,
+      tickets: printTickets,
+    }
+  },
+})
+
 /** Rattache le fichier produit au titre. */
 export const attachPdf = internalMutation({
   args: {
@@ -137,6 +240,38 @@ export const attachPdf = internalMutation({
   },
 })
 
+/** Rattache le PDF multi-billets au dossier et remplace l'ancienne version. */
+export const attachBookingPdf = internalMutation({
+  args: {
+    saleId: v.id("sales"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const sale = await ctx.db.get(args.saleId)
+    if (!sale) throw new Error("Vente introuvable")
+    if (sale.bundlePdfStorageId && sale.bundlePdfStorageId !== args.storageId) {
+      await ctx.storage.delete(sale.bundlePdfStorageId)
+    }
+    await ctx.db.patch(args.saleId, { bundlePdfStorageId: args.storageId })
+  },
+})
+
+/** Assemble plusieurs billets A5 dans un unique PDF multi-pages. */
+export async function renderBookingPdf(
+  tickets: readonly TicketPrintData[]
+): Promise<Uint8Array> {
+  const bundle = await PDFDocument.create()
+  for (const ticket of tickets) {
+    const source = await PDFDocument.load(await renderTicketPdf(ticket))
+    const pages = await bundle.copyPages(source, source.getPageIndices())
+    for (const page of pages) bundle.addPage(page)
+  }
+  bundle.setTitle("Billets SETRAG")
+  bundle.setProducer("SETRAG — billettique")
+  bundle.setCreator("SETRAG")
+  return await bundle.save()
+}
+
 /**
  * Produit — ou retrouve — le billet imprimable et rend son adresse.
  *
@@ -150,7 +285,10 @@ export const ticketPdf = action({
     contactPhone: v.optional(v.string()),
     force: v.optional(v.boolean()),
   },
-  handler: async (ctx, args): Promise<{ url: string; regenerated: boolean }> => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ url: string; regenerated: boolean }> => {
     const data = await ctx.runQuery(internal.functions.documents.printData, {
       ticketId: args.ticketId,
       contactPhone: args.contactPhone,
@@ -164,7 +302,7 @@ export const ticketPdf = action({
 
     const bytes = await renderTicketPdf(data)
     const storageId = await ctx.storage.store(
-      new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }),
+      new Blob([bytes as unknown as BlobPart], { type: "application/pdf" })
     )
 
     await ctx.runMutation(internal.functions.documents.attachPdf, {
@@ -175,6 +313,60 @@ export const ticketPdf = action({
     const url = await ctx.storage.getUrl(storageId)
     if (!url) throw new Error("Billet généré mais introuvable dans le stockage")
     return { url, regenerated: true }
+  },
+})
+
+/** Produit un document unique contenant tous les billets d'une réservation. */
+export const bookingPdf = action({
+  args: {
+    reference: v.string(),
+    contactPhone: v.optional(v.string()),
+    force: v.optional(v.boolean()),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    url: string
+    filename: string
+    ticketCount: number
+    regenerated: boolean
+  }> => {
+    const data = await ctx.runQuery(
+      internal.functions.documents.bookingPrintData,
+      {
+        reference: args.reference,
+        contactPhone: args.contactPhone,
+      }
+    )
+    if (data.bundlePdfStorageId && args.force !== true) {
+      const cached = await ctx.storage.getUrl(data.bundlePdfStorageId)
+      if (cached) {
+        return {
+          url: cached,
+          filename: `billets-${data.reference}.pdf`,
+          ticketCount: data.tickets.length,
+          regenerated: false,
+        }
+      }
+    }
+
+    const bytes = await renderBookingPdf(data.tickets)
+    const storageId = await ctx.storage.store(
+      new Blob([bytes as unknown as BlobPart], { type: "application/pdf" })
+    )
+    await ctx.runMutation(internal.functions.documents.attachBookingPdf, {
+      saleId: data.saleId,
+      storageId,
+    })
+    const url = await ctx.storage.getUrl(storageId)
+    if (!url) throw new Error("Billets générés mais introuvables")
+    return {
+      url,
+      filename: `billets-${data.reference}.pdf`,
+      ticketCount: data.tickets.length,
+      regenerated: true,
+    }
   },
 })
 
@@ -234,6 +426,11 @@ export const resignTickets = internalMutation({
       // Le PDF porte l'ancien symbole : il devient faux, on le retire pour
       // qu'il soit refabriqué à la prochaine demande.
       if (ticket.pdfStorageId) await ctx.storage.delete(ticket.pdfStorageId)
+      const sale = await ctx.db.get(ticket.saleId)
+      if (sale?.bundlePdfStorageId) {
+        await ctx.storage.delete(sale.bundlePdfStorageId)
+        await ctx.db.patch(sale._id, { bundlePdfStorageId: undefined })
+      }
 
       await ctx.db.patch(ticket._id, {
         barcodePayload: signed.barcode,

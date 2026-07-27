@@ -1,5 +1,8 @@
 import { httpRouter } from "convex/server"
+import { httpAction } from "./_generated/server"
 import { authComponent, createAuth } from "./betterAuth/auth"
+import { webhook as telegramWebhook } from "./messaging/telegram"
+import { transactionalEmail } from "./lib/resend"
 
 const http = httpRouter()
 
@@ -12,6 +15,20 @@ authComponent.registerRoutes(http, createAuth, {
       .map((o: string) => o.trim())
       .filter(Boolean),
   },
+})
+
+http.route({
+  path: "/webhooks/telegram",
+  method: "POST",
+  handler: telegramWebhook,
+})
+
+http.route({
+  path: "/webhooks/resend",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    return await transactionalEmail.handleResendEventWebhook(ctx, request)
+  }),
 })
 
 export default http

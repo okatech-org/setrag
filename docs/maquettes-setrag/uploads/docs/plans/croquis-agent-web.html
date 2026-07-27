@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETRAG — Croquis agent-web</title>
+<link rel="stylesheet" href="plan.css">
+<link rel="stylesheet" href="croquis.css">
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <div class="brand">SETRAG · Croquis</div>
+  <div class="sub"><a href="index.html" style="color:var(--accent)">← Vue d'ensemble</a><br>agent-web — 27 écrans<br>26 juillet 2026</div>
+  <a href="#conventions">Conventions</a>
+  <a href="#flux">Flux de navigation</a>
+  <div class="toc-group">Commun</div>
+  <a href="#AW-00">AW-00 · Connexion SSO</a>
+  <div class="toc-group">Portail de vente</div>
+  <a href="#AW-V-01">AW-V-01 · Accueil vendeur</a>
+  <a href="#AW-V-02">AW-V-02 · Vente billet</a>
+  <a href="#AW-V-03">AW-V-03 · Plan de voiture</a>
+  <a href="#AW-V-04">AW-V-04 · Vente bagage</a>
+  <a href="#AW-V-05">AW-V-05 · Colis express</a>
+  <a href="#AW-V-06">AW-V-06 · TAA / funéraire</a>
+  <a href="#AW-V-07">AW-V-07 · Encaissement</a>
+  <a href="#AW-V-08">AW-V-08 · Confirmation</a>
+  <a href="#AW-V-09">AW-V-09 · Recherche opération</a>
+  <a href="#AW-V-10">AW-V-10 · Ma caisse</a>
+  <a href="#AW-V-11">AW-V-11 · Vente manuelle</a>
+  <div class="toc-group">Portail de gestion</div>
+  <a href="#AW-G-01">AW-G-01 · Tableau de bord</a>
+  <a href="#AW-G-02">AW-G-02 · Livrets horaires</a>
+  <a href="#AW-G-03">AW-G-03 · Tarifs</a>
+  <a href="#AW-G-04">AW-G-04 · Yield</a>
+  <a href="#AW-G-05">AW-G-05 · Trains &amp; voitures</a>
+  <a href="#AW-G-06">AW-G-06 · Places</a>
+  <a href="#AW-G-07">AW-G-07 · Points de vente</a>
+  <a href="#AW-G-08">AW-G-08 · Voyageurs</a>
+  <a href="#AW-G-09">AW-G-09 · Recettes</a>
+  <a href="#AW-G-10">AW-G-10 · Comptabilité</a>
+  <a href="#AW-G-11">AW-G-11 · Rapports &amp; KPI</a>
+  <a href="#AW-G-12">AW-G-12 · PV &amp; incidents</a>
+  <a href="#AW-G-13">AW-G-13 · Utilisateurs</a>
+  <a href="#AW-G-14">AW-G-14 · Paramétrage</a>
+  <a href="#AW-G-15">AW-G-15 · Intégrations</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <h1>agent-web — croquis d'écrans</h1>
+  <p>Croquis en fil de fer des 27 écrans du portail de vente et du portail de gestion (le
+  remplaçant de MOBIPASS). Chaque écran porte un identifiant stable, la liste de ses états, son
+  contenu, ses composants, ses interactions numérotées et ses transitions. Volontairement en
+  niveaux de gris : la forme reste à la main du designer, ce document fixe la structure et le
+  comportement.</p>
+  <div class="hero-meta">
+    <span class="chip">27 écrans</span>
+    <span class="chip">Next.js 16 · Cadence</span>
+    <a class="chip" href="agent-web.html">→ plan applicatif</a>
+    <a class="chip" href="backend.html">→ plan backend</a>
+  </div>
+</header>
+
+<section id="conventions">
+  <h2>Conventions de lecture</h2>
+  <div class="card">
+    <div class="table-scroll"><table>
+      <tr><th style="width:150px">Élément</th><th>Signification</th></tr>
+      <tr><td><span class="n">1</span> repère</td><td>Point d'interaction — renvoie au numéro correspondant dans la liste « Interactions » de l'écran.</td></tr>
+      <tr><td><code>AW-V-02</code></td><td>Identifiant d'écran : application · section (V = vente, G = gestion) · numéro. À citer dans les maquettes, les tickets et le code.</td></tr>
+      <tr><td>Barres grises</td><td>Contenu textuel non spécifié à ce stade (titre, ligne de texte) — le libellé exact vient du contenu décrit dans la spécification.</td></tr>
+      <tr><td>Cadres pointillés</td><td>Zone optionnelle, vide ou conditionnelle selon l'état.</td></tr>
+      <tr><td><span class="wf-tag ok">valide</span> <span class="wf-tag warn">attention</span> <span class="wf-tag err">erreur</span></td><td>Les seules couleurs employées : elles portent un statut. Rappel Cadence — l'information ne doit jamais reposer sur la couleur seule, un libellé l'accompagne toujours.</td></tr>
+    </table></div>
+    <p style="margin-bottom:0"><b>Règles transverses applicables à tous les écrans</b> : hauteur
+    d'action ≥ 44 px · un seul bouton primaire par écran · anneau de focus jamais supprimé ·
+    heures et montants en police tabulaire · écran de vente utilisable entièrement au clavier
+    (l'objectif de 4 s par billet l'impose) · toute action sensible confirmée puis auditée.</p>
+  </div>
+</section>
+
+<section id="flux">
+  <h2>Flux de navigation</h2>
+  <pre class="mermaid">
+flowchart LR
+  L["AW-00<br/>Connexion SSO"] --> H["AW-V-01<br/>Accueil vendeur"]
+  L --> D["AW-G-01<br/>Tableau de bord"]
+
+  subgraph VENTE["Portail de vente"]
+    H --> V2["AW-V-02 Billet"]
+    H --> V4["AW-V-04 Bagage"]
+    H --> V5["AW-V-05 Colis"]
+    H --> V6["AW-V-06 TAA / funéraire"]
+    V2 -.->|choisir la place| V3["AW-V-03 Plan de voiture"]
+    V3 -.-> V2
+    V2 & V4 & V5 & V6 --> V7["AW-V-07 Encaissement"]
+    V7 --> V8["AW-V-08 Confirmation"]
+    V8 --> H
+    H --> V9["AW-V-09 Recherche opération"]
+    V9 -.->|annuler · rembourser · duplicata| V8
+    H --> V10["AW-V-10 Ma caisse"]
+    H --> V11["AW-V-11 Vente manuelle"]
+  end
+
+  subgraph GESTION["Portail de gestion"]
+    D --> G2["G-02 Livrets"] --> G5["G-05 Trains"]
+    D --> G3["G-03 Tarifs"] --> G4["G-04 Yield"]
+    D --> G6["G-06 Places"]
+    D --> G7["G-07 Points de vente"]
+    D --> G8["G-08 Voyageurs"]
+    D --> G9["G-09 Recettes"] --> G10["G-10 Comptabilité"]
+    D --> G11["G-11 Rapports"]
+    D --> G12["G-12 PV & incidents"]
+    D --> G13["G-13 Utilisateurs"]
+    D --> G14["G-14 Paramétrage"]
+    D --> G15["G-15 Intégrations"]
+  end
+  </pre>
+  <div class="scr-index">
+    <a href="#AW-00"><b>AW-00</b> Connexion SSO</a>
+    <a href="#AW-V-01"><b>AW-V-01</b> Accueil vendeur</a>
+    <a href="#AW-V-02"><b>AW-V-02</b> Vente billet</a>
+    <a href="#AW-V-03"><b>AW-V-03</b> Plan de voiture</a>
+    <a href="#AW-V-04"><b>AW-V-04</b> Vente bagage</a>
+    <a href="#AW-V-05"><b>AW-V-05</b> Colis express</a>
+    <a href="#AW-V-06"><b>AW-V-06</b> TAA / funéraire</a>
+    <a href="#AW-V-07"><b>AW-V-07</b> Encaissement</a>
+    <a href="#AW-V-08"><b>AW-V-08</b> Confirmation</a>
+    <a href="#AW-V-09"><b>AW-V-09</b> Recherche opération</a>
+    <a href="#AW-V-10"><b>AW-V-10</b> Ma caisse</a>
+    <a href="#AW-V-11"><b>AW-V-11</b> Vente manuelle</a>
+    <a href="#AW-G-01"><b>AW-G-01</b> Tableau de bord</a>
+    <a href="#AW-G-02"><b>AW-G-02</b> Livrets horaires</a>
+    <a href="#AW-G-03"><b>AW-G-03</b> Tarifs</a>
+    <a href="#AW-G-04"><b>AW-G-04</b> Yield</a>
+    <a href="#AW-G-05"><b>AW-G-05</b> Trains &amp; voitures</a>
+    <a href="#AW-G-06"><b>AW-G-06</b> Places</a>
+    <a href="#AW-G-07"><b>AW-G-07</b> Points de vente</a>
+    <a href="#AW-G-08"><b>AW-G-08</b> Voyageurs</a>
+    <a href="#AW-G-09"><b>AW-G-09</b> Recettes</a>
+    <a href="#AW-G-10"><b>AW-G-10</b> Comptabilité</a>
+    <a href="#AW-G-11"><b>AW-G-11</b> Rapports &amp; KPI</a>
+    <a href="#AW-G-12"><b>AW-G-12</b> PV &amp; incidents</a>
+    <a href="#AW-G-13"><b>AW-G-13</b> Utilisateurs</a>
+    <a href="#AW-G-14"><b>AW-G-14</b> Paramétrage</a>
+    <a href="#AW-G-15"><b>AW-G-15</b> Intégrations</a>
+  </div>
+</section>
+
+<!-- ══════════════════════════ COMMUN ══════════════════════════ -->
+<section>
+  <h2>Commun</h2>
+
+  <div class="screen-block" id="AW-00">
+    <div class="sb-head"><span class="sb-id">AW-00</span><h3>Connexion</h3><span class="sb-role">tout profil interne</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">agent.setrag.ga</div>
+          <div class="wf-body" style="padding:20px 40px;align-items:center;gap:10px">
+            <div class="wf-box dash" style="width:60px;height:34px;display:flex;align-items:center;justify-content:center;font-size:8px">LOGO</div>
+            <div class="wf-h big">Billettique SETRAG</div>
+            <div class="wf-t w60"></div>
+            <div class="wf-btn pri wide" style="margin-top:6px">Se connecter avec mon compte SETRAG <span class="n">1</span></div>
+            <div class="wf-box dash" style="width:100%;text-align:center;font-size:9px">— ou —</div>
+            <div style="width:100%;display:flex;flex-direction:column;gap:5px">
+              <div class="wf-lbl">Identifiant</div><div class="wf-fld">matricule</div>
+              <div class="wf-lbl">Mot de passe</div><div class="wf-fld">••••••••</div>
+              <div class="wf-btn gho wide">Connexion <span class="n">2</span></div>
+            </div>
+            <div class="wf-alert err" style="width:100%">Compte désactivé — contactez la DSI</div>
+          </div>
+        </div>
+        <div class="wf-states" style="margin-top:10px">
+          <div><div class="cap">état : MFA requis</div>
+            <div class="wf"><div class="wf-body" style="padding:12px;align-items:center;gap:6px">
+              <div class="wf-h">Code de vérification</div>
+              <div class="wf-row" style="gap:4px">
+                <div class="wf-fld" style="width:20px;text-align:center">•</div><div class="wf-fld" style="width:20px;text-align:center">•</div>
+                <div class="wf-fld" style="width:20px;text-align:center">•</div><div class="wf-fld" style="width:20px;text-align:center">•</div>
+                <div class="wf-fld" style="width:20px;text-align:center">•</div><div class="wf-fld" style="width:20px;text-align:center">•</div>
+              </div>
+              <div class="wf-btn pri wide">Valider <span class="n">3</span></div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">repos</span> — bouton SSO seul (cible finale)</li>
+          <li><span class="st">repli</span> — formulaire identifiant/mot de passe, actif en phases 0-1 avant l'enregistrement OIDC ERAMET</li>
+          <li><span class="st">mfa</span> — saisie du code TOTP à 6 chiffres</li>
+          <li><span class="st">erreur</span> — identifiants invalides, compte AD désactivé, trop de tentatives (verrouillage temporaire)</li>
+          <li><span class="st">redirection</span> — écran d'attente pendant le rebond vers le fournisseur d'identité</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Logo SETRAG, nom de l'application, environnement affiché si ce n'est pas la production (bandeau « RECETTE »)</li>
+          <li>Message d'erreur explicite et non ambigu, sans révéler si le compte existe</li>
+          <li>Mention de la version applicative en pied de page (support)</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul>
+          <li><code>Button</code> (primaire, pleine largeur), <code>Input</code>, <code>InputOTP</code> (6 cases), <code>Alert</code>, <code>Separator</code>, <code>Spinner</code></li>
+        </ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Redirige vers le fournisseur d'identité ERAMET (OIDC) ; retour avec les rôles issus des groupes AD</li>
+          <li><span class="n">2</span> Connexion par mot de passe (comptes de repli uniquement) ; verrouillage après N échecs, N paramétré</li>
+          <li><span class="n">3</span> Validation TOTP ; option « appareil de confiance » non retenue pour les profils comptables et administrateurs</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul>
+          <li>Profil de vente → <a href="#AW-V-01">AW-V-01</a></li>
+          <li>Profil de gestion → <a href="#AW-G-01">AW-G-01</a></li>
+          <li>Profil mixte → choix d'espace à l'arrivée (deux grandes cartes)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ VENTE ══════════════════════════ -->
+<section>
+  <h2>Portail de vente</h2>
+
+  <div class="screen-block" id="AW-V-01">
+    <div class="sb-head"><span class="sb-id">AW-V-01</span><h3>Accueil vendeur &amp; ouverture de caisse</h3><span class="sb-role">vendeur guichet · agence</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Portail de vente — Gare d'Owendo · Guichet 3</div>
+          <div class="wf-app">
+            <div class="wf-side">
+              <div class="it on">Vendre</div><div class="it">Opérations</div><div class="it">Ma caisse</div><div class="it">Manuel</div>
+            </div>
+            <div class="wf-main">
+              <div class="wf-top"><div class="wf-h">Bonjour, A. MBOUMBA</div><div style="margin-left:auto" class="wf-tag ok">caisse ouverte</div></div>
+              <div class="wf-row">
+                <div class="wf-kpi"><b>42</b><span>ventes du jour</span></div>
+                <div class="wf-kpi"><b>1 246 500</b><span>XAF encaissés</span></div>
+                <div class="wf-kpi"><b>3</b><span>annulations</span></div>
+              </div>
+              <div class="wf-lbl">Nouvelle vente</div>
+              <div class="wf-row wrap">
+                <div class="wf-btn pri g1" style="padding:12px 8px">🎫 Billet voyageur <span class="n">1</span></div>
+                <div class="wf-btn g1" style="padding:12px 8px">🧳 Bagage <span class="n">2</span></div>
+                <div class="wf-btn g1" style="padding:12px 8px">📦 Colis express <span class="n">3</span></div>
+              </div>
+              <div class="wf-row wrap">
+                <div class="wf-btn g1">🚗 Transport auto accompagné <span class="n">4</span></div>
+                <div class="wf-btn g1">⚱️ Transport funéraire <span class="n">4</span></div>
+              </div>
+              <div class="wf-lbl">Dernières opérations</div>
+              <div class="wf-tbl">
+                <div class="r head"><div class="sm">N°</div><div class="lg">Prestation</div><div>Montant</div><div class="sm">Action</div></div>
+                <div class="r"><div class="sm">B-4821</div><div class="lg">Billet · OWE→FCV · 2e</div><div>18 500</div><div class="sm">⋯ <span class="n">5</span></div></div>
+                <div class="r"><div class="sm">G-1190</div><div class="lg">Bagage · 12 kg</div><div>700</div><div class="sm">⋯</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="wf-states" style="margin-top:10px">
+          <div><div class="cap">état : caisse fermée (bloquant)</div>
+            <div class="wf"><div class="wf-body" style="padding:12px">
+              <div class="wf-alert warn">Aucune session de caisse ouverte</div>
+              <div class="wf-lbl">Fond de caisse (XAF)</div><div class="wf-fld">0</div>
+              <div class="wf-btn pri wide">Ouvrir ma caisse <span class="n">6</span></div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">caisse fermée</span> — la vente est bloquée, seul le bloc d'ouverture est actif</li>
+          <li><span class="st">caisse ouverte</span> — état nominal</li>
+          <li><span class="st">hors ligne</span> — bandeau permanent, boutons de vente désactivés et consigne « passer au mode dégradé papier »</li>
+          <li><span class="st">agence</span> — un bloc supplémentaire affiche le quota de places restant pour l'agence</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Identité du vendeur, gare et guichet (l'appareil émetteur est enregistré sur chaque vente)</li>
+          <li>Compteurs de la session en cours : ventes, montant encaissé, annulations</li>
+          <li>Cinq entrées de vente, une par produit du cahier des charges</li>
+          <li>Les 5 à 10 dernières opérations du vendeur, accès direct à la réimpression</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>SidebarNav</code>, <code>StatCard</code>, <code>Button</code> (grandes cibles produit), <code>DataTable</code> compacte, <code>Alert</code>, <code>Badge</code>, <code>DropdownMenu</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Ouvre la vente de billet voyageur — le produit le plus fréquent, en bouton primaire (raccourci F1)</li>
+          <li><span class="n">2</span> Ouvre la vente de bagage, qui exige un billet de rattachement (F2)</li>
+          <li><span class="n">3</span> Ouvre la vente de colis express, expédition autonome (F3)</li>
+          <li><span class="n">4</span> Ouvrent le transport auto accompagné et le transport funéraire (F4, F5)</li>
+          <li><span class="n">5</span> Menu contextuel : réimprimer (duplicata tracé), annuler, rembourser — selon les droits du profil</li>
+          <li><span class="n">6</span> Ouvre la session de caisse avec le fond déclaré ; horodatée et auditée</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul>
+          <li>→ <a href="#AW-V-02">AW-V-02</a> · <a href="#AW-V-04">AW-V-04</a> · <a href="#AW-V-05">AW-V-05</a> · <a href="#AW-V-06">AW-V-06</a></li>
+          <li>Barre latérale → <a href="#AW-V-09">AW-V-09</a>, <a href="#AW-V-10">AW-V-10</a>, <a href="#AW-V-11">AW-V-11</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-V-02">
+    <div class="sb-head"><span class="sb-id">AW-V-02</span><h3>Vente billet voyageur</h3><span class="sb-role">vendeur guichet · agence — écran critique &lt; 4 s</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Vente · Billet voyageur</div>
+          <div class="wf-body tight">
+            <div class="wf-step"><i class="on">1</i> Trajet <span class="ln"></span><i>2</i> Voyageurs <span class="ln"></span><i>3</i> Paiement</div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Gare départ</div><div class="wf-sel">Owendo (OWE)</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Gare arrivée</div><div class="wf-sel">Franceville (FCV)</div></div>
+              <div class="wf-col" style="flex:.6"><div class="wf-lbl">Date</div><div class="wf-fld filled">14/08/2026</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col" style="flex:.5"><div class="wf-lbl">Adultes</div><div class="wf-fld filled">2</div></div>
+              <div class="wf-col" style="flex:.5"><div class="wf-lbl">Enfants 4-11</div><div class="wf-fld filled">1</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Réduction</div><div class="wf-sel">Aucune</div></div>
+              <div class="wf-btn pri" style="align-self:flex-end">Rechercher <span class="n">1</span></div>
+            </div>
+            <div class="wf-lbl">Dessertes disponibles · distance 648 km</div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">Train</div><div>Départ</div><div>Arrivée</div><div class="sm">Type</div><div>2e / 1re / VIP</div><div>Prix</div></div>
+              <div class="r" style="background:var(--wf-fill)"><div class="sm">TR-201</div><div>08:00</div><div>19:45</div><div class="sm">EXPRESS</div><div>84 / 31 / 6</div><div>28 100 <span class="n">2</span></div></div>
+              <div class="r"><div class="sm">TR-202</div><div>17:30</div><div>07:10</div><div class="sm">OMNIBUS</div><div>0 / 12 / —</div><div>22 200</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g2">
+                <div class="wf-lbl">Classe</div>
+                <div class="wf-row"><div class="wf-chip on">2e</div><div class="wf-chip">1re</div><div class="wf-chip">VIP</div><div class="wf-chip">Debout</div></div>
+              </div>
+              <div class="wf-col g1"><div class="wf-lbl">Places</div><div class="wf-sel">Auto (12A, 12B, 12C)</div></div>
+              <div class="wf-btn gho" style="align-self:flex-end">Choisir sur plan <span class="n">3</span></div>
+            </div>
+            <div class="wf-lbl">Voyageurs</div>
+            <div class="wf-box">
+              <div class="wf-row wrap" style="gap:4px">
+                <div class="wf-col" style="flex:1.2"><div class="wf-lbl">Nom</div><div class="wf-fld filled">MBADINGA</div></div>
+                <div class="wf-col" style="flex:1.2"><div class="wf-lbl">Prénom</div><div class="wf-fld filled">Paul</div></div>
+                <div class="wf-col" style="flex:.5"><div class="wf-lbl">Sexe</div><div class="wf-sel">M</div></div>
+                <div class="wf-col g1"><div class="wf-lbl">Téléphone</div><div class="wf-fld filled">+241 …</div></div>
+                <div class="wf-col g1"><div class="wf-lbl">Tél. urgence</div><div class="wf-fld">+241 …</div></div>
+              </div>
+              <div class="wf-row" style="margin-top:4px"><div class="wf-t w40"></div><div style="margin-left:auto;font-size:9px">+ voyageur 2 · + voyageur 3 <span class="n">4</span></div></div>
+            </div>
+            <div class="wf-row split mid" style="border-top:1px solid var(--wf-line-soft);padding-top:6px">
+              <div><div class="wf-lbl">Total TTC</div><div class="wf-h big">70 250 XAF</div>
+                <div style="font-size:8.5px">HT 59 534 · TVA 10 716 · CSS 0 · enfant −50 %</div></div>
+              <div class="wf-row"><div class="wf-btn gho">Proforma <span class="n">5</span></div><div class="wf-btn pri">Encaisser <span class="n">6</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">saisie trajet</span> — étape 1, avant recherche</li>
+          <li><span class="st">résultats</span> — dessertes listées avec disponibilité par classe <b>sur le segment demandé</b></li>
+          <li><span class="st">aucune desserte</span> — message et proposition de dates voisines</li>
+          <li><span class="st">classe complète</span> — la ligne reste visible, la classe est désactivée avec la mention « complet », jamais masquée</li>
+          <li><span class="st">saisie voyageurs</span> — étape 2, un bloc par voyageur</li>
+          <li><span class="st">quota agence épuisé</span> — vente bloquée pour le profil agence, message explicite</li>
+          <li><span class="st">prix recalculé</span> — mention visible si le yield a fait évoluer le tarif depuis l'affichage des résultats</li>
+          <li><span class="st">erreur de place</span> — la place choisie vient d'être prise, proposition automatique de repli</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Distance calculée entre les deux gares (points kilométriques) — elle détermine le barème et la règle d'arrondi</li>
+          <li>Disponibilité par classe calculée sur les segments couverts par le trajet, pas sur la desserte entière</li>
+          <li>Champs voyageur exigés par le cahier des charges : nom, prénom, sexe, téléphone, téléphone d'urgence ; document d'identité si la réduction l'exige</li>
+          <li>Ventilation fiscale visible avant encaissement : HT, TVA, CSS, TTC, et le détail des réductions appliquées</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Stepper</code>, <code>Combobox</code> gares (recherche par code ou nom), <code>DatePicker</code>, <code>NumberInput</code>, <code>DataTable</code> sélectionnable, <code>ChipGroup</code> classes, <code>RepeatableFieldset</code> voyageurs, <code>PriceSummary</code>, <code>Button</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Lance la recherche (touche Entrée) ; inversion départ/arrivée par un bouton discret entre les deux champs</li>
+          <li><span class="n">2</span> Sélectionne la desserte ; la ligne se verrouille et les classes se mettent à jour</li>
+          <li><span class="n">3</span> Ouvre <a href="#AW-V-03">AW-V-03</a> pour choisir les places sur le plan de voiture</li>
+          <li><span class="n">4</span> Ajoute ou retire un bloc voyageur ; le nombre reste cohérent avec adultes + enfants</li>
+          <li><span class="n">5</span> Génère une facture proforma imprimable, sans écriture comptable</li>
+          <li><span class="n">6</span> Valide la vente et ouvre l'encaissement ; désactivé tant que les champs obligatoires manquent, avec la liste des manques</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul>
+          <li>→ <a href="#AW-V-03">AW-V-03</a> (plan de voiture) · <a href="#AW-V-07">AW-V-07</a> (encaissement)</li>
+          <li>Abandon → retour <a href="#AW-V-01">AW-V-01</a> avec confirmation si des données sont saisies</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-V-03">
+    <div class="sb-head"><span class="sb-id">AW-V-03</span><h3>Plan de voiture — sélection de place</h3><span class="sb-role">vendeur · superposition</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">TR-201 · 14/08 · 2e classe</div>
+          <div class="wf-body">
+            <div class="wf-row mid"><div class="wf-h">Voiture</div><div class="wf-row"><div class="wf-chip on">V1</div><div class="wf-chip">V2</div><div class="wf-chip">V3</div></div><div style="margin-left:auto" class="wf-tag neutral">84 libres</div></div>
+            <div class="wf-box">
+              <div class="wf-seatmap">
+                <i></i><i class="busy"></i><i></i><i></i><i class="sel"></i><i></i><i class="blk"></i><i></i><i></i><i class="busy"></i>
+                <i></i><i></i><i class="sel"></i><i class="busy"></i><i></i><i></i><i></i><i class="busy"></i><i></i><i></i>
+                <i class="busy"></i><i></i><i></i><i></i><i class="sel"></i><i></i><i></i><i></i><i class="blk"></i><i></i>
+                <i></i><i></i><i class="busy"></i><i></i><i></i><i></i><i class="busy"></i><i></i><i></i><i></i>
+              </div>
+              <div class="wf-row wrap" style="margin-top:6px;font-size:8.5px;gap:9px">
+                <span>▢ libre</span><span>▨ occupée</span><span>▣ sélectionnée</span><span>⧄ bloquée</span>
+              </div>
+            </div>
+            <div class="wf-alert warn">Une place occupée sur un autre segment peut être libre sur le vôtre — l'affichage tient compte du trajet demandé <span class="n">1</span></div>
+            <div class="wf-row split mid">
+              <div style="font-size:9.5px">Sélection : 12A · 12B · 14C (3/3)</div>
+              <div class="wf-row"><div class="wf-btn gho">Annuler</div><div class="wf-btn pri">Confirmer <span class="n">2</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">chargement</span> — squelette du plan pendant la lecture de l'occupation</li>
+          <li><span class="st">normal</span> — places libres, occupées, bloquées, sélectionnées</li>
+          <li><span class="st">quota atteint</span> — le nombre de places sélectionnées égale le nombre de voyageurs, les autres deviennent non cliquables</li>
+          <li><span class="st">conflit</span> — une place devient occupée pendant la sélection (temps réel), retrait automatique et message</li>
+          <li><span class="st">voiture sans plan</span> — repli sur une saisie numérique du numéro de place</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Onglets par voiture de la classe choisie, avec le nombre de places libres</li>
+          <li>Grille fidèle au plan importé (rangées × colonnes), numérotation réelle des places</li>
+          <li>Légende explicite — les états ne reposent pas sur la seule couleur, les motifs les distinguent</li>
+          <li>Rappel que la disponibilité est calculée sur le segment du trajet demandé</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Dialog</code> plein écran, <code>Tabs</code> voitures, <code>SeatMap</code> (composant à créer, réutilisé en gestion), <code>Legend</code>, <code>Alert</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Survol d'une place : infobulle indiquant les segments déjà occupés</li>
+          <li><span class="n">2</span> Confirme et renvoie les places à l'écran de vente ; fermeture sans confirmer conserve l'attribution automatique</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>Retour → <a href="#AW-V-02">AW-V-02</a> (toujours) — cet écran ne s'atteint que depuis la vente ou depuis <a href="#AW-G-06">AW-G-06</a> en lecture</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-V-04">
+    <div class="sb-head"><span class="sb-id">AW-V-04</span><h3>Vente bagage</h3><span class="sb-role">vendeur guichet bagages</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Vente · Bagage</div>
+          <div class="wf-body tight">
+            <div class="wf-lbl">Billet voyageur de rattachement (obligatoire)</div>
+            <div class="wf-row"><div class="wf-fld filled g2">B-4821</div><div class="wf-btn gho">Rechercher <span class="n">1</span></div><div class="wf-btn gho">Scanner <span class="n">2</span></div></div>
+            <div class="wf-box fill">
+              <div class="wf-row split"><div class="wf-h">MBADINGA Paul</div><span class="wf-tag ok">billet valide</span></div>
+              <div style="font-size:9px">OWE → FCV · TR-201 · 14/08 08:00 · 2e classe · 648 km</div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Poids (kg) · max 30</div><div class="wf-fld filled">12</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Nombre de colis</div><div class="wf-fld filled">1</div></div>
+              <div class="wf-col g2"><div class="wf-lbl">Code tarifaire</div><div class="wf-sel">Général — franchise 0 kg</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Expéditeur</div><div class="wf-fld filled">MBADINGA Paul</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Destinataire</div><div class="wf-fld">nom / prénom</div></div>
+            </div>
+            <div class="wf-box dash">
+              <div class="wf-lbl">Détail du calcul</div>
+              <div style="font-size:9px">Frais d'enregistrement 700 (≥ 200 km) · excédent 0 kg · TVA</div>
+            </div>
+            <div class="wf-row split mid" style="border-top:1px solid var(--wf-line-soft);padding-top:6px">
+              <div><div class="wf-lbl">Total TTC</div><div class="wf-h big">833 XAF</div></div>
+              <div class="wf-row"><div class="wf-btn gho">+ Autre bagage <span class="n">3</span></div><div class="wf-btn pri">Encaisser <span class="n">4</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">sans billet</span> — état initial, le reste du formulaire est désactivé</li>
+          <li><span class="st">billet trouvé</span> — récapitulatif du voyage, gares et distance héritées</li>
+          <li><span class="st">billet invalide</span> — annulé, remboursé, déjà voyagé : vente refusée avec le motif</li>
+          <li><span class="st">poids hors limite</span> — au-delà de 30 kg, message orientant vers le colis express</li>
+          <li><span class="st">multi-bagages</span> — plusieurs étiquettes dans la même vente</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Numéro d'étiquette attribué automatiquement, unique, imprimé sur l'étiquette physique</li>
+          <li>Gares, train, dates et distance repris du billet — jamais ressaisis</li>
+          <li>Détail du calcul visible : frais d'enregistrement (490 F HT sous 190 km, 700 F au-delà), excédent au barème, franchise du code tarifaire</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>TicketLookup</code> (saisie + scan), <code>SummaryCard</code>, <code>NumberInput</code>, <code>Select</code> tarif, <code>PriceBreakdown</code>, <code>RepeatableFieldset</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Recherche du billet par numéro ou par nom du voyageur</li>
+          <li><span class="n">2</span> Lecture du code-barres du billet avec la douchette du guichet</li>
+          <li><span class="n">3</span> Ajoute une seconde étiquette rattachée au même billet</li>
+          <li><span class="n">4</span> Passe à l'encaissement ; l'impression comprend l'étiquette et le talon</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-V-07">AW-V-07</a> · retour <a href="#AW-V-01">AW-V-01</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-V-05">
+    <div class="sb-head"><span class="sb-id">AW-V-05</span><h3>Vente colis express</h3><span class="sb-role">vendeur guichet colis</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Vente · Colis express — expédition autonome</div>
+          <div class="wf-body tight">
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Gare départ</div><div class="wf-sel">Owendo</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Gare arrivée</div><div class="wf-sel">Booué</div></div>
+              <div class="wf-col" style="flex:.7"><div class="wf-lbl">Zone</div><div class="wf-fld filled">Z4 · 340 km</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Expéditeur · nom</div><div class="wf-fld filled">NZENG Marie</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Téléphone expéditeur</div><div class="wf-fld filled">+241 …</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Destinataire · nom</div><div class="wf-fld filled">OBAME Jean</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Téléphone destinataire</div><div class="wf-fld filled">+241 …</div></div>
+            </div>
+            <div class="wf-lbl">Articles — une vignette par article <span class="n">1</span></div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">Vignette</div><div class="lg">Description</div><div class="sm">Poids</div><div>Montant</div><div class="sm"></div></div>
+              <div class="r"><div class="sm">V-77120</div><div class="lg">Carton scellé</div><div class="sm">18 kg</div><div>4 500</div><div class="sm">✕</div></div>
+              <div class="r"><div class="sm">V-77121</div><div class="lg">Sac</div><div class="sm">7 kg</div><div>2 100</div><div class="sm">✕</div></div>
+              <div class="r" style="background:var(--wf-fill)"><div class="sm">+</div><div class="lg">Ajouter un article <span class="n">2</span></div><div class="sm"></div><div></div><div class="sm"></div></div>
+            </div>
+            <div class="wf-alert warn">Poids unitaire limité à 100 kg — au-delà, formule par fraction de 100 kg</div>
+            <div class="wf-row split mid" style="border-top:1px solid var(--wf-line-soft);padding-top:6px">
+              <div><div class="wf-lbl">Total TTC · 2 articles · 25 kg</div><div class="wf-h big">6 600 XAF</div></div>
+              <div class="wf-btn pri">Encaisser <span class="n">3</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">saisie</span> — au moins un article requis pour encaisser</li>
+          <li><span class="st">poids excessif</span> — au-delà de 100 kg par article, bascule sur la formule par fraction de 100 kg avec explication</li>
+          <li><span class="st">zone hors barème</span> — relation non desservie : blocage explicite</li>
+          <li><span class="st">suivi actif</span> — après création, les statuts d'expédition apparaissent (enregistré, en transport, arrivé, retiré)</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Numéro d'expédition unique + une vignette par article, imprimées avec code-barres</li>
+          <li>Zone tarifaire déduite de la distance (7 zones), paliers de poids par tranche de 10 kg</li>
+          <li>Coordonnées téléphoniques des deux parties — support des notifications de statut</li>
+          <li>Bordereau d'expédition imprimable (remplace le document Word actuel, non modifiable)</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Combobox</code> gares, <code>ContactFieldset</code> ×2, <code>EditableTable</code> articles, <code>PriceBreakdown</code>, <code>Alert</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Les numéros de vignette sont attribués par le système ; saisie manuelle possible si vignettes pré-imprimées, avec contrôle d'unicité</li>
+          <li><span class="n">2</span> Ajoute une ligne d'article ; le montant se recalcule à chaque modification de poids</li>
+          <li><span class="n">3</span> Encaissement puis impression du bordereau et des vignettes</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-V-07">AW-V-07</a> · suivi ultérieur depuis <a href="#AW-V-09">AW-V-09</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-V-06">
+    <div class="sb-head"><span class="sb-id">AW-V-06</span><h3>Transport auto accompagné / transport funéraire</h3><span class="sb-role">vendeur guichet</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Vente · Prestation spéciale</div>
+          <div class="wf-body tight">
+            <div class="wf-tabs"><div class="tb on">Transport auto accompagné</div><div class="tb">Transport funéraire</div></div>
+            <div class="wf-lbl">Billet voyageur de rattachement <span style="text-transform:none">(TAA uniquement)</span> <span class="n">1</span></div>
+            <div class="wf-row"><div class="wf-fld filled g2">B-4823</div><div class="wf-btn gho">Rechercher</div></div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Gare départ</div><div class="wf-sel">Owendo</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Gare arrivée</div><div class="wf-sel">Franceville</div></div>
+              <div class="wf-col" style="flex:.7"><div class="wf-lbl">Tonnage</div><div class="wf-fld filled">1,4 t</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Expéditeur</div><div class="wf-fld filled">MBADINGA Paul</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Code tarifaire</div><div class="wf-sel">TAA-STD</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Validité</div><div class="wf-fld filled">14/08 → 15/08</div></div>
+            </div>
+            <div class="wf-box dash"><div class="wf-lbl">Pièces jointes</div><div style="font-size:9px">Carte grise / autorisation — dépôt optionnel <span class="n">2</span></div></div>
+            <div class="wf-row split mid" style="border-top:1px solid var(--wf-line-soft);padding-top:6px">
+              <div><div class="wf-lbl">Total TTC</div><div class="wf-h big">185 000 XAF</div></div>
+              <div class="wf-btn pri">Encaisser <span class="n">3</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">onglet TAA</span> — le rattachement à un billet voyageur est obligatoire</li>
+          <li><span class="st">onglet funéraire</span> — prestation autonome, le bloc billet disparaît</li>
+          <li><span class="st">billet manquant</span> — encaissement bloqué en TAA</li>
+          <li><span class="st">capacité indisponible</span> — pas de wagon porte-auto sur la desserte : blocage avec proposition d'une autre date</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Numéro d'expédition unique, gares, distance, tonnage, code tarifaire, dates de départ et d'arrivée, validité</li>
+          <li>Ventilation HT / TVA / CSS / TTC, montant perçu et montant restant à payer</li>
+          <li>Pour le transport funéraire : mention des pièces administratives exigées, en texte paramétrable</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Tabs</code>, <code>TicketLookup</code> conditionnel, <code>Combobox</code>, <code>FileUpload</code> optionnel, <code>PriceBreakdown</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Le bloc n'est affiché que sur l'onglet TAA ; le changement d'onglet réinitialise le formulaire après confirmation</li>
+          <li><span class="n">2</span> Dépôt de justificatifs, stockés et rattachés à l'expédition</li>
+          <li><span class="n">3</span> Encaissement puis impression du bordereau</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-V-07">AW-V-07</a> · retour <a href="#AW-V-01">AW-V-01</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-V-07">
+    <div class="sb-head"><span class="sb-id">AW-V-07</span><h3>Encaissement</h3><span class="sb-role">vendeur — commun à tous les produits</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Encaissement · vente V-90218</div>
+          <div class="wf-body">
+            <div class="wf-box fill">
+              <div class="wf-row split"><div class="wf-h">3 billets · OWE → FCV</div><div class="wf-h big">70 250 XAF</div></div>
+              <div style="font-size:9px">TR-201 · 14/08 08:00 · 2e classe · places 12A 12B 14C</div>
+            </div>
+            <div class="wf-lbl">Mode de règlement</div>
+            <div class="wf-row wrap">
+              <div class="wf-chip on">Espèces</div><div class="wf-chip">Airtel Money</div><div class="wf-chip">Moov Money</div>
+              <div class="wf-chip">Carte</div><div class="wf-chip">Client en compte</div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Montant reçu</div><div class="wf-fld filled">100 000</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">À rendre</div><div class="wf-fld filled" style="background:var(--wf-fill)">29 750</div></div>
+            </div>
+            <div class="wf-box dash"><div class="wf-lbl">Si mobile money</div>
+              <div class="wf-row mid"><div class="wf-fld g2">+241 numéro payeur</div><div class="wf-btn gho">Envoyer la demande <span class="n">1</span></div></div>
+              <div style="font-size:9px;margin-top:4px">⏳ En attente de confirmation du client… (statut temps réel)</div>
+            </div>
+            <div class="wf-row split mid" style="border-top:1px solid var(--wf-line-soft);padding-top:6px">
+              <div class="wf-btn gho">Annuler la vente <span class="n">2</span></div>
+              <div class="wf-btn pri">Valider et imprimer <span class="n">3</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="wf-states" style="margin-top:10px">
+          <div><div class="cap">état : paiement refusé</div>
+            <div class="wf"><div class="wf-body" style="padding:10px">
+              <div class="wf-alert err">Paiement refusé — solde insuffisant</div>
+              <div class="wf-row"><div class="wf-btn gho g1">Changer de mode</div><div class="wf-btn g1">Réessayer <span class="n">4</span></div></div>
+            </div></div>
+          </div>
+          <div><div class="cap">état : client en compte</div>
+            <div class="wf"><div class="wf-body" style="padding:10px">
+              <div class="wf-lbl">Compte client</div><div class="wf-sel">SOGARA — encours 2 400 000</div>
+              <div class="wf-alert warn">Plafond d'encours atteint</div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">espèces</span> — saisie du montant reçu, calcul du rendu de monnaie</li>
+          <li><span class="st">mobile money · en attente</span> — demande envoyée, écran d'attente avec statut temps réel et compte à rebours</li>
+          <li><span class="st">confirmé</span> — passage automatique à la confirmation</li>
+          <li><span class="st">refusé / expiré</span> — motif affiché, changement de mode ou nouvelle tentative</li>
+          <li><span class="st">en compte</span> — sélection du compte client, contrôle de l'encours et du plafond</li>
+          <li><span class="st">paiement partiel</span> — montant perçu inférieur au dû, reste à payer enregistré (champ prévu par le cahier des charges)</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Récapitulatif non modifiable de la vente et montant TTC en grand</li>
+          <li>Modes de règlement disponibles selon le point de vente et le paramétrage</li>
+          <li>Pour le mobile money : numéro payeur, référence du prestataire, temps restant</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>SummaryCard</code>, <code>ChipGroup</code> modes, <code>CurrencyInput</code>, <code>ChangeCalculator</code>, <code>PaymentWaitPanel</code> (réactif), <code>Alert</code>, <code>Select</code> comptes</li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Déclenche la demande de paiement (notification sur le téléphone du client) ; le statut se met à jour sans rechargement</li>
+          <li><span class="n">2</span> Abandonne la vente et libère immédiatement les places réservées</li>
+          <li><span class="n">3</span> Valide l'encaissement, écrit la vente et lance l'impression</li>
+          <li><span class="n">4</span> Relance la demande de paiement, dans la limite d'un nombre d'essais paramétré</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul>
+          <li>Succès → <a href="#AW-V-08">AW-V-08</a></li>
+          <li>Annulation → retour à l'écran de vente d'origine</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-V-08">
+    <div class="sb-head"><span class="sb-id">AW-V-08</span><h3>Confirmation &amp; impression</h3><span class="sb-role">vendeur</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Vente enregistrée</div>
+          <div class="wf-body">
+            <div class="wf-alert ok">✓ Vente V-90218 enregistrée · journée comptable du 26/07</div>
+            <div class="wf-row">
+              <div class="wf-print g2">
+                <div class="wf-row split"><div class="wf-h">BILLET VOYAGEUR</div><div style="font-size:8px">N° B-4821</div></div>
+                <div style="font-size:8.5px;line-height:1.6">MBADINGA Paul · M<br>Owendo → Franceville · 648 km<br>TR-201 EXPRESS · 14/08 08:00 → 19:45<br>2e classe · voiture 1 · place 12A<br>TTC 23 417 XAF · TVA 3 572</div>
+                <div class="wf-row mid" style="margin-top:5px"><div class="wf-qr"></div><div style="font-size:8px" class="g1">Code Aztec signé<br>Vérifiable hors ligne</div></div>
+              </div>
+              <div class="wf-col g1">
+                <div class="wf-btn pri wide">🖨 Imprimer tout <span class="n">1</span></div>
+                <div class="wf-btn wide">Billet 1 · 2 · 3 <span class="n">2</span></div>
+                <div class="wf-btn wide">Envoyer par SMS <span class="n">3</span></div>
+                <div class="wf-btn gho wide">Reçu de caisse</div>
+                <div class="wf-btn pri wide" style="margin-top:8px">Nouvelle vente <span class="n">4</span></div>
+              </div>
+            </div>
+            <div class="wf-alert warn">Imprimante non détectée — réimpression possible depuis Opérations <span class="n">5</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">succès</span> — vente écrite, titres émis</li>
+          <li><span class="st">impression en cours</span> — indicateur par document</li>
+          <li><span class="st">imprimante indisponible</span> — la vente reste valide ; consigne de réimpression, jamais de nouvelle vente</li>
+          <li><span class="st">envoi SMS</span> — accusé ou échec avec possibilité de renvoi</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Numéro de vente et journée comptable de rattachement</li>
+          <li>Aperçu fidèle du titre imprimé, avec le code Aztec signé — y compris sur billet papier</li>
+          <li>Documents disponibles selon le produit : billet, étiquette bagage, vignettes, bordereau d'expédition, reçu de caisse</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Alert</code> succès, <code>TicketPreview</code>, <code>Barcode</code> (Aztec), <code>ButtonGroup</code>, <code>PrintStatus</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Imprime l'ensemble des documents de la vente</li>
+          <li><span class="n">2</span> Impression unitaire d'un titre</li>
+          <li><span class="n">3</span> Envoie la référence et le lien court par SMS au numéro du voyageur</li>
+          <li><span class="n">4</span> Réinitialise et retourne à l'accueil vendeur (raccourci clavier)</li>
+          <li><span class="n">5</span> Lien direct vers la recherche d'opération pour réimprimer — la réimpression produit un duplicata tracé, jamais un second original</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-V-01">AW-V-01</a> · <a href="#AW-V-09">AW-V-09</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-V-09">
+    <div class="sb-head"><span class="sb-id">AW-V-09</span><h3>Recherche d'opération — annulation, remboursement, duplicata</h3><span class="sb-role">vendeur · taxateur (selon droits)</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Opérations</div>
+          <div class="wf-body tight">
+            <div class="wf-row">
+              <div class="wf-fld g2">N° opération, nom, téléphone…</div>
+              <div class="wf-sel" style="flex:.9">Tous produits</div>
+              <div class="wf-sel" style="flex:.9">Aujourd'hui</div>
+              <div class="wf-btn pri">Chercher <span class="n">1</span></div>
+            </div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">N°</div><div class="lg">Prestation</div><div>Voyageur</div><div class="sm">État</div><div>Montant</div><div class="sm">…</div></div>
+              <div class="r"><div class="sm">B-4821</div><div class="lg">Billet OWE→FCV</div><div>MBADINGA P.</div><div class="sm"><span class="wf-tag ok">vendu</span></div><div>23 417</div><div class="sm">⋯ <span class="n">2</span></div></div>
+              <div class="r"><div class="sm">B-4790</div><div class="lg">Billet OWE→BOO</div><div>NZENG M.</div><div class="sm"><span class="wf-tag err">annulé</span></div><div>—</div><div class="sm">⋯</div></div>
+              <div class="r"><div class="sm">G-1190</div><div class="lg">Bagage 12 kg</div><div>MBADINGA P.</div><div class="sm"><span class="wf-tag warn">remboursé</span></div><div>−833</div><div class="sm">⋯</div></div>
+            </div>
+            <div class="wf-modal">
+              <div class="wf-h">Rembourser B-4821</div>
+              <div class="wf-row"><div class="wf-col g1"><div class="wf-lbl">Motif</div><div class="wf-sel">Annulation du train</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Pénalité</div><div class="wf-fld filled">0 % — motif SETRAG</div></div></div>
+              <div class="wf-box fill" style="margin-top:5px;font-size:9px">Montant remboursé : <b>23 417 XAF</b> · mode : espèces</div>
+              <div class="wf-row end" style="margin-top:5px"><div class="wf-btn gho">Annuler</div><div class="wf-btn pri">Confirmer le remboursement <span class="n">3</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">recherche vide</span> — invite et raccourcis (mes ventes du jour, ma caisse)</li>
+          <li><span class="st">résultats</span> — liste paginée tous produits</li>
+          <li><span class="st">aucun résultat</span> — suggestion d'élargir la période</li>
+          <li><span class="st">action refusée</span> — droit manquant, ou délai dépassé, ou titre déjà contrôlé : motif explicite</li>
+          <li><span class="st">confirmation</span> — fenêtre d'annulation, de remboursement ou de duplicata</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Recherche multi-critères : numéro de vente ou d'opération, nom, téléphone, train, date, type de prestation, canal</li>
+          <li>État affiché sans ambiguïté : vendu, annulé, remboursé, contrôlé, duplicata émis</li>
+          <li>Fenêtre de remboursement : motif paramétré, taux de pénalité appliqué, montant net, mode de restitution</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>SearchBar</code>, <code>FilterBar</code>, <code>DataTable</code> paginée, <code>DropdownMenu</code> actions, <code>Dialog</code> confirmation, <code>Badge</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Recherche instantanée dès trois caractères ; lecture au scanner acceptée dans le champ</li>
+          <li><span class="n">2</span> Menu : voir le détail, réimprimer (duplicata), annuler, rembourser, suivre l'expédition — grisées selon droits et état</li>
+          <li><span class="n">3</span> Confirme l'opération : écriture liée créée, places libérées, audit enregistré. Aucune suppression, jamais</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>Détail → <a href="#AW-V-08">AW-V-08</a> en lecture · retour <a href="#AW-V-01">AW-V-01</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-V-10">
+    <div class="sb-head"><span class="sb-id">AW-V-10</span><h3>Ma caisse &amp; clôture</h3><span class="sb-role">vendeur · responsable de point de vente</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Ma caisse · session du 26/07 06:12</div>
+          <div class="wf-body">
+            <div class="wf-row">
+              <div class="wf-kpi"><b>42</b><span>opérations</span></div>
+              <div class="wf-kpi"><b>1 246 500</b><span>total TTC</span></div>
+              <div class="wf-kpi"><b>3</b><span>annulations</span></div>
+              <div class="wf-kpi"><b>−833</b><span>remboursements</span></div>
+            </div>
+            <div class="wf-lbl">Détail par mode de règlement</div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="lg">Mode</div><div>Théorique</div><div>Compté <span class="n">1</span></div><div>Écart</div></div>
+              <div class="r"><div class="lg">Espèces</div><div>812 000</div><div>810 000</div><div><span class="wf-tag err">−2 000</span></div></div>
+              <div class="r"><div class="lg">Airtel Money</div><div>310 500</div><div>310 500</div><div>0</div></div>
+              <div class="r"><div class="lg">Moov Money</div><div>124 000</div><div>124 000</div><div>0</div></div>
+              <div class="r"><div class="lg">Client en compte</div><div>0</div><div>—</div><div>—</div></div>
+            </div>
+            <div class="wf-box dash"><div class="wf-lbl">Justification d'écart (obligatoire si ≠ 0)</div><div class="wf-fld">Motif…</div></div>
+            <div class="wf-row end"><div class="wf-btn gho">Imprimer l'état <span class="n">2</span></div><div class="wf-btn pri">Clôturer ma caisse <span class="n">3</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">session ouverte</span> — compteurs en temps réel</li>
+          <li><span class="st">comptage</span> — saisie des montants comptés par mode, écart calculé en direct</li>
+          <li><span class="st">écart non justifié</span> — clôture bloquée tant que le motif est vide</li>
+          <li><span class="st">clôturée</span> — lecture seule, état imprimable, session transmise au contrôle des recettes</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Heure d'ouverture, fond de caisse initial, opérateur, point de vente</li>
+          <li>Totaux par mode de règlement : théorique issu du système, compté saisi par le vendeur, écart</li>
+          <li>Détail des annulations et remboursements de la session</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>StatCard</code>, <code>DataTable</code> éditable, <code>CurrencyInput</code>, <code>Textarea</code> justification, <code>Dialog</code> confirmation, <code>PrintButton</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Saisie du comptage réel ; l'écart se calcule et se signale immédiatement</li>
+          <li><span class="n">2</span> Imprime l'état de caisse (document de contrôle)</li>
+          <li><span class="n">3</span> Clôture définitive après confirmation ; la session devient non modifiable et remonte au contrôle des recettes</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>Après clôture → <a href="#AW-V-01">AW-V-01</a> en état « caisse fermée » · vue superviseur dans <a href="#AW-G-09">AW-G-09</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-V-11">
+    <div class="sb-head"><span class="sb-id">AW-V-11</span><h3>Ressaisie des ventes manuelles (mode dégradé)</h3><span class="sb-role">agent taxateur · responsable de point de vente</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Ventes manuelles · régularisation</div>
+          <div class="wf-body tight">
+            <div class="wf-alert warn">Ces ventes ont été réalisées sur billets pré-imprimés pendant une indisponibilité. Leur ressaisie assure la continuité de la numérotation.</div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">N° pré-imprimé <span class="n">1</span></div><div class="wf-fld filled">PP-0042817</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">N° système (attribué)</div><div class="wf-fld" style="background:var(--wf-fill)">B-4830 (auto)</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Date réelle de vente</div><div class="wf-fld filled">25/07 14:20</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Prestation</div><div class="wf-sel">Billet voyageur</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Trajet</div><div class="wf-sel">OWE → LTV</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Train / date départ</div><div class="wf-sel">TR-202 · 25/07</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Voyageur</div><div class="wf-fld filled">OBAME Jean</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Montant perçu</div><div class="wf-fld filled">16 500</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Vendeur d'origine</div><div class="wf-sel">A. MBOUMBA</div></div>
+            </div>
+            <div class="wf-row split mid">
+              <div style="font-size:9px">Séquence pré-imprimée : <b>PP-0042810 → PP-0042817</b> · <span class="wf-tag warn">3 manquants</span> <span class="n">2</span></div>
+              <div class="wf-btn pri">Enregistrer <span class="n">3</span></div>
+            </div>
+            <div class="wf-lbl">Ressaisies de la journée</div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">Pré-imp.</div><div class="sm">Système</div><div class="lg">Prestation</div><div>Montant</div><div class="sm">État</div></div>
+              <div class="r"><div class="sm">PP-042816</div><div class="sm">B-4829</div><div class="lg">Billet OWE→BOO</div><div>12 300</div><div class="sm"><span class="wf-tag ok">intégré</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">saisie</span> — état nominal</li>
+          <li><span class="st">doublon</span> — le numéro pré-imprimé existe déjà : blocage strict (garde-fou anti-fraude)</li>
+          <li><span class="st">trou de séquence</span> — des numéros manquent dans la plage : signalé, non bloquant, tracé pour le contrôle des recettes</li>
+          <li><span class="st">desserte close</span> — le train est parti : ressaisie autorisée mais marquée « régularisation a posteriori »</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Numéro pré-imprimé du carnet papier <b>et</b> numéro attribué par le système — les deux sont conservés</li>
+          <li>Date et heure réelles de la vente, distinctes de la date de saisie</li>
+          <li>Identité du vendeur d'origine (celui qui a émis le billet papier)</li>
+          <li>Suivi de la continuité de la séquence de carnets</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Alert</code> pédagogique, <code>Input</code> avec contrôle d'unicité, <code>DateTimePicker</code>, <code>Select</code>, <code>SequenceIndicator</code> (composant à créer), <code>DataTable</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Contrôle d'unicité à la saisie, avant validation</li>
+          <li><span class="n">2</span> Ouvre le détail des numéros manquants de la plage — élément de contrôle anti-fraude</li>
+          <li><span class="n">3</span> Enregistre la vente avec le canal « manuel » ; elle entre dans la journée comptable et les états de caisse</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>Contrôle des trous de séquence → <a href="#AW-G-09">AW-G-09</a> · retour <a href="#AW-V-01">AW-V-01</a></li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ GESTION ══════════════════════════ -->
+<section>
+  <h2>Portail de gestion</h2>
+
+  <div class="screen-block" id="AW-G-01">
+    <div class="sb-head"><span class="sb-id">AW-G-01</span><h3>Tableau de bord</h3><span class="sb-role">administrateur · responsable KPI · direction</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Tableau de bord</div>
+          <div class="wf-app">
+            <div class="wf-side">
+              <div class="it on">Bord</div><div class="it">Livrets</div><div class="it">Tarifs</div><div class="it">Yield</div><div class="it">Trains</div><div class="it">Places</div><div class="it">Ventes</div><div class="it">Recettes</div><div class="it">Compta</div><div class="it">Rapports</div><div class="it">PV</div><div class="it">Users</div><div class="it">Réglages</div>
+            </div>
+            <div class="wf-main">
+              <div class="wf-top"><div class="wf-h">Vue d'ensemble</div><div class="wf-sel" style="margin-left:auto;width:110px">Aujourd'hui <span class="n">1</span></div></div>
+              <div class="wf-row">
+                <div class="wf-kpi"><b>318</b><span>ventes</span></div>
+                <div class="wf-kpi"><b>7,2 M</b><span>XAF TTC</span></div>
+                <div class="wf-kpi"><b>78 %</b><span>remplissage</span></div>
+                <div class="wf-kpi"><b>24 500</b><span>recette / siège</span></div>
+              </div>
+              <div class="wf-row">
+                <div class="wf-col g2"><div class="wf-lbl">Ventes par canal · 14 jours</div>
+                  <div class="wf-chart"><i style="height:40%"></i><i style="height:65%"></i><i style="height:52%"></i><i style="height:80%"></i><i style="height:70%"></i><i style="height:95%"></i><i style="height:60%"></i><i style="height:45%"></i></div></div>
+                <div class="wf-col g1"><div class="wf-lbl">Prochains départs</div>
+                  <div class="wf-list">
+                    <div class="wf-item"><div class="wf-col"><div class="wf-h">TR-201 · 08:00</div><div style="font-size:8.5px">remplissage 92 %</div></div><span class="wf-tag ok">à l'heure</span></div>
+                    <div class="wf-item"><div class="wf-col"><div class="wf-h">TR-202 · 17:30</div><div style="font-size:8.5px">remplissage 41 %</div></div><span class="wf-tag warn">+45 min</span></div>
+                  </div></div>
+              </div>
+              <div class="wf-lbl">Alertes <span class="n">2</span></div>
+              <div class="wf-list">
+                <div class="wf-item"><span class="wf-tag err">écart</span><div class="g1">Caisse Franceville G2 · écart −12 000 non justifié</div><div style="font-size:9px">→</div></div>
+                <div class="wf-item"><span class="wf-tag warn">expire</span><div class="g1">Livret horaire « Été 2026 » expire dans 6 jours</div><div style="font-size:9px">→</div></div>
+                <div class="wf-item"><span class="wf-tag err">export</span><div class="g1">Déversement SAGE du 25/07 en échec (3 tentatives)</div><div style="font-size:9px">→</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">chargement</span> — squelettes sur les indicateurs</li>
+          <li><span class="st">normal</span></li>
+          <li><span class="st">sans alerte</span> — bloc remplacé par un message neutre</li>
+          <li><span class="st">périmètre restreint</span> — un chef de gare ne voit que son point de vente</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Indicateurs du cahier des charges : ventes, chiffre d'affaires, taux de remplissage, recette moyenne par siège</li>
+          <li>Répartition par canal (gare, agence, en ligne, bord, manuel) et par produit</li>
+          <li>Prochains départs avec remplissage et statut de circulation</li>
+          <li>Alertes actionnables : écarts de caisse, expirations de tarifs et livrets, échecs de déversement, file d'envoi bloquée</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>SidebarNav</code>, <code>StatCard</code>, <code>BarChart</code>, <code>List</code>, <code>Badge</code>, <code>DateRangePicker</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Change la période (jour, semaine, mois, plage libre) ; l'ensemble se recalcule</li>
+          <li><span class="n">2</span> Chaque alerte est un lien direct vers l'écran de traitement</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ tous les écrans de gestion via la barre latérale et les alertes</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-02">
+    <div class="sb-head"><span class="sb-id">AW-G-02</span><h3>Livrets horaires</h3><span class="sb-role">administrateur fonctionnel · validateur</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Livrets horaires</div>
+          <div class="wf-body tight">
+            <div class="wf-row mid"><div class="wf-tabs g1"><div class="tb on">Tous</div><div class="tb">Brouillon</div><div class="tb">Actif</div><div class="tb">Expiré</div></div><div class="wf-btn pri">+ Nouveau livret <span class="n">1</span></div></div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="lg">Libellé</div><div>Validité</div><div class="sm">Trains</div><div class="sm">Statut</div><div class="sm">…</div></div>
+              <div class="r"><div class="lg">Été 2026</div><div>01/06 → 31/08</div><div class="sm">112</div><div class="sm"><span class="wf-tag ok">actif</span></div><div class="sm">⋯</div></div>
+              <div class="r"><div class="lg">Rentrée 2026</div><div>01/09 → 31/12</div><div class="sm">120</div><div class="sm"><span class="wf-tag warn">à valider</span></div><div class="sm">⋯ <span class="n">2</span></div></div>
+            </div>
+            <div class="wf-box">
+              <div class="wf-row split mid"><div class="wf-h">Rentrée 2026 — itinéraire détaillé</div><div class="wf-row"><div class="wf-btn gho">Importer <span class="n">3</span></div><div class="wf-btn gho">Exporter</div></div></div>
+              <div class="wf-tbl" style="margin-top:5px">
+                <div class="r head"><div class="sm">Train</div><div class="sm">Type</div><div class="lg">Gare</div><div>Arrivée</div><div>Départ</div><div class="sm">PK</div></div>
+                <div class="r"><div class="sm">TR-201</div><div class="sm">EXPRESS</div><div class="lg">Owendo</div><div>—</div><div>08:00</div><div class="sm">0</div></div>
+                <div class="r"><div class="sm"></div><div class="sm"></div><div class="lg">Ndjolé</div><div>11:20</div><div>11:30</div><div class="sm">175</div></div>
+                <div class="r"><div class="sm"></div><div class="sm"></div><div class="lg">Booué</div><div>13:55</div><div>14:10</div><div class="sm">340</div></div>
+              </div>
+              <div class="wf-row end" style="margin-top:6px"><div class="wf-btn gho">Rejeter <span class="n">4</span></div><div class="wf-btn pri">Valider et activer <span class="n">5</span></div></div>
+            </div>
+            <div class="wf-alert warn">L'activation régénérera les dessertes à partir du 01/09 — 340 billets déjà vendus seront convertis sans pénalité <span class="n">6</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">brouillon</span> — modifiable librement</li>
+          <li><span class="st">à valider</span> — verrouillé en écriture, en attente du validateur</li>
+          <li><span class="st">rejeté</span> — motif de rejet affiché, retour possible en brouillon</li>
+          <li><span class="st">actif</span> — dessertes générées ; modification impossible, seule une nouvelle version est permise</li>
+          <li><span class="st">expiré</span> — lecture seule, conservé pour l'historique</li>
+          <li><span class="st">conflit d'activation</span> — chevauchement de périodes avec un autre livret actif</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Libellé, description, dates de début et de fin de validité, auteur, validateur</li>
+          <li>Itinéraire sommaire (circulation globale) et itinéraire détaillé (arrêts, arrivées, départs, points kilométriques)</li>
+          <li>Nombre de dessertes qui seront générées et impact sur les billets déjà vendus</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Tabs</code>, <code>DataTable</code>, <code>Button</code>, <code>ImportDialog</code> (fichier tabulaire), <code>EditableTable</code> arrêts, <code>ApprovalBar</code> (composant réutilisé pour les tarifs), <code>Alert</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Crée un livret, éventuellement par duplication d'un livret existant</li>
+          <li><span class="n">2</span> Menu : ouvrir, dupliquer, exporter, archiver</li>
+          <li><span class="n">3</span> Import en masse des trains et de leurs arrêts, avec rapport d'erreurs ligne à ligne avant application</li>
+          <li><span class="n">4</span> Rejette avec motif obligatoire, notifié à l'auteur</li>
+          <li><span class="n">5</span> Valide et active après confirmation explicite de l'impact</li>
+          <li><span class="n">6</span> Détaille les billets à convertir (report de voyage sans pénalité)</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-G-05">AW-G-05</a> (composition des trains) · <a href="#AW-G-06">AW-G-06</a> (places générées)</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-03">
+    <div class="sb-head"><span class="sb-id">AW-G-03</span><h3>Tarifs — barème kilométrique</h3><span class="sb-role">administrateur fonctionnel · validateur</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Tarifs</div>
+          <div class="wf-body tight">
+            <div class="wf-tabs"><div class="tb on">Bases kilométriques</div><div class="tb">Réductions</div><div class="tb">Abonnements</div><div class="tb">Bagages / colis</div><div class="tb">Taxes</div></div>
+            <div class="wf-row mid"><div class="wf-sel g1">Grille « Tarifs 2026 » — <span style="color:#9a5b00">brouillon</span></div><div class="wf-btn gho">Importer</div><div class="wf-btn gho">Exporter</div><div class="wf-btn pri">Soumettre <span class="n">1</span></div></div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="lg">Type de train</div><div>Classe</div><div>0 – 99 km</div><div>100 km et +</div><div class="sm">Unité</div></div>
+              <div class="r"><div class="lg">EXPRESS</div><div>VIP</div><div>72,38</div><div>62,16</div><div class="sm">F/km</div></div>
+              <div class="r"><div class="lg">EXPRESS</div><div>1re</div><div>60,10</div><div>54,93</div><div class="sm">F/km</div></div>
+              <div class="r"><div class="lg">EXPRESS</div><div>2e</div><div>47,51</div><div>43,42</div><div class="sm">F/km</div></div>
+              <div class="r"><div class="lg">OMNIBUS</div><div>1re</div><div>46,93</div><div>42,89</div><div class="sm">F/km</div></div>
+              <div class="r"><div class="lg">OMNIBUS</div><div>2e</div><div>37,54</div><div>34,31</div><div class="sm">F/km</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Règles d'arrondi</div>
+                <div class="wf-box" style="font-size:9px;line-height:1.7">0 – 99 km → 10 F<br>100 – 299 km → 50 F<br>300 km et + → 100 F</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Simulateur <span class="n">2</span></div>
+                <div class="wf-box"><div class="wf-row" style="gap:4px"><div class="wf-fld g1">OWE</div><div class="wf-fld g1">FCV</div><div class="wf-sel" style="flex:.9">2e</div></div>
+                <div style="font-size:9px;margin-top:5px">648 km × 43,42 = 28 136 → arrondi <b>28 100 XAF</b></div></div></div>
+            </div>
+            <div class="wf-alert warn">La grille active expire le 31/12/2026 — pensez à préparer la suivante</div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">brouillon · à valider · actif · expiré · rejeté</span> — même cycle que les livrets horaires</li>
+          <li><span class="st">import en erreur</span> — rapport ligne à ligne, rien n'est appliqué tant que tout n'est pas conforme</li>
+          <li><span class="st">simulation</span> — panneau de calcul toujours disponible, y compris sur un brouillon</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Bases au kilomètre par type de train (Express, Omnibus, Autorail) × classe × palier de distance</li>
+          <li>Règles d'arrondi par tranche de distance</li>
+          <li>Réductions : enfant 4-11 ans (−50 %), groupes (−30 % de 10 à 49, −45 % au-delà), militaires avec ordre de mission (−10 %), et les tarifs en projet à paramétrer (week-end, étudiant, 3e âge, promotionnel)</li>
+          <li>Coefficients d'abonnement par tranche de distance, déclinaisons 6 mois, 3 mois, demi-tarif</li>
+          <li>Barèmes bagages (frais d'enregistrement, excédents) et colis (zones × paliers de poids)</li>
+          <li>Taux de TVA et de CSS</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Tabs</code>, <code>EditableTable</code> numérique, <code>ImportDialog</code>, <code>ApprovalBar</code>, <code>FareSimulator</code> (composant à créer, réutilisé en yield), <code>Alert</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Soumet la grille au validateur ; passage en lecture seule</li>
+          <li><span class="n">2</span> Simule un prix sur un trajet réel, avec le détail du calcul (distance, base, arrondi, réductions)</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-G-04">AW-G-04</a> (le yield s'applique au-dessus de cette grille)</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-04">
+    <div class="sb-head"><span class="sb-id">AW-G-04</span><h3>Yield management</h3><span class="sb-role">administrateur fonctionnel · direction commerciale</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Yield management</div>
+          <div class="wf-body tight">
+            <div class="wf-tabs"><div class="tb on">Contingents</div><div class="tb">Règles</div><div class="tb">Bornes</div><div class="tb">Indicateurs</div></div>
+            <div class="wf-lbl">Contingents de classes tarifaires — TR-201 · 2e classe · 320 places</div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="lg">Contingent</div><div>Places</div><div>Coefficient</div><div>Prix résultant</div><div class="sm">Vendues</div></div>
+              <div class="r"><div class="lg">Bas prix</div><div>60</div><div>×0,80</div><div>22 500</div><div class="sm">60/60 ✓</div></div>
+              <div class="r"><div class="lg">Standard</div><div>180</div><div>×1,00</div><div>28 100</div><div class="sm">112/180</div></div>
+              <div class="r"><div class="lg">Flexible</div><div>80</div><div>×1,35</div><div>37 900</div><div class="sm">4/80</div></div>
+            </div>
+            <div class="wf-alert ok">Contingent bas prix épuisé — les ventes basculent automatiquement sur Standard <span class="n">1</span></div>
+            <div class="wf-lbl">Règles de modulation actives</div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">Prio</div><div class="lg">Règle</div><div>Condition</div><div>Effet</div><div class="sm">Actif</div></div>
+              <div class="r"><div class="sm">10</div><div class="lg">Anticipation</div><div>&gt; 21 jours</div><div>−10 %</div><div class="sm">◉ <span class="n">2</span></div></div>
+              <div class="r"><div class="sm">20</div><div class="lg">Dernière minute</div><div>&lt; 48 h</div><div>+10 %</div><div class="sm">◉</div></div>
+              <div class="r"><div class="sm">30</div><div class="lg">Remplissage</div><div>&gt; 90 %</div><div>+30 %</div><div class="sm">◉</div></div>
+              <div class="r"><div class="lg">Vendredi &amp; veilles de fête</div><div class="sm">40</div><div>calendrier</div><div>+20 %</div><div class="sm">◯</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Bornes de sécurité</div>
+                <div class="wf-box" style="font-size:9px">Plancher 18 000 · Plafond 95 000 XAF<br>appliqués <b>après</b> cumul des règles</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Simulateur <span class="n">3</span></div>
+                <div class="wf-box"><div class="wf-row" style="gap:4px"><div class="wf-fld g1">14/08</div><div class="wf-sel g1">TR-201 · 2e</div></div>
+                <div style="font-size:9px;margin-top:5px">Base 28 100 → contingent Standard ×1,00 → remplissage 92 % +30 % → <b>36 500</b> (sous plafond)</div></div></div>
+            </div>
+            <div class="wf-row end"><div class="wf-btn pri">Enregistrer les règles <span class="n">4</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">consultation</span> — état par défaut</li>
+          <li><span class="st">édition</span> — modification d'un contingent ou d'une règle, avec simulation obligatoire avant enregistrement</li>
+          <li><span class="st">contingent épuisé</span> — signalé sur la ligne, bascule automatique</li>
+          <li><span class="st">borne atteinte</span> — le prix simulé est plafonné : mention explicite du bridage</li>
+          <li><span class="st">règle inactive</span> — conservée et historisée, jamais supprimée</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Contingents par desserte et par classe : nombre de places, coefficient, prix résultant, avancement des ventes</li>
+          <li>Règles de modulation avec priorité, condition, effet, période de validité, auteur et date de dernière modification</li>
+          <li>Bornes plancher et plafond par desserte, appliquées après le cumul</li>
+          <li>Indicateurs : taux de remplissage, recette moyenne par siège, revenu par trajet</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Tabs</code>, <code>EditableTable</code>, <code>Switch</code>, <code>PriorityList</code> (glisser-déposer), <code>FareSimulator</code>, <code>Alert</code>, <code>StatCard</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Détail des ventes du contingent et de la bascule</li>
+          <li><span class="n">2</span> Active ou désactive une règle ; la désactivation conserve l'historique</li>
+          <li><span class="n">3</span> Simule sur une desserte et une date réelles, avec le détail de chaque étape du calcul</li>
+          <li><span class="n">4</span> Enregistre — confirmation obligatoire rappelant que les prix affichés changeront immédiatement</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-G-03">AW-G-03</a> (grille de base) · <a href="#AW-G-11">AW-G-11</a> (indicateurs détaillés)</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-05">
+    <div class="sb-head"><span class="sb-id">AW-G-05</span><h3>Trains &amp; voitures</h3><span class="sb-role">administrateur fonctionnel</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Matériel roulant</div>
+          <div class="wf-body tight">
+            <div class="wf-row mid"><div class="wf-h g1">Trains</div><div class="wf-btn pri">+ Train <span class="n">1</span></div></div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">N°</div><div class="lg">Nom</div><div class="sm">Type</div><div class="sm">Voitures</div><div>Capacité 2e/1re/VIP</div><div class="sm">Actif</div></div>
+              <div class="r" style="background:var(--wf-fill)"><div class="sm">TR-201</div><div class="lg">Express Transgabonais</div><div class="sm">EXPRESS</div><div class="sm">6</div><div>320 / 96 / 32</div><div class="sm">◉</div></div>
+              <div class="r"><div class="sm">TR-202</div><div class="lg">Omnibus</div><div class="sm">OMNIBUS</div><div class="sm">8</div><div>420 / 64 / —</div><div class="sm">◉</div></div>
+            </div>
+            <div class="wf-box">
+              <div class="wf-h">TR-201 — composition</div>
+              <div class="wf-tbl" style="margin-top:5px">
+                <div class="r head"><div class="sm">Voiture</div><div class="sm">Classe</div><div class="lg">N° de série</div><div>Assises</div><div>Debout</div><div class="sm">…</div></div>
+                <div class="r"><div class="sm">V1</div><div class="sm">2e</div><div class="lg">VB-2201</div><div>80 (20×4)</div><div>20</div><div class="sm">⋯ <span class="n">2</span></div></div>
+                <div class="r"><div class="sm">V2</div><div class="sm">1re</div><div class="lg">VA-1105</div><div>48 (12×4)</div><div>0</div><div class="sm">⋯</div></div>
+              </div>
+              <div class="wf-row" style="margin-top:6px"><div class="wf-btn gho">Importer un plan de sièges <span class="n">3</span></div><div class="wf-btn gho">Aperçu du plan <span class="n">4</span></div></div>
+            </div>
+            <div class="wf-alert warn">La modification d'un plan de sièges n'affecte pas les dessertes déjà ouvertes à la vente</div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">liste</span> · <span class="st">détail composition</span></li>
+          <li><span class="st">import de plan</span> — prévisualisation de la grille avant application</li>
+          <li><span class="st">train inactif</span> — retiré des futures générations, historique conservé</li>
+          <li><span class="st">plan incohérent</span> — rangées × colonnes ≠ nombre de places déclaré : blocage</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Train : numéro, nom, description, type (Express, Omnibus, Spécial), état actif</li>
+          <li>Voiture : classe, numéro de série, nombre de rangées et de colonnes, places assises, places debout</li>
+          <li>Capacités agrégées par classe, calculées et non saisies</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>DataTable</code> maître-détail, <code>Dialog</code> édition, <code>ImportDialog</code> plan, <code>SeatMap</code> en aperçu (lecture seule), <code>Switch</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Crée un train et sa composition</li>
+          <li><span class="n">2</span> Modifie, duplique ou retire une voiture de la composition</li>
+          <li><span class="n">3</span> Importe le plan (rangées, colonnes, numérotation) depuis un fichier tabulaire</li>
+          <li><span class="n">4</span> Affiche le plan tel qu'il apparaîtra au vendeur (<a href="#AW-V-03">AW-V-03</a>)</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-G-02">AW-G-02</a> (affectation aux livrets) · <a href="#AW-G-06">AW-G-06</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-06">
+    <div class="sb-head"><span class="sb-id">AW-G-06</span><h3>Places — blocage &amp; traçabilité</h3><span class="sb-role">chef de gare · superviseur · administrateur</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Places</div>
+          <div class="wf-body tight">
+            <div class="wf-row"><div class="wf-sel g1">TR-201 · 14/08/2026</div><div class="wf-sel" style="flex:.7">Voiture V1 · 2e</div><div class="wf-btn gho">Traçabilité <span class="n">1</span></div></div>
+            <div class="wf-row">
+              <div class="wf-col g2">
+                <div class="wf-box"><div class="wf-seatmap">
+                  <i></i><i class="busy"></i><i></i><i></i><i class="blk"></i><i></i><i class="blk"></i><i></i><i></i><i class="busy"></i>
+                  <i></i><i></i><i class="busy"></i><i class="busy"></i><i></i><i></i><i></i><i class="busy"></i><i></i><i></i>
+                  <i class="busy"></i><i></i><i></i><i></i><i class="sel"></i><i class="sel"></i><i></i><i></i><i class="blk"></i><i></i>
+                </div>
+                <div class="wf-row" style="margin-top:6px;font-size:8.5px;gap:9px"><span>▢ libre</span><span>▨ vendue</span><span>⧄ bloquée</span><span>▣ sélection</span></div></div>
+              </div>
+              <div class="wf-col g1">
+                <div class="wf-lbl">Sélection : 3C, 3D</div>
+                <div class="wf-lbl">Motif</div><div class="wf-sel">Maintenance</div>
+                <div class="wf-fld">Commentaire…</div>
+                <div class="wf-btn pri wide">Bloquer <span class="n">2</span></div>
+                <div class="wf-btn gho wide">Débloquer <span class="n">3</span></div>
+                <div class="wf-box dash" style="font-size:9px">Segment concerné : tout le parcours, ou de <b>Booué</b> à <b>Franceville</b> <span class="n">4</span></div>
+              </div>
+            </div>
+            <div class="wf-lbl">Journal de traçabilité</div>
+            <div class="wf-tbl">
+              <div class="r head"><div>Date · heure</div><div class="lg">Agent</div><div class="sm">Action</div><div class="sm">Place</div><div class="sm">Voiture</div><div class="sm">Classe</div></div>
+              <div class="r"><div>26/07 09:12</div><div class="lg">J. OLELE</div><div class="sm">Blocage</div><div class="sm">3C</div><div class="sm">V1</div><div class="sm">2e</div></div>
+              <div class="r"><div>25/07 16:40</div><div class="lg">F. ONANGA</div><div class="sm">Déblocage</div><div class="sm">7A</div><div class="sm">V2</div><div class="sm">1re</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">consultation</span> — plan en lecture</li>
+          <li><span class="st">sélection</span> — une ou plusieurs places retenues</li>
+          <li><span class="st">place vendue</span> — blocage refusé, l'écran propose de consulter la vente</li>
+          <li><span class="st">blocage partiel</span> — restriction à un intervalle de segments</li>
+          <li><span class="st">desserte partie</span> — lecture seule</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Plan de la voiture avec l'état réel de chaque place, y compris l'occupation par segment</li>
+          <li>Motif de blocage (maintenance, réservation opérationnelle, protocole, autre) et commentaire libre</li>
+          <li>Journal complet exigé par le cahier des charges : date, heure, agent, action, numéro de place, voiture, classe</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Select</code> desserte, <code>SeatMap</code> interactif, <code>Select</code> motif, <code>Textarea</code>, <code>SegmentRangePicker</code> (composant à créer), <code>DataTable</code> journal, <code>ExportButton</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Bascule vers le journal filtré sur la desserte</li>
+          <li><span class="n">2</span> Bloque la sélection ; motif obligatoire, action auditée</li>
+          <li><span class="n">3</span> Débloque et remet les places à la vente</li>
+          <li><span class="n">4</span> Restreint le blocage à un intervalle de segments — le reste du parcours demeure vendable</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>Vente liée → <a href="#AW-V-09">AW-V-09</a> · export du journal → <a href="#AW-G-11">AW-G-11</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-07">
+    <div class="sb-head"><span class="sb-id">AW-G-07</span><h3>Points de vente &amp; agences accréditées</h3><span class="sb-role">administrateur fonctionnel</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Points de vente</div>
+          <div class="wf-body tight">
+            <div class="wf-tabs"><div class="tb on">Points de vente</div><div class="tb">Quotas d'agences</div></div>
+            <div class="wf-row mid"><div class="wf-fld g2">Rechercher…</div><div class="wf-sel" style="flex:.9">Tous types</div><div class="wf-btn pri">+ Point de vente <span class="n">1</span></div></div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">Code</div><div class="lg">Nom</div><div class="sm">Type</div><div class="lg">Gare</div><div class="sm">Guichets</div><div class="sm">Actif</div></div>
+              <div class="r"><div class="sm">OWE-V</div><div class="lg">Owendo Virié — voyageurs</div><div class="sm">gare</div><div class="lg">Owendo</div><div class="sm">4</div><div class="sm">◉</div></div>
+              <div class="r"><div class="sm">AG-042</div><div class="lg">Agence Libreville Centre</div><div class="sm">agence</div><div class="lg">—</div><div class="sm">2</div><div class="sm">◉</div></div>
+            </div>
+            <div class="wf-box">
+              <div class="wf-h">Quotas — Agence Libreville Centre</div>
+              <div class="wf-row" style="margin-top:5px"><div class="wf-sel g1">TR-201 · 14/08</div><div class="wf-sel" style="flex:.8">2e classe</div><div class="wf-fld" style="flex:.6">40</div><div class="wf-btn pri">Affecter <span class="n">2</span></div></div>
+              <div class="wf-tbl" style="margin-top:5px">
+                <div class="r head"><div class="lg">Desserte</div><div class="sm">Classe</div><div>Alloué</div><div>Vendu</div><div>Restant</div><div class="sm">…</div></div>
+                <div class="r"><div class="lg">TR-201 · 14/08</div><div class="sm">2e</div><div>40</div><div>31</div><div>9</div><div class="sm">✕ <span class="n">3</span></div></div>
+                <div class="r"><div class="lg">TR-201 · 15/08</div><div class="sm">1re</div><div>10</div><div>10</div><div><span class="wf-tag warn">0</span></div><div class="sm">✕</div></div>
+              </div>
+            </div>
+            <div class="wf-alert warn">Retirer une affectation restitue les places invendues au stock général — action tracée</div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">liste</span> · <span class="st">création/édition</span> · <span class="st">désactivé</span></li>
+          <li><span class="st">quota épuisé</span> — l'agence ne peut plus vendre sur cette desserte</li>
+          <li><span class="st">retrait partiel</span> — seules les places invendues sont restituables</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Point de vente : code, nom, type (gare, agence accréditée, agence premium), gare de rattachement, nombre de guichets par produit, état</li>
+          <li>Quotas : desserte, classe, places allouées, vendues, restantes, date d'affectation et auteur</li>
+          <li>Suivi des royalties d'agence (10 %) — montant calculé par période</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Tabs</code>, <code>DataTable</code>, <code>Dialog</code> édition, <code>QuotaAllocator</code> (composant à créer), <code>Alert</code>, <code>Badge</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Crée un point de vente et le rattache à une gare</li>
+          <li><span class="n">2</span> Affecte des places à une agence sur une desserte et une classe ; le stock général est décrémenté d'autant</li>
+          <li><span class="n">3</span> Annule l'affectation ; les places invendues repartent au stock général, l'action est auditée</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-G-06">AW-G-06</a> (effet sur l'inventaire) · <a href="#AW-G-09">AW-G-09</a> (recettes par point de vente)</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-08">
+    <div class="sb-head"><span class="sb-id">AW-G-08</span><h3>Voyageurs — recherche &amp; manifeste</h3><span class="sb-role">responsable KPI · chef de gare · exploitation</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Voyageurs</div>
+          <div class="wf-body tight">
+            <div class="wf-row wrap">
+              <div class="wf-sel" style="flex:.9">Type : EXPRESS</div>
+              <div class="wf-fld" style="flex:.8">14/08/2026</div>
+              <div class="wf-sel" style="flex:.8">TR-201</div>
+              <div class="wf-fld g1">N° opération, nom…</div>
+              <div class="wf-btn pri">Rechercher <span class="n">1</span></div>
+            </div>
+            <div class="wf-row split mid"><div class="wf-h">Manifeste TR-201 · 14/08 · 412 voyageurs</div><div class="wf-row"><div class="wf-btn gho">Imprimer</div><div class="wf-btn gho">Exporter CSV <span class="n">2</span></div></div></div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">N° op.</div><div class="lg">Nom / Prénom</div><div class="sm">Cl.</div><div class="sm">Place</div><div>Départ</div><div>Arrivée</div><div class="sm">Bagages</div></div>
+              <div class="r"><div class="sm">B-4821</div><div class="lg">MBADINGA Paul</div><div class="sm">2e</div><div class="sm">V1-12A</div><div>Owendo</div><div>Franceville</div><div class="sm">1</div></div>
+              <div class="r"><div class="sm">B-4822</div><div class="lg">NZENG Marie</div><div class="sm">1re</div><div class="sm">V2-04B</div><div>Owendo</div><div>Booué</div><div class="sm">0</div></div>
+              <div class="r"><div class="sm">B-4901</div><div class="lg">OBAME Jean</div><div class="sm">2e</div><div class="sm">V1-12A</div><div>Booué</div><div>Franceville</div><div class="sm">2</div></div>
+            </div>
+            <div class="wf-alert warn">La place V1-12A apparaît deux fois : occupation sur des segments disjoints — comportement normal <span class="n">3</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">recherche</span> · <span class="st">résultats</span> · <span class="st">aucun résultat</span></li>
+          <li><span class="st">export en préparation</span> — les gros exports sont préparés en tâche de fond puis notifiés</li>
+          <li><span class="st">accès restreint</span> — les données personnelles ne sont visibles qu'avec le droit correspondant, et chaque consultation est auditée</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Critères du cahier des charges : type de train, date de départ, numéro de train, numéro d'opération (billet, bagage, colis, TAA, funéraire)</li>
+          <li>Manifeste : nom, prénom, numéro d'opération, gare de départ et d'arrivée, heure de départ, classe, place, bagages associés</li>
+          <li>Mention explicite lorsqu'une place est réutilisée sur des segments disjoints</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>FilterBar</code>, <code>DataTable</code> paginée et triable, <code>ExportButton</code>, <code>PrintButton</code>, <code>Alert</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Lance la recherche ; les critères se combinent</li>
+          <li><span class="n">2</span> Exporte en CSV — export paginé côté serveur, notifié quand il dépasse un seuil</li>
+          <li><span class="n">3</span> Explique la double occupation d'une même place sur des segments différents</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>Détail d'une opération → <a href="#AW-V-09">AW-V-09</a> · le même manifeste alimente l'application contrôleur</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-09">
+    <div class="sb-head"><span class="sb-id">AW-G-09</span><h3>Contrôle des recettes</h3><span class="sb-role">contrôleur de recettes · comptable</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Contrôle des recettes · journée du 25/07</div>
+          <div class="wf-body tight">
+            <div class="wf-tabs"><div class="tb on">États de caisse</div><div class="tb">Annulations</div><div class="tb">Remboursements</div><div class="tb">Ventes manuelles</div></div>
+            <div class="wf-row">
+              <div class="wf-kpi"><b>7,2 M</b><span>ventes TTC</span></div>
+              <div class="wf-kpi"><b>7,18 M</b><span>règlements</span></div>
+              <div class="wf-kpi"><b>−20 000</b><span>écart total</span></div>
+              <div class="wf-kpi"><b>3 / 27</b><span>caisses en écart</span></div>
+            </div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="lg">Point de vente</div><div class="lg">Vendeur</div><div>Théorique</div><div>Compté</div><div>Écart</div><div class="sm">Statut</div></div>
+              <div class="r"><div class="lg">Owendo Virié G1</div><div class="lg">A. MBOUMBA</div><div>1 246 500</div><div>1 244 500</div><div><span class="wf-tag err">−2 000</span></div><div class="sm">clôturée</div></div>
+              <div class="r"><div class="lg">Franceville G2</div><div class="lg">M. NZENG</div><div>892 000</div><div>880 000</div><div><span class="wf-tag err">−12 000</span></div><div class="sm">à justifier <span class="n">1</span></div></div>
+              <div class="r"><div class="lg">Booué G1</div><div class="lg">J. OBAME</div><div>410 000</div><div>410 000</div><div>0</div><div class="sm"><span class="wf-tag ok">validée</span></div></div>
+              <div class="r"><div class="lg">Lastourville G1</div><div class="lg">P. ELLA</div><div>318 000</div><div>—</div><div>—</div><div class="sm"><span class="wf-tag warn">ouverte</span></div></div>
+            </div>
+            <div class="wf-alert warn">1 caisse encore ouverte — la journée comptable ne peut pas être clôturée <span class="n">2</span></div>
+            <div class="wf-row end"><div class="wf-btn gho">Imprimer les états <span class="n">3</span></div><div class="wf-btn pri">Clôturer la journée comptable <span class="n">4</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">journée en cours</span> — caisses ouvertes, clôture impossible</li>
+          <li><span class="st">prête à clôturer</span> — toutes les caisses clôturées et les écarts justifiés</li>
+          <li><span class="st">écart non justifié</span> — bloquant, mis en évidence</li>
+          <li><span class="st">clôturée</span> — lecture seule, écritures comptables générées</li>
+          <li><span class="st">réouverture</span> — possible uniquement par un profil administrateur, avec motif et audit</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Totaux de la journée : ventes, règlements par mode, écart global, nombre de caisses en écart</li>
+          <li>Une ligne par session de caisse : point de vente, vendeur, théorique, compté, écart, statut, justification</li>
+          <li>Onglets de contrôle : annulations, remboursements (avec motifs et pénalités), ventes manuelles et trous de séquence</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Tabs</code>, <code>StatCard</code>, <code>DataTable</code>, <code>Badge</code>, <code>Dialog</code> justification, <code>Alert</code>, <code>PrintButton</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Ouvre le détail de la session et permet de saisir ou valider la justification d'écart</li>
+          <li><span class="n">2</span> Liste les caisses encore ouvertes et permet de relancer les vendeurs concernés</li>
+          <li><span class="n">3</span> Imprime les états réglementaires de contrôle</li>
+          <li><span class="n">4</span> Clôture la journée : génère les écritures et déclenche le déversement — confirmation explicite et irréversible sans intervention administrateur</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-G-10">AW-G-10</a> après clôture · détail d'une caisse ↔ <a href="#AW-V-10">AW-V-10</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-10">
+    <div class="sb-head"><span class="sb-id">AW-G-10</span><h3>Comptabilité — journal &amp; déversement SAGE</h3><span class="sb-role">comptable · administrateur IT</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Comptabilité</div>
+          <div class="wf-body tight">
+            <div class="wf-row mid"><div class="wf-sel" style="flex:.8">Juillet 2026</div><div class="wf-h g1">Journal comptable des ventes (V65)</div><div class="wf-btn gho">Exporter <span class="n">1</span></div></div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">Journal</div><div class="sm">Pièce</div><div>Date</div><div class="sm">Site</div><div class="lg">Compte analytique</div><div>HT</div><div>TVA</div><div>CSS</div><div>TTC</div></div>
+              <div class="r"><div class="sm">VT</div><div class="sm">B-4821</div><div>25/07</div><div class="sm">OWE</div><div class="lg">706100 · Billets voyageurs</div><div>19 845</div><div>3 572</div><div>0</div><div>23 417</div></div>
+              <div class="r"><div class="sm">VT</div><div class="sm">G-1190</div><div>25/07</div><div class="sm">OWE</div><div class="lg">706200 · Bagages</div><div>700</div><div>133</div><div>0</div><div>833</div></div>
+              <div class="r"><div class="sm">VT</div><div class="sm">C-2201</div><div>25/07</div><div class="sm">BOO</div><div class="lg">706300 · Colis express</div><div>5 593</div><div>1 007</div><div>0</div><div>6 600</div></div>
+            </div>
+            <div class="wf-lbl">Déversements vers SAGE X3 V12</div>
+            <div class="wf-tbl">
+              <div class="r head"><div>Journée</div><div class="sm">Pièces</div><div>Montant</div><div class="sm">Statut</div><div class="lg">Détail</div><div class="sm">…</div></div>
+              <div class="r"><div>24/07</div><div class="sm">286</div><div>6 810 200</div><div class="sm"><span class="wf-tag ok">intégré</span></div><div class="lg">Accusé reçu 24/07 23:14</div><div class="sm">⋯</div></div>
+              <div class="r"><div>25/07</div><div class="sm">318</div><div>7 204 700</div><div class="sm"><span class="wf-tag err">échec</span></div><div class="lg">Compte analytique inconnu (ligne 214)</div><div class="sm">⋯ <span class="n">2</span></div></div>
+            </div>
+            <div class="wf-row end"><div class="wf-btn gho">Voir le fichier généré <span class="n">3</span></div><div class="wf-btn pri">Rejouer le déversement <span class="n">4</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">en attente</span> — journée clôturée, déversement programmé</li>
+          <li><span class="st">en cours</span> — envoi et tentatives automatiques visibles</li>
+          <li><span class="st">intégré</span> — accusé reçu de SAGE</li>
+          <li><span class="st">échec</span> — motif précis, ligne fautive identifiée, rejeu possible</li>
+          <li><span class="st">rejeu manuel</span> — après correction du paramétrage</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Journal au format V65 : code journal, numéro de pièce, date de vente, site financier, point de vente, compte analytique de l'article, HT, TVA, CSS, TTC, axes analytiques</li>
+          <li>Historique des déversements par journée, avec nombre de pièces, montant, statut et accusé</li>
+          <li>Diagnostic d'échec exploitable par un comptable, pas seulement par la DSI</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Select</code> période, <code>DataTable</code> paginée, <code>StatusBadge</code>, <code>CodeViewer</code> (fichier généré), <code>Button</code>, <code>Alert</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Exporte le journal (CSV, JSON ou XML — formats de la clause de réversibilité)</li>
+          <li><span class="n">2</span> Ouvre le détail de l'échec et la ligne en cause</li>
+          <li><span class="n">3</span> Affiche le fichier exactement tel qu'il a été transmis</li>
+          <li><span class="n">4</span> Relance le déversement après correction ; l'idempotence évite tout double comptage</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>← <a href="#AW-G-09">AW-G-09</a> · état technique de la file → <a href="#AW-G-15">AW-G-15</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-11">
+    <div class="sb-head"><span class="sb-id">AW-G-11</span><h3>Rapports &amp; KPI</h3><span class="sb-role">responsable KPI · direction · comptable</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Rapports</div>
+          <div class="wf-body tight">
+            <div class="wf-row">
+              <div class="wf-col" style="flex:.85">
+                <div class="wf-lbl">Rapports réglementaires</div>
+                <div class="wf-list">
+                  <div class="wf-item"><div class="g1">Liste des ventes</div></div>
+                  <div class="wf-item" style="background:var(--wf-fill)"><div class="g1">Traçabilité des places</div></div>
+                  <div class="wf-item"><div class="g1">Places vendues</div></div>
+                  <div class="wf-item"><div class="g1">Liste des remboursements</div></div>
+                  <div class="wf-item"><div class="g1">État de caisse</div></div>
+                  <div class="wf-item"><div class="g1">Journal comptable</div></div>
+                </div>
+                <div class="wf-lbl" style="margin-top:6px">Mes rapports</div>
+                <div class="wf-list"><div class="wf-item"><div class="g1">CA par ligne · mensuel</div></div></div>
+                <div class="wf-btn gho wide" style="margin-top:5px">+ Nouveau rapport <span class="n">1</span></div>
+              </div>
+              <div class="wf-col g2">
+                <div class="wf-row wrap"><div class="wf-sel g1">Période : juillet 2026</div><div class="wf-sel g1">Point de vente : tous</div><div class="wf-sel g1">Produit : tous</div><div class="wf-btn pri">Générer <span class="n">2</span></div></div>
+                <div class="wf-row">
+                  <div class="wf-kpi"><b>78 %</b><span>remplissage</span></div>
+                  <div class="wf-kpi"><b>24 500</b><span>recette/siège</span></div>
+                  <div class="wf-kpi"><b>18,4 M</b><span>revenu/trajet</span></div>
+                </div>
+                <div class="wf-chart"><i style="height:35%"></i><i style="height:55%"></i><i style="height:48%"></i><i style="height:72%"></i><i style="height:90%"></i><i style="height:66%"></i><i style="height:58%"></i></div>
+                <div class="wf-tbl">
+                  <div class="r head"><div class="lg">Ligne</div><div>Voyageurs</div><div>CA TTC</div><div>Remplissage</div></div>
+                  <div class="r"><div class="lg">Owendo → Franceville</div><div>18 204</div><div>412 M</div><div>82 %</div></div>
+                  <div class="r"><div class="lg">Owendo → Booué</div><div>9 118</div><div>121 M</div><div>64 %</div></div>
+                </div>
+                <div class="wf-row end"><div class="wf-btn gho">CSV <span class="n">3</span></div><div class="wf-btn gho">PDF</div><div class="wf-btn gho">Planifier l'envoi <span class="n">4</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">sélection</span> — aucun rapport ouvert</li>
+          <li><span class="st">génération</span> — indicateur de progression pour les volumes importants</li>
+          <li><span class="st">résultat</span> — indicateurs, graphique et tableau</li>
+          <li><span class="st">volume dépassé</span> — l'export bascule en tâche de fond, notification à la disponibilité</li>
+          <li><span class="st">aucune donnée</span> — message et suggestion d'élargir la période</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Les six rapports réglementaires du cahier des charges, disponibles sans configuration</li>
+          <li>Rapports personnalisés enregistrables et repartageables</li>
+          <li>Indicateurs de pilotage : taux de remplissage, recette moyenne par siège, revenu total par trajet</li>
+          <li>Axes d'analyse : ligne, train, période, point de vente, canal, produit</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>ReportList</code>, <code>FilterBar</code>, <code>StatCard</code>, <code>BarChart</code>, <code>DataTable</code>, <code>ExportButton</code>, <code>ScheduleDialog</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Crée un rapport en choisissant les axes, les mesures et les filtres</li>
+          <li><span class="n">2</span> Génère le rapport ; les résultats volumineux sont paginés</li>
+          <li><span class="n">3</span> Exporte aux formats de la clause de réversibilité</li>
+          <li><span class="n">4</span> Programme un envoi périodique par e-mail à une liste de destinataires</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>← <a href="#AW-G-01">AW-G-01</a> · indicateurs yield ↔ <a href="#AW-G-04">AW-G-04</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-12">
+    <div class="sb-head"><span class="sb-id">AW-G-12</span><h3>Procès-verbaux &amp; incidents</h3><span class="sb-role">superviseur · chef de gare · exploitation</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Terrain</div>
+          <div class="wf-body tight">
+            <div class="wf-tabs"><div class="tb on">Procès-verbaux</div><div class="tb">Incidents</div></div>
+            <div class="wf-row wrap"><div class="wf-sel" style="flex:.9">Statut : tous</div><div class="wf-sel" style="flex:.9">Desserte</div><div class="wf-fld g1">Rechercher…</div></div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">N° PV</div><div>Date</div><div class="lg">Contrevenant</div><div class="lg">Motif</div><div>Montant</div><div class="sm">Statut</div></div>
+              <div class="r"><div class="sm">PV-0341</div><div>25/07</div><div class="lg">Non décliné</div><div class="lg">Sans titre</div><div>25 000</div><div class="sm"><span class="wf-tag ok">payé</span></div></div>
+              <div class="r"><div class="sm">PV-0342</div><div>25/07</div><div class="lg">MOUSSAVOU L.</div><div class="lg">Classe supérieure</div><div>8 000</div><div class="sm"><span class="wf-tag warn">contesté</span> <span class="n">1</span></div></div>
+              <div class="r"><div class="sm">PV-0343</div><div>26/07</div><div class="lg">NDONG A.</div><div class="lg">Titre invalide</div><div>25 000</div><div class="sm"><span class="wf-tag err">émis</span></div></div>
+            </div>
+            <div class="wf-box">
+              <div class="wf-row split"><div class="wf-h">PV-0342 · contestation</div><span class="wf-tag warn">à traiter</span></div>
+              <div style="font-size:9px;margin-top:4px">TR-201 · 25/07 · contrôleur F. ONANGA · scan 14:22 · hors ligne, synchronisé 16:40</div>
+              <div class="wf-t w90" style="margin-top:5px"></div><div class="wf-t w75"></div>
+              <div class="wf-row end" style="margin-top:6px"><div class="wf-btn gho">Maintenir <span class="n">2</span></div><div class="wf-btn gho">Annuler le PV <span class="n">3</span></div><div class="wf-btn pri">Rembourser</div></div>
+            </div>
+            <div class="wf-list">
+              <div class="wf-item"><span class="wf-tag err">critique</span><div class="g1">Incident sécurité · TR-202 · 25/07 22:10 · 2 photos</div><div style="font-size:9px">→ <span class="n">4</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">PV émis</span> — amende non réglée</li>
+          <li><span class="st">PV payé</span> — encaissé à bord ou au guichet</li>
+          <li><span class="st">PV contesté</span> — file de traitement dédiée</li>
+          <li><span class="st">PV annulé</span> — motif obligatoire, audité</li>
+          <li><span class="st">incident ouvert · en cours · résolu</span></li>
+          <li><span class="st">issu du hors-ligne</span> — mention de l'écart entre l'heure de constat et l'heure de synchronisation</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>PV : numéro, date, contrôleur, desserte, identité déclarée du contrevenant, motif, montant, statut, mode de règlement, scan rattaché</li>
+          <li>Incident : catégorie, gravité, description, photos, auteur, desserte ou gare, statut, résolution</li>
+          <li>Traçabilité hors-ligne : heure réelle du constat et heure de remontée</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Tabs</code>, <code>FilterBar</code>, <code>DataTable</code>, <code>DetailPanel</code>, <code>ImageGallery</code>, <code>Badge</code>, <code>Dialog</code> confirmation</li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Ouvre le détail et la contestation</li>
+          <li><span class="n">2</span> Maintient le PV, avec commentaire notifié au contrevenant si un contact est connu</li>
+          <li><span class="n">3</span> Annule le PV avec motif obligatoire ; s'il était payé, ouvre un remboursement</li>
+          <li><span class="n">4</span> Ouvre l'incident, permet de l'affecter, de le commenter et de le clôturer</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>Remboursement → <a href="#AW-V-09">AW-V-09</a> · scan d'origine ↔ application contrôleur</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-13">
+    <div class="sb-head"><span class="sb-id">AW-G-13</span><h3>Utilisateurs &amp; habilitations</h3><span class="sb-role">administrateur IT · administrateur fonctionnel</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Utilisateurs</div>
+          <div class="wf-body tight">
+            <div class="wf-tabs"><div class="tb on">Utilisateurs</div><div class="tb">Rôles &amp; droits</div><div class="tb">Correspondance AD</div></div>
+            <div class="wf-row"><div class="wf-fld g2">Rechercher…</div><div class="wf-sel" style="flex:.9">Tous rôles</div><div class="wf-sel" style="flex:.9">Tous sites</div></div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="lg">Nom</div><div class="sm">Matricule</div><div class="lg">Rôle</div><div class="lg">Point de vente</div><div class="sm">Source</div><div class="sm">État</div></div>
+              <div class="r"><div class="lg">MBOUMBA Aly</div><div class="sm">4821</div><div class="lg">Vendeur guichet</div><div class="lg">Owendo Virié G1</div><div class="sm">AD</div><div class="sm"><span class="wf-tag ok">actif</span></div></div>
+              <div class="r"><div class="lg">ONANGA Félix</div><div class="sm">3190</div><div class="lg">Contrôleur train</div><div class="lg">—</div><div class="sm">AD</div><div class="sm"><span class="wf-tag ok">actif</span></div></div>
+              <div class="r"><div class="lg">Compte recette</div><div class="sm">—</div><div class="lg">Admin fonctionnel</div><div class="lg">—</div><div class="sm">local</div><div class="sm"><span class="wf-tag warn">repli</span></div></div>
+            </div>
+            <div class="wf-box">
+              <div class="wf-h">Matrice de droits — rôle « Vendeur guichet » <span class="n">1</span></div>
+              <div class="wf-tbl" style="margin-top:5px">
+                <div class="r head"><div class="lg">Objet</div><div class="sm">Voir</div><div class="sm">Créer</div><div class="sm">Modifier</div><div class="sm">Supprimer</div><div class="sm">Valider</div></div>
+                <div class="r"><div class="lg">Ventes</div><div class="sm">☑</div><div class="sm">☑</div><div class="sm">☐</div><div class="sm">☐</div><div class="sm">☐</div></div>
+                <div class="r"><div class="lg">Remboursements</div><div class="sm">☑</div><div class="sm">☐</div><div class="sm">☐</div><div class="sm">☐</div><div class="sm">☐</div></div>
+                <div class="r"><div class="lg">Tarifs</div><div class="sm">☑</div><div class="sm">☐</div><div class="sm">☐</div><div class="sm">☐</div><div class="sm">☐</div></div>
+              </div>
+            </div>
+            <div class="wf-box dash"><div class="wf-lbl">Correspondance groupe AD → rôle <span class="n">2</span></div>
+              <div style="font-size:9px">SETRAG-BILLET-VENDEUR → Vendeur guichet · SETRAG-BILLET-COMPTA → Comptable</div></div>
+            <div class="wf-alert warn">La désactivation d'un compte dans l'annuaire coupe l'accès à la session suivante — aucune action manuelle requise</div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">utilisateur AD</span> — rôle et état pilotés par l'annuaire, non modifiables ici</li>
+          <li><span class="st">compte de repli</span> — géré localement, signalé comme tel</li>
+          <li><span class="st">désactivé</span> — historique de ses opérations conservé</li>
+          <li><span class="st">édition de rôle</span> — la matrice de droits est modifiable, avec aperçu des utilisateurs concernés</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Utilisateur : nom, matricule, rôle, point de vente de rattachement, source (annuaire ou local), état, dernière connexion</li>
+          <li>Matrice de droits par rôle et par objet : voir, créer, modifier, supprimer, valider</li>
+          <li>Table de correspondance entre groupes d'annuaire et rôles applicatifs</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>Tabs</code>, <code>DataTable</code>, <code>PermissionMatrix</code> (composant à créer), <code>Dialog</code>, <code>Badge</code>, <code>Alert</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Modifie les droits d'un rôle ; la confirmation indique le nombre d'utilisateurs impactés</li>
+          <li><span class="n">2</span> Édite la correspondance annuaire → rôle ; appliquée à la connexion suivante</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-G-14">AW-G-14</a> (politiques de mot de passe des comptes de repli)</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-14">
+    <div class="sb-head"><span class="sb-id">AW-G-14</span><h3>Paramétrage</h3><span class="sb-role">administrateur fonctionnel · administrateur IT</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Paramétrage</div>
+          <div class="wf-app">
+            <div class="wf-side" style="width:96px">
+              <div class="it on">Général</div><div class="it">Taxes</div><div class="it">Produits</div><div class="it">Paiement</div><div class="it">Remboursement</div><div class="it">Gabarits</div><div class="it">Notifications</div><div class="it">Sécurité</div>
+            </div>
+            <div class="wf-main">
+              <div class="wf-h">Général</div>
+              <div class="wf-row"><div class="wf-col g1"><div class="wf-lbl">Langue par défaut</div><div class="wf-sel">Français</div></div>
+                <div class="wf-col g1"><div class="wf-lbl">Nom de domaine</div><div class="wf-fld filled">billets.setrag.ga</div></div></div>
+              <div class="wf-row"><div class="wf-col g1"><div class="wf-lbl">Fenêtre de vente</div><div class="wf-sel">1 mois <span class="n">1</span></div></div>
+                <div class="wf-col g1"><div class="wf-lbl">Délai de réservation en ligne</div><div class="wf-fld filled">15 min</div></div></div>
+              <div class="wf-h" style="margin-top:6px">Remboursements</div>
+              <div class="wf-tbl">
+                <div class="r head"><div class="lg">Motif</div><div>Pénalité</div><div class="sm">Actif</div></div>
+                <div class="r"><div class="lg">Annulation du train (SETRAG)</div><div>0 %</div><div class="sm">◉</div></div>
+                <div class="r"><div class="lg">Renoncement client &gt; 48 h</div><div>10 %</div><div class="sm">◉</div></div>
+                <div class="r"><div class="lg">Renoncement client &lt; 48 h</div><div>50 %</div><div class="sm">◉</div></div>
+                <div class="r" style="background:var(--wf-fill)"><div class="lg">+ Ajouter un motif <span class="n">2</span></div><div></div><div class="sm"></div></div>
+              </div>
+              <div class="wf-h" style="margin-top:6px">Taxes</div>
+              <div class="wf-row"><div class="wf-col g1"><div class="wf-lbl">TVA</div><div class="wf-fld filled">18 %</div></div>
+                <div class="wf-col g1"><div class="wf-lbl">CSS</div><div class="wf-fld filled">0 %</div></div>
+                <div class="wf-col g1"><div class="wf-lbl">Applicable au</div><div class="wf-fld filled">01/01/2026</div></div></div>
+              <div class="wf-row end" style="margin-top:6px"><div class="wf-btn pri">Enregistrer <span class="n">3</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">consultation</span> · <span class="st">modifié</span> (barre d'enregistrement collante) · <span class="st">enregistré</span></li>
+          <li><span class="st">impact différé</span> — certains paramètres (taxes, fenêtre de vente) prennent effet à une date, signalée</li>
+          <li><span class="st">valeur verrouillée</span> — paramètre piloté par la DSI, en lecture seule</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Général : langue, nom de domaine, fenêtre de mise en vente, délai de réservation</li>
+          <li>Taxes : TVA, CSS, avec date d'application</li>
+          <li>Produits, modes de paiement autorisés, classes de véhicules, types de train, types d'utilisateur</li>
+          <li>Motifs de remboursement et taux de pénalité associés</li>
+          <li>Gabarits d'e-mail et d'impression (billet, étiquette, bordereau, reçu)</li>
+          <li>Sécurité des comptes de repli : longueur et durée de validité du mot de passe, nombre d'échecs autorisés</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>SettingsNav</code>, <code>Form</code> sections, <code>EditableTable</code>, <code>Switch</code>, <code>TemplateEditor</code>, <code>StickySaveBar</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Le passage de 1 à 3 mois avertit de la nécessité de gérer la conversion des billets en cas de changement de livret</li>
+          <li><span class="n">2</span> Ajoute un motif de remboursement et son taux de pénalité</li>
+          <li><span class="n">3</span> Enregistre — chaque modification est auditée avec l'ancienne et la nouvelle valeur</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>→ <a href="#AW-G-13">AW-G-13</a> · <a href="#AW-G-15">AW-G-15</a></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-block" id="AW-G-15">
+    <div class="sb-head"><span class="sb-id">AW-G-15</span><h3>Intégrations &amp; supervision</h3><span class="sb-role">administrateur IT</span></div>
+    <div class="sb-grid">
+      <div class="sb-sketch">
+        <div class="wf">
+          <div class="wf-chrome">Gestion · Intégrations</div>
+          <div class="wf-body tight">
+            <div class="wf-lbl">Services externes</div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="lg">Service</div><div class="sm">État</div><div>Dernier échange</div><div class="lg">Détail</div><div class="sm">…</div></div>
+              <div class="r"><div class="lg">SAGE X3 V12</div><div class="sm"><span class="wf-tag err">échec</span></div><div>25/07 23:14</div><div class="lg">Compte analytique inconnu</div><div class="sm">⋯ <span class="n">1</span></div></div>
+              <div class="r"><div class="lg">Prestataire de paiement</div><div class="sm"><span class="wf-tag ok">actif</span></div><div>26/07 09:41</div><div class="lg">Webhooks 132 · polling 4</div><div class="sm">⋯</div></div>
+              <div class="r"><div class="lg">Passerelle SMS</div><div class="sm"><span class="wf-tag ok">actif</span></div><div>26/07 09:38</div><div class="lg">318 envoyés · 2 échecs</div><div class="sm">⋯</div></div>
+              <div class="r"><div class="lg">COLIRAIL</div><div class="sm"><span class="wf-tag neutral">non configuré</span></div><div>—</div><div class="lg">En attente du contrat d'interface</div><div class="sm">⋯</div></div>
+              <div class="r"><div class="lg">API front-office</div><div class="sm"><span class="wf-tag ok">actif</span></div><div>26/07 09:42</div><div class="lg">v1 · 4 200 appels / 24 h</div><div class="sm">⋯</div></div>
+            </div>
+            <div class="wf-lbl">File d'envoi <span class="n">2</span></div>
+            <div class="wf-tbl">
+              <div class="r head"><div class="sm">Type</div><div class="lg">Référence</div><div class="sm">Tentatives</div><div>Prochaine</div><div class="sm">Statut</div><div class="sm">…</div></div>
+              <div class="r"><div class="sm">SAGE</div><div class="lg">Journée 25/07</div><div class="sm">3</div><div>—</div><div class="sm"><span class="wf-tag err">échec</span></div><div class="sm">↻ <span class="n">3</span></div></div>
+              <div class="r"><div class="sm">SMS</div><div class="lg">Billet B-4830</div><div class="sm">1</div><div>09:52</div><div class="sm"><span class="wf-tag warn">en attente</span></div><div class="sm">↻</div></div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-col g1"><div class="wf-lbl">Seuils d'alerte e-mail <span class="n">4</span></div>
+                <div class="wf-box" style="font-size:9px">File &gt; 50 éléments · échec d'intégration · API indisponible &gt; 5 min</div></div>
+              <div class="wf-col g1"><div class="wf-lbl">Journal d'audit</div>
+                <div class="wf-box" style="font-size:9px">Export continu vers le SIEM ERAMET · dernier lot 09:40 <span class="n">5</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-spec">
+        <h4>États</h4>
+        <ul>
+          <li><span class="st">actif</span> · <span class="st">dégradé</span> (lenteur, échecs partiels) · <span class="st">échec</span> · <span class="st">non configuré</span></li>
+          <li><span class="st">file saine</span> — aucun élément en échec</li>
+          <li><span class="st">file bloquée</span> — remontée en alerte sur le tableau de bord</li>
+        </ul>
+        <h4>Contenu</h4>
+        <ul>
+          <li>Un bloc par service externe : SAGE X3, prestataire de paiement, passerelle SMS, service d'e-mail, COLIRAIL, API front-office</li>
+          <li>File d'envoi : type d'événement, référence métier, tentatives, prochaine tentative, dernier message d'erreur</li>
+          <li>Seuils d'alerte e-mail exigés par le cahier des charges (base de données, portail, API)</li>
+          <li>État de l'export continu du journal d'audit vers le SIEM</li>
+        </ul>
+        <h4>Composants</h4>
+        <ul><li><code>StatusTable</code>, <code>DataTable</code> file, <code>RetryButton</code>, <code>ThresholdForm</code>, <code>LogViewer</code>, <code>Badge</code></li></ul>
+        <h4>Interactions</h4>
+        <ol class="acts">
+          <li><span class="n">1</span> Ouvre le diagnostic du service, avec les derniers échanges et leur charge utile</li>
+          <li><span class="n">2</span> Filtre la file par type, statut ou période</li>
+          <li><span class="n">3</span> Rejoue un élément ou l'ensemble des éléments en échec, après correction</li>
+          <li><span class="n">4</span> Configure les seuils et les destinataires des alertes</li>
+          <li><span class="n">5</span> Vérifie la continuité de l'export d'audit et relance un lot si nécessaire</li>
+        </ol>
+        <h4>Navigation</h4>
+        <ul><li>← <a href="#AW-G-01">AW-G-01</a> (alertes) · <a href="#AW-G-10">AW-G-10</a> (déversements)</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <footer style="margin-top:26px">
+    Croquis agent-web · 26 juillet 2026 · 27 écrans. Voir aussi les croquis
+    <a href="croquis-billetterie-web.html">billetterie-web</a>,
+    <a href="croquis-voyageur-mobile.html">voyageur-mobile</a>,
+    <a href="croquis-controleur-mobile.html">controleur-mobile</a>,
+    le <a href="agent-web.html">plan applicatif</a> et le <a href="backend.html">plan backend</a>.
+  </footer>
+</section>
+
+</main>
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", themeVariables: { fontSize: "13px" } });
+</script>
+</body>
+</html>

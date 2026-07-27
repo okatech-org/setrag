@@ -8,6 +8,13 @@
  * @module
  */
 
+import type * as ai_chat from "../ai/chat.js";
+import type * as ai_contracts from "../ai/contracts.js";
+import type * as ai_conversations from "../ai/conversations.js";
+import type * as ai_providers from "../ai/providers.js";
+import type * as ai_rateLimiter from "../ai/rateLimiter.js";
+import type * as ai_realtime from "../ai/realtime.js";
+import type * as ai_tools from "../ai/tools.js";
 import type * as betterAuth_auth from "../betterAuth/auth.js";
 import type * as crons from "../crons.js";
 import type * as functions_accounting from "../functions/accounting.js";
@@ -21,7 +28,11 @@ import type * as functions_devAuth from "../functions/devAuth.js";
 import type * as functions_documents from "../functions/documents.js";
 import type * as functions_manualSales from "../functions/manualSales.js";
 import type * as functions_monitoring from "../functions/monitoring.js";
+import type * as functions_notificationCenter from "../functions/notificationCenter.js";
+import type * as functions_notificationLog from "../functions/notificationLog.js";
+import type * as functions_notifications from "../functions/notifications.js";
 import type * as functions_referential from "../functions/referential.js";
+import type * as functions_reportSchedules from "../functions/reportSchedules.js";
 import type * as functions_reporting from "../functions/reporting.js";
 import type * as functions_rollup from "../functions/rollup.js";
 import type * as functions_sales from "../functions/sales.js";
@@ -29,9 +40,16 @@ import type * as functions_trips from "../functions/trips.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_aztecRender from "../lib/aztecRender.js";
+import type * as lib_resend from "../lib/resend.js";
 import type * as lib_saleContext from "../lib/saleContext.js";
 import type * as lib_signature from "../lib/signature.js";
 import type * as lib_ticketPdf from "../lib/ticketPdf.js";
+import type * as lib_tripQuote from "../lib/tripQuote.js";
+import type * as messaging_contracts from "../messaging/contracts.js";
+import type * as messaging_core from "../messaging/core.js";
+import type * as messaging_dispatch from "../messaging/dispatch.js";
+import type * as messaging_orchestrator from "../messaging/orchestrator.js";
+import type * as messaging_telegram from "../messaging/telegram.js";
 import type * as model_accounting from "../model/accounting.js";
 import type * as model_ancillary from "../model/ancillary.js";
 import type * as model_approval from "../model/approval.js";
@@ -60,6 +78,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "ai/chat": typeof ai_chat;
+  "ai/contracts": typeof ai_contracts;
+  "ai/conversations": typeof ai_conversations;
+  "ai/providers": typeof ai_providers;
+  "ai/rateLimiter": typeof ai_rateLimiter;
+  "ai/realtime": typeof ai_realtime;
+  "ai/tools": typeof ai_tools;
   "betterAuth/auth": typeof betterAuth_auth;
   crons: typeof crons;
   "functions/accounting": typeof functions_accounting;
@@ -73,7 +98,11 @@ declare const fullApi: ApiFromModules<{
   "functions/documents": typeof functions_documents;
   "functions/manualSales": typeof functions_manualSales;
   "functions/monitoring": typeof functions_monitoring;
+  "functions/notificationCenter": typeof functions_notificationCenter;
+  "functions/notificationLog": typeof functions_notificationLog;
+  "functions/notifications": typeof functions_notifications;
   "functions/referential": typeof functions_referential;
+  "functions/reportSchedules": typeof functions_reportSchedules;
   "functions/reporting": typeof functions_reporting;
   "functions/rollup": typeof functions_rollup;
   "functions/sales": typeof functions_sales;
@@ -81,9 +110,16 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/auth": typeof lib_auth;
   "lib/aztecRender": typeof lib_aztecRender;
+  "lib/resend": typeof lib_resend;
   "lib/saleContext": typeof lib_saleContext;
   "lib/signature": typeof lib_signature;
   "lib/ticketPdf": typeof lib_ticketPdf;
+  "lib/tripQuote": typeof lib_tripQuote;
+  "messaging/contracts": typeof messaging_contracts;
+  "messaging/core": typeof messaging_core;
+  "messaging/dispatch": typeof messaging_dispatch;
+  "messaging/orchestrator": typeof messaging_orchestrator;
+  "messaging/telegram": typeof messaging_telegram;
   "model/accounting": typeof model_accounting;
   "model/ancillary": typeof model_ancillary;
   "model/approval": typeof model_approval;

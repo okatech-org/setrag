@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETRAG — Croquis voyageur-mobile</title>
+<link rel="stylesheet" href="plan.css">
+<link rel="stylesheet" href="croquis.css">
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <div class="brand">SETRAG · Croquis</div>
+  <div class="sub"><a href="index.html" style="color:var(--accent)">← Vue d'ensemble</a><br>voyageur-mobile — 10 écrans<br>26 juillet 2026</div>
+  <a href="#flux">Flux de navigation</a>
+  <div class="toc-group">Entrée</div>
+  <a href="#VM-01">VM-01 · Connexion OTP</a>
+  <a href="#VM-02">VM-02 · Accueil</a>
+  <div class="toc-group">Tunnel d'achat</div>
+  <a href="#VM-03">VM-03 · Recherche &amp; résultats</a>
+  <a href="#VM-04">VM-04 · Détail &amp; voyageurs</a>
+  <a href="#VM-05">VM-05 · Paiement</a>
+  <div class="toc-group">Titres de transport</div>
+  <a href="#VM-06">VM-06 · Mes billets</a>
+  <a href="#VM-07">VM-07 · Billet plein écran</a>
+  <a href="#VM-08">VM-08 · Suivi du voyage</a>
+  <div class="toc-group">Service</div>
+  <a href="#VM-09">VM-09 · Notifications</a>
+  <a href="#VM-10">VM-10 · Compte</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <h1>voyageur-mobile — croquis d'écrans</h1>
+  <p>Croquis en fil de fer des 10 écrans de l'application Expo du voyageur du Transgabonais
+  (Owendo ↔ Franceville, 648 km, 22 gares). Chaque écran porte un identifiant stable, la liste de
+  ses états, son contenu, ses composants, ses interactions numérotées et ses transitions. Le fil
+  conducteur est unique : <b>le titre de transport vit dans le téléphone</b> et reste présentable
+  sans réseau, dans les tunnels comme sous la forêt. Volontairement en niveaux de gris — la forme
+  reste à la main du designer, ce document fixe la structure et le comportement.</p>
+  <div class="hero-meta">
+    <span class="chip">10 écrans</span>
+    <span class="chip">Expo SDK 57 · Cadence</span>
+    <span class="chip">Hors ligne d'abord</span>
+    <a class="chip" href="croquis-billetterie-web.html">→ croquis billetterie-web</a>
+    <a class="chip" href="voyageur-mobile.html">→ plan applicatif</a>
+    <a class="chip" href="backend.html">→ plan backend</a>
+  </div>
+</header>
+
+<section id="flux">
+  <h2>Flux de navigation</h2>
+  <pre class="mermaid">
+flowchart TD
+  L["VM-01<br/>Connexion OTP"] --> H["VM-02<br/>Accueil"]
+  L -.->|"poursuivre sans compte"| H
+
+  subgraph ACHAT["Tunnel d'achat"]
+    H --> S["VM-03<br/>Recherche et résultats"]
+    S --> D["VM-04<br/>Détail et voyageurs"]
+    D --> P["VM-05<br/>Paiement"]
+    P -.->|"refusé, expiré, hold perdu"| D
+    P -.->|"payer au guichet"| T
+  end
+
+  P --> T["VM-06<br/>Mes billets"]
+  H -.->|"prochain billet"| B["VM-07<br/>Billet plein écran"]
+  T --> B
+  B --> V["VM-08<br/>Suivi du voyage"]
+  T --> V
+
+  subgraph SERVICE["Service"]
+    N["VM-09<br/>Notifications"]
+    C["VM-10<br/>Compte"]
+  end
+
+  H --> N
+  N -.->|"retard, rappel de départ"| V
+  N -.->|"confirmation d'achat"| B
+  H --> C
+  C -.->|"déconnexion, suppression"| L
+  </pre>
+  <div class="scr-index">
+    <a href="#VM-01"><b>VM-01</b> Connexion OTP</a>
+    <a href="#VM-02"><b>VM-02</b> Accueil</a>
+    <a href="#VM-03"><b>VM-03</b> Recherche &amp; résultats</a>
+    <a href="#VM-04"><b>VM-04</b> Détail &amp; voyageurs</a>
+    <a href="#VM-05"><b>VM-05</b> Paiement</a>
+    <a href="#VM-06"><b>VM-06</b> Mes billets</a>
+    <a href="#VM-07"><b>VM-07</b> Billet plein écran</a>
+    <a href="#VM-08"><b>VM-08</b> Suivi du voyage</a>
+    <a href="#VM-09"><b>VM-09</b> Notifications</a>
+    <a href="#VM-10"><b>VM-10</b> Compte</a>
+  </div>
+</section>
+
+<section>
+
+<!-- ══════════════════════════════ VM-01 ══════════════════════════════ -->
+<div class="screen-block" id="VM-01">
+  <div class="sb-head"><span class="sb-id">VM-01</span><h3>Connexion OTP</h3><span class="sb-role">visiteur · non authentifié</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">étape 1 : numéro</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Votre numéro</div>
+              <div style="font-size:9px">Nous vous envoyons un code à six chiffres par SMS.</div>
+              <div class="wf-row mid">
+                <div class="wf-sel" style="flex:.7">+241 <span class="n">1</span></div>
+                <div class="wf-fld g2">06 12 34 56</div>
+              </div>
+              <div class="wf-lbl">Opérateur détecté : Airtel</div>
+              <div class="wf-btn pri wide">Recevoir le code <span class="n">2</span></div>
+              <div class="wf-box dash">
+                <div style="font-size:9px">Vous avez acheté un billet sans compte ?</div>
+                <div class="wf-btn gho wide">Poursuivre sans compte <span class="n">3</span></div>
+              </div>
+              <div style="font-size:8.5px">En continuant, vous acceptez les conditions générales de vente.</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">étape 2 : code à 6 chiffres</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row mid"><div class="wf-btn gho">‹</div><div class="wf-h">Vérification</div></div>
+              <div style="font-size:9px">Code envoyé au +241 06 12 34 56 <span class="n">4</span></div>
+              <div class="wf-row">
+                <div class="wf-fld filled g1">4</div>
+                <div class="wf-fld filled g1">1</div>
+                <div class="wf-fld filled g1">7</div>
+                <div class="wf-fld g1">·</div>
+                <div class="wf-fld g1">·</div>
+                <div class="wf-fld g1">·</div>
+              </div>
+              <div class="wf-row split mid">
+                <div style="font-size:9px">Renvoyer dans 00:47</div>
+                <div class="wf-tag neutral">2 essais restants</div>
+              </div>
+              <div class="wf-btn pri wide">Valider</div>
+              <div class="wf-btn gho wide">Renvoyer le code <span class="n">5</span></div>
+              <div class="wf-box dash"><div style="font-size:9px">SMS non reçu ? Vérifiez la couverture réseau, puis réessayez dans un instant.</div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : quota de tentatives atteint</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h">Vérification</div>
+              <div class="wf-alert err">Trop de codes erronés. Nouvelle tentative possible dans 15 minutes.</div>
+              <div class="wf-row">
+                <div class="wf-fld g1">·</div><div class="wf-fld g1">·</div><div class="wf-fld g1">·</div>
+                <div class="wf-fld g1">·</div><div class="wf-fld g1">·</div><div class="wf-fld g1">·</div>
+              </div>
+              <div class="wf-btn wide">Valider</div>
+              <div class="wf-btn gho wide">Changer de numéro</div>
+              <div class="wf-alert warn">Hors ligne : la connexion exige le réseau. Vos billets déjà émis restent consultables. <span class="n">6</span></div>
+              <div class="wf-btn gho wide">Voir mes billets hors ligne</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">saisie du numéro</span> — indicatif +241 pré-sélectionné, clavier numérique, validation du format gabonais avant envoi</li>
+        <li><span class="st">envoi en cours</span> — bouton en attente, action désactivée pour éviter le double envoi</li>
+        <li><span class="st">saisie du code</span> — six cases, remplissage automatique depuis le SMS, minuterie de renvoi de 60 secondes</li>
+        <li><span class="st">code erroné</span> — message explicite et décompte des essais restants, jamais un simple encadré rouge</li>
+        <li><span class="st">quota atteint</span> — verrouillage temporisé de 15 minutes, avec l'échéance annoncée en clair</li>
+        <li><span class="st">hors ligne</span> — la connexion est impossible, mais l'accès aux billets déjà en cache reste offert</li>
+        <li><span class="st">sans compte</span> — accès en consultation par référence de billet reçue par SMS</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Sélecteur d'indicatif limité au +241, numéro national sur neuf chiffres, opérateur déduit du préfixe</li>
+        <li>Explication du canal utilisé : le SMS est le seul vecteur, l'adresse électronique reste secondaire</li>
+        <li>Minuterie de renvoi, nombre d'essais restants, échéance de déverrouillage</li>
+        <li>Mention des conditions générales, sans case à cocher à cette étape — l'acceptation bloquante intervient au paiement</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>PhoneInput</code> (composant à créer, indicatif +241), <code>InputOTP</code>, <code>Countdown</code>, <code>Button</code>, <code>Alert</code>, <code>Badge</code>, <code>KeyboardAvoidingView</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Ouvre la liste des indicatifs ; le +241 reste la valeur par défaut</li>
+        <li><span class="n">2</span> Déclenche l'envoi du code ; l'action reste inactive tant que le numéro est incomplet</li>
+        <li><span class="n">3</span> Bascule en consultation par référence, sans création de compte</li>
+        <li><span class="n">4</span> Retour à la saisie du numéro en cas d'erreur de frappe</li>
+        <li><span class="n">5</span> Renvoi du code, activé seulement à l'expiration de la minuterie</li>
+        <li><span class="n">6</span> Ouvre directement <a href="#VM-06">VM-06</a> en lecture du cache local</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>Succès → <a href="#VM-02">VM-02</a> · sans compte → <a href="#VM-06">VM-06</a> en consultation</li>
+        <li>Écran d'entrée après une déconnexion depuis <a href="#VM-10">VM-10</a></li>
+      </ul>
+      <h4>Cadence</h4>
+      <ul>
+        <li>Cases OTP de 44 px minimum, espacées ; un seul bouton primaire — « Valider »</li>
+        <li>Anneau de focus visible sur chaque case ; le numéro et la minuterie en police tabulaire</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ VM-02 ══════════════════════════════ -->
+<div class="screen-block" id="VM-02">
+  <div class="sb-head"><span class="sb-id">VM-02</span><h3>Accueil</h3><span class="sb-role">voyageur connecté · onglet 1</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : voyage à venir</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><div class="wf-h big">Bonjour Paul</div><div class="wf-btn gho">🔔 <span class="n">5</span></div></div>
+              <div class="wf-box fill">
+                <div class="wf-row split mid"><div class="wf-lbl">Prochain billet</div><div class="wf-tag ok">hors ligne</div></div>
+                <div class="wf-h">Owendo → Franceville</div>
+                <div style="font-size:9px">TR-201 · ven. 14 août · 08:00 · 2e classe</div>
+                <div class="wf-row mid"><div class="wf-qr"></div><div class="wf-col"><div class="wf-btn pri">Afficher le billet <span class="n">1</span></div><div class="wf-btn gho">Suivre le train <span class="n">6</span></div></div></div>
+              </div>
+              <div class="wf-box">
+                <div class="wf-lbl">Où allez-vous ?</div>
+                <div class="wf-sel">Owendo <span class="n">2</span></div>
+                <div class="wf-sel">Franceville</div>
+                <div class="wf-row"><div class="wf-sel g2">Ven. 14 août</div><div class="wf-sel g1">1 voyageur</div></div>
+                <div class="wf-btn wide">Rechercher <span class="n">3</span></div>
+              </div>
+              <div class="wf-lbl">Trajets mémorisés</div>
+              <div class="wf-row wrap"><div class="wf-chip on">Owendo → Booué</div><div class="wf-chip">Ntoum → Lopé</div><div class="wf-chip">Moanda → Owendo</div></div>
+              <div class="wf-lbl">Départs du jour</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">TR-201 · 08:00</div><div style="font-size:9px">Owendo → Franceville</div></div><div class="wf-tag ok">à l'heure</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">TR-202 · 18:30</div><div style="font-size:9px">Franceville → Owendo</div></div><div class="wf-tag warn">+35 min <span class="n">4</span></div></div>
+              </div>
+            </div>
+            <div class="wf-tabbar"><div class="tb on">Accueil</div><div class="tb">Billets</div><div class="tb">Compte</div></div>
+          </div>
+        </div>
+        <div><div class="cap">état : premier lancement, aucun voyage</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><div class="wf-h big">Bonjour</div><div class="wf-btn gho">🔔</div></div>
+              <div class="wf-box dash">
+                <div class="wf-h">Aucun voyage prévu</div>
+                <div style="font-size:9px">Recherchez une desserte du Transgabonais : votre billet sera conservé dans le téléphone et restera consultable sans réseau.</div>
+              </div>
+              <div class="wf-box">
+                <div class="wf-sel">Gare de départ</div>
+                <div class="wf-sel">Gare d'arrivée</div>
+                <div class="wf-row"><div class="wf-sel g2">Date</div><div class="wf-sel g1">1 voyageur</div></div>
+                <div class="wf-btn pri wide">Rechercher</div>
+              </div>
+              <div class="wf-lbl">Départs du jour</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><div class="wf-t w60"></div><div class="wf-t w40"></div></div><div class="wf-tag neutral">—</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-t w50"></div><div class="wf-t w40"></div></div><div class="wf-tag neutral">—</div></div>
+              </div>
+            </div>
+            <div class="wf-tabbar"><div class="tb on">Accueil</div><div class="tb">Billets</div><div class="tb">Compte</div></div>
+          </div>
+        </div>
+        <div><div class="cap">état : hors ligne</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-alert warn">Hors ligne — dernières informations du 14/08 à 07:41. La recherche et l'achat sont indisponibles.</div>
+              <div class="wf-box fill">
+                <div class="wf-row split mid"><div class="wf-lbl">Prochain billet</div><div class="wf-tag ok">hors ligne</div></div>
+                <div class="wf-h">Owendo → Franceville</div>
+                <div class="wf-btn pri wide">Afficher le billet</div>
+              </div>
+              <div class="wf-box dash">
+                <div class="wf-sel">Gare de départ</div>
+                <div class="wf-sel">Gare d'arrivée</div>
+                <div class="wf-btn wide">Rechercher — indisponible</div>
+              </div>
+              <div class="wf-lbl">Départs du jour · non actualisés</div>
+              <div class="wf-list"><div class="wf-item"><div class="wf-col"><div class="wf-h">TR-201 · 08:00</div><div style="font-size:9px">Statut inconnu depuis 07:41</div></div><div class="wf-tag neutral">périmé</div></div></div>
+            </div>
+            <div class="wf-tabbar"><div class="tb on">Accueil</div><div class="tb">Billets</div><div class="tb">Compte</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">avec voyage à venir</span> — la carte du prochain titre de transport occupe le haut de l'écran, avec un accès en un geste au code</li>
+        <li><span class="st">sans voyage</span> — état vide pédagogique, la recherche prend la place de la carte billet</li>
+        <li><span class="st">visiteur sans compte</span> — invitation discrète à se connecter, recherche pleinement utilisable</li>
+        <li><span class="st">hors ligne</span> — bandeau daté, billets en cache toujours accessibles, recherche et achat explicitement désactivés</li>
+        <li><span class="st">desserte perturbée</span> — le retard ou l'annulation d'un train du voyageur remonte en tête, avant tout le reste</li>
+        <li><span class="st">chargement</span> — squelettes de listes, jamais d'écran blanc, le contenu en cache s'affiche immédiatement</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Carte du prochain titre : trajet, numéro de desserte, date et heure, classe, vignette du code et indicateur de disponibilité hors ligne</li>
+        <li>Formulaire de recherche rapide : gare de départ, gare d'arrivée, date, nombre de voyageurs</li>
+        <li>Trajets mémorisés localement, proposés en un appui</li>
+        <li>Départs du jour avec leur statut temps réel, limités à quelques lignes pour économiser les données</li>
+        <li>Horodatage de la dernière synchronisation, visible dès que le réseau manque</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>SafeAreaView</code>, <code>TicketCard</code> (composant à créer), <code>StationPicker</code> (composant à créer), <code>DatePicker</code>, <code>Chip</code>, <code>FlatList</code>, <code>Badge</code>, <code>OfflineBanner</code> (composant à créer), <code>Skeleton</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Ouvre le billet en plein écran, avec luminosité forcée</li>
+        <li><span class="n">2</span> Ouvre le sélecteur de gare : recherche textuelle sur les 22 gares, liste embarquée donc utilisable hors ligne</li>
+        <li><span class="n">3</span> Lance la recherche de dessertes</li>
+        <li><span class="n">4</span> Ouvre le suivi de la desserte perturbée</li>
+        <li><span class="n">5</span> Ouvre le centre de notifications, avec pastille de non-lus</li>
+        <li><span class="n">6</span> Ouvre le suivi du train du prochain billet</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>Recherche → <a href="#VM-03">VM-03</a> · billet → <a href="#VM-07">VM-07</a> · suivi → <a href="#VM-08">VM-08</a></li>
+        <li>Cloche → <a href="#VM-09">VM-09</a> · onglets → <a href="#VM-06">VM-06</a>, <a href="#VM-10">VM-10</a></li>
+      </ul>
+      <h4>Cadence</h4>
+      <ul>
+        <li>Un seul bouton primaire : « Afficher le billet » s'il existe un voyage, sinon « Rechercher »</li>
+        <li>Le statut d'une desserte associe toujours un libellé au repère coloré ; heures en police tabulaire</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ VM-03 ══════════════════════════════ -->
+<div class="screen-block" id="VM-03">
+  <div class="sb-head"><span class="sb-id">VM-03</span><h3>Recherche &amp; résultats</h3><span class="sb-role">voyageur · étape 1 du tunnel</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">formulaire</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row mid"><div class="wf-btn gho">‹</div><div class="wf-h">Rechercher</div></div>
+              <div class="wf-step"><i class="on">1</i><span class="ln"></span><i>2</i><span class="ln"></span><i>3</i></div>
+              <div class="wf-box">
+                <div class="wf-lbl">Départ</div>
+                <div class="wf-sel">Owendo</div>
+                <div class="wf-row end"><div class="wf-btn gho">⇅ <span class="n">1</span></div></div>
+                <div class="wf-lbl">Arrivée</div>
+                <div class="wf-sel">Franceville</div>
+              </div>
+              <div class="wf-lbl">Date</div>
+              <div class="wf-row wrap"><div class="wf-chip">Aujourd'hui</div><div class="wf-chip on">Ven. 14 août</div><div class="wf-chip">Autre date <span class="n">2</span></div></div>
+              <div class="wf-lbl">Voyageurs</div>
+              <div class="wf-row split mid"><div style="font-size:9px">Adultes</div><div class="wf-row mid"><div class="wf-btn gho">−</div><div class="wf-h">2</div><div class="wf-btn gho">+</div></div></div>
+              <div class="wf-row split mid"><div style="font-size:9px">Enfants 4 à 11 ans (−50 %)</div><div class="wf-row mid"><div class="wf-btn gho">−</div><div class="wf-h">1</div><div class="wf-btn gho">+ <span class="n">3</span></div></div></div>
+              <div class="wf-btn pri wide">Voir les dessertes</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">résultats</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row mid"><div class="wf-btn gho">‹</div><div class="wf-col"><div class="wf-h">Owendo → Franceville</div><div style="font-size:9px">Ven. 14 août · 3 voyageurs</div></div><div class="wf-btn gho">✎ <span class="n">4</span></div></div>
+              <div class="wf-row wrap"><div class="wf-chip on">Toutes</div><div class="wf-chip">Express</div><div class="wf-chip">Omnibus</div><div class="wf-chip">Couchette</div></div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col">
+                  <div class="wf-row split mid"><div class="wf-h">08:00 → 22:15</div><div class="wf-tag neutral">14 h 15</div></div>
+                  <div style="font-size:9px">TR-201 · Express · 648 km · sans changement</div>
+                  <div class="wf-row wrap"><div class="wf-chip">2e — 12 places · 15 000 F</div><div class="wf-chip">1re — 4 places · 25 000 F</div></div>
+                  <div class="wf-row end"><div class="wf-btn">Choisir <span class="n">5</span></div></div>
+                </div></div>
+                <div class="wf-item"><div class="wf-col">
+                  <div class="wf-row split mid"><div class="wf-h">18:30 → 09:40</div><div class="wf-tag neutral">15 h 10</div></div>
+                  <div style="font-size:9px">TR-203 · Omnibus · dessert 22 gares</div>
+                  <div class="wf-row wrap"><div class="wf-chip">2e — 3 places · 13 500 F</div><div class="wf-chip">Couchette — complet</div></div>
+                  <div class="wf-alert warn">Dernières places sur ce segment</div>
+                  <div class="wf-row end"><div class="wf-btn">Choisir</div></div>
+                </div></div>
+                <div class="wf-item"><div class="wf-col">
+                  <div class="wf-row split mid"><div class="wf-h">21:00 → 11:30</div><div class="wf-tag err">annulée</div></div>
+                  <div style="font-size:9px">TR-205 · desserte supprimée ce jour</div>
+                </div></div>
+              </div>
+              <div style="font-size:9px">Prix indicatifs, figés pendant 15 minutes après validation. <span class="n">6</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : aucun résultat</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row mid"><div class="wf-btn gho">‹</div><div class="wf-h">Owendo → Lopé</div></div>
+              <div class="wf-box dash">
+                <div class="wf-h">Aucune desserte ce jour</div>
+                <div style="font-size:9px">Le Transgabonais ne circule pas sur cette relation le vendredi 14 août.</div>
+              </div>
+              <div class="wf-lbl">Dates les plus proches</div>
+              <div class="wf-row wrap"><div class="wf-chip">Sam. 15 août</div><div class="wf-chip">Dim. 16 août</div></div>
+              <div class="wf-btn pri wide">Modifier la recherche</div>
+              <div class="wf-alert err">Recherche impossible : réseau indisponible. Réessayez une fois la couverture retrouvée.</div>
+              <div class="wf-btn gho wide">Réessayer</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">formulaire</span> — gares, date et composition du groupe ; la liste des 22 gares est embarquée donc consultable sans réseau</li>
+        <li><span class="st">recherche en cours</span> — squelettes de cartes, annulation possible</li>
+        <li><span class="st">résultats</span> — une carte par desserte, places restantes calculées sur le segment demandé</li>
+        <li><span class="st">dernières places</span> — mention explicite quand l'inventaire du segment descend sous le seuil</li>
+        <li><span class="st">complet</span> — classe affichée mais non sélectionnable, le motif est écrit</li>
+        <li><span class="st">desserte annulée</span> — carte inerte, marquée, conservée pour informer</li>
+        <li><span class="st">aucun résultat</span> — état vide avec propositions de dates voisines</li>
+        <li><span class="st">hors ligne</span> — la recherche exige le réseau ; le message le dit et propose une nouvelle tentative</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Gare de départ, gare d'arrivée, inversion, date, nombre d'adultes et d'enfants de 4 à 11 ans</li>
+        <li>Par desserte : heure de départ et d'arrivée, durée, numéro et type de train, nombre d'arrêts</li>
+        <li>Par classe : places disponibles sur le segment et prix par voyageur en XAF</li>
+        <li>Rappel que le prix est figé quinze minutes une fois le dossier ouvert</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>StationPicker</code> (composant à créer), <code>DatePicker</code>, <code>Stepper</code> (composant à créer), <code>FlatList</code>, <code>TripCard</code> (composant à créer), <code>Chip</code>, <code>Badge</code>, <code>Skeleton</code>, <code>EmptyState</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Inverse les deux gares</li>
+        <li><span class="n">2</span> Ouvre le calendrier ; les jours sans circulation sont désactivés</li>
+        <li><span class="n">3</span> Ajuste le nombre d'enfants ; la réduction de 50 % apparaît immédiatement dans les prix</li>
+        <li><span class="n">4</span> Rouvre le formulaire sans perdre les critères</li>
+        <li><span class="n">5</span> Ouvre le détail de la desserte et ouvre le dossier — le compte à rebours de 15 minutes démarre</li>
+        <li><span class="n">6</span> Explique le barème kilométrique et la variation des prix selon le remplissage</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#VM-02">VM-02</a> · choisir une desserte → <a href="#VM-04">VM-04</a></li>
+      </ul>
+      <h4>Cadence</h4>
+      <ul>
+        <li>Cartes de desserte cliquables sur toute leur surface, hauteur bien supérieure à 44 px</li>
+        <li>« Complet », « annulée » et « dernières places » sont écrits, jamais seulement colorés ; heures et montants en police tabulaire</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ VM-04 ══════════════════════════════ -->
+<div class="screen-block" id="VM-04">
+  <div class="sb-head"><span class="sb-id">VM-04</span><h3>Détail &amp; voyageurs</h3><span class="sb-role">voyageur · étape 2 du tunnel</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">classe et place</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><div class="wf-btn gho">‹</div><div class="wf-h">TR-201 · 14 août</div><div class="wf-tag warn">14:32</div></div>
+              <div class="wf-step"><i>1</i><span class="ln"></span><i class="on">2</i><span class="ln"></span><i>3</i></div>
+              <div class="wf-box fill"><div style="font-size:9px">Owendo 08:00 → Franceville 22:15 · 648 km · 3 voyageurs</div></div>
+              <div class="wf-lbl">Classe</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">2e classe · 15 000 F</div><div style="font-size:9px">12 places sur ce segment</div></div><div class="wf-chip on">✓</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">1re classe · 25 000 F</div><div style="font-size:9px">4 places · climatisation</div></div><div class="wf-chip">—</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Couchette · complet</div><div style="font-size:9px">Aucune place sur ce segment</div></div><div class="wf-chip">✕</div></div>
+              </div>
+              <div class="wf-row split mid"><div class="wf-lbl">Places · voiture 1</div><div class="wf-btn gho">Voiture ▾ <span class="n">1</span></div></div>
+              <div class="wf-seatmap">
+                <i></i><i class="busy"></i><i></i><i class="sel"></i><i></i><i class="busy"></i><i></i><i></i><i class="blk"></i><i></i>
+                <i class="sel"></i><i></i><i class="busy"></i><i></i><i class="sel"></i><i></i><i class="busy"></i><i></i><i></i><i></i>
+              </div>
+              <div class="wf-row wrap"><div class="wf-chip">libre</div><div class="wf-chip on">choisie</div><div class="wf-chip">occupée</div><div class="wf-chip">indisponible</div></div>
+              <div class="wf-btn pri wide">Continuer <span class="n">2</span></div>
+              <div class="wf-btn gho wide">Placement automatique</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">voyageurs</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><div class="wf-h">Voyageurs</div><div class="wf-tag warn">12:08</div></div>
+              <div class="wf-tabs"><div class="tb on">1 · adulte</div><div class="tb">2 · adulte</div><div class="tb">3 · enfant</div></div>
+              <div class="wf-row"><div class="wf-fld filled g1">MBADINGA</div><div class="wf-fld filled g1">Paul</div></div>
+              <div class="wf-lbl">Sexe</div>
+              <div class="wf-row"><div class="wf-chip on">Masculin</div><div class="wf-chip">Féminin</div></div>
+              <div class="wf-lbl">Téléphone</div>
+              <div class="wf-row mid"><div class="wf-sel" style="flex:.7">+241</div><div class="wf-fld filled g2">06 12 34 56</div></div>
+              <div class="wf-lbl">Téléphone d'urgence</div>
+              <div class="wf-row mid"><div class="wf-sel" style="flex:.7">+241</div><div class="wf-fld g2">Obligatoire <span class="n">3</span></div></div>
+              <div class="wf-alert err">Voyageur 3 : la date de naissance est requise pour appliquer la réduction enfant.</div>
+              <div class="wf-box dash"><div class="wf-row split mid"><div style="font-size:9px">Copier mes informations</div><div class="wf-chip">Utiliser <span class="n">4</span></div></div></div>
+              <div class="wf-btn pri wide">Continuer</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">récapitulatif de prix</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h">Récapitulatif</div>
+              <div class="wf-tbl">
+                <div class="r head"><div class="lg">Ligne</div><div class="sm">Qté</div><div>Montant</div></div>
+                <div class="r"><div class="lg">2e classe adulte</div><div class="sm">2</div><div>30 000 F</div></div>
+                <div class="r"><div class="lg">2e classe enfant −50 %</div><div class="sm">1</div><div>7 500 F</div></div>
+                <div class="r"><div class="lg">Frais de service</div><div class="sm">—</div><div>500 F</div></div>
+                <div class="r head"><div class="lg">Total</div><div class="sm"></div><div>38 000 F</div></div>
+              </div>
+              <div class="wf-alert warn">Prix garanti jusqu'à 09:14. Passé ce délai, le dossier est libéré et le tarif recalculé. <span class="n">5</span></div>
+              <div class="wf-box dash"><div style="font-size:9px">Détail du barème : 648 km × tarif kilométrique, ajusté au remplissage de la desserte.</div></div>
+              <div class="wf-btn pri wide">Passer au paiement</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">choix de la classe</span> — prix et disponibilité par classe sur le segment demandé</li>
+        <li><span class="st">classe complète</span> — option visible, non sélectionnable, motif écrit</li>
+        <li><span class="st">plan de voiture</span> — sélection de place facultative ; le placement automatique reste offert</li>
+        <li><span class="st">place déjà prise</span> — la place choisie a été vendue entre-temps, message immédiat et nouvelle sélection demandée</li>
+        <li><span class="st">saisie incomplète</span> — champs manquants signalés au niveau du champ et récapitulés en tête</li>
+        <li><span class="st">réduction enfant</span> — appliquée dès la date de naissance renseignée, entre 4 et 11 ans révolus</li>
+        <li><span class="st">dossier expiré</span> — le compte à rebours de 15 minutes est écoulé : places relâchées, retour aux résultats</li>
+        <li><span class="st">hors ligne</span> — l'étape exige le réseau ; la saisie déjà faite est conservée localement et restituée au retour</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Rappel de la desserte : gares, horaires, distance, nombre de voyageurs</li>
+        <li>Classes avec prix unitaire et places restantes sur le segment</li>
+        <li>Plan de voiture, légende complète, sélecteur de voiture</li>
+        <li>Par voyageur : nom, prénom, sexe, téléphone, téléphone d'urgence, date de naissance pour les enfants</li>
+        <li>Récapitulatif ventilé : lignes tarifaires, réductions, frais de service, total en XAF</li>
+        <li>Compte à rebours du maintien de la réservation et du prix</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>SegmentedControl</code>, <code>SeatMap</code> (composant à créer), <code>Form</code> + <code>zod</code> partagé, <code>PhoneInput</code> (composant à créer), <code>DateField</code>, <code>Tabs</code>, <code>PriceBreakdown</code> (composant à créer), <code>Countdown</code>, <code>Alert</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Change de voiture ; le plan se recharge sans perdre les places déjà choisies</li>
+        <li><span class="n">2</span> Valide la classe et les places, puis ouvre le formulaire voyageurs</li>
+        <li><span class="n">3</span> Le téléphone d'urgence est exigé par le cahier des charges : le champ bloque la validation</li>
+        <li><span class="n">4</span> Recopie le profil du titulaire du compte dans le premier voyageur</li>
+        <li><span class="n">5</span> Le compte à rebours reste visible en permanence ; à zéro, le dossier retourne aux résultats</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#VM-03">VM-03</a> · continuer → <a href="#VM-05">VM-05</a> · expiration → <a href="#VM-03">VM-03</a></li>
+      </ul>
+      <h4>Cadence</h4>
+      <ul>
+        <li>Cases du plan de voiture agrandies au doigt, zone tactile de 44 px même si le carré dessiné est plus petit</li>
+        <li>L'état d'une place n'est jamais porté par la seule couleur : forme, hachure et légende l'accompagnent</li>
+        <li>Un seul bouton primaire par étape ; montants et compte à rebours en police tabulaire</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ VM-05 ══════════════════════════════ -->
+<div class="screen-block" id="VM-05">
+  <div class="sb-head"><span class="sb-id">VM-05</span><h3>Paiement</h3><span class="sb-role">voyageur · étape 3 du tunnel</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">choix du moyen de paiement</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><div class="wf-btn gho">‹</div><div class="wf-h">Paiement</div><div class="wf-tag warn">09:12 <span class="n">1</span></div></div>
+              <div class="wf-step"><i>1</i><span class="ln"></span><i>2</i><span class="ln"></span><i class="on">3</i></div>
+              <div class="wf-box fill">
+                <div class="wf-h">38 000 F</div>
+                <div style="font-size:9px">Owendo → Franceville · TR-201 · 14 août 08:00 · 3 voyageurs · 2e classe</div>
+              </div>
+              <div class="wf-lbl">Moyen de paiement</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Airtel Money</div><div style="font-size:9px">Validation par code PIN sur votre téléphone</div></div><div class="wf-chip on">✓</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Moov Money</div><div style="font-size:9px">Validation par code PIN sur votre téléphone</div></div><div class="wf-chip">—</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Carte bancaire</div><div style="font-size:9px">Visa, Mastercard</div></div><div class="wf-chip">—</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Payer au guichet</div><div style="font-size:9px">Réservation tenue 24 h, à régler en gare <span class="n">2</span></div></div><div class="wf-chip">—</div></div>
+              </div>
+              <div class="wf-lbl">Numéro payeur</div>
+              <div class="wf-row mid"><div class="wf-sel" style="flex:.7">+241</div><div class="wf-fld filled g2">06 12 34 56</div></div>
+              <div class="wf-row mid"><div class="wf-chip">☐</div><div style="font-size:9px">J'accepte les conditions générales de vente <span class="n">3</span></div></div>
+              <div class="wf-btn pri wide">Payer 38 000 F</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">attente de validation PIN</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h">Validation en cours</div>
+              <div class="wf-box fill">
+                <div class="wf-h">38 000 F · Airtel Money</div>
+                <div style="font-size:9px">Composez votre code PIN sur la demande reçue au +241 06 12 34 56.</div>
+              </div>
+              <div class="wf-step"><i class="on">✓</i><span class="ln"></span><i class="on">2</i><span class="ln"></span><i>3</i></div>
+              <div class="wf-tbl">
+                <div class="r"><div class="lg">Demande envoyée</div><div class="sm">✓</div></div>
+                <div class="r"><div class="lg">Attente du code PIN</div><div class="sm">…</div></div>
+                <div class="r"><div class="lg">Émission du billet</div><div class="sm">—</div></div>
+              </div>
+              <div class="wf-alert warn">Ne fermez pas l'application. Expiration de la demande dans 02:41. <span class="n">4</span></div>
+              <div class="wf-box dash"><div style="font-size:9px">Aucune demande reçue ? Vérifiez que le numéro payeur est bien celui de votre compte mobile money.</div></div>
+              <div class="wf-btn gho wide">Annuler le paiement <span class="n">5</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : refusé ou expiré</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h">Paiement non abouti</div>
+              <div class="wf-alert err">Refusé par l'opérateur : solde insuffisant. Aucun montant n'a été débité.</div>
+              <div class="wf-box fill"><div style="font-size:9px">Vos places sont encore tenues 04:18. Passé ce délai elles repartent à la vente.</div></div>
+              <div class="wf-btn pri wide">Réessayer <span class="n">6</span></div>
+              <div class="wf-btn gho wide">Changer de moyen de paiement</div>
+              <div class="wf-btn gho wide">Réserver et payer au guichet</div>
+              <div class="wf-alert warn">Réseau perdu pendant la validation : le statut sera confirmé dès le retour de la couverture, ne payez pas deux fois. <span class="n">7</span></div>
+              <div class="wf-alert err">Dossier expiré : les places ont été relâchées, la recherche doit être relancée.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">choix du moyen</span> — mobile money d'abord, carte ensuite, paiement au guichet toujours proposé</li>
+        <li><span class="st">conditions non acceptées</span> — le paiement reste inactif tant que la case n'est pas cochée</li>
+        <li><span class="st">attente PIN</span> — statut temps réel de la demande, étapes explicites, expiration annoncée</li>
+        <li><span class="st">confirmé</span> — billet émis, mise en cache locale immédiate puis bascule vers le titre</li>
+        <li><span class="st">refusé</span> — motif retourné par l'opérateur, garantie qu'aucun débit n'a eu lieu, nouvelle tentative offerte</li>
+        <li><span class="st">expiré</span> — la demande de validation n'a pas abouti dans le délai de l'opérateur</li>
+        <li><span class="st">hold expiré</span> — les places ont été relâchées et le prix figé est perdu : retour aux résultats</li>
+        <li><span class="st">réseau perdu</span> — l'issue est vérifiée à la reconnexion, avec avertissement explicite contre le double paiement</li>
+        <li><span class="st">payer au guichet</span> — réservation tenue 24 heures, référence à présenter en gare, envoyée par SMS</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Récapitulatif figé : montant total, desserte, date, nombre de voyageurs, classe</li>
+        <li>Compte à rebours du maintien des places et du prix, visible en permanence</li>
+        <li>Liste des moyens de paiement, numéro payeur pré-rempli avec le numéro du compte</li>
+        <li>Case d'acceptation des conditions générales, bloquante</li>
+        <li>Suivi des étapes de la transaction et délai d'expiration de la demande</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>PaymentMethodList</code> (composant à créer), <code>PhoneInput</code> (composant à créer), <code>Checkbox</code>, <code>Countdown</code>, <code>PaymentStatus</code> (composant à créer, abonnement réactif Convex), <code>BottomSheet</code>, <code>Alert</code>, <code>Button</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Compte à rebours du dossier : à zéro, les places sont relâchées et l'écran renvoie aux résultats</li>
+        <li><span class="n">2</span> Bascule en réservation sans paiement : référence émise, à régler en gare sous 24 heures</li>
+        <li><span class="n">3</span> Ouvre les conditions générales ; le paiement reste inactif tant qu'elles ne sont pas acceptées</li>
+        <li><span class="n">4</span> Le statut est suivi par abonnement réactif, sans interrogation répétée du serveur — économie de données et de batterie</li>
+        <li><span class="n">5</span> Annule la demande auprès de l'opérateur et revient au choix du moyen de paiement</li>
+        <li><span class="n">6</span> Relance une demande ; la référence de transaction est idempotente, aucun double débit possible</li>
+        <li><span class="n">7</span> À la reconnexion, l'application interroge le statut avant de proposer quoi que ce soit d'autre</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#VM-04">VM-04</a> · confirmé → <a href="#VM-07">VM-07</a> puis <a href="#VM-06">VM-06</a></li>
+        <li>Hold expiré → <a href="#VM-03">VM-03</a> · payer au guichet → <a href="#VM-06">VM-06</a> avec le titre en attente de règlement</li>
+      </ul>
+      <h4>Cadence</h4>
+      <ul>
+        <li>Un seul bouton primaire : « Payer », puis « Réessayer » en cas d'échec</li>
+        <li>Le statut de paiement est toujours écrit en toutes lettres ; montants et comptes à rebours en police tabulaire</li>
+        <li>Aucune saisie de code PIN dans l'application : la validation se fait sur l'interface de l'opérateur</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ VM-06 ══════════════════════════════ -->
+<div class="screen-block" id="VM-06">
+  <div class="sb-head"><span class="sb-id">VM-06</span><h3>Mes billets</h3><span class="sb-role">voyageur · onglet 2</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : billets à venir</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><div class="wf-h big">Mes billets</div><div class="wf-btn gho">↻ <span class="n">1</span></div></div>
+              <div class="wf-tabs"><div class="tb on">À venir</div><div class="tb">Passés</div></div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-qr"></div><div class="wf-col">
+                  <div class="wf-h">Owendo → Franceville</div>
+                  <div style="font-size:9px">TR-201 · ven. 14 août · 08:00</div>
+                  <div style="font-size:9px">3 voyageurs · 2e classe · B-4821</div>
+                  <div class="wf-row wrap"><div class="wf-tag ok">hors ligne</div><div class="wf-tag neutral">dans 2 jours</div></div>
+                </div></div>
+                <div class="wf-item"><div class="wf-qr"></div><div class="wf-col">
+                  <div class="wf-h">Moanda → Owendo</div>
+                  <div style="font-size:9px">TR-202 · dim. 23 août · 18:30</div>
+                  <div class="wf-row wrap"><div class="wf-tag warn">à régler au guichet</div></div>
+                  <div style="font-size:9px">Référence R-9034 · avant le 15 août <span class="n">2</span></div>
+                </div></div>
+                <div class="wf-item"><div class="wf-qr" style="opacity:.35"></div><div class="wf-col">
+                  <div class="wf-h">Ntoum → Lopé</div>
+                  <div style="font-size:9px">TR-203 · mer. 27 août</div>
+                  <div class="wf-row wrap"><div class="wf-tag err">annulé — remboursé</div></div>
+                </div></div>
+              </div>
+              <div style="font-size:9px">Synchronisé il y a 3 min <span class="n">3</span></div>
+            </div>
+            <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb on">Billets</div><div class="tb">Compte</div></div>
+          </div>
+        </div>
+        <div><div class="cap">état : hors ligne</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Mes billets</div>
+              <div class="wf-alert warn">Hors ligne — 3 billets disponibles dans le téléphone. Dernière synchronisation le 14/08 à 07:41.</div>
+              <div class="wf-tabs"><div class="tb on">À venir</div><div class="tb">Passés</div></div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-qr"></div><div class="wf-col">
+                  <div class="wf-h">Owendo → Franceville</div>
+                  <div style="font-size:9px">TR-201 · 14 août · 08:00</div>
+                  <div class="wf-tag ok">disponible hors ligne</div>
+                </div></div>
+                <div class="wf-item"><div class="wf-box dash"><div style="font-size:9px">Un billet acheté depuis un autre appareil n'apparaîtra qu'après reconnexion. <span class="n">4</span></div></div></div>
+              </div>
+              <div class="wf-btn gho wide">Réessayer la synchronisation</div>
+            </div>
+            <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb on">Billets</div><div class="tb">Compte</div></div>
+          </div>
+        </div>
+        <div><div class="cap">état : aucun billet</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Mes billets</div>
+              <div class="wf-tabs"><div class="tb on">À venir</div><div class="tb">Passés</div></div>
+              <div class="wf-box dash">
+                <div class="wf-h">Aucun billet à venir</div>
+                <div style="font-size:9px">Vos titres de transport apparaîtront ici et resteront consultables sans réseau, une fois émis.</div>
+              </div>
+              <div class="wf-btn pri wide">Rechercher une desserte</div>
+              <div class="wf-box dash">
+                <div class="wf-lbl">Billet reçu par SMS</div>
+                <div class="wf-row mid"><div class="wf-fld g2">Référence B-…</div><div class="wf-btn">Ajouter <span class="n">5</span></div></div>
+              </div>
+            </div>
+            <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb on">Billets</div><div class="tb">Compte</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">à venir</span> — titres classés par date de départ, le plus proche en tête</li>
+        <li><span class="st">passés</span> — historique consultable, code masqué, reçu et facture téléchargeables</li>
+        <li><span class="st">en attente de règlement</span> — réservation à payer au guichet, échéance affichée en clair</li>
+        <li><span class="st">annulé ou remboursé</span> — carte marquée, code estompé, motif et montant remboursé indiqués</li>
+        <li><span class="st">hors ligne</span> — nombre de titres disponibles localement et date de la dernière synchronisation</li>
+        <li><span class="st">cache périmé</span> — invitation à synchroniser ; les billets restent valables, seul le statut de desserte est daté</li>
+        <li><span class="st">vide</span> — état pédagogique avec ajout d'un billet par sa référence SMS</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Par titre : trajet, numéro de desserte, date et heure de départ, nombre de voyageurs, classe, numéro de billet</li>
+        <li>Vignette du code Aztec, indicateur « disponible hors ligne », compte à rebours avant le départ</li>
+        <li>Horodatage de la dernière synchronisation, permanent en bas de liste</li>
+        <li>Champ d'ajout d'un billet acheté sans l'application, à partir de la référence reçue par SMS</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>SectionList</code>, <code>TicketCard</code> (composant à créer), <code>Tabs</code>, <code>Badge</code>, <code>RefreshControl</code>, <code>OfflineBanner</code> (composant à créer), <code>EmptyState</code>, <code>SyncStamp</code> (composant à créer)</li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Synchronise la liste et rafraîchit les codes ; sans réseau, l'action explique pourquoi elle échoue</li>
+        <li><span class="n">2</span> Ouvre la marche à suivre pour régler au guichet, avec la référence et les gares ouvertes</li>
+        <li><span class="n">3</span> L'horodatage de synchronisation est un repère de confiance : il ne disparaît jamais</li>
+        <li><span class="n">4</span> Explique la limite du cache : un achat fait ailleurs exige une reconnexion pour apparaître</li>
+        <li><span class="n">5</span> Rattache un billet reçu par SMS au compte, après vérification de la référence</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>Carte → <a href="#VM-07">VM-07</a> · suivi de la desserte → <a href="#VM-08">VM-08</a></li>
+        <li>Onglets → <a href="#VM-02">VM-02</a>, <a href="#VM-10">VM-10</a> · état vide → <a href="#VM-03">VM-03</a></li>
+      </ul>
+      <h4>Cadence</h4>
+      <ul>
+        <li>Cartes de billet cliquables sur toute leur hauteur, largement au-delà de 44 px</li>
+        <li>Les statuts « hors ligne », « à régler », « annulé » sont écrits, la couleur ne fait que renforcer</li>
+        <li>Dates, heures et références en police tabulaire</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ VM-07 ══════════════════════════════ -->
+<div class="screen-block" id="VM-07">
+  <div class="sb-head"><span class="sb-id">VM-07</span><h3>Billet plein écran</h3><span class="sb-role">voyageur · écran présenté au contrôleur</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : en ligne · code dynamique</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight" style="align-items:center">
+              <div class="wf-row split mid" style="width:100%"><div class="wf-btn gho">‹</div><div class="wf-h">Billet 1 / 3</div><div class="wf-btn gho">⋯ <span class="n">1</span></div></div>
+              <div class="wf-qr lg"></div>
+              <div style="font-size:9px">Actualisé il y a 12 s <span class="n">2</span></div>
+              <div class="wf-box fill" style="width:100%">
+                <div class="wf-h">MBADINGA Paul</div>
+                <div style="font-size:9px">Owendo → Franceville</div>
+                <div style="font-size:9px">TR-201 · ven. 14 août · 08:00</div>
+                <div style="font-size:9px">2e classe · voiture 1 · place 12A</div>
+                <div style="font-size:9px">N° B-4821</div>
+              </div>
+              <div class="wf-row" style="width:100%"><div class="wf-btn gho g1">Partager <span class="n">3</span></div><div class="wf-btn gho g1">PDF</div></div>
+              <div style="font-size:8.5px">Capture d'écran désactivée sur cet écran. <span class="n">4</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : hors ligne</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight" style="align-items:center">
+              <div class="wf-alert warn" style="width:100%">Hors ligne — billet valable, dernier code du 14/08 à 07:41.</div>
+              <div class="wf-qr lg"></div>
+              <div style="font-size:9px">Présentez cet écran au contrôleur : il vérifie la signature sans réseau. <span class="n">5</span></div>
+              <div class="wf-box fill" style="width:100%">
+                <div class="wf-h">MBADINGA Paul</div>
+                <div style="font-size:9px">Owendo → Franceville · voiture 1 · place 12A</div>
+                <div style="font-size:9px">N° B-4821</div>
+              </div>
+              <div class="wf-btn gho wide">Actualiser le code</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">états : contrôlé · annulé</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight" style="align-items:center">
+              <div class="wf-alert ok" style="width:100%">Contrôlé le 14/08 à 09:12 par le chef de train.</div>
+              <div class="wf-qr lg" style="opacity:.35"></div>
+              <div style="font-size:9px">Le billet reste consultable jusqu'à l'arrivée.</div>
+              <div class="wf-alert err" style="width:100%">Billet annulé le 12/08 — remboursement de 15 000 F traité. Le code n'est plus présentable.</div>
+              <div class="wf-box dash" style="width:100%"><div style="font-size:9px">Le contrôle est signalé par l'application du contrôleur : un code partagé par capture est détecté au second passage.</div></div>
+              <div class="wf-btn gho wide">Signaler un problème <span class="n">6</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">en ligne</span> — code dynamique régénéré périodiquement, horodatage de fraîcheur visible</li>
+        <li><span class="st">hors ligne</span> — dernier code émis, bandeau explicite ; le billet reste parfaitement valable</li>
+        <li><span class="st">contrôlé</span> — mention du contrôle et de son heure, code estompé</li>
+        <li><span class="st">annulé ou remboursé</span> — code masqué, motif et montant remboursé affichés</li>
+        <li><span class="st">en attente de règlement</span> — aucun code présentable, seule la référence à payer au guichet est affichée</li>
+        <li><span class="st">multi-billets</span> — navigation latérale entre les titres d'une même réservation</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Code Aztec signé, le plus grand possible, sur fond clair et à luminosité forcée</li>
+        <li>Identité du voyageur, trajet, desserte, date et heure, classe, voiture et place, numéro de billet</li>
+        <li>Indicateur de fraîcheur du code et de disponibilité hors ligne</li>
+        <li>Mention du blocage de la capture d'écran, pour que la restriction ne soit pas vécue comme un défaut</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>BarcodeView</code> (Aztec, composant à créer), <code>Carousel</code> billets, <code>Alert</code>, <code>ActionSheet</code>, <code>Badge</code>, <code>expo-brightness</code>, <code>expo-screen-capture</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Menu : envoyer par SMS, télécharger le PDF, ajouter au calendrier, signaler un problème</li>
+        <li><span class="n">2</span> Appui sur l'horodatage : force une actualisation du code si le réseau est disponible</li>
+        <li><span class="n">3</span> Partage la référence et le lien court par SMS, pour un accompagnant sans l'application</li>
+        <li><span class="n">4</span> La capture d'écran est bloquée sur cet écran ; l'explication est donnée au lieu d'un simple échec</li>
+        <li><span class="n">5</span> Explique la vérification hors ligne par signature, pour rassurer le voyageur sans réseau</li>
+        <li><span class="n">6</span> Ouvre un formulaire de réclamation rattaché au numéro de billet</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#VM-06">VM-06</a> (mes billets) · suivi du train → <a href="#VM-08">VM-08</a></li>
+        <li>Accès direct depuis la carte de <a href="#VM-02">VM-02</a> et depuis une notification de <a href="#VM-09">VM-09</a></li>
+      </ul>
+      <h4>Cadence</h4>
+      <ul>
+        <li>Le code prime sur tout : aucune action primaire ne lui dispute la place, les actions secondaires restent en bas</li>
+        <li>Le statut du billet est toujours écrit ; la couleur du bandeau ne fait que confirmer</li>
+        <li>Numéro de billet, place et horaires en police tabulaire ; luminosité restaurée à la sortie de l'écran</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ VM-08 ══════════════════════════════ -->
+<div class="screen-block" id="VM-08">
+  <div class="sb-head"><span class="sb-id">VM-08</span><h3>Suivi du voyage</h3><span class="sb-role">voyageur · desserte en cours ou à venir</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : à l'heure</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row mid"><div class="wf-btn gho">‹</div><div class="wf-col"><div class="wf-h">TR-201</div><div style="font-size:9px">Owendo → Franceville · 14 août</div></div></div>
+              <div class="wf-box fill">
+                <div class="wf-row split mid"><div class="wf-h big">À l'heure</div><div class="wf-tag ok">à l'heure</div></div>
+                <div style="font-size:9px">Arrivée prévue à Franceville à 22:15</div>
+              </div>
+              <div class="wf-row"><div class="wf-kpi"><b>328</b><span>km parcourus</span></div><div class="wf-kpi"><b>6 h 10</b><span>restantes</span></div></div>
+              <div class="wf-lbl">Arrêts</div>
+              <div class="wf-tbl">
+                <div class="r head"><div class="lg">Gare</div><div class="sm">Prévu</div><div class="sm">Estimé</div></div>
+                <div class="r"><div class="lg">Owendo</div><div class="sm">08:00</div><div class="sm">08:02</div></div>
+                <div class="r"><div class="lg">N'Djolé</div><div class="sm">11:20</div><div class="sm">11:24</div></div>
+                <div class="r"><div class="lg">Booué</div><div class="sm">14:05</div><div class="sm">14:05</div></div>
+                <div class="r"><div class="lg">Lopé</div><div class="sm">15:30</div><div class="sm">15:32</div></div>
+                <div class="r"><div class="lg">Lastoursville</div><div class="sm">18:10</div><div class="sm">18:12</div></div>
+                <div class="r"><div class="lg">Moanda</div><div class="sm">20:40</div><div class="sm">20:41</div></div>
+                <div class="r"><div class="lg">Franceville</div><div class="sm">22:15</div><div class="sm">22:15</div></div>
+              </div>
+              <div style="font-size:9px">Position approximative : entre Booué et Lopé <span class="n">1</span></div>
+              <div class="wf-btn gho wide">Afficher mon billet <span class="n">2</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">état : retard</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h">TR-202 · 14 août</div>
+              <div class="wf-alert warn">Retard de 35 minutes annoncé au départ de Franceville. Arrivée à Owendo estimée à 10:15.</div>
+              <div class="wf-box fill">
+                <div class="wf-row split mid"><div class="wf-h big">Retard · 35 min</div><div class="wf-tag warn">+35 min</div></div>
+                <div style="font-size:9px">Motif : croisement de convoi minéralier</div>
+              </div>
+              <div class="wf-lbl">Arrêts</div>
+              <div class="wf-tbl">
+                <div class="r head"><div class="lg">Gare</div><div class="sm">Prévu</div><div class="sm">Estimé</div></div>
+                <div class="r"><div class="lg">Franceville</div><div class="sm">18:30</div><div class="sm">19:05</div></div>
+                <div class="r"><div class="lg">Moanda</div><div class="sm">20:05</div><div class="sm">20:40</div></div>
+                <div class="r"><div class="lg">Booué</div><div class="sm">02:15</div><div class="sm">02:50</div></div>
+                <div class="r"><div class="lg">Owendo</div><div class="sm">09:40</div><div class="sm">10:15</div></div>
+              </div>
+              <div class="wf-row mid"><div class="wf-chip on">☑</div><div style="font-size:9px">M'avertir de tout changement <span class="n">3</span></div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">états : annulée · hors ligne</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h">TR-205 · 14 août</div>
+              <div class="wf-alert err">Desserte annulée. Remboursement intégral engagé, sans démarche de votre part.</div>
+              <div class="wf-box fill"><div style="font-size:9px">38 000 F remboursés sur le compte Airtel Money ayant servi au paiement, sous 72 heures. <span class="n">4</span></div></div>
+              <div class="wf-btn pri wide">Chercher une autre desserte</div>
+              <div class="wf-alert warn">Hors ligne — statut du 14/08 à 07:41, susceptible d'avoir changé depuis. <span class="n">5</span></div>
+              <div class="wf-tbl">
+                <div class="r head"><div class="lg">Gare</div><div class="sm">Prévu</div><div class="sm">Estimé</div></div>
+                <div class="r"><div class="lg">Owendo</div><div class="sm">08:00</div><div class="sm">—</div></div>
+                <div class="r"><div class="lg">Booué</div><div class="sm">14:05</div><div class="sm">—</div></div>
+              </div>
+              <div class="wf-btn gho wide">Réessayer</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">à l'heure</span> — horaires estimés alignés sur les horaires théoriques</li>
+        <li><span class="st">retard</span> — retard en minutes, motif quand il est communiqué, horaires estimés recalculés sur toute la ligne</li>
+        <li><span class="st">annulée</span> — annonce de l'annulation et du remboursement automatique</li>
+        <li><span class="st">en circulation</span> — position approximative entre deux gares, kilomètres parcourus et temps restant</li>
+        <li><span class="st">terminée</span> — desserte arrivée, historique des horaires réels conservé</li>
+        <li><span class="st">hors ligne</span> — dernier statut connu, daté, avec avertissement de possible obsolescence</li>
+        <li><span class="st">statut indisponible</span> — la desserte n'est pas encore suivie, seuls les horaires théoriques sont affichés</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Numéro de desserte, relation, date, statut en toutes lettres</li>
+        <li>Liste des arrêts avec horaire théorique et horaire estimé, gare courante mise en avant</li>
+        <li>Position approximative, kilomètres parcourus sur les 648 km, durée restante</li>
+        <li>Motif de perturbation quand il est fourni par l'exploitation</li>
+        <li>Horodatage du dernier statut reçu, permanent</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>TripTimeline</code> (composant à créer), <code>StatusBanner</code> (composant à créer), <code>StatCard</code>, <code>Switch</code>, <code>Alert</code>, abonnement réactif <code>trips.get</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Détaille la position : dernier point de passage confirmé et prochain arrêt</li>
+        <li><span class="n">2</span> Ouvre le titre de transport associé à cette desserte</li>
+        <li><span class="n">3</span> Active ou coupe les alertes de changement pour cette desserte</li>
+        <li><span class="n">4</span> Détaille le remboursement : moyen, montant, délai, référence</li>
+        <li><span class="n">5</span> Relance la synchronisation dès qu'une couverture réseau est retrouvée</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#VM-06">VM-06</a> ou <a href="#VM-07">VM-07</a> · annulation → <a href="#VM-03">VM-03</a></li>
+        <li>Ouvert directement depuis une notification de retard de <a href="#VM-09">VM-09</a></li>
+      </ul>
+      <h4>Cadence</h4>
+      <ul>
+        <li>Le retard est écrit en minutes, jamais réduit à une pastille de couleur</li>
+        <li>Tous les horaires en police tabulaire, pour que les colonnes théorique et estimé s'alignent</li>
+        <li>Un seul bouton primaire, et seulement lorsqu'une action s'impose — chercher une autre desserte après une annulation</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ VM-09 ══════════════════════════════ -->
+<div class="screen-block" id="VM-09">
+  <div class="sb-head"><span class="sb-id">VM-09</span><h3>Notifications</h3><span class="sb-role">voyageur · centre et préférences</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">centre de notifications</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row split mid"><div class="wf-btn gho">‹</div><div class="wf-h big">Notifications</div><div class="wf-btn gho">⚙ <span class="n">1</span></div></div>
+              <div class="wf-row wrap"><div class="wf-chip on">Toutes</div><div class="wf-chip">Non lues</div><div class="wf-chip">Voyages</div></div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col">
+                  <div class="wf-row split mid"><div class="wf-h">Retard de 35 min</div><div class="wf-tag warn">retard</div></div>
+                  <div style="font-size:9px">TR-202 du 14 août · arrivée estimée 10:15</div>
+                  <div style="font-size:9px">il y a 12 min <span class="n">2</span></div>
+                </div></div>
+                <div class="wf-item"><div class="wf-col">
+                  <div class="wf-row split mid"><div class="wf-h">Départ demain</div><div class="wf-tag neutral">rappel</div></div>
+                  <div style="font-size:9px">TR-201 · Owendo 08:00 · présentez-vous 30 min avant</div>
+                  <div style="font-size:9px">hier, 08:00</div>
+                </div></div>
+                <div class="wf-item"><div class="wf-col">
+                  <div class="wf-row split mid"><div class="wf-h">Billet émis</div><div class="wf-tag ok">achat</div></div>
+                  <div style="font-size:9px">3 billets · B-4821 · 38 000 F</div>
+                </div></div>
+                <div class="wf-item"><div class="wf-col">
+                  <div class="wf-row split mid"><div class="wf-h">Remboursement traité</div><div class="wf-tag ok">remboursement</div></div>
+                  <div style="font-size:9px">15 000 F · Airtel Money · sous 72 h</div>
+                </div></div>
+              </div>
+              <div class="wf-btn gho wide">Tout marquer comme lu <span class="n">3</span></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">préférences par canal</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row mid"><div class="wf-btn gho">‹</div><div class="wf-h">Préférences</div></div>
+              <div class="wf-alert warn">Les notifications système sont désactivées pour cette application. <span class="n">4</span></div>
+              <div class="wf-btn wide">Ouvrir les réglages du téléphone</div>
+              <div class="wf-tbl">
+                <div class="r head"><div class="lg">Événement</div><div class="sm">Push</div><div class="sm">SMS</div></div>
+                <div class="r"><div class="lg">Confirmation d'achat</div><div class="sm">☑</div><div class="sm">☑</div></div>
+                <div class="r"><div class="lg">Rappel la veille</div><div class="sm">☑</div><div class="sm">☐</div></div>
+                <div class="r"><div class="lg">Rappel à H−2</div><div class="sm">☑</div><div class="sm">☐</div></div>
+                <div class="r"><div class="lg">Retard ou annulation</div><div class="sm">☑</div><div class="sm">☑</div></div>
+                <div class="r"><div class="lg">Remboursement traité</div><div class="sm">☑</div><div class="sm">☑</div></div>
+                <div class="r"><div class="lg">Offres commerciales</div><div class="sm">☐</div><div class="sm">☐</div></div>
+              </div>
+              <div class="wf-box dash"><div style="font-size:9px">Le SMS reste actif pour les événements critiques : c'est le seul canal qui atteint un téléphone sans données. <span class="n">5</span></div></div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">états : vide · hors ligne</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Notifications</div>
+              <div class="wf-box dash">
+                <div class="wf-h">Aucune notification</div>
+                <div style="font-size:9px">Vous serez prévenu de la confirmation de vos achats, des rappels de départ et de toute perturbation.</div>
+              </div>
+              <div class="wf-alert warn">Hors ligne — seules les notifications déjà reçues sont affichées, arrêtées au 14/08 à 07:41.</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><div class="wf-t w75"></div><div class="wf-t w50"></div></div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-t w60"></div><div class="wf-t w40"></div></div></div>
+              </div>
+              <div class="wf-btn gho wide">Réessayer</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">liste</span> — notifications classées par date, les non-lues distinguées par un libellé et un fond, pas par la seule couleur</li>
+        <li><span class="st">vide</span> — état pédagogique décrivant ce que le voyageur recevra</li>
+        <li><span class="st">notifications refusées</span> — l'autorisation système manque : explication et renvoi vers les réglages du téléphone</li>
+        <li><span class="st">hors ligne</span> — historique local affiché, daté ; aucune réception nouvelle</li>
+        <li><span class="st">préférences</span> — réglage par événement et par canal, push et SMS</li>
+        <li><span class="st">canal indisponible</span> — un canal désactivé au niveau du système est signalé dans le tableau, pas seulement en tête d'écran</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Types couverts : confirmation d'achat, rappel la veille, rappel à H−2, retard, annulation, remboursement traité</li>
+        <li>Par notification : titre, desserte concernée, détail utile, horodatage relatif</li>
+        <li>Tableau de préférences croisant événements et canaux, offres commerciales décochées par défaut</li>
+        <li>Rappel du rôle du SMS pour les événements critiques, indépendant des données mobiles</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>FlatList</code>, <code>NotificationItem</code> (composant à créer), <code>Chip</code>, <code>Switch</code>, <code>Alert</code>, <code>expo-notifications</code>, <code>Linking</code> vers les réglages système</li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Ouvre les préférences par canal</li>
+        <li><span class="n">2</span> Ouvre l'écran concerné : suivi de la desserte, billet ou détail de remboursement</li>
+        <li><span class="n">3</span> Marque l'ensemble comme lu et efface la pastille de l'accueil</li>
+        <li><span class="n">4</span> Renvoie vers les réglages système du téléphone, l'application ne pouvant pas accorder l'autorisation elle-même</li>
+        <li><span class="n">5</span> Détaille la politique de canaux et le coût nul du SMS pour le voyageur</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>← <a href="#VM-02">VM-02</a> · retard → <a href="#VM-08">VM-08</a> · achat → <a href="#VM-07">VM-07</a></li>
+        <li>Consentement commercial partagé avec <a href="#VM-10">VM-10</a></li>
+      </ul>
+      <h4>Cadence</h4>
+      <ul>
+        <li>Chaque ligne dépasse 44 px de hauteur ; les bascules gardent leur libellé à gauche</li>
+        <li>Le type de notification est écrit dans une étiquette, la couleur ne fait que renforcer</li>
+        <li>Horodatages et montants en police tabulaire</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ VM-10 ══════════════════════════════ -->
+<div class="screen-block" id="VM-10">
+  <div class="sb-head"><span class="sb-id">VM-10</span><h3>Compte</h3><span class="sb-role">voyageur · onglet 3</span></div>
+  <div class="sb-grid">
+    <div class="sb-sketch">
+      <div class="wf-states">
+        <div><div class="cap">état : connecté</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-h big">Mon compte</div>
+              <div class="wf-box fill">
+                <div class="wf-h">MBADINGA Paul</div>
+                <div style="font-size:9px">+241 06 12 34 56 · vérifié</div>
+                <div style="font-size:9px">paul.mbadinga@example.ga · non vérifié <span class="n">1</span></div>
+              </div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Profil</div><div style="font-size:9px">Nom, sexe, téléphone d'urgence</div></div><div class="wf-chip">›</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Voyageurs enregistrés</div><div style="font-size:9px">3 profils réutilisables à l'achat</div></div><div class="wf-chip">›</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Langue</div><div style="font-size:9px">Français</div></div><div class="wf-chip">›</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Notifications</div><div style="font-size:9px">Préférences par canal</div></div><div class="wf-chip">›</div></div>
+              </div>
+              <div class="wf-lbl">Données personnelles</div>
+              <div class="wf-list">
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Consentements</div><div style="font-size:9px">Révocables à tout moment <span class="n">2</span></div></div><div class="wf-chip">›</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Exporter mes données</div><div style="font-size:9px">Archive envoyée par lien SMS <span class="n">3</span></div></div><div class="wf-chip">›</div></div>
+                <div class="wf-item"><div class="wf-col"><div class="wf-h">Supprimer mon compte</div><div style="font-size:9px">Action définitive <span class="n">4</span></div></div><div class="wf-chip">›</div></div>
+              </div>
+              <div class="wf-btn gho wide">Se déconnecter <span class="n">5</span></div>
+              <div style="font-size:8.5px">Version 1.0.0 · cache local 2,4 Mo</div>
+            </div>
+            <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb">Billets</div><div class="tb on">Compte</div></div>
+          </div>
+        </div>
+        <div><div class="cap">état : consentements</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-row mid"><div class="wf-btn gho">‹</div><div class="wf-h">Consentements</div></div>
+              <div class="wf-tbl">
+                <div class="r head"><div class="lg">Traitement</div><div class="sm">État</div></div>
+                <div class="r"><div class="lg">Exécution du contrat de transport</div><div class="sm">requis</div></div>
+                <div class="r"><div class="lg">Informations de voyage par SMS</div><div class="sm">☑</div></div>
+                <div class="r"><div class="lg">Offres commerciales</div><div class="sm">☐</div></div>
+                <div class="r"><div class="lg">Statistiques d'usage anonymes</div><div class="sm">☑</div></div>
+              </div>
+              <div class="wf-box dash"><div style="font-size:9px">Les traitements requis par le contrat de transport ne peuvent pas être révoqués sans supprimer le compte ; le motif est indiqué en clair.</div></div>
+              <div class="wf-lbl">Historique</div>
+              <div class="wf-tbl">
+                <div class="r"><div class="lg">Offres commerciales — retiré</div><div class="sm">12/08</div></div>
+                <div class="r"><div class="lg">SMS de voyage — accordé</div><div class="sm">02/07</div></div>
+              </div>
+              <div class="wf-btn pri wide">Enregistrer</div>
+            </div>
+          </div>
+        </div>
+        <div><div class="cap">états : suppression · hors ligne · invité</div>
+          <div class="wf wf-phone">
+            <div class="wf-notch"></div>
+            <div class="wf-body tight">
+              <div class="wf-modal">
+                <div class="wf-h">Supprimer le compte ?</div>
+                <div style="font-size:9px">Vos billets à venir seront annulés et remboursés. Les pièces comptables sont conservées dix ans, comme l'impose la réglementation.</div>
+                <div class="wf-fld">Saisissez SUPPRIMER pour confirmer</div>
+                <div class="wf-row end"><div class="wf-btn gho">Annuler</div><div class="wf-btn">Supprimer</div></div>
+              </div>
+              <div class="wf-alert warn">Hors ligne — la modification du compte exige le réseau. Vos billets restent consultables. <span class="n">6</span></div>
+              <div class="wf-box dash">
+                <div class="wf-h">Vous n'êtes pas connecté</div>
+                <div style="font-size:9px">Connectez-vous par SMS pour retrouver vos billets sur tous vos appareils.</div>
+                <div class="wf-btn pri wide">Se connecter</div>
+              </div>
+            </div>
+            <div class="wf-tabbar"><div class="tb">Accueil</div><div class="tb">Billets</div><div class="tb on">Compte</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-spec">
+      <h4>États</h4>
+      <ul>
+        <li><span class="st">connecté</span> — profil, réglages et rubriques relatives aux données personnelles</li>
+        <li><span class="st">invité</span> — invitation à se connecter, réglages locaux tout de même accessibles</li>
+        <li><span class="st">consentements</span> — état par traitement, révocation immédiate, historique daté</li>
+        <li><span class="st">export demandé</span> — archive en préparation, lien de téléchargement transmis par SMS</li>
+        <li><span class="st">suppression confirmée</span> — saisie explicite exigée, conséquences énoncées avant l'action</li>
+        <li><span class="st">hors ligne</span> — la consultation reste possible, toute modification est différée et l'écran le dit</li>
+        <li><span class="st">déconnexion</span> — avertissement sur la perte de l'accès aux billets en cache</li>
+      </ul>
+      <h4>Contenu</h4>
+      <ul>
+        <li>Identité : nom, prénom, sexe, téléphone vérifié, téléphone d'urgence, adresse électronique facultative</li>
+        <li>Profils de voyageurs enregistrés, réutilisables lors d'un achat</li>
+        <li>Langue de l'interface, préférences de notification</li>
+        <li>Consentements révocables avec leur historique, export des données, suppression du compte</li>
+        <li>Version de l'application et taille du cache local des billets</li>
+      </ul>
+      <h4>Composants</h4>
+      <ul><li><code>SettingsList</code> (composant à créer), <code>Avatar</code>, <code>Switch</code>, <code>ConfirmDialog</code>, <code>BottomSheet</code>, <code>Alert</code>, <code>expo-secure-store</code>, query <code>users:me</code></li></ul>
+      <h4>Interactions</h4>
+      <ol class="acts">
+        <li><span class="n">1</span> Lance la vérification de l'adresse électronique, facultative — le téléphone reste l'identifiant</li>
+        <li><span class="n">2</span> Ouvre le détail des consentements ; chacun est révocable, sauf ceux requis par le contrat de transport, dont le motif est expliqué</li>
+        <li><span class="n">3</span> Demande l'export : l'archive est préparée puis notifiée par SMS avec un lien à durée limitée</li>
+        <li><span class="n">4</span> Ouvre la confirmation de suppression, avec saisie explicite et rappel des conséquences sur les billets à venir</li>
+        <li><span class="n">5</span> Déconnexion : avertit que les billets en cache ne seront plus accessibles sur cet appareil</li>
+        <li><span class="n">6</span> Hors ligne, les rubriques modifiables sont désactivées avec un motif écrit, jamais grisées en silence</li>
+      </ol>
+      <h4>Navigation</h4>
+      <ul>
+        <li>Onglets → <a href="#VM-02">VM-02</a>, <a href="#VM-06">VM-06</a> · notifications → <a href="#VM-09">VM-09</a></li>
+        <li>Déconnexion ou suppression → <a href="#VM-01">VM-01</a></li>
+      </ul>
+      <h4>Cadence</h4>
+      <ul>
+        <li>Les rubriques de liste dépassent 44 px ; un seul bouton primaire, « Enregistrer » ou « Se connecter » selon l'état</li>
+        <li>La suppression n'est pas un bouton primaire rouge isolé : elle passe par une confirmation écrite</li>
+        <li>Dates de consentement et taille de cache en police tabulaire</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+  <footer style="margin-top:26px">
+    Croquis voyageur-mobile · 26 juillet 2026 · 10 écrans. Voir aussi les croquis
+    <a href="croquis-agent-web.html">agent-web</a>,
+    <a href="croquis-billetterie-web.html">billetterie-web</a>,
+    <a href="croquis-controleur-mobile.html">controleur-mobile</a>,
+    le <a href="voyageur-mobile.html">plan applicatif</a> et le <a href="backend.html">plan backend</a>.
+  </footer>
+</section>
+
+</main>
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", themeVariables: { fontSize: "13px" } });
+</script>
+</body>
+</html>

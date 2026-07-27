@@ -1,14 +1,18 @@
 import { v } from "convex/values"
-import { internalMutation, mutation, query } from "../_generated/server"
+import {
+  internalMutation,
+  mutation,
+  query,
+  type QueryCtx,
+} from "../_generated/server"
+import { internal } from "../_generated/api"
 import type { Doc, Id } from "../_generated/dataModel"
 import { audit, getUser, requireUser } from "../lib/auth"
 import { activeFareSchedule, currentAccountingDay } from "../lib/saleContext"
 import { paymentMethod, serviceClass } from "../schema"
 import { performSale } from "./sales"
-import { computeTicketFare, type FareSchedule } from "../model/fares"
-import { occupancyRate, quotePrice, type PricingRule } from "../model/pricing"
 import { release, segmentMask } from "../model/inventory"
-import { daysUntilDeparture, weekdayOf } from "../model/calendar"
+import { quoteTrip } from "../lib/tripQuote"
 
 /**
  * Vente en ligne — réservation, règlement et espace client.
@@ -58,178 +62,10 @@ export const quote = query({
     discountCodes: v.optional(v.array(v.string())),
     promoCode: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    if (!Number.isInteger(args.passengerCount) || args.passengerCount < 1) {
-      throw new Error(`Nombre de voyageurs invalide : ${args.passengerCount}`)
-    }
-
-    const trip = await ctx.db.get(args.tripId)
-    if (!trip) throw new Error("Desserte introuvable")
-
-    const stops = (
-      await ctx.db
-        .query("tripStops")
-        .withIndex("by_trip_sequence", (q) => q.eq("tripId", args.tripId))
-        .collect()
-    ).sort((a, b) => a.sequence - b.sequence)
-
-    const fromIndex = stops.findIndex(
-      (s) => s.stationId === args.originStationId,
-    )
-    const toIndex = stops.findIndex(
-      (s) => s.stationId === args.destinationStationId,
-    )
-    if (fromIndex === -1 || toIndex === -1 || toIndex <= fromIndex) {
-      throw new Error("Trajet incompatible avec cette desserte")
-    }
-    const distanceKm = Math.abs(
-      stops[toIndex]!.kilometerPoint - stops[fromIndex]!.kilometerPoint,
-    )
-
-    const schedule = await ctx.db
-      .query("fareSchedules")
-      .withIndex("by_status", (q) => q.eq("status", "actif"))
-      .first()
-    if (!schedule) throw new Error("Aucune grille tarifaire active")
-
-    const [bases, discounts, quotas, rules] = await Promise.all([
-      ctx.db
-        .query("fareBases")
-        .withIndex("by_schedule", (q) => q.eq("scheduleId", schedule._id))
-        .collect(),
-      ctx.db
-        .query("discounts")
-        .withIndex("by_schedule", (q) => q.eq("scheduleId", schedule._id))
-        .collect(),
-      ctx.db
-        .query("fareClassQuotas")
-        .withIndex("by_trip_class", (q) =>
-          q.eq("tripId", args.tripId).eq("serviceClass", args.serviceClass),
-        )
-        .collect(),
-      ctx.db
-        .query("pricingRules")
-        .withIndex("by_active_priority", (q) => q.eq("isActive", true))
-        .collect(),
-    ])
-
-    const fareSchedule: FareSchedule = {
-      taxes: { vatPct: schedule.vatPct, cssPct: schedule.cssPct },
-      roundingBasis: schedule.roundingBasis,
-      bases: bases.map((b) => ({
-        trainType: b.trainType,
-        serviceClass: b.serviceClass,
-        shortDistanceRate: b.shortDistanceRate,
-        longDistanceRate: b.longDistanceRate,
-      })),
-    }
-
-    const counters = (
-      await ctx.db
-        .query("segmentCounters")
-        .withIndex("by_trip_class", (q) =>
-          q.eq("tripId", args.tripId).eq("serviceClass", args.serviceClass),
-        )
-        .collect()
-    ).filter((c) => c.segmentIndex >= fromIndex && c.segmentIndex < toIndex)
-
-    const available =
-      counters.length > 0 ? Math.min(...counters.map((c) => c.available)) : 0
-    const capacity = counters[0]?.capacity ?? 0
-    const sold = counters.length > 0 ? Math.max(...counters.map((c) => c.sold)) : 0
-
-    const now = Date.now()
-    const context = {
-      occupancyRate: occupancyRate(capacity, sold),
-      daysUntilDeparture: daysUntilDeparture(trip.departureAt, now),
-      departureWeekday: weekdayOf(trip.serviceDate),
-      channel: "ligne",
-      now,
-      promoCode: args.promoCode,
-    }
-
-    const scopedRules: PricingRule[] = rules
-      .filter((r) => r.tripId === undefined || r.tripId === args.tripId)
-      .filter(
-        (r) =>
-          r.serviceClass === undefined || r.serviceClass === args.serviceClass,
-      )
-      .map((r) => ({
-        id: r._id,
-        type: r.type,
-        threshold: r.threshold,
-        modifierPct: r.modifierPct,
-        priority: r.priority,
-        validFrom: r.validFrom,
-        validUntil: r.validUntil,
-        code: r.code,
-        isActive: r.isActive,
-      }))
-    const bounds = rules
-      .filter((r) => r.floorXaf !== undefined || r.capXaf !== undefined)
-      .sort((a, b) => a.priority - b.priority)[0]
-
-    const lignes = []
-    let total = 0
-    for (let i = 0; i < args.passengerCount; i += 1) {
-      const code = args.discountCodes?.[i]
-      const discount = code
-        ? discounts.find((d) => d.code === code && d.isActive)
-        : undefined
-      if (code && !discount) {
-        throw new Error(`Réduction « ${code} » inconnue ou désactivée`)
-      }
-      const base = computeTicketFare({
-        schedule: fareSchedule,
-        trainType: trip.trainType,
-        serviceClass: args.serviceClass,
-        distanceKm,
-        discount: discount
-          ? {
-              code: discount.code as never,
-              ratePct: discount.ratePct,
-              label: discount.label,
-            }
-          : null,
-      })
-      const q = quotePrice({
-        basePriceTtc: base.ttc,
-        distanceKm,
-        quotas: quotas.map((x) => ({
-          label: x.label,
-          priority: x.priority,
-          seatCount: x.seatCount,
-          soldCount: x.soldCount,
-          coefficient: x.coefficient,
-          isActive: x.isActive,
-        })),
-        seatsNeeded: args.passengerCount,
-        rules: scopedRules,
-        context,
-        floorXaf: bounds?.floorXaf,
-        capXaf: bounds?.capXaf,
-      })
-      total += q.unitPriceTtc
-      lignes.push({
-        discountCode: discount?.code ?? null,
-        discountLabel: discount?.label ?? null,
-        quotaLabel: q.quotaLabel,
-        unitPriceTtc: q.unitPriceTtc,
-        appliedRules: q.appliedRules,
-      })
-    }
-
-    return {
-      distanceKm,
-      fromIndex,
-      toIndex,
-      available,
-      hasAvailability: available >= args.passengerCount,
-      lines: lignes,
-      totalTtc: total,
-      holdDurationMs: HOLD_DURATION_MS,
-    }
-  },
+  handler: async (ctx, args) => ({
+    ...(await quoteTrip(ctx, args, "ligne")),
+    holdDurationMs: HOLD_DURATION_MS,
+  }),
 })
 
 /* ────────────────────────── Créer une réservation ──────────────────────── */
@@ -277,7 +113,7 @@ export const create = mutation({
         passengers: args.passengers,
         method: "airtel_money",
         promoCode: args.promoCode,
-      },
+      }
     )
 
     return {
@@ -302,6 +138,7 @@ export const confirm = mutation({
     reference: v.string(),
     method: paymentMethod,
     payerPhone: v.optional(v.string()),
+    cgvVersion: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const sale = await ctx.db
@@ -317,7 +154,7 @@ export const confirm = mutation({
     }
     if (sale.priceLockedUntil && sale.priceLockedUntil < Date.now()) {
       throw new Error(
-        "Le délai de règlement est dépassé : les places ont été libérées",
+        "Le délai de règlement est dépassé : les places ont été libérées"
       )
     }
 
@@ -334,13 +171,13 @@ export const confirm = mutation({
     for (const ticket of tickets) {
       const mask = segmentMask(
         { fromIndex: ticket.fromStopIndex, toIndex: ticket.toStopIndex },
-        trip.segmentCount,
+        trip.segmentCount
       )
       if (ticket.seatId) {
         const occupancy = await ctx.db
           .query("seatOccupancy")
           .withIndex("by_trip_seat", (q) =>
-            q.eq("tripId", ticket.tripId).eq("seatId", ticket.seatId!),
+            q.eq("tripId", ticket.tripId).eq("seatId", ticket.seatId!)
           )
           .unique()
         if (occupancy) {
@@ -356,13 +193,15 @@ export const confirm = mutation({
         await ctx.db
           .query("segmentCounters")
           .withIndex("by_trip_class", (q) =>
-            q.eq("tripId", ticket.tripId).eq("serviceClass", ticket.serviceClass),
+            q
+              .eq("tripId", ticket.tripId)
+              .eq("serviceClass", ticket.serviceClass)
           )
           .collect()
       ).filter(
         (c) =>
           c.segmentIndex >= ticket.fromStopIndex &&
-          c.segmentIndex < ticket.toStopIndex,
+          c.segmentIndex < ticket.toStopIndex
       )
       for (const counter of counters) {
         await ctx.db.patch(counter._id, {
@@ -378,6 +217,8 @@ export const confirm = mutation({
       accountingDayId: day._id,
       amounts: { ...sale.amounts, received: sale.amounts.ttc },
       priceLockedUntil: undefined,
+      cgvVersion: args.cgvVersion ?? "cgv-2026-07",
+      cgvAcceptedAt: Date.now(),
     })
     await ctx.db.patch(day._id, {
       totalTtc: day.totalTtc + sale.amounts.ttc,
@@ -407,6 +248,18 @@ export const confirm = mutation({
       },
     })
 
+    if (sale.contactEmail) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.functions.notifications.sendBookingEmail,
+        {
+          reference: sale.number,
+          contactPhone: sale.contactPhone,
+          email: sale.contactEmail,
+        }
+      )
+    }
+
     return {
       reference: sale.number,
       status: "confirmee" as const,
@@ -418,6 +271,35 @@ export const confirm = mutation({
 })
 
 /* ──────────────────────────── Consultation ─────────────────────────────── */
+
+async function hydrateBooking(ctx: QueryCtx, sale: Doc<"sales">) {
+  const tickets = await ctx.db
+    .query("tickets")
+    .withIndex("by_sale", (q) => q.eq("saleId", sale._id))
+    .collect()
+  const trip = tickets[0] ? await ctx.db.get(tickets[0].tripId) : null
+  const [origin, destination, payments, adjustments] = await Promise.all([
+    tickets[0] ? ctx.db.get(tickets[0].originStationId) : null,
+    tickets[0] ? ctx.db.get(tickets[0].destinationStationId) : null,
+    ctx.db
+      .query("payments")
+      .withIndex("by_sale", (q) => q.eq("saleId", sale._id))
+      .collect(),
+    ctx.db
+      .query("sales")
+      .withIndex("by_origin", (q) => q.eq("originSaleId", sale._id))
+      .collect(),
+  ])
+  return {
+    sale,
+    tickets,
+    trip,
+    origin,
+    destination,
+    payments,
+    adjustments,
+  }
+}
 
 /** Réservation et ses titres, retrouvés par référence. */
 export const getByReference = query({
@@ -433,18 +315,10 @@ export const getByReference = query({
     const user = await getUser(ctx)
     const isOwner = user && sale.customerId === user._id
     if (!isOwner && sale.contactPhone !== args.contactPhone) {
-      throw new Error(
-        "Référence et contact téléphonique ne correspondent pas",
-      )
+      throw new Error("Référence et contact téléphonique ne correspondent pas")
     }
 
-    const tickets = await ctx.db
-      .query("tickets")
-      .withIndex("by_sale", (q) => q.eq("saleId", sale._id))
-      .collect()
-    const trip = tickets[0] ? await ctx.db.get(tickets[0].tripId) : null
-
-    return { sale, tickets, trip }
+    return await hydrateBooking(ctx, sale)
   },
 })
 
@@ -461,14 +335,7 @@ export const listMine = query({
     return await Promise.all(
       sales
         .sort((a, b) => b.soldAt - a.soldAt)
-        .map(async (sale) => {
-          const tickets = await ctx.db
-            .query("tickets")
-            .withIndex("by_sale", (q) => q.eq("saleId", sale._id))
-            .collect()
-          const trip = tickets[0] ? await ctx.db.get(tickets[0].tripId) : null
-          return { sale, tickets, trip }
-        }),
+        .map(async (sale) => await hydrateBooking(ctx, sale))
     )
   },
 })
@@ -495,11 +362,17 @@ export const myTickets = query({
           ctx.db.get(ticket.originStationId),
           ctx.db.get(ticket.destinationStationId),
         ])
-        result.push({ ticket, trip, origin, destination, reference: sale.number })
+        result.push({
+          ticket,
+          trip,
+          origin,
+          destination,
+          reference: sale.number,
+        })
       }
     }
     return result.sort(
-      (a, b) => (a.trip?.departureAt ?? 0) - (b.trip?.departureAt ?? 0),
+      (a, b) => (a.trip?.departureAt ?? 0) - (b.trip?.departureAt ?? 0)
     )
   },
 })
@@ -520,7 +393,7 @@ export const cancelHold = mutation({
     if (!sale) throw new Error("Réservation introuvable")
     if (sale.status !== "en_attente_paiement") {
       throw new Error(
-        `Réservation « ${sale.status} » : utilisez l'annulation au guichet`,
+        `Réservation « ${sale.status} » : utilisez l'annulation au guichet`
       )
     }
 
@@ -548,7 +421,7 @@ export const cancelHold = mutation({
 async function releaseHold(
   ctx: Parameters<typeof currentAccountingDay>[0],
   sale: Doc<"sales">,
-  finalStatus: "expiree" | "annulee",
+  finalStatus: "expiree" | "annulee"
 ): Promise<number> {
   const tickets = await ctx.db
     .query("tickets")
@@ -560,13 +433,13 @@ async function releaseHold(
     if (!trip) continue
     const mask = segmentMask(
       { fromIndex: ticket.fromStopIndex, toIndex: ticket.toStopIndex },
-      trip.segmentCount,
+      trip.segmentCount
     )
     if (ticket.seatId) {
       const occupancy = await ctx.db
         .query("seatOccupancy")
         .withIndex("by_trip_seat", (q) =>
-          q.eq("tripId", ticket.tripId).eq("seatId", ticket.seatId!),
+          q.eq("tripId", ticket.tripId).eq("seatId", ticket.seatId!)
         )
         .unique()
       if (occupancy) {
@@ -575,21 +448,23 @@ async function releaseHold(
         })
       }
     }
+    if (ticket.pdfStorageId) await ctx.storage.delete(ticket.pdfStorageId)
     await ctx.db.patch(ticket._id, {
       status: finalStatus === "annulee" ? "annule" : "expire",
+      pdfStorageId: undefined,
     })
 
     const counters = (
       await ctx.db
         .query("segmentCounters")
         .withIndex("by_trip_class", (q) =>
-          q.eq("tripId", ticket.tripId).eq("serviceClass", ticket.serviceClass),
+          q.eq("tripId", ticket.tripId).eq("serviceClass", ticket.serviceClass)
         )
         .collect()
     ).filter(
       (c) =>
         c.segmentIndex >= ticket.fromStopIndex &&
-        c.segmentIndex < ticket.toStopIndex,
+        c.segmentIndex < ticket.toStopIndex
     )
     for (const counter of counters) {
       const held = Math.max(0, counter.held - 1)
@@ -600,10 +475,15 @@ async function releaseHold(
     }
   }
 
+  if (sale.bundlePdfStorageId) {
+    await ctx.storage.delete(sale.bundlePdfStorageId)
+  }
+
   await ctx.db.patch(sale._id, {
     status: finalStatus,
     cancelledAt: Date.now(),
     priceLockedUntil: undefined,
+    bundlePdfStorageId: undefined,
   })
   return tickets.length
 }
@@ -619,7 +499,7 @@ export const expireStaleHolds = internalMutation({
     const pending = await ctx.db
       .query("sales")
       .withIndex("by_status_hold", (q) =>
-        q.eq("status", "en_attente_paiement").lt("priceLockedUntil", now),
+        q.eq("status", "en_attente_paiement").lt("priceLockedUntil", now)
       )
       .collect()
 

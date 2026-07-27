@@ -11,13 +11,13 @@ export function GaresDesservies() {
 
   if (gares === undefined) {
     return (
-      <p className="text-muted-foreground text-sm">Chargement des gares…</p>
+      <p className="text-sm text-muted-foreground">Chargement des gares…</p>
     )
   }
 
   if (gares.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-muted-foreground">
         Aucune gare n&apos;est encore ouverte à la vente.
       </p>
     )
@@ -28,7 +28,9 @@ export function GaresDesservies() {
       {gares.map((gare) => (
         <Badge key={gare._id} variant="secondary">
           {gare.name}
-          <span className="text-muted-foreground">PK {gare.kilometerPoint}</span>
+          <span className="text-muted-foreground">
+            PK {gare.kilometerPoint}
+          </span>
         </Badge>
       ))}
     </div>

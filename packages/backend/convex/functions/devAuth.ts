@@ -84,7 +84,7 @@ export const consumeCode = mutation({
     if (!isDevSigninEnabled()) {
       throw new Error(
         `Récupération des codes désactivée. Poser ${DEV_SIGNIN_ENV}=true sur ` +
-          `un déploiement de développement — jamais en production.`,
+          `un déploiement de développement — jamais en production.`
       )
     }
 
@@ -118,5 +118,21 @@ export const consumeCode = mutation({
 /** État de l'interrupteur, pour que l'interface sache quoi proposer. */
 export const status = query({
   args: {},
-  handler: async () => ({ enabled: isDevSigninEnabled() }),
+  handler: async () => {
+    const developmentEnabled = isDevSigninEnabled()
+    const emailDeliveryEnabled =
+      process.env.AUTH_EMAIL_ENABLED === "true" &&
+      Boolean(process.env.RESEND_API_KEY?.trim()) &&
+      Boolean(
+        process.env.AUTH_EMAIL_FROM?.trim() ||
+        process.env.TICKETS_EMAIL_FROM?.trim()
+      )
+    return {
+      // `enabled` est conservé pour les outils de supervision existants.
+      enabled: developmentEnabled,
+      developmentEnabled,
+      emailDeliveryEnabled,
+      smsDeliveryEnabled: false,
+    }
+  },
 })

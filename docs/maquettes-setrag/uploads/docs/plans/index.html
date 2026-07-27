@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETRAG — Plans d'implémentation</title>
+<link rel="stylesheet" href="plan.css">
+</head>
+<body>
+<div class="layout">
+
+<main style="max-width: 1000px; margin: 0 auto;">
+
+<header class="hero">
+  <h1>Billettique SETRAG — plans d'implémentation</h1>
+  <p>Système billettique unifié du Transgabonais, couvrant les deux cahiers des charges SETRAG :
+  le <b>système central de vente</b> (remplaçant de MOBIPASS — produits, tarifs, inventaire,
+  caisse, comptabilité) et le <b>front-office</b> (vente en ligne, application contrôleur).
+  Un seul backend Convex, quatre applications clientes, un monorepo Bun.</p>
+  <div class="hero-meta">
+    <span class="chip">Un système · deux lots</span>
+    <span class="chip">Convex (région US)</span>
+    <span class="chip">Révision unifiée — 25 juillet 2026</span>
+  </div>
+</header>
+
+<section>
+  <h2>Les plans</h2>
+  <div class="plan-grid">
+    <a class="plan-card" href="backend.html">
+      <div class="pc-icon">⚙️</div>
+      <div class="pc-title">Backend — système unifié</div>
+      <div class="pc-desc">Le document central : périmètre des deux CDC, architecture, modèle de
+      données, inventaire par segment, tarification kilométrique + yield, caisse et SAGE X3,
+      billet signé, feuille de route, risques et points ouverts.</div>
+    </a>
+    <a class="plan-card" href="agent-web.html">
+      <div class="pc-icon">🖥️</div>
+      <div class="pc-title">agent-web</div>
+      <div class="pc-desc">Le remplaçant de MOBIPASS : portail de vente (guichets, agences,
+      caisse, mode dégradé) et portail de gestion (livrets, tarifs, yield, comptabilité,
+      rapports). SSO Active Directory.</div>
+    </a>
+    <a class="plan-card" href="billetterie-web.html">
+      <div class="pc-icon">🎫</div>
+      <div class="pc-title">billetterie-web</div>
+      <div class="pc-desc">La vente en ligne grand public : recherche, achat en moins de 5 minutes,
+      paiement mobile money ou « payer au guichet », billet électronique, espace client.</div>
+    </a>
+    <a class="plan-card" href="voyageur-mobile.html">
+      <div class="pc-icon">📱</div>
+      <div class="pc-title">voyageur-mobile</div>
+      <div class="pc-desc">L'application Expo du voyageur : achat natif, billet Aztec consultable
+      hors-ligne, notifications de retard, billet par SMS en secours.</div>
+    </a>
+    <a class="plan-card" href="controleur-mobile.html">
+      <div class="pc-icon">🔍</div>
+      <div class="pc-title">controleur-mobile</div>
+      <div class="pc-desc">L'application offline-first du contrôleur : scan signé vérifié sans
+      réseau, vente à bord, procès-verbaux, incidents, synchronisation idempotente.</div>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>Les croquis d'écrans</h2>
+  <p style="color:var(--ink-muted);max-width:80ch">Wireframes annotés des 58 écrans, destinés au
+  designer et aux développeurs. Chaque écran porte un identifiant stable
+  (<code>AW-V-02</code>, <code>BW-04</code>…), ses états, son contenu, ses composants, ses
+  interactions numérotées et ses transitions. Ce sont des croquis en niveaux de gris, pas des
+  maquettes : la forme reste à définir.</p>
+  <div class="plan-grid">
+    <a class="plan-card" href="croquis-agent-web.html">
+      <div class="pc-icon">🖥️</div>
+      <div class="pc-title">Croquis agent-web · 27 écrans</div>
+      <div class="pc-desc">Portail de vente (vente des 5 produits, plan de voiture, encaissement,
+      caisse, mode dégradé) et portail de gestion (livrets, tarifs, yield, places, recettes,
+      comptabilité, rapports, habilitations, intégrations).</div>
+    </a>
+    <a class="plan-card" href="croquis-billetterie-web.html">
+      <div class="pc-icon">🎫</div>
+      <div class="pc-title">Croquis billetterie-web · 10 écrans</div>
+      <div class="pc-desc">Recherche, résultats, passagers, paiement et attente, confirmation,
+      mes réservations, suivi de desserte, compte, connexion par OTP.</div>
+    </a>
+    <a class="plan-card" href="croquis-voyageur-mobile.html">
+      <div class="pc-icon">📱</div>
+      <div class="pc-title">Croquis voyageur-mobile · 10 écrans</div>
+      <div class="pc-desc">Tunnel d'achat natif, billet Aztec plein écran consultable hors ligne,
+      suivi du voyage, notifications, compte.</div>
+    </a>
+    <a class="plan-card" href="croquis-controleur-mobile.html">
+      <div class="pc-icon">🔍</div>
+      <div class="pc-title">Croquis controleur-mobile · 11 écrans</div>
+      <div class="pc-desc">Manifeste embarqué, scanner et verdicts hors ligne, régularisation,
+      vente à bord, procès-verbaux, incidents, synchronisation et arbitrage des conflits.</div>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>L'essentiel en cinq points</h2>
+  <div class="card">
+    <ol style="margin-bottom:0">
+      <li><b>Un seul système.</b> L'inventaire de places (revendable par segment), le journal
+      comptable (déversé dans SAGE X3) et le moteur tarifaire sont indivisibles — les deux lots
+      des CDC sont les deux moitiés d'un même ensemble.</li>
+      <li><b>L'inventaire est par siège et par segment.</b> Une place Owendo→Booué se revend
+      Booué→Franceville ; masques de bits transactionnels + compteurs dénormalisés, sans document
+      chaud unique.</li>
+      <li><b>La tarification suit le CDC au complet.</b> Barème kilométrique officiel (annexe 2)
+      avec cycle de validation, puis yield management intégral : quotas de classes tarifaires,
+      anticipation, période, remplissage, ajustement temps réel. Les paramètres commerciaux
+      relèvent de SETRAG.</li>
+      <li><b>Le terrain impose l'offline.</b> Contrôle vérifiable sans réseau (Aztec + Ed25519),
+      billets en cache local, guichets tolérants aux coupures, mode dégradé papier réconcilié.</li>
+      <li><b>Deux chantiers restent déclenchés</b> par une décision externe : le partenaire de
+      paiement (l'abstraction et le simulateur sont construits sans attendre — espèces et
+      « payer au guichet » suffisent à démarrer) et l'interface COLIRAIL pour le suivi des
+      colis.</li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <h2>Jalons</h2>
+  <div class="table-scroll"><table>
+    <tr><th style="width:190px">Jalon</th><th>Contenu</th><th style="width:190px">Échéance visée</th></tr>
+    <tr><td>Phases 0-2</td><td>Système central complet : vente guichet tous produits, caisse, comptabilité SAGE, agences — « MOBIPASS remplacé »</td><td>~6 mois (exigence CDC)</td></tr>
+    <tr><td>Phase 3</td><td>Vente en ligne web + mobile, billet électronique, API front-office</td><td>+1 mois</td></tr>
+    <tr><td>Phase 4</td><td>Application contrôleur offline-first, PV, incidents</td><td>+1,5 mois</td></tr>
+    <tr><td>Phase 5</td><td>Yield complet, conformité, pentest, préproduction</td><td>+1 mois</td></tr>
+    <tr><td>Chantiers A / B</td><td>Paiement électronique réel · interface COLIRAIL</td><td>sur décision externe</td></tr>
+  </table></div>
+
+  <footer>
+    Sources : CDC « Projet billettique SETRAG » (v1.2, 02/07/2025) · CDC « Applications
+    Front-Office » · revue documentaire de juillet 2026. Détail complet, risques et points
+    ouverts dans le <a href="backend.html">plan backend</a>.
+  </footer>
+</section>
+
+</main>
+</div>
+</body>
+</html>

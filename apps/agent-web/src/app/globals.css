@@ -1,1 +1,33 @@
 @import "@workspace/ui/globals.css";
+
+html {
+  background: var(--c-canvas);
+}
+
+body {
+  margin: 0;
+}
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body {
+    background: white;
+  }
+
+  .sale-confirmation {
+    max-width: none;
+  }
+
+  .sale-confirmation .print-actions,
+  .sale-confirmation .sale-success {
+    display: none;
+  }
+
+  .ticket-preview {
+    break-inside: avoid;
+    border: 1px solid #333;
+  }
+}

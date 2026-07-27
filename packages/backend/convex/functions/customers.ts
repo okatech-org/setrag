@@ -99,6 +99,118 @@ export const updateProfile = mutation({
   },
 })
 
+/* ────────────────────── Voyageurs enregistrés ─────────────────────────── */
+
+/**
+ * Fiches de voyageurs mémorisées, pour préremplir un dossier.
+ *
+ * Ces fiches n'ont aucune valeur de titre : le billet fige sa propre copie de
+ * l'identité au moment de l'émission, et modifier une fiche ici ne touche
+ * jamais un billet déjà vendu.
+ */
+export const listSavedPassengers = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx)
+    const rows = await ctx.db
+      .query("savedPassengers")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect()
+    return rows.sort((a, b) => a.lastName.localeCompare(b.lastName))
+  },
+})
+
+const savedPassengerFields = {
+  lastName: v.string(),
+  firstName: v.string(),
+  gender: v.union(v.literal("M"), v.literal("F")),
+  phone: v.optional(v.string()),
+  emergencyPhone: v.optional(v.string()),
+  birthDate: v.optional(v.string()),
+  discountCode: v.optional(v.string()),
+}
+
+export const addSavedPassenger = mutation({
+  args: savedPassengerFields,
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    if (!args.lastName.trim() || !args.firstName.trim()) {
+      throw new Error("Le nom et le prénom du voyageur sont obligatoires")
+    }
+
+    const now = Date.now()
+    const id = await ctx.db.insert("savedPassengers", {
+      ...args,
+      lastName: args.lastName.trim(),
+      firstName: args.firstName.trim(),
+      userId: user._id,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    await audit(ctx, {
+      actorId: user._id,
+      action: "voyageur_enregistre.ajouter",
+      entityTable: "savedPassengers",
+      entityId: id,
+      after: { lastName: args.lastName, firstName: args.firstName },
+    })
+    return id
+  },
+})
+
+export const updateSavedPassenger = mutation({
+  args: { passengerId: v.id("savedPassengers"), ...savedPassengerFields },
+  handler: async (ctx, { passengerId, ...fields }) => {
+    const user = await requireUser(ctx)
+    const existing = await ctx.db.get(passengerId)
+    // On ne révèle pas qu'une fiche existe chez quelqu'un d'autre : même
+    // message dans les deux cas.
+    if (!existing || existing.userId !== user._id) {
+      throw new Error("Voyageur enregistré introuvable")
+    }
+    if (!fields.lastName.trim() || !fields.firstName.trim()) {
+      throw new Error("Le nom et le prénom du voyageur sont obligatoires")
+    }
+
+    await ctx.db.patch(passengerId, {
+      ...fields,
+      lastName: fields.lastName.trim(),
+      firstName: fields.firstName.trim(),
+      updatedAt: Date.now(),
+    })
+
+    await audit(ctx, {
+      actorId: user._id,
+      action: "voyageur_enregistre.modifier",
+      entityTable: "savedPassengers",
+      entityId: passengerId,
+      before: { lastName: existing.lastName, firstName: existing.firstName },
+      after: { lastName: fields.lastName, firstName: fields.firstName },
+    })
+  },
+})
+
+export const removeSavedPassenger = mutation({
+  args: { passengerId: v.id("savedPassengers") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const existing = await ctx.db.get(args.passengerId)
+    if (!existing || existing.userId !== user._id) {
+      throw new Error("Voyageur enregistré introuvable")
+    }
+
+    await ctx.db.delete(args.passengerId)
+    await audit(ctx, {
+      actorId: user._id,
+      action: "voyageur_enregistre.supprimer",
+      entityTable: "savedPassengers",
+      entityId: args.passengerId,
+      before: { lastName: existing.lastName, firstName: existing.firstName },
+    })
+  },
+})
+
 /* ───────────────────────────── Consentements ───────────────────────────── */
 
 /** Enregistre un consentement explicite, horodaté et versionné. */
@@ -210,13 +322,17 @@ export const exportMyData = query({
       tickets.push(...t)
     }
 
-    const [consents, notifications] = await Promise.all([
+    const [consents, notifications, savedPassengers] = await Promise.all([
       ctx.db
         .query("consents")
         .withIndex("by_user", (q) => q.eq("userId", user._id))
         .collect(),
       ctx.db
         .query("notifications")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .collect(),
+      ctx.db
+        .query("savedPassengers")
         .withIndex("by_user", (q) => q.eq("userId", user._id))
         .collect(),
     ])
@@ -243,6 +359,16 @@ export const exportMyData = query({
         status: t.status,
       })),
       consents,
+      // Ces fiches ne servent qu'au préremplissage, mais elles portent des
+      // données personnelles de tiers : elles font partie de l'export.
+      savedPassengers: savedPassengers.map((p) => ({
+        lastName: p.lastName,
+        firstName: p.firstName,
+        gender: p.gender,
+        phone: p.phone,
+        emergencyPhone: p.emergencyPhone,
+        birthDate: p.birthDate,
+      })),
       notifications: notifications.length,
     }
   },
@@ -293,6 +419,16 @@ export const deleteMyAccount = mutation({
       .collect()
     for (const consent of consents.filter((c) => c.revokedAt === undefined)) {
       await ctx.db.patch(consent._id, { revokedAt: Date.now() })
+    }
+
+    // Les fiches de voyageurs n'ont aucune valeur comptable : contrairement au
+    // profil, qui est anonymisé, elles sont effacées pour de bon.
+    const savedPassengers = await ctx.db
+      .query("savedPassengers")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect()
+    for (const passenger of savedPassengers) {
+      await ctx.db.delete(passenger._id)
     }
 
     await audit(ctx, {

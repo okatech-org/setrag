@@ -33,6 +33,8 @@ export interface TripResultCardProps
   /** Message affiché à la place du trajet quand la desserte est supprimée. */
   cancelledNotice?: string
   actionLabel?: string
+  /** Navigation progressive : le lien fonctionne même avant l'hydratation. */
+  actionHref?: string
   onSelect?: () => void
   /** Détail affiché sous les heures quand la carte est sélectionnée. */
   selectionNote?: string
@@ -51,6 +53,7 @@ function TripResultCard({
   state = "default",
   cancelledNotice,
   actionLabel,
+  actionHref,
   onSelect,
   selectionNote,
   className,
@@ -177,18 +180,27 @@ function TripResultCard({
           </>
         )}
 
-        {onSelect && (
+        {onSelect && actionHref ? (
+          <Button
+            asChild
+            size="sm"
+            variant={cancelled ? "danger" : selected ? "secondary" : "primary"}
+          >
+            <a href={actionHref} onClick={onSelect}>
+              {actionLabel ??
+                (cancelled ? "Voir les solutions" : selected ? "Modifier" : "Choisir")}
+            </a>
+          </Button>
+        ) : onSelect ? (
           <Button
             size="sm"
-            variant={
-              cancelled ? "danger" : selected ? "secondary" : "primary"
-            }
+            variant={cancelled ? "danger" : selected ? "secondary" : "primary"}
             onClick={onSelect}
           >
             {actionLabel ??
               (cancelled ? "Voir les solutions" : selected ? "Modifier" : "Choisir")}
           </Button>
-        )}
+        ) : null}
       </div>
     </article>
   )

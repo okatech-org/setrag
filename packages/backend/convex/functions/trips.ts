@@ -3,7 +3,11 @@ import { internalMutation, mutation, query } from "../_generated/server"
 import type { Id } from "../_generated/dataModel"
 import { audit, requirePermission } from "../lib/auth"
 import { tripStatus } from "../schema"
-import { fromServiceDate, isWithinSaleWindow, toServiceDate } from "../model/calendar"
+import {
+  fromServiceDate,
+  isWithinSaleWindow,
+  toServiceDate,
+} from "../model/calendar"
 import { segmentCountFor } from "../model/network"
 import { availableForRange, segmentMask, isRangeFree } from "../model/inventory"
 
@@ -36,16 +40,14 @@ export const generateOne = internalMutation({
     const booklet = await ctx.db.get(schedule.bookletId)
     if (!booklet) throw new Error("Livret horaire introuvable")
     if (booklet.status !== "actif") {
-      throw new Error(
-        `Livret « ${booklet.status} » : génération refusée`,
-      )
+      throw new Error(`Livret « ${booklet.status} » : génération refusée`)
     }
 
     // Idempotence : ne pas recréer une desserte déjà engendrée.
     const existing = await ctx.db
       .query("trips")
       .withIndex("by_train_date", (q) =>
-        q.eq("trainId", schedule.trainId).eq("serviceDate", args.serviceDate),
+        q.eq("trainId", schedule.trainId).eq("serviceDate", args.serviceDate)
       )
       .collect()
     if (existing.some((t) => t.scheduleId === args.scheduleId)) {
@@ -60,7 +62,7 @@ export const generateOne = internalMutation({
 
     const departureAt = fromServiceDate(
       args.serviceDate,
-      schedule.departureTime,
+      schedule.departureTime
     )
     const lastStop = stops[stops.length - 1]!
     const arrivalOffset =
@@ -84,7 +86,7 @@ export const generateOne = internalMutation({
       segmentCount,
       isOpenForSale: isWithinSaleWindow(
         args.serviceDate,
-        toServiceDate(Date.now()),
+        toServiceDate(Date.now())
       ),
     })
 
@@ -116,7 +118,7 @@ export const generateOne = internalMutation({
     if (coaches.length === 0) {
       throw new Error(
         `Train ${schedule.trainNumber} sans composition : inventaire ` +
-          `impossible`,
+          `impossible`
       )
     }
 
@@ -148,7 +150,7 @@ export const generateOne = internalMutation({
         seats.filter((s) => s.isActive).length + coach.standingCapacity
       capacityByClass.set(
         coach.serviceClass,
-        (capacityByClass.get(coach.serviceClass) ?? 0) + total,
+        (capacityByClass.get(coach.serviceClass) ?? 0) + total
       )
     }
 
@@ -177,6 +179,71 @@ export const generateOne = internalMutation({
       seats: seatCount,
       counters: counterCount,
     }
+  },
+})
+
+/**
+ * Prochains départs ouverts à la vente depuis une gare d'origine.
+ *
+ * Cette requête alimente les raccourcis de la page d'accueil. Elle ne
+ * fabrique aucun horaire : seules les dessertes réellement engendrées dans
+ * le livret actif et encore ouvertes à la vente sont retournées.
+ */
+export const nextDepartures = query({
+  args: {
+    originCode: v.string(),
+    limit: v.optional(v.number()),
+    after: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 2
+    if (!Number.isInteger(limit) || limit < 1 || limit > 8) {
+      throw new Error(`Limite invalide : ${limit}`)
+    }
+
+    const origin = await ctx.db
+      .query("stations")
+      .withIndex("by_code", (q) => q.eq("code", args.originCode))
+      .unique()
+    if (!origin || !origin.isActive) return []
+
+    const trips = await ctx.db
+      .query("trips")
+      .withIndex("by_origin_departure", (q) =>
+        q
+          .eq("originStationId", origin._id)
+          .gte("departureAt", args.after ?? Date.now())
+      )
+      .filter((q) => q.eq(q.field("isOpenForSale"), true))
+      .take(limit)
+
+    return await Promise.all(
+      trips.map(async (trip) => {
+        const destination = await ctx.db.get(trip.destinationStationId)
+        return {
+          tripId: trip._id,
+          trainNumber: trip.trainNumber,
+          trainType: trip.trainType,
+          serviceDate: trip.serviceDate,
+          departureAt: trip.departureAt,
+          arrivalAt: trip.arrivalAt,
+          status: trip.status,
+          delayMinutes: trip.delayMinutes,
+          origin: {
+            stationId: origin._id,
+            code: origin.code,
+            name: origin.name,
+          },
+          destination: destination
+            ? {
+                stationId: destination._id,
+                code: destination.code,
+                name: destination.name,
+              }
+            : null,
+        }
+      })
+    )
   },
 })
 
@@ -218,10 +285,10 @@ export const search = query({
       const ordered = stops.sort((a, b) => a.sequence - b.sequence)
 
       const fromIndex = ordered.findIndex(
-        (s) => s.stationId === args.originStationId,
+        (s) => s.stationId === args.originStationId
       )
       const toIndex = ordered.findIndex(
-        (s) => s.stationId === args.destinationStationId,
+        (s) => s.stationId === args.destinationStationId
       )
       if (fromIndex === -1 || toIndex === -1 || toIndex <= fromIndex) continue
 
@@ -238,7 +305,7 @@ export const search = query({
         if (rows.length === 0) continue
         byClass[serviceClass] = availableForRange(
           rows.map((r) => r.available),
-          { fromIndex, toIndex },
+          { fromIndex, toIndex }
         )
       }
 
@@ -249,7 +316,7 @@ export const search = query({
         fromIndex,
         toIndex,
         distanceKm: Math.abs(
-          destination.kilometerPoint - origin.kilometerPoint,
+          destination.kilometerPoint - origin.kilometerPoint
         ),
         departureAt: origin.departureAt ?? trip.departureAt,
         arrivalAt: destination.arrivalAt ?? trip.arrivalAt,
@@ -278,14 +345,20 @@ export const get = query({
       .query("segmentCounters")
       .withIndex("by_trip_class", (q) => q.eq("tripId", args.tripId))
       .collect()
+    const hydratedStops = await Promise.all(
+      stops.map(async (stop) => ({
+        ...stop,
+        station: await ctx.db.get(stop.stationId),
+      }))
+    )
 
     return {
       trip,
-      stops: stops.sort((a, b) => a.sequence - b.sequence),
+      stops: hydratedStops.sort((a, b) => a.sequence - b.sequence),
       counters: counters.sort(
         (a, b) =>
           a.serviceClass.localeCompare(b.serviceClass) ||
-          a.segmentIndex - b.segmentIndex,
+          a.segmentIndex - b.segmentIndex
       ),
     }
   },
@@ -298,7 +371,7 @@ export const availableSeats = query({
     fromIndex: v.number(),
     toIndex: v.number(),
     serviceClass: v.optional(
-      v.union(v.literal("DEUXIEME"), v.literal("PREMIERE"), v.literal("VIP")),
+      v.union(v.literal("DEUXIEME"), v.literal("PREMIERE"), v.literal("VIP"))
     ),
   },
   handler: async (ctx, args) => {
@@ -307,7 +380,7 @@ export const availableSeats = query({
 
     const request = segmentMask(
       { fromIndex: args.fromIndex, toIndex: args.toIndex },
-      trip.segmentCount,
+      trip.segmentCount
     )
 
     const occupancy = await ctx.db
@@ -319,22 +392,41 @@ export const availableSeats = query({
       ? occupancy.filter((o) => o.serviceClass === args.serviceClass)
       : occupancy
 
+    const coaches = await ctx.db
+      .query("coaches")
+      .withIndex("by_train", (q) => q.eq("trainId", trip.trainId))
+      .collect()
+    const coachById = new Map(coaches.map((coach) => [coach._id, coach]))
     const seats = []
     for (const row of filtered) {
-      const taken = row.soldMask | row.heldMask | row.blockedMask
       const seat = await ctx.db.get(row.seatId)
       if (!seat) continue
+      const coach = coachById.get(row.coachId)
+      if (!coach) continue
+      const isBlocked = !isRangeFree(row.blockedMask, request)
+      const isOccupied = !isRangeFree(row.soldMask | row.heldMask, request)
       seats.push({
         seatId: row.seatId,
         coachId: row.coachId,
+        coachLabel: coach.label,
+        coachPosition: coach.position,
+        coachRowCount: coach.rowCount,
+        coachColumnCount: coach.columnCount,
         label: seat.label,
         row: seat.row,
         column: seat.column,
         serviceClass: row.serviceClass,
-        isFree: isRangeFree(taken, request),
+        isBlocked,
+        isOccupied,
+        isFree: !isBlocked && !isOccupied,
       })
     }
-    return seats.sort((a, b) => a.row - b.row || a.column - b.column)
+    return seats.sort(
+      (a, b) =>
+        a.coachPosition - b.coachPosition ||
+        a.row - b.row ||
+        a.column - b.column
+    )
   },
 })
 

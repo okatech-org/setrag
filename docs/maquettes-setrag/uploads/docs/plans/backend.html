@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETRAG — Plan backend (système unifié)</title>
+<link rel="stylesheet" href="plan.css">
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <div class="brand">SETRAG · Billettique</div>
+  <div class="sub"><a href="index.html" style="color:var(--accent)">← Vue d'ensemble</a><br>Plan backend — système unifié<br>25 juillet 2026</div>
+  <a href="#perimetre">1 · Périmètre : un système, deux lots</a>
+  <a href="#terrain">2 · Contexte gabonais</a>
+  <div class="toc-group">Architecture</div>
+  <a href="#architecture">3 · Architecture</a>
+  <a href="#identites">4 · Identités &amp; habilitations</a>
+  <a href="#risques">5 · Risques plateforme</a>
+  <div class="toc-group">Domaine</div>
+  <a href="#donnees">6 · Modèle de données</a>
+  <a href="#inventaire">7 · Inventaire par segment</a>
+  <a href="#tarification">8 · Tarification</a>
+  <a href="#ventes">9 · Canaux de vente</a>
+  <a href="#fret">10 · Bagages, colis, TAA, funéraire</a>
+  <a href="#comptabilite">11 · Comptabilité &amp; SAGE</a>
+  <a href="#billet">12 · Billet &amp; code-barres</a>
+  <a href="#controle">13 · Contrôle &amp; hors-ligne</a>
+  <a href="#paiements">14 · Paiements</a>
+  <a href="#conformite">15 · Sécurité &amp; conformité</a>
+  <div class="toc-group">Livraison</div>
+  <a href="#composants">16 · Composants Convex</a>
+  <a href="#modules">17 · Modules backend</a>
+  <a href="#roadmap">18 · Feuille de route</a>
+  <a href="#questions">19 · Points ouverts</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <h1>Plan backend — système billettique unifié</h1>
+  <p>Un seul backend Convex porte l'intégralité de la billettique SETRAG : le système central de
+  vente (remplaçant de MOBIPASS — CDC « Projet billettique », juillet 2025) et les applications
+  front-office qu'il alimente (CDC « Vente en ligne &amp; Application contrôleur »). Ce document est
+  la spécification d'implémentation : il décrit ce qui sera construit, pas l'adaptation d'un
+  existant.</p>
+  <div class="hero-meta">
+    <span class="chip">Convex (région US)</span>
+    <span class="chip">Bun monorepo</span>
+    <span class="chip">4 applications clientes</span>
+    <a class="chip" href="billetterie-web.html">→ billetterie-web</a>
+    <a class="chip" href="agent-web.html">→ agent-web</a>
+    <a class="chip" href="voyageur-mobile.html">→ voyageur-mobile</a>
+    <a class="chip" href="controleur-mobile.html">→ controleur-mobile</a>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<section id="perimetre">
+  <h2><span class="num">1</span>Périmètre : un système, deux lots</h2>
+  <p class="lede">Les deux cahiers des charges décrivent les deux moitiés d'un même système. Le
+  CDC « Projet billettique » construit le système central (produits, tarifs, inventaire, caisse,
+  comptabilité) et exige une API pour alimenter le front-office ; le CDC « Front-Office » construit
+  la vente en ligne et l'application contrôleur qui consomment cette API. Décision : <b>un seul
+  système</b>. La frontière entre les deux lots devient une frontière interne — exposée malgré
+  tout comme une véritable API HTTP documentée, parce que c'est un livrable contractuel du lot
+  back-office et la porte d'entrée de futurs tiers (COLIRAIL, partenaires).</p>
+
+  <div class="table-scroll"><table>
+    <tr><th style="width:110px">Lot</th><th>Contenu</th><th style="width:250px">Applications</th></tr>
+    <tr>
+      <td><b>Système central</b><br><span class="badge new">CDC billettique</span></td>
+      <td>Cinq produits voyageurs (billets, bagages, colis express, transport auto accompagné,
+      transport funéraire), 22 gares équipées + agences accréditées avec quotas, livrets horaires
+      et tarifs à cycle de validation, inventaire de places par segment, caisse et journée
+      comptable, déversement SAGE X3, vente manuelle en mode dégradé, reporting/KPI, yield
+      management (tarification dynamique + quotas de classes tarifaires).</td>
+      <td><code>agent-web</code> — portail de vente (guichet) + portail de gestion</td>
+    </tr>
+    <tr>
+      <td><b>Front-office</b><br><span class="badge new">CDC front</span></td>
+      <td>Vente en ligne de billets (web + mobile), paiement mobile money / carte, billet
+      électronique à code-barres signé, espace client ; application contrôleur : scan hors-ligne,
+      vente à bord, procès-verbaux, incidents.</td>
+      <td><code>billetterie-web</code> · <code>voyageur-mobile</code> ·
+      <code>controleur-mobile</code></td>
+    </tr>
+  </table></div>
+
+  <div class="callout">
+    <b>Pourquoi un seul système — les trois raisons qui tranchent</b>
+    <ul>
+      <li><b>L'inventaire de places est indivisible.</b> Une place libérée à Booué doit être
+      revendable vers Franceville, en même temps depuis 27 guichets, des agences sous quota, la
+      vente en ligne et le train lui-même. Réparti sur deux systèmes, ce stock devient un verrou
+      distribué au-dessus d'un réseau instable — la définition même du risque de survente.</li>
+      <li><b>Le journal comptable est unique.</b> Toutes les ventes, tous canaux, se déversent
+      dans SAGE X3 après chaque journée comptable. Deux systèmes = une réconciliation permanente,
+      donc des écarts permanents.</li>
+      <li><b>Le moteur tarifaire est unique.</b> Barème kilométrique, réductions, yield et quotas
+      de classes tarifaires s'appliquent à tous les canaux — un prix ne peut pas dépendre du
+      logiciel qui l'affiche.</li>
+    </ul>
+  </div>
+
+  <h3>Exigences chiffrées à tenir (fusion des deux CDC)</h3>
+  <div class="table-scroll"><table>
+    <tr><th>Exigence</th><th style="width:200px">Source</th></tr>
+    <tr><td>Émission d'un billet guichet &lt; 4 s · connexion SSO &lt; 2 s · disponibilité ≥ 99,9 %</td><td>CDC billettique §9.2.2</td></tr>
+    <tr><td>Achat en ligne complet &lt; 5 min · temps de réponse &lt; 2 s</td><td>CDC front §5</td></tr>
+    <tr><td>Aucun doublon de titre — identification unique et enregistrement automatique de chaque billet, duplicata tracés</td><td>CDC billettique §7.1.1</td></tr>
+    <tr><td>Traçabilité complète : de la taxation au règlement, y compris blocage/déblocage de places</td><td>CDC billettique §7.7</td></tr>
+    <tr><td>Mise en exploitation du système central en 6 mois</td><td>CDC billettique §9.5.3</td></tr>
+    <tr><td>Volumétrie de référence : ~285 000 voyageurs/an, ~409 000 bagages/an, 8 trains/semaine</td><td>CDC billettique annexe 1</td></tr>
+  </table></div>
+  <p>La volumétrie est modeste en moyenne mais concentrée : 8 trains par semaine pour 285 000
+  voyageurs par an, c'est environ <b>700 voyageurs par départ</b> — la charge se masse sur
+  quelques dessertes et quelques heures de vente. C'est le profil exact qui justifie le travail
+  sur la contention d'inventaire (<a href="#inventaire">section 7</a>).</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="terrain">
+  <h2><span class="num">2</span>Contexte gabonais &amp; contraintes de terrain</h2>
+  <p class="lede">Ces constats justifient directement des choix d'architecture. La ligne fait
+  648 km d'Owendo à Franceville, à travers la forêt équatoriale, avec 22 gares équipées.</p>
+
+  <div class="table-scroll"><table>
+    <tr><th style="width:200px">Constat</th><th>Détail</th><th style="width:250px">Conséquence</th></tr>
+    <tr><td><b>Mobile money dominant</b></td>
+      <td>4,7 M de comptes au Gabon (T2 2025), 4 087 Mds FCFA de transactions en 2024 ; la
+      bancarisation classique est nettement plus faible.</td>
+      <td>Le mobile money est le moyen de paiement principal ; la carte est le cas secondaire ;
+      les espèces au guichet restent un canal à part entière.</td></tr>
+    <tr><td><b>Téléphone &gt; e-mail</b></td>
+      <td>Le numéro de téléphone est l'identifiant de fait du grand public. Le CDC billettique
+      impose d'ailleurs le contact téléphonique sur le billet, et un contact d'urgence.</td>
+      <td>OTP par SMS comme parcours d'authentification client par défaut ; billet délivrable
+      par SMS, pas seulement en PDF par e-mail.</td></tr>
+    <tr><td><b>Réseau discontinu le long de la voie</b></td>
+      <td>Couverture correcte aux gares principales, zones blanches probables entre gares en
+      forêt — aucune carte publique précise, à relever sur le terrain.</td>
+      <td>Hors-ligne = mode nominal de l'app contrôleur ; billets consultables sans réseau ;
+      guichets tolérants aux coupures ; le CDC billettique exige lui-même l'adaptation aux
+      « zones hors ligne ».</td></tr>
+    <tr><td><b>Données mobiles chères</b></td>
+      <td>Le Gabon reste parmi les pays africains où le Go coûte cher (les sources divergent sur
+      le montant, pas sur le rang relatif).</td>
+      <td>Payloads compacts, temps réel par WebSocket plutôt que polling, bundles légers.</td></tr>
+    <tr><td><b>Électricité instable</b></td>
+      <td>Délestages fréquents dans le Grand Libreville (~250 MW d'offre pour ~350 MW de
+      demande).</td>
+      <td>Aucune vente en cours ne doit se perdre sur coupure : état local persistant côté
+      guichet, reprise automatique, mode dégradé papier spécifié (<a href="#ventes">section 9</a>).</td></tr>
+    <tr><td><b>Hébergement US</b></td>
+      <td>Décision actée : déploiement Convex en région US. Latence structurellement plus élevée
+      depuis Libreville que vers l'Europe (câbles SAT-3/ACE atterrissant en France).</td>
+      <td>Compensation par conception : cache client, échanges frugaux, hors-ligne. Dossier de
+      transfert international monté sur les garanties contractuelles (<a href="#conformite">section 15</a>).</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="architecture">
+  <h2><span class="num">3</span>Architecture</h2>
+  <p class="lede">Convex est le système central : source de vérité de l'inventaire, moteur
+  tarifaire, journal comptable, temps réel vers les quatre applications. Les systèmes externes
+  sont atteints par des actions et des webhooks, derrière des interfaces internes.</p>
+
+  <pre class="mermaid">
+flowchart LR
+  subgraph Fronts["Applications (monorepo)"]
+    AW["agent-web<br/>guichet + gestion"]
+    BW["billetterie-web<br/>vente en ligne"]
+    VM["voyageur-mobile"]
+    CM["controleur-mobile<br/>offline-first"]
+  end
+
+  subgraph CONVEX["packages/backend — Convex (US)"]
+    Q["Queries / Mutations réactives"]
+    ACT["Actions (intégrations)"]
+    HTTP["API HTTP publique<br/>+ webhooks"]
+    CRON["Crons & workflows durables"]
+    DB[("Modèle de données<br/>unifié")]
+    Q --- DB
+    ACT --- DB
+    CRON --- DB
+    HTTP --- Q
+  end
+
+  subgraph Externes
+    AD["Identité ERAMET<br/>(Entra ID / AD, OIDC)"]:::gate
+    PAY["Agrégateur paiement<br/>(partenaire à choisir)"]:::gate
+    SAGE["SAGE X3 V12<br/>(comptabilité)"]
+    COLI["COLIRAIL<br/>(suivi colis)"]:::gate
+    MAIL["Resend (e-mail)"]
+    SMS["Passerelle SMS"]
+    PUSH["Expo Push"]
+  end
+
+  AW & BW & VM -->|WebSocket temps réel| Q
+  CM -->|sync par lots idempotents| Q
+  AW -->|SSO OIDC| AD
+  ACT --> MAIL & SMS & PUSH
+  ACT -->|journal V65| SAGE
+  ACT <-->|statuts colis| COLI
+  ACT <-->|PaymentProvider| PAY
+  PAY -->|webhooks signés| HTTP
+
+  classDef gate fill:#fdf3e3,stroke:#9a5b00,color:#7a4600;
+  </pre>
+
+  <h3>Principes structurants</h3>
+  <ul>
+    <li><b>Une seule source de vérité.</b> Inventaire, tarifs, ventes et journée comptable vivent
+    dans Convex. Il n'y a plus de « back-office distant » à synchroniser : la couche
+    d'anti-corruption prévue quand le back-office était un tiers disparaît du chemin critique.</li>
+    <li><b>La logique métier vit hors des fonctions Convex.</b> Modules TypeScript purs dans
+    <code>convex/model/</code> (tarification, inventaire, caisse, validation de titre), appelés
+    par de fines fonctions <code>query</code>/<code>mutation</code>. C'est la bonne pratique
+    recommandée par Convex, et la police d'assurance de réversibilité exigée par le CDC.</li>
+    <li><b>Aucune vente hors transaction.</b> Lecture et écriture de l'inventaire dans la même
+    mutation, quel que soit le canal (guichet, ligne, agence, bord).</li>
+    <li><b>L'API front-office est un produit.</b> Routes HTTP versionnées et documentées
+    (places disponibles, création de réservation, validité d'un titre) — livrable contractuel du
+    lot back-office, même si nos propres fronts passent par les fonctions Convex natives.</li>
+    <li><b>Toute écriture sortante passe par une file.</b> Déversements SAGE, statuts COLIRAIL,
+    notifications : table <code>outboxEvents</code> + relances par composant, rien ne se perd si
+    un système tiers est indisponible.</li>
+    <li><b>Le titre de transport se vérifie sans réseau.</b> Code-barres signé Ed25519, clé
+    publique embarquée côté contrôleur.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="identites">
+  <h2><span class="num">4</span>Identités &amp; habilitations</h2>
+  <p class="lede">Deux populations, deux systèmes d'identité — c'est une exigence du CDC
+  billettique, pas un choix de confort.</p>
+
+  <div class="table-scroll"><table>
+    <tr><th style="width:190px">Population</th><th>Authentification</th><th>Exigences</th></tr>
+    <tr>
+      <td><b>Personnel interne</b><br>gestionnaires clientèle, taxateurs, contrôleurs de recettes,
+      comptables, superviseurs, admins, contrôleurs de train</td>
+      <td><b>SSO sur l'annuaire ERAMET</b> (Entra ID / Active Directory) en OIDC, via le plugin
+      SSO de Better Auth ou une intégration OIDC directe. MFA porté par le fournisseur
+      d'identité.</td>
+      <td>Rôles dérivés des groupes AD · <b>déprovisionnement automatique</b> : un compte
+      désactivé dans l'AD perd l'accès (revalidation du jeton à chaque session, sessions courtes)
+      · accès admin via bastion · journalisation SIEM.</td>
+    </tr>
+    <tr>
+      <td><b>Clients</b><br>voyageurs, expéditeurs de colis, clients en compte</td>
+      <td><b>OTP par téléphone</b> (canal principal) ou e-mail, via Better Auth
+      (<code>phoneNumber</code> / <code>emailOTP</code>). Compte optionnel pour l'achat simple.</td>
+      <td>Limitation de débit par numéro et par IP · consentements versionnés · sessions longues
+      (7-30 j) côté voyageur.</td>
+    </tr>
+  </table></div>
+
+  <div class="callout warn">
+    <b>Dépendance à instruire tôt : l'app registration ERAMET</b>
+    Le SSO exige un enregistrement d'application auprès de la DSI ERAMET (client OIDC, URIs de
+    redirection, mapping des groupes). C'est une démarche administrative chez un grand groupe —
+    délai typique de plusieurs semaines. À lancer dès la phase 0. En attendant, les rôles internes
+    fonctionnent sur des comptes provisionnés manuellement, bascule SSO ensuite sans toucher au
+    modèle de rôles.
+  </div>
+
+  <h3>Rôles applicatifs</h3>
+  <p>Matrice RBAC à droits fins (consultation / modification / suppression / validation, exigée
+  par le CDC §9.1.2), portée par <code>convex/lib/auth.ts</code> :</p>
+  <p style="font-family:var(--mono);font-size:12.5px;color:var(--ink-muted)">
+    voyageur · vendeur_guichet · vendeur_agence · taxateur · controleur_train ·
+    controleur_recettes · chef_gare · comptable · responsable_kpi · admin_fonctionnel ·
+    admin_it
+  </p>
+  <p>Chaque rôle interne est rattaché à un ou plusieurs <b>points de vente</b> ; toutes les
+  opérations sensibles passent par <code>audit()</code> avec l'appareil émetteur — champ exigé
+  sur chaque vente par le CDC.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="risques">
+  <h2><span class="num">5</span>Risques plateforme à documenter</h2>
+  <div class="table-scroll"><table>
+    <tr><th style="width:200px">Risque</th><th>Constat</th><th style="width:280px">Atténuation</th></tr>
+    <tr>
+      <td><b>SLA 99,9 % contractuel vs disponibilité mesurée de Convex</b></td>
+      <td>Le CDC exige ≥ 99,9 %. Convex annonce 99,99 % (99,95 % contractuel Enterprise), mais des
+      mesures tierces relèvent 99,2–99,7 % sur certaines fenêtres. SOC 2 Type II revendiqué,
+      pas de preuve d'ISO 27001.</td>
+      <td>Contractualiser en plan Enterprise avec SLA écrit ; remplir les questionnaires ERAMET
+      (PRA, fournisseur SaaS) avec Convex en sous-traitant ; surtout, concevoir pour que
+      l'indisponibilité du cloud ne bloque ni le contrôle à bord (hors-ligne), ni la vente
+      (mode dégradé papier §9), ni la consultation des billets (cache local).</td>
+    </tr>
+    <tr>
+      <td><b>Réversibilité exigée par le CDC</b></td>
+      <td>Restitution de l'intégralité des données en format ouvert (CSV, JSON, XML), assistance
+      de migration 3 mois, attestation d'effacement.</td>
+      <td>Logique métier en TypeScript pur hors du runtime Convex ; export périodique automatisé
+      (snapshot + streaming) vers un format documenté ; le schéma de données du présent document
+      fait partie de la documentation contractuelle.</td>
+    </tr>
+    <tr>
+      <td><b>Better Auth sur Convex en « early alpha »</b></td>
+      <td>Composant <code>@convex-dev/better-auth</code> en 0.12.x, ruptures fréquentes ;
+      SSO OIDC et OTP à faire coexister.</td>
+      <td>Version figée, montée volontaire avec guide de migration ; accès encapsulé derrière
+      <code>convex/lib/auth.ts</code> ; prototypes SSO et OTP dès la phase 0-1.</td>
+    </tr>
+    <tr>
+      <td><b>Limites d'exécution Convex</b></td>
+      <td>1 s par query/mutation · 32 000 documents lus / 16 000 écrits par transaction ·
+      document ≤ 1 Mio.</td>
+      <td>Manifestes, exports comptables, rapports et purges systématiquement paginés ou traités
+      par lots planifiés (<code>@convex-dev/migrations</code>, workflows durables). Aucun état
+      global chaud sur un document unique (<a href="#inventaire">section 7</a>).</td>
+    </tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="donnees">
+  <h2><span class="num">6</span>Modèle de données</h2>
+  <p class="lede">Le modèle couvre neuf domaines. Les cartes détaillent les tables structurantes ;
+  les champs fiscaux (HT, TVA, CSS, TTC) et de traçabilité (vendeur, point de vente, appareil
+  émetteur, journée comptable) sont portés par toutes les ventes, tous produits confondus.</p>
+
+  <pre class="mermaid">
+flowchart TB
+  subgraph Referentiel["Réseau & matériel"]
+    stations --> segments
+    trains --> coaches
+    coaches --> seats
+  end
+  subgraph Offre["Offre & horaires"]
+    timetableBooklets --> trips
+    trains --> trips
+    trips --> tripStops
+  end
+  subgraph Tarifs["Tarification"]
+    fareSchedules --> fareBases
+    discounts
+    fareClassQuotas --> trips
+    pricingRules
+  end
+  subgraph Inv["Inventaire"]
+    trips --> seatOccupancy
+    seats --> seatOccupancy
+    trips --> segmentCounters
+    agencyQuotas --> trips
+    seatBlocks --> seats
+  end
+  subgraph Vente["Ventes multi-produits"]
+    sales --> tickets
+    sales --> baggages
+    sales --> parcels
+    sales --> vehicleTransports
+    sales --> funeralTransports
+    sales --> payments
+    pointsOfSale --> sales
+    corporateAccounts --> sales
+    cashSessions --> sales
+  end
+  subgraph Compta["Comptabilité"]
+    accountingDays --> sales
+    journalEntries --> accountingDays
+  end
+  subgraph Terrain["Contrôle & terrain"]
+    tickets --> ticketScans
+    ticketScans --> procesVerbaux
+    incidents
+    manualTickets
+  end
+  subgraph Conf["Interop & conformité"]
+    outboxEvents
+    consents
+    auditLogs
+    notifications
+  end
+  </pre>
+
+  <div class="entity-grid">
+    <div class="domain-title">Réseau &amp; matériel roulant</div>
+    <div class="entity">
+      <div class="ename">stations</div>
+      <div class="fields">code · nom · province · <b>pk</b> (point kilométrique)<br>
+      équipée (bool) · guichets {voyageurs, bagages, colis} · isActive</div>
+      <div class="rel">22 gares équipées + agence commerciale, chargées depuis le référentiel réel
+      SETRAG (annexe CDC). Le PK sert au calcul kilométrique des tarifs.</div>
+    </div>
+    <div class="entity">
+      <div class="ename">trains · coaches · seats</div>
+      <div class="fields">trains: numéro · nom · type (<b>EXPRESS | OMNIBUS | SPECIAL</b>)<br>
+      coaches: trainId · classe (2e | 1re | VIP) · numéroSérie ·<br>
+      &nbsp;&nbsp;placesDebout · rangées × colonnes<br>
+      seats: coachId · numéro · position</div>
+      <div class="rel">Le plan de voiture est importé (rangées, colonnes, places assises) ; les
+      places debout sont un contingent sans siège. Composition d'un train = liste de voitures.</div>
+    </div>
+
+    <div class="domain-title">Offre &amp; horaires</div>
+    <div class="entity">
+      <div class="ename">timetableBooklets (livrets horaires)</div>
+      <div class="fields">description · validFrom/To ·<br>
+      status (<b>brouillon | valide | rejete | actif | expire</b>)<br>
+      approvedBy · itinéraires sommaire/détaillé</div>
+      <div class="rel">Cycle de validation exigé par le CDC ; import en masse des trains ; un
+      changement de livret déclenche la conversion des billets déjà vendus (report de voyage
+      sans pénalité).</div>
+    </div>
+    <div class="entity">
+      <div class="ename">trips (dessertes)</div>
+      <div class="fields">bookletId · trainId · date · departureAt · arrivalAt<br>
+      status (planifie | a_lheure | retarde | annule | termine)<br>
+      delayMinutes · tripStops[] (séquence, PK, horaires)</div>
+      <div class="rel">Générées depuis le livret horaire actif. La fenêtre de mise en vente est
+      paramétrable (1 mois aujourd'hui, extensible à 3 — débat ouvert au CDC).</div>
+    </div>
+
+    <div class="domain-title">Ventes — socle commun</div>
+    <div class="entity">
+      <div class="ename">sales (ventes)</div>
+      <div class="fields">numéro unique · type (billet | bagage | colis | taa | funeraire)<br>
+      canal (<b>guichet | ligne | agence | bord | manuel</b>)<br>
+      pointOfSaleId · vendeurId · <b>appareilEmetteur</b><br>
+      clientId? · corporateAccountId? (en compte / comptant)<br>
+      montants {HT, TVA, CSS, TTC, perçu, àPayer}<br>
+      état (vente | <b>annulation</b> | <b>remboursement</b>)<br>
+      accountingDayId · cashSessionId? · dateVente</div>
+      <div class="rel">Enveloppe commune de toute opération commerciale — c'est elle qui alimente
+      les états de caisse, les rapports et le journal comptable. Les annulations et remboursements
+      sont des écritures liées, jamais des suppressions : le CDC liste explicitement leur
+      indétectabilité actuelle comme faille de fraude.</div>
+    </div>
+    <div class="entity">
+      <div class="ename">tickets (billets)</div>
+      <div class="fields">saleId · numéro unique · voyageur {nom, prénom, <b>sexe</b>,<br>
+      &nbsp;&nbsp;téléphone, <b>téléphoneUrgence</b>, nationalité?}<br>
+      gareDépart/Arrivée · distanceKm · classe · codeTarifaire<br>
+      tripId · seatId? (ou debout) · tauxRéduction<br>
+      status (valide | utilise | annule | rembourse | expire | <b>duplicata</b>)<br>
+      barcodePayload · barcodeSignature · keyVersion · pdfStorageId?</div>
+      <div class="rel">Tous les champs minimaux du CDC §7.1.1. La réimpression produit un
+      <b>duplicata tracé</b> — jamais un second original.</div>
+    </div>
+
+    <div class="domain-title">Points de vente &amp; agences</div>
+    <div class="entity">
+      <div class="ename">pointsOfSale · agencyQuotas</div>
+      <div class="fields">pointsOfSale: code · nom · type (<b>gare | agence_accreditee |<br>
+      &nbsp;&nbsp;agence_premium</b>) · stationId? · isActive<br>
+      agencyQuotas: agencyId · tripId · classe · placesAllouées ·<br>
+      &nbsp;&nbsp;placesVendues · status (active | annulee)</div>
+      <div class="rel">Affectation de places par date de départ / type / numéro de train,
+      annulation d'affectation tracée. Les agences règlent 10 % de royalties — leur maintien dans
+      le périmètre est un point ouvert du CDC lui-même (§19).</div>
+    </div>
+
+    <div class="domain-title">Comptabilité</div>
+    <div class="entity">
+      <div class="ename">accountingDays · cashSessions · journalEntries</div>
+      <div class="fields">accountingDays: date · status (ouverte | <b>clôturée</b>) · totaux<br>
+      cashSessions: vendeurId · pointOfSaleId · ouverture/clôture ·<br>
+      &nbsp;&nbsp;fondDeCaisse · totalPerçu par mode de paiement · écart<br>
+      journalEntries: format V65 {code journal, pièce, site financier,<br>
+      &nbsp;&nbsp;compte analytique, HT, TVA, CSS, TTC, centre de coût}</div>
+      <div class="rel">La clôture de journée génère les écritures V65 et les pousse vers SAGE X3
+      via l'outbox — détail en <a href="#comptabilite">section 11</a>.</div>
+    </div>
+
+    <div class="domain-title">Contrôle &amp; terrain</div>
+    <div class="entity">
+      <div class="ename">ticketScans · procesVerbaux · incidents · manualTickets</div>
+      <div class="fields">ticketScans: ticketId · tripId · agentId · résultat · offline ·<br>
+      &nbsp;&nbsp;clientScanId · conflict?<br>
+      procesVerbaux: numéro · motif · montant · status · paymentId?<br>
+      incidents: catégorie · gravité · photos? · status<br>
+      manualTickets: numéroPréImprimé · numéroSystème · saisiPar</div>
+      <div class="rel">Les billets manuels du mode dégradé sont ressaisis avec leur numéro
+      pré-imprimé, doublé de la numérotation système — continuité de la séquence garantie
+      (exigence CDC §7.10).</div>
+    </div>
+
+    <div class="domain-title">Paiement · conformité · interop</div>
+    <div class="entity">
+      <div class="ename">payments · paymentEvents · consents · outboxEvents</div>
+      <div class="fields">payments: saleId? · pvId? · méthode (airtel | moov | clickpay |<br>
+      &nbsp;&nbsp;visa | mastercard | especes | en_compte) · status · expiresAt<br>
+      paymentEvents: journal brut idempotent des webhooks/polls<br>
+      consents: type · version · grantedAt · channel<br>
+      outboxEvents: type (sage | colirail | notification) · statut · tentatives</div>
+      <div class="rel">Machine à états de paiement détaillée en <a href="#paiements">section 14</a> ;
+      « espèces » et « en compte » sont des modes à part entière, pas des cas particuliers.</div>
+    </div>
+  </div>
+  <p>S'ajoutent les tables déjà décrites dans les sections dédiées : <code>seatOccupancy</code>,
+  <code>segmentCounters</code>, <code>seatBlocks</code> (<a href="#inventaire">§7</a>),
+  <code>fareSchedules</code>, <code>fareBases</code>, <code>discounts</code>,
+  <code>subscriptionCards</code>, <code>fareClassQuotas</code>, <code>pricingRules</code>
+  (<a href="#tarification">§8</a>), <code>baggages</code>, <code>parcels</code>,
+  <code>vehicleTransports</code>, <code>funeralTransports</code> (<a href="#fret">§10</a>),
+  <code>users</code>, <code>auditLogs</code>, <code>notifications</code>, <code>pushTokens</code>.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="inventaire">
+  <h2><span class="num">7</span>Inventaire de places par segment</h2>
+  <p class="lede">Le CDC l'exige noir sur blanc : « cas d'un passager qui achète un billet
+  Owendo–Booué — on doit pouvoir vendre la place libérée » (vers Franceville). L'inventaire n'est
+  donc pas un compteur par desserte : c'est une occupation <b>par siège et par segment</b>.</p>
+
+  <h3>Modèle : un masque de bits par siège</h3>
+  <p>Une desserte traverse au plus une vingtaine de segments inter-gares (23 gares → 22 segments).
+  Chaque couple (desserte, siège) porte un document <code>seatOccupancy</code> avec un
+  <b>masque de bits</b> : le bit <i>i</i> vaut 1 si le siège est occupé sur le segment <i>i</i>.
+  Un billet Owendo→Booué positionne les bits 0 à 12 ; le siège reste vendable de Booué à
+  Franceville (bits 13 à 21 libres). Réserver = vérifier <code>masque &amp; demande == 0</code>
+  puis écrire <code>masque | demande</code> — dans la même mutation, l'atomicité de Convex fait
+  le reste.</p>
+
+  <pre class="mermaid">
+flowchart LR
+  subgraph S["Siège 12C — desserte du 14/08"]
+    direction LR
+    A["OWE→NDJ<br/>occupé (billet A)"]:::occ --> B["NDJ→BOO<br/>occupé (billet A)"]:::occ --> C["BOO→MOA<br/>libre"]:::free --> D["MOA→FCV<br/>libre"]:::free
+  end
+  E["Nouveau billet<br/>Booué→Franceville"] -->|"masque compatible<br/>→ même siège revendu"| C
+  classDef occ fill:#fceeed,stroke:#b3261e,color:#7a1c17;
+  classDef free fill:#e7f2ee,stroke:#0f6b4f,color:#0a4a37;
+  </pre>
+
+  <h3>Trois niveaux, trois usages</h3>
+  <div class="table-scroll"><table>
+    <tr><th style="width:220px">Table</th><th>Rôle</th><th style="width:230px">Propriété</th></tr>
+    <tr><td><code>seatOccupancy</code><br>(desserte × siège)</td>
+      <td>Vérité transactionnelle de l'attribution : réservation, hold 15 min, libération,
+      attribution du numéro de place.</td>
+      <td>Exacte — c'est elle qui empêche la survente</td></tr>
+    <tr><td><code>segmentCounters</code><br>(desserte × classe × segment)</td>
+      <td>Compteurs dénormalisés de disponibilité, mis à jour dans la même transaction que
+      l'occupation. La recherche lit min(segments couverts) sans toucher aux sièges — une page de
+      résultats reste sous la limite d'une seconde.</td>
+      <td>Exacte, écriture répartie sur ~66 documents par desserte (pas de document chaud unique)</td></tr>
+    <tr><td><code>seatBlocks</code></td>
+      <td>Blocage / déblocage manuel de places (maintenance, réservation opérationnelle), avec le
+      rapport de traçabilité exigé par le CDC : qui, quand, quelle place, quelle action.</td>
+      <td>Auditée systématiquement</td></tr>
+  </table></div>
+
+  <ul>
+    <li><b>Places debout</b> : contingent par voiture sans numéro de siège — un simple compteur
+    par (desserte, voiture), même discipline transactionnelle.</li>
+    <li><b>Quotas d'agences</b> : l'allocation à une agence réserve des places sur
+    <code>segmentCounters</code> dans un sous-compteur dédié ; la vente d'agence consomme son
+    quota, l'annulation d'affectation le restitue au stock général — tracée.</li>
+    <li><b>Quotas tarifaires (yield)</b> : les classes tarifaires (<a href="#tarification">§8</a>)
+    consomment le même stock physique — un contingent « bas prix » épuisé ne libère pas de siège,
+    il change le prix du suivant.</li>
+    <li><b>Hold de 15 minutes</b> : la vente en ligne pose une occupation temporaire expirée par
+    cron ; le guichet vend ferme, sans hold.</li>
+    <li><b>Contention</b> : ~700 voyageurs sur un départ populaire, ventes étalées sur des
+    semaines — avec l'écriture répartie par siège et par segment, aucun point chaud n'est attendu.
+    Un test de charge en phase 1 le confirme ; le découpage supplémentaire en tranches reste
+    l'option de secours documentée.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="tarification">
+  <h2><span class="num">8</span>Tarification</h2>
+  <p class="lede">Deux étages : le <b>barème</b> (la grille officielle kilométrique, avec cycle de
+  validation) et le <b>yield management</b> (l'optimisation par la demande, spécifiée par le CDC).
+  Le prix d'un titre = barème → réductions → yield → arrondi réglementaire → taxes.</p>
+
+  <h3>Étage 1 — le barème kilométrique</h3>
+  <div class="table-scroll"><table>
+    <tr><th style="width:230px">Élément</th><th>Règle (annexe 2 du CDC)</th></tr>
+    <tr><td><code>fareBases</code></td>
+      <td>Prix de base au kilomètre par <b>type de train</b> (Omnibus, Express, Autorail) ×
+      <b>classe</b> × <b>palier de distance</b> (0–99 km / 100 km et plus). Exemple : Express VIP
+      72,38 F/km sous 100 km, 62,16 au-delà. Distance = |PK arrivée − PK départ|.</td></tr>
+    <tr><td>Arrondis réglementaires</td>
+      <td>Aux 10 F près (0–99 km), aux 50 F près (100–299 km), aux 100 F près (300 km et plus).</td></tr>
+    <tr><td><code>discounts</code></td>
+      <td>Enfant 4-11 ans : −50 % · groupes : −30 % (10-49 pers.), −45 % (50+) · militaires avec
+      ordre de mission : −10 % · tarifs en projet à paramètres ouverts : week-end (X %), étudiant
+      (Y %), 3e âge (Z %), promotionnel (M %).</td></tr>
+    <tr><td><code>subscriptionCards</code></td>
+      <td>Cartes d'abonnement : prix = billet simple × coefficient de la table officielle par
+      tranche de distance (40 tranches, de ×300 à ×46) ; déclinaisons 6 mois (−40 %), 3 mois
+      (−60 %), demi-tarif (−2/3). Contrôlées à bord comme les billets.</td></tr>
+    <tr><td>Affrètements</td>
+      <td>Simple (voitures dans un train régulier, tarif groupe) et spécial (train complet, barème
+      annexe) — traités comme des ventes hors inventaire standard, phase tardive.</td></tr>
+    <tr><td>Taxes</td>
+      <td>TVA et CSS paramétrables, calculées et stockées sur chaque vente (HT / TVA / CSS / TTC) —
+      le journal comptable les ventile.</td></tr>
+    <tr><td>Cycle de vie</td>
+      <td>Tout tarif et tout livret horaire passe par <b>brouillon → validé/rejeté → actif →
+      expiré</b>, avec import/export en masse et notification d'expiration — exigence explicite
+      du CDC.</td></tr>
+  </table></div>
+
+  <h3>Étage 2 — le yield management</h3>
+  <p>Spécifié au complet, conformément au CDC (l'exemple qu'il donne : un billet à 20 000 XAF un
+  mois avant, 100 000 la veille). Les paramètres — paliers, amplitudes, contingents — relèvent de
+  SETRAG ; le back-office les pilote et les simule avant activation.</p>
+  <div class="table-scroll"><table>
+    <tr><th style="width:230px">Mécanisme</th><th>Fonctionnement</th></tr>
+    <tr><td><b>Quotas de classes tarifaires</b><br><code>fareClassQuotas</code></td>
+      <td>Chaque desserte est découpée en contingents : bas prix (limité), standard, flexible.
+      Quand un contingent est épuisé, le suivant prend le relais — le prix monte par paliers avec
+      le remplissage, mécaniquement et sans recalcul. C'est le cœur du yield ferroviaire, et il
+      est couplé à l'inventaire (<a href="#inventaire">§7</a>).</td></tr>
+    <tr><td><b>Modulation continue</b><br><code>pricingRules</code></td>
+      <td>Règles par priorité : anticipation (date de réservation), période (week-end, vacances,
+      jours fériés, événements), taux de remplissage, canal. Cumul borné par un
+      <b>plancher/plafond par desserte</b> — sécurité d'implémentation contre l'empilement
+      aberrant.</td></tr>
+    <tr><td><b>Ajustement temps réel</b></td>
+      <td>Réservations et annulations mettent à jour remplissage et contingents dans la
+      transaction de vente ; le prix affiché suit par réactivité Convex, sans job de recalcul.</td></tr>
+    <tr><td><b>Prévision &amp; segmentation</b></td>
+      <td>Tableaux de bord analytiques (flux par trajet, pointes, événements) et profils
+      loisirs/professionnels — alimentés par <code>@convex-dev/aggregate</code>, phase tardive,
+      sans impact sur le moteur de prix.</td></tr>
+    <tr><td><b>KPI</b></td>
+      <td>Taux de remplissage, recette moyenne par siège, revenu par trajet — exigés par le CDC,
+      servis par les mêmes agrégats.</td></tr>
+  </table></div>
+
+  <div class="callout">
+    <b>Garanties transverses du moteur</b>
+    Le prix est <b>figé dans la vente</b> dès la création (et pendant tout le hold en ligne) ;
+    chaque vente conserve le code tarifaire, le taux de réduction et les règles appliquées — un
+    remboursement ou une réclamation se reconstituent des mois plus tard ; toute modification de
+    barème ou de règle est auditée et historisée, jamais supprimée physiquement.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="ventes">
+  <h2><span class="num">9</span>Canaux de vente</h2>
+  <p class="lede">Cinq canaux, une seule mutation de vente au fond — <code>model/sales.ts</code> —
+  déclinée par des points d'entrée qui diffèrent par l'authentification, le paiement et le mode
+  de délivrance du titre.</p>
+
+  <div class="table-scroll"><table>
+    <tr><th style="width:150px">Canal</th><th>Spécificités</th><th style="width:230px">Application</th></tr>
+    <tr><td><b>Guichet</b></td>
+      <td>Vente ferme immédiate, tous produits, espèces / mobile money / en compte ; impression
+      billet + étiquettes ; rattachée à une session de caisse ouverte ; objectif &lt; 4 s
+      par émission.</td>
+      <td><a href="agent-web.html">agent-web</a> — portail de vente</td></tr>
+    <tr><td><b>En ligne</b></td>
+      <td>Recherche → hold 15 min → paiement électronique (ou réservation à payer au guichet
+      avant expiration paramétrable) → billet électronique. Compte client optionnel.</td>
+      <td><a href="billetterie-web.html">billetterie-web</a> · <a href="voyageur-mobile.html">voyageur-mobile</a></td></tr>
+    <tr><td><b>Agence accréditée</b></td>
+      <td>Comme le guichet, mais la vente consomme le quota alloué à l'agence ; règlement et
+      royalties (10 %) suivis par les états dédiés.</td>
+      <td>agent-web — profil <code>vendeur_agence</code></td></tr>
+    <tr><td><b>À bord</b></td>
+      <td>Vente par le contrôleur, sans hold, espèces ou mobile money ; fonctionne hors-ligne sur
+      le stock embarqué de sa desserte, synchronisation différée.</td>
+      <td><a href="controleur-mobile.html">controleur-mobile</a></td></tr>
+    <tr><td><b>Manuel (mode dégradé)</b></td>
+      <td>Billets papier pré-imprimés en cas de panne ; ressaisie a posteriori avec le numéro
+      pré-imprimé doublé du numéro système — la séquence comptable reste continue, aucun titre
+      fantôme.</td>
+      <td>agent-web — écran de ressaisie dédié</td></tr>
+  </table></div>
+
+  <p>Toutes les ventes, quel que soit le canal, portent l'état <b>vente / annulation /
+  remboursement</b> comme écritures liées et traçables, le motif de remboursement paramétré, et le
+  taux de pénalité appliqué — les trois manques de traçabilité que le CDC cite comme sources de
+  fraude du système actuel.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="fret">
+  <h2><span class="num">10</span>Bagages, colis express, TAA, transport funéraire</h2>
+  <p class="lede">Quatre produits au-delà du billet, tous vendus par les mêmes guichets, la même
+  caisse et le même journal comptable. Chacun a son identifiant physique propre (étiquette,
+  vignette, expédition).</p>
+
+  <div class="table-scroll"><table>
+    <tr><th style="width:190px">Produit</th><th>Modèle</th><th>Tarification</th></tr>
+    <tr><td><b>Bagage</b><br><code>baggages</code></td>
+      <td>Rattaché à un billet voyageur ; étiquette à numéro unique ; poids 0-30 kg ;
+      expéditeur/destinataire.</td>
+      <td>Frais d'enregistrement fixes (490 F HT ≤ 190 km, 700 F au-delà) + excédents selon
+      barème ; franchise de poids liée au code tarifaire.</td></tr>
+    <tr><td><b>Colis express</b><br><code>parcels</code> + articles</td>
+      <td>Expédition autonome (sans billet), un ou plusieurs articles portant chacun une
+      <b>vignette</b> ; contacts téléphoniques expéditeur et destinataire ; statuts de suivi
+      (enregistré, en transport, arrivé, retiré).</td>
+      <td>Grille zones (7 zones kilométriques) × paliers de poids de 10 kg ; formule spécifique
+      au-delà de 500 kg. Poids unitaire ≤ 100 kg.</td></tr>
+    <tr><td><b>Transport auto accompagné</b><br><code>vehicleTransports</code></td>
+      <td>Véhicule rattaché à un billet voyageur ; tonnage ; numéro d'expédition.</td>
+      <td>Code tarifaire dédié.</td></tr>
+    <tr><td><b>Transport funéraire</b><br><code>funeralTransports</code></td>
+      <td>Prestation autonome ; tonnage ; expéditeur.</td>
+      <td>Code tarifaire dédié.</td></tr>
+  </table></div>
+
+  <div class="callout warn">
+    <b>Interface COLIRAIL — à cadrer</b>
+    Les commentaires du CDC indiquent que la traçabilité fine des colis (notification SMS de
+    statut à l'expéditeur) sera portée par COLIRAIL, avec une interface à prévoir. Contrat
+    inconnu : on expose nos statuts d'expédition sur l'API HTTP et on prévoit un connecteur
+    sortant via l'outbox — même discipline que pour SAGE. Les SMS de statut restent faisables en
+    interne en attendant (passerelle SMS déjà prévue).
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="comptabilite">
+  <h2><span class="num">11</span>Comptabilité, caisse &amp; SAGE X3</h2>
+  <p class="lede">Le circuit de contrôle du CDC : chaque fin de journée comptable, rapprocher les
+  ventes des règlements, contrôler les caisses, puis déverser le chiffre d'affaires dans SAGE X3.</p>
+
+  <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor V as Vendeur
+  actor CR as Contrôleur de recettes
+  participant CX as Convex
+  participant SAGE as SAGE X3 V12
+
+  V->>CX: ouverture de session de caisse (fond de caisse)
+  Note over V,CX: ventes de la journée — tous produits, tous modes de paiement
+  V->>CX: clôture de session — comptage par mode de paiement
+  CX->>CX: calcul de l'écart théorique/constaté
+  CR->>CX: états de contrôle (caisse, annulations, remboursements)
+  CR->>CX: clôture de la journée comptable
+  CX->>CX: génération des écritures V65<br/>(journal, pièce, site, compte analytique, HT/TVA/CSS/TTC, centre de coût)
+  CX->>SAGE: export via outbox (format V12, relances automatiques)
+  SAGE-->>CX: accusé d'intégration → journée marquée déversée
+  </pre>
+
+  <ul>
+    <li><b>Une vente appartient à une journée comptable</b>, attribuée à l'enregistrement ; les
+    ventes postérieures à la clôture basculent sur la journée suivante. Les ventes en ligne de la
+    nuit sont rattachées automatiquement, sans caisse.</li>
+    <li><b>Les états de contrôle</b> exigés (état de caisse par prestation, liste des
+    remboursements, traçabilité des places, places vendues, liste des ventes par canal) sont des
+    requêtes paginées sur <code>sales</code> — aucun état ne scanne la base sans index.</li>
+    <li><b>Format d'échange SAGE</b> : le CDC fournit le gabarit d'état V65 ; le mode de transport
+    (dépôt de fichier, API, connecteur) est un point à confirmer avec la DSI — l'outbox rend le
+    choix indolore.</li>
+    <li><b>Clients en compte</b> : facturation différée sur compte client
+    (<code>corporateAccounts</code>), avec relevé par période — le mode de paiement
+    <code>en_compte</code> ne passe pas par la caisse espèces.</li>
+    <li><b>Proforma</b> : génération de factures proforma (manque explicite de MOBIPASS cité au
+    CDC) — document PDF non comptabilisé, converti en vente à l'encaissement.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="billet">
+  <h2><span class="num">12</span>Billet électronique &amp; code-barres signé</h2>
+  <p class="lede">Un même format de titre signé pour tous les canaux — imprimé au guichet, PDF
+  par e-mail, SMS, ou affiché dans l'app — vérifiable sans réseau par le contrôleur.</p>
+
+  <div class="card">
+    <h3 style="margin-top:0">Format : Aztec + CBOR + Ed25519</h3>
+    <ul>
+      <li><b>Aztec plutôt que QR</b> : standard de fait du ferroviaire (UIC) — pas de marge
+      blanche obligatoire, meilleure lecture en mouvement, sur écran fissuré ou papier froissé.
+      Le scan se fait dans une app dédiée, la reconnaissance grand public n'est pas un critère.</li>
+      <li><b>Charge utile</b> : CBOR → zlib → Base45, modèle du certificat COVID européen
+      simplifié pour un émetteur unique. Champs : version, version de clé (rotation), type
+      (billet | abonnement), numéro, desserte + date, classe, siège, expiration.</li>
+      <li><b>Signature Ed25519</b> (64 octets, déterministe) — clé privée en variable
+      d'environnement Convex, clé publique embarquée dans l'app contrôleur.</li>
+      <li><b>Billets papier du guichet</b> : même code-barres imprimé — c'est ce qui rend les
+      billets « facilement imitables » d'aujourd'hui infalsifiables demain, y compris pour les
+      ventes purement guichet.</li>
+      <li><b>Anti-fraude en ligne</b> : code dynamique régénéré périodiquement dans l'app
+      voyageur, blocage natif de la capture d'écran ; le PDF porte un code statique — compromis
+      assumé, identique au rail européen.</li>
+    </ul>
+  </div>
+
+  <p>Chaîne de délivrance (workflow durable, <a href="#composants">§16</a>) : confirmation du
+  paiement → activation des titres → génération du PDF (gabarit Cadence) → e-mail Resend et/ou
+  SMS avec lien court → notification push → cache local dans l'app voyageur pour consultation
+  hors réseau.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="controle">
+  <h2><span class="num">13</span>Contrôle à bord &amp; mode hors-ligne</h2>
+  <p class="lede">Convex n'a pas de mode hors-ligne persistant (sa file de mutations ne survit pas
+  à la fermeture de l'app) ; la couche hors-ligne du contrôleur est donc construite, pas
+  configurée. Détail applicatif dans le <a href="controleur-mobile.html">plan controleur-mobile</a>.</p>
+
+  <ul>
+    <li><b>Avant le départ</b> : téléchargement du manifeste de la desserte (paginé), de la clé
+    publique et du barème des amendes ; stockage SQLite chiffré (SQLCipher).</li>
+    <li><b>À bord</b> : vérification Ed25519 locale (via <code>react-native-quick-crypto</code>),
+    contrôle desserte/segment/expiration, anti-repassage local ; billets <em>et</em> cartes
+    d'abonnement. Écriture métier + entrée de file d'envoi dans la même transaction SQLite,
+    idempotence par <code>clientId</code>.</li>
+    <li><b>Vente à bord et PV</b> : créés hors-ligne, encaissés en espèces ou mobile money
+    (à la reconnexion pour ce dernier).</li>
+    <li><b>Au retour du réseau</b> : <code>scans.syncBatch</code> / <code>pv.syncBatch</code> /
+    <code>incidents.syncBatch</code> — déduplication par <code>clientId</code>, conflits (billet
+    validé sur deux terminaux) signalés pour arbitrage humain, jamais bloqués silencieusement.</li>
+    <li><b>Fin de tournée</b> : purge des données locales après synchronisation confirmée —
+    minimisation des données personnelles sur le terrain.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="paiements">
+  <h2><span class="num">14</span>Paiements</h2>
+  <p class="lede">Le partenaire d'agrégation n'est pas choisi ; l'intégration réelle est un
+  chantier déclenché. Ce qui se construit sans attendre : la machine à états, l'interface
+  <code>PaymentProvider</code>, un simulateur complet — et les modes espèces / en compte, qui ne
+  dépendent de personne et suffisent à mettre le système en production.</p>
+
+  <pre class="mermaid">
+stateDiagram-v2
+  direction LR
+  [*] --> initie : payments.initiate
+  initie --> en_attente : push USSD / redirection
+  en_attente --> confirme : webhook signé OU polling
+  en_attente --> echoue : rejet opérateur
+  en_attente --> expire : cron (fin du hold)
+  confirme --> rembourse : payments.refund
+  echoue --> [*]
+  expire --> [*]
+  </pre>
+
+  <div class="table-scroll"><table>
+    <tr><th style="width:210px">Acquis de la recherche</th><th>Conséquence</th></tr>
+    <tr><td>CinetPay et Paystack ne couvrent pas le Gabon</td>
+      <td>Candidats sérieux : <b>SingPay</b>, <b>E-Billing/Digitech</b>, <b>MYPAYGA</b>,
+      <b>CLIKPAY</b> (locaux). Vérifier pour chacun : agrément COBAC, sandbox, webhooks signés,
+      délais de règlement.</td></tr>
+    <tr><td>« Click&amp;Pay » sans correspondance publique identifiable</td>
+      <td>À faire préciser par SETRAG (CLIKPAY ? standard Click to Pay d'une banque acquéreuse ?).</td></tr>
+    <tr><td>Les webhooks seuls ne suffisent pas (Moov sans webhook documenté)</td>
+      <td>Réconciliation par polling <b>structurelle</b> : cron + <code>paymentEvents</code>
+      idempotent ; jamais de livraison de titre sur la seule foi d'un webhook.</td></tr>
+    <tr><td>SETRAG est marchand, pas prestataire de paiement</td>
+      <td>Pas d'agrément propre requis (règlement CEMAC 04/18) — mais vérification de l'agrément
+      du prestataire avant contrat.</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="conformite">
+  <h2><span class="num">15</span>Sécurité &amp; conformité</h2>
+
+  <div class="table-scroll"><table>
+    <tr><th style="width:230px">Exigence (fusion des deux CDC)</th><th>Réponse</th></tr>
+    <tr><td>SSO AD + MFA + déprovisionnement</td>
+      <td>Section 4. MFA au niveau du fournisseur d'identité pour l'interne ; TOTP applicatif pour
+      les contrôleurs si l'IdP n'est pas joignable en mobilité (à trancher avec la DSI).</td></tr>
+    <tr><td>RBAC au moindre privilège, droits fins</td>
+      <td>Matrice consultation/modification/suppression/validation par rôle, portée par
+      <code>lib/auth.ts</code>, vérifiée dans chaque fonction.</td></tr>
+    <tr><td>Chiffrement TLS 1.2+ / AES-256 au repos</td>
+      <td>Natif côté Convex ; SQLCipher sur les terminaux contrôleurs ; secrets en variables
+      d'environnement, jamais en base.</td></tr>
+    <tr><td>Journalisation centralisée + SIEM + alertes</td>
+      <td><code>audit()</code> systématique (y compris consultations de données voyageurs par les
+      agents) ; export en continu des <code>auditLogs</code> vers le SIEM ERAMET (streaming
+      export) ; alertes sur comportements anormaux : échecs de connexion répétés, annulations en
+      rafale, écarts de caisse récurrents — les signaux de fraude que le CDC vise.</td></tr>
+    <tr><td>OWASP Top 10, pentests, PRA testé</td>
+      <td>Validation d'arguments sur toute fonction publique, contrôle d'accès par identifiants
+      non devinables ; pentest avant production ; réponse aux questionnaires ERAMET (PRA +
+      fournisseur SaaS) avec Convex en sous-traitant — les 4 annexes cyber référencées par les CDC
+      sont à récupérer.</td></tr>
+    <tr><td>Protection des données</td>
+      <td>Double référentiel : <b>loi gabonaise 001/2011 modifiée 2023</b> (contraignante —
+      déclaration préalable du traitement à l'APDPVP + autorisation de transfert international
+      vers les États-Unis, à engager dès la phase 0) et <b>RGPD</b> en exigence de groupe ERAMET
+      (minimisation, anonymisation des environnements de test, droit à l'effacement).
+      Consentements versionnés, purges par lots planifiées, durées de conservation à arrêter avec
+      le juriste.</td></tr>
+    <tr><td>Anti-fraude billettique</td>
+      <td>Numérotation unique et continue, duplicata tracés, annulations/remboursements en
+      écritures liées jamais supprimées, code-barres signé y compris sur billet papier,
+      traçabilité du blocage de places, rapprochement ventes/règlements quotidien.</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="composants">
+  <h2><span class="num">16</span>Composants Convex</h2>
+  <p class="lede">Sur les 26 composants officiels <code>@convex-dev/*</code>, neuf sont retenus.
+  Les composants communautaires sont écartés (maturité inégale) — les besoins non couverts
+  (consentements, audit) restent du code maison.</p>
+
+  <div class="table-scroll"><table>
+    <tr><th style="width:250px">Composant</th><th>Usage</th></tr>
+    <tr><td><code>better-auth</code></td><td>OTP clients (téléphone/e-mail), SSO OIDC interne, TOTP contrôleurs. Version figée, montées volontaires.</td></tr>
+    <tr><td><code>rate-limiter</code></td><td>OTP (par numéro et par IP), recherche, création de réservation.</td></tr>
+    <tr><td><code>resend</code></td><td>File d'envoi e-mail avec relances : billets, proformas, notifications d'expiration (tarifs, livrets, mots de passe).</td></tr>
+    <tr><td><code>aggregate</code></td><td>KPI et statistiques en O(log n) : ventes par ligne/train/période, remplissage, recette par siège.</td></tr>
+    <tr><td><code>workflow</code></td><td>Pipelines durables : après-paiement (billets → PDF → e-mail → SMS → push), clôture de journée comptable (états → V65 → export SAGE), conversion de billets sur changement de livret.</td></tr>
+    <tr><td><code>workpool</code></td><td>Envois de masse maîtrisés : annonce de retard à un train complet, notifications d'expiration.</td></tr>
+    <tr><td><code>action-retrier</code></td><td>Relances des appels sortants (paiement, SMS, SAGE, COLIRAIL) — l'outbox garde l'état métier, le composant exécute les tentatives.</td></tr>
+    <tr><td><code>expo-push-notifications</code></td><td>Push des deux apps mobiles.</td></tr>
+    <tr><td><code>migrations</code></td><td>Évolutions de schéma sans coupure et purges de conformité par lots.</td></tr>
+  </table></div>
+  <p><code>sharded-counter</code> reste l'option de secours si les tests de charge révèlent de la
+  contention résiduelle (compteurs d'affichage uniquement — jamais l'allocation stricte).
+  Écartés : <code>stripe</code>/<code>polar</code> (paiement occidental), <code>twilio</code>
+  (fournisseur SMS non choisi), <code>geospatial</code> (23 gares fixes), <code>crons</code>
+  dynamique (le <code>crons.ts</code> statique + scheduler natif suffisent), <code>r2</code>
+  (storage natif suffisant au démarrage), et les composants IA/collaboration hors sujet.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="modules">
+  <h2><span class="num">17</span>Modules backend</h2>
+  <div class="table-scroll"><table>
+    <tr><th style="width:300px">Module</th><th>Contenu</th></tr>
+    <tr><td><code>convex/model/</code></td><td>Logique métier en TypeScript pur, testable sans Convex : <code>fares.ts</code> (barème kilométrique, arrondis, réductions, abonnements), <code>yield.ts</code> (quotas tarifaires, règles), <code>inventory.ts</code> (masques de sièges, compteurs de segments, quotas agences), <code>sales.ts</code> (vente commune multi-produits, annulation, remboursement), <code>cash.ts</code> (sessions, écarts, journée comptable), <code>accounting.ts</code> (écritures V65), <code>barcode.ts</code> (CBOR + Base45 + Ed25519).</td></tr>
+    <tr><td><code>functions/referential.ts</code></td><td>Gares, trains, voitures, plans de sièges (import), points de vente, agences.</td></tr>
+    <tr><td><code>functions/booklets.ts</code> · <code>functions/fares.ts</code></td><td>Livrets horaires et tarifs : CRUD + cycle de validation + import/export en masse + génération des dessertes.</td></tr>
+    <tr><td><code>functions/inventory.ts</code></td><td>Disponibilités par segment, blocage/déblocage, quotas agences, rapport de traçabilité des places.</td></tr>
+    <tr><td><code>functions/sales.ts</code> + <code>bookings.ts</code></td><td>Vente guichet/agence/bord (ferme) et réservation en ligne (hold) ; annulations, remboursements avec motifs et pénalités ; proformas ; ressaisie des ventes manuelles.</td></tr>
+    <tr><td><code>functions/baggages.ts</code> · <code>parcels.ts</code> · <code>vehicles.ts</code> · <code>funeral.ts</code></td><td>Les quatre produits fret voyageur, avec étiquettes/vignettes et statuts.</td></tr>
+    <tr><td><code>functions/payments.ts</code> + <code>lib/payment/</code></td><td>Machine à états, interface <code>PaymentProvider</code>, simulateur pilotable, webhooks + réconciliation.</td></tr>
+    <tr><td><code>functions/cash.ts</code> · <code>functions/accounting.ts</code></td><td>Sessions de caisse, états de contrôle, clôture de journée, export SAGE (outbox).</td></tr>
+    <tr><td><code>functions/tickets.ts</code> · <code>scans.ts</code> · <code>pv.ts</code> · <code>incidents.ts</code></td><td>Titres, manifestes paginés, synchronisation par lots idempotents, PV, incidents.</td></tr>
+    <tr><td><code>functions/reports.ts</code> · <code>admin.ts</code></td><td>États réglementaires du CDC, KPI, extractions voyageurs, exports paginés.</td></tr>
+    <tr><td><code>functions/users.ts</code> · <code>consents.ts</code> · <code>notifications.ts</code></td><td>Profils, rôles, consentements, préférences de notification.</td></tr>
+    <tr><td><code>http.ts</code></td><td>API front-office versionnée (places, réservation, validité de titre — livrable contractuel), webhooks paiement, téléchargement de billets, endpoints COLIRAIL.</td></tr>
+    <tr><td><code>crons.ts</code> + <code>workflows/</code></td><td>Expiration des holds, réconciliation paiements, rappels de départ, notifications d'expiration (tarifs, livrets), purges de conformité, exports SIEM.</td></tr>
+    <tr><td><code>betterAuth/</code></td><td>OTP clients + SSO OIDC interne + TOTP ; hooks de rôle et de durée de session.</td></tr>
+  </table></div>
+
+  <h4>Variables d'environnement</h4>
+  <p style="font-family:var(--mono);font-size:12.5px;color:var(--ink-muted)">
+    RESEND_API_KEY · SMS_PROVIDER_URL / SMS_API_KEY · PAYMENT_PROVIDER_URL / PAYMENT_API_KEY /
+    PAYMENT_WEBHOOK_SECRET · BARCODE_SIGNING_KEY_V1 · OIDC_CLIENT_ID / OIDC_CLIENT_SECRET /
+    OIDC_ISSUER · SAGE_EXPORT_TARGET · COLIRAIL_API_URL / COLIRAIL_API_KEY
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="roadmap">
+  <h2><span class="num">18</span>Feuille de route</h2>
+  <p class="lede">Le CDC billettique fixe 6 mois pour la mise en exploitation du système central :
+  c'est l'objectif des phases 0 à 2. Le front-office suit sur le même socle. Deux chantiers
+  restent déclenchés par une décision externe (violet).</p>
+
+  <div class="phase">
+    <div class="ph-num">0</div>
+    <div class="ph-body">
+      <div class="ph-title">Socle &amp; décisions <span class="ph-dur">~2 semaines</span></div>
+      <ul>
+        <li>Schéma complet, <code>convex/model/</code>, composants installés, référentiel réel
+        (22 gares, PK, plans de voitures)</li>
+        <li>Moteur tarifaire kilométrique + arrondis + réductions — testé unitairement contre
+        l'annexe 2 du CDC</li>
+        <li>Demande d'app registration OIDC à la DSI ERAMET · démarche APDPVP engagée ·
+        récupération des 4 annexes cyber</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="ph-num">1</div>
+    <div class="ph-body">
+      <div class="ph-title">Cœur billettique — vente guichet <span class="ph-dur">~6 semaines</span></div>
+      <ul>
+        <li>Inventaire par segment (masques + compteurs), livrets horaires et tarifs avec cycle de
+        validation, génération des dessertes</li>
+        <li>Vente guichet billets (&lt; 4 s), impression avec code-barres signé, annulations,
+        remboursements, duplicatas, proformas</li>
+        <li>Sessions de caisse, journée comptable, états de contrôle, ressaisie des ventes
+        manuelles</li>
+        <li>Test de charge sur l'inventaire (départ à 700 voyageurs)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="ph-num">2</div>
+    <div class="ph-body">
+      <div class="ph-title">Produits complets &amp; comptabilité <span class="ph-dur">~6 semaines · jalon « MOBIPASS remplacé »</span></div>
+      <ul>
+        <li>Bagages, colis express (vignettes, zones), TAA, transport funéraire</li>
+        <li>Export SAGE X3 (V65) via outbox · clients en compte · agences accréditées et quotas</li>
+        <li>Rapports réglementaires, KPI, extractions voyageurs · SSO AD en production</li>
+        <li>Recette du système central — l'exigence des 6 mois du CDC billettique est tenue ici</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="ph-num">3</div>
+    <div class="ph-body">
+      <div class="ph-title">Vente en ligne <span class="ph-dur">~4 semaines</span></div>
+      <ul>
+        <li>billetterie-web et voyageur-mobile : recherche → hold → paiement (simulateur ou
+        « payer au guichet ») → billet électronique</li>
+        <li>OTP SMS/e-mail réels, notifications push, billets hors-ligne, workflow après-paiement</li>
+        <li>API front-office HTTP documentée (livrable contractuel)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="ph-num">4</div>
+    <div class="ph-body">
+      <div class="ph-title">Application contrôleur <span class="ph-dur">~5 semaines</span></div>
+      <ul>
+        <li>App Expo offline-first : SQLCipher, manifeste embarqué, scan Ed25519, anti-repassage</li>
+        <li>Vente à bord, PV et encaissement d'amendes, incidents, synchronisation idempotente,
+        écran de conflits</li>
+        <li>Contrôle des cartes d'abonnement</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="ph-num">5</div>
+    <div class="ph-body">
+      <div class="ph-title">Yield complet &amp; durcissement <span class="ph-dur">~3 semaines</span></div>
+      <ul>
+        <li>Quotas de classes tarifaires + modulation continue + simulation back-office +
+        KPI yield</li>
+        <li>Purges de conformité, exports SIEM, pentest, PRA documenté et testé, préproduction</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase gated">
+    <div class="ph-num">A</div>
+    <div class="ph-body">
+      <div class="ph-title">Paiement électronique réel <span class="ph-dur">déclenché par le choix du partenaire</span></div>
+      <ul><li>Implémentation <code>PaymentProvider</code> réelle, webhooks signés, réconciliation, recette sandbox, bascule progressive</li></ul>
+    </div>
+  </div>
+  <div class="phase gated">
+    <div class="ph-num">B</div>
+    <div class="ph-body">
+      <div class="ph-title">Interface COLIRAIL <span class="ph-dur">déclenché par la réception du contrat</span></div>
+      <ul><li>Connecteur statuts colis (outbox), notifications SMS croisées, recette avec l'équipe COLIRAIL</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="questions">
+  <h2><span class="num">19</span>Points ouverts</h2>
+  <div class="table-scroll"><table>
+    <tr><th style="width:230px">Sujet</th><th>Question</th><th style="width:140px">Bloque</th></tr>
+    <tr><td>Agences accréditées</td><td>Le CDC lui-même hésite (commentaire : « a priori on n'aura plus d'agence accréditée si on peut vendre en ligne ? on paie 10 % de royalties ») — maintenues au périmètre en attendant l'arbitrage de la direction commerciale.</td><td>Phase 2 (module isolable)</td></tr>
+    <tr><td>Fenêtre de vente</td><td>1 mois (validité actuelle des billets) ou 3 mois ? Débattu dans les commentaires du CDC. Paramétrable — mais la conversion des billets sur changement de livret doit être livrée si on ouvre à 3 mois.</td><td>Phase 1 (paramètre)</td></tr>
+    <tr><td>Paramètres tarifaires</td><td>Les X/Y/Z/M % des tarifs en projet (week-end, étudiant, 3e âge, promo), les contingents yield, les planchers/plafonds par desserte.</td><td>Phase 5 (paramétrage)</td></tr>
+    <tr><td>SAGE X3</td><td>Mode de transport de l'export V65 : dépôt de fichier, API, connecteur ? À confirmer avec la DSI.</td><td>Phase 2</td></tr>
+    <tr><td>« Click&amp;Pay »</td><td>Identité exacte du produit — aucune correspondance publique fiable trouvée.</td><td>Chantier A</td></tr>
+    <tr><td>Partenaire paiement</td><td>Instruire SingPay, E-Billing, MYPAYGA, CLIKPAY : agrément COBAC, sandbox, webhooks, règlement.</td><td>Chantier A</td></tr>
+    <tr><td>COLIRAIL</td><td>Contrat d'interface du suivi colis.</td><td>Chantier B</td></tr>
+    <tr><td>IdP ERAMET</td><td>Entra ID ou ADFS ? Groupes AD disponibles pour le mapping des rôles ? Politique MFA ?</td><td>Phase 2 (SSO)</td></tr>
+    <tr><td>Annexes cyber</td><td>4 documents référencés non fournis : CDC Cyber Back, CDC Cyber Front, Annexe contrat v2.6, questionnaires PRA et SaaS.</td><td>Avant production</td></tr>
+    <tr><td>Matériel</td><td>Terminaux durcis contrôleurs (NFC ? impression embarquée ?), imprimantes guichet (billets + étiquettes bagages/vignettes).</td><td>Phases 1 et 4</td></tr>
+    <tr><td>Couverture réseau</td><td>Relevé réel le long de la ligne — dimensionne le manifeste embarqué.</td><td>Phase 4</td></tr>
+    <tr><td>Convex Enterprise</td><td>SLA écrit, SOC 2, sous-traitants, réponse ISO 27001 — pour les questionnaires ERAMET.</td><td>Avant production</td></tr>
+  </table></div>
+
+  <footer>
+    Plan backend — système unifié · 25 juillet 2026. Sources : CDC « Projet billettique SETRAG »
+    (v1.2, 02/07/2025, 36 p.), CDC « Applications Front-Office » (11 p.), revue documentaire
+    juillet 2026 (Convex, offline-first Expo, billettique ferroviaire, paiement gabonais, droit
+    gabonais des données). Les plans par application détaillent les écrans :
+    <a href="agent-web.html">agent-web</a> · <a href="billetterie-web.html">billetterie-web</a> ·
+    <a href="voyageur-mobile.html">voyageur-mobile</a> ·
+    <a href="controleur-mobile.html">controleur-mobile</a>.
+  </footer>
+</section>
+
+</main>
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", themeVariables: { fontSize: "13px" } });
+</script>
+</body>
+</html>

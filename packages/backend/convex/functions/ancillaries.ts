@@ -1,6 +1,7 @@
 import { v } from "convex/values"
 import { mutation, query } from "../_generated/server"
 import type { Doc, Id } from "../_generated/dataModel"
+import type { MutationCtx, QueryCtx } from "../_generated/server"
 import { audit, requirePermission } from "../lib/auth"
 import {
   accrueToAccountingDay,
@@ -29,9 +30,9 @@ import { distanceBetween } from "../model/network"
 
 /** Distance commerciale entre deux gares du référentiel. */
 async function distanceBetweenStations(
-  ctx: Parameters<typeof requireSellingContext>[0],
+  ctx: MutationCtx | QueryCtx,
   originId: Id<"stations">,
-  destinationId: Id<"stations">,
+  destinationId: Id<"stations">
 ): Promise<number> {
   const [origin, destination] = await Promise.all([
     ctx.db.get(originId),
@@ -55,7 +56,88 @@ function toGrid(rows: readonly Doc<"ancillaryFares">[]): AncillaryFareRow[] {
   }))
 }
 
+/** Recherche sécurisée d'un billet pour les produits qui doivent y être liés. */
+interface TicketLookupData {
+  ticket: {
+    _id: Id<"tickets">
+    number: string
+    passenger: { firstName: string; lastName: string }
+    status: Doc<"tickets">["status"]
+  }
+  trip: { trainNumber: string } | null
+  origin: { code: string; kilometerPoint: number } | null
+  destination: { code: string; kilometerPoint: number } | null
+}
+
+export const lookupTicket = query({
+  args: { number: v.string() },
+  handler: async (ctx, args): Promise<TicketLookupData | null> => {
+    await requirePermission(ctx, "ventes", "consulter")
+    const ticket = await ctx.db
+      .query("tickets")
+      .withIndex("by_number", (q) => q.eq("number", args.number.trim()))
+      .unique()
+    if (!ticket) return null
+    const [trip, origin, destination] = await Promise.all([
+      ctx.db.get(ticket.tripId),
+      ctx.db.get(ticket.originStationId),
+      ctx.db.get(ticket.destinationStationId),
+    ])
+    return {
+      ticket: {
+        _id: ticket._id,
+        number: ticket.number,
+        passenger: {
+          firstName: ticket.passenger.firstName,
+          lastName: ticket.passenger.lastName,
+        },
+        status: ticket.status,
+      },
+      trip: trip ? { trainNumber: trip.trainNumber } : null,
+      origin: origin
+        ? { code: origin.code, kilometerPoint: origin.kilometerPoint }
+        : null,
+      destination: destination
+        ? {
+            code: destination.code,
+            kilometerPoint: destination.kilometerPoint,
+          }
+        : null,
+    }
+  },
+})
+
 /* ────────────────────────────── Bagages ────────────────────────────────── */
+
+export const quoteBaggage = query({
+  args: {
+    ticketId: v.id("tickets"),
+    weightKg: v.number(),
+    franchiseKg: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "ventes", "consulter")
+    const ticket = await ctx.db.get(args.ticketId)
+    if (!ticket) throw new Error("Billet voyageur introuvable")
+    const distanceKm = await distanceBetweenStations(
+      ctx,
+      ticket.originStationId,
+      ticket.destinationStationId
+    )
+    const { schedule, ancillary } = await activeFareSchedule(ctx)
+    const terms = resolveBaggageTerms(toGrid(ancillary), distanceKm)
+    const breakdown = computeBaggageFare({
+      distanceKm,
+      weightKg: args.weightKg,
+      franchiseKg: args.franchiseKg ?? terms.franchiseKg,
+      excessRatePerKgHt: terms.excessRatePerKgHt,
+    })
+    const totalTtc = round0(
+      breakdown.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
+    )
+    return { distanceKm, breakdown, totalTtc }
+  },
+})
 
 /**
  * Enregistre un bagage rattaché à un billet voyageur.
@@ -83,14 +165,14 @@ export const sellBaggage = mutation({
     if (!ticket) throw new Error("Billet voyageur introuvable")
     if (ticket.status !== "valide") {
       throw new Error(
-        `Billet « ${ticket.status} » : enregistrement de bagage impossible`,
+        `Billet « ${ticket.status} » : enregistrement de bagage impossible`
       )
     }
 
     const distanceKm = await distanceBetweenStations(
       ctx,
       ticket.originStationId,
-      ticket.destinationStationId,
+      ticket.destinationStationId
     )
 
     const { schedule, ancillary } = await activeFareSchedule(ctx)
@@ -108,18 +190,18 @@ export const sellBaggage = mutation({
       excessRatePerKgHt: args.excessRatePerKgHt ?? terms.excessRatePerKgHt,
     })
     const ttc = round0(
-      fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100),
+      fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
     )
     const amounts = buildAmounts(ttc, schedule.vatPct, schedule.cssPct, ttc)
 
     const code = selling.pointOfSale.code
     const saleSeq = await nextSequence(
       ctx,
-      sequenceKey(code, selling.serviceDate, "vente"),
+      sequenceKey(code, selling.serviceDate, "vente")
     )
     const tagSeq = await nextSequence(
       ctx,
-      sequenceKey(code, selling.serviceDate, "bagage"),
+      sequenceKey(code, selling.serviceDate, "bagage")
     )
 
     const saleId = await ctx.db.insert("sales", {
@@ -137,12 +219,7 @@ export const sellBaggage = mutation({
       soldAt: Date.now(),
     })
 
-    const tagNumber = formatNumber(
-      "bagage",
-      code,
-      selling.serviceDate,
-      tagSeq,
-    )
+    const tagNumber = formatNumber("bagage", code, selling.serviceDate, tagSeq)
     const baggageId = await ctx.db.insert("baggages", {
       saleId,
       tagNumber,
@@ -162,7 +239,7 @@ export const sellBaggage = mutation({
       ctx,
       selling.accountingDay,
       amounts.ttc,
-      amounts.received,
+      amounts.received
     )
     await audit(ctx, {
       actorId: actor._id,
@@ -186,6 +263,37 @@ export const sellBaggage = mutation({
 
 /* ─────────────────────────── Colis express ─────────────────────────────── */
 
+export const quoteParcel = query({
+  args: {
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
+    items: v.array(v.object({ weightKg: v.number() })),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "ventes", "consulter")
+    const distanceKm = await distanceBetweenStations(
+      ctx,
+      args.originStationId,
+      args.destinationStationId
+    )
+    const { schedule, ancillary } = await activeFareSchedule(ctx)
+    const breakdown = computeParcelFare(
+      args.items,
+      distanceKm,
+      toGrid(ancillary)
+    )
+    const totalTtc = round0(
+      breakdown.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
+    )
+    return {
+      distanceKm,
+      zone: breakdown.items[0]!.zone,
+      breakdown,
+      totalTtc,
+    }
+  },
+})
+
 /**
  * Enregistre une expédition de colis express.
  *
@@ -201,9 +309,7 @@ export const sellParcel = mutation({
     senderPhone: v.string(),
     recipientName: v.string(),
     recipientPhone: v.string(),
-    items: v.array(
-      v.object({ description: v.string(), weightKg: v.number() }),
-    ),
+    items: v.array(v.object({ description: v.string(), weightKg: v.number() })),
     deviceId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -216,14 +322,14 @@ export const sellParcel = mutation({
     if (!args.senderPhone.trim() || !args.recipientPhone.trim()) {
       throw new Error(
         "Les contacts téléphoniques de l'expéditeur et du destinataire sont " +
-          "obligatoires",
+          "obligatoires"
       )
     }
 
     const distanceKm = await distanceBetweenStations(
       ctx,
       args.originStationId,
-      args.destinationStationId,
+      args.destinationStationId
     )
     const { schedule, ancillary } = await activeFareSchedule(ctx)
 
@@ -231,18 +337,18 @@ export const sellParcel = mutation({
     const fare = computeParcelFare(args.items, distanceKm, toGrid(ancillary))
 
     const ttc = round0(
-      fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100),
+      fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
     )
     const amounts = buildAmounts(ttc, schedule.vatPct, schedule.cssPct, ttc)
 
     const code = selling.pointOfSale.code
     const saleSeq = await nextSequence(
       ctx,
-      sequenceKey(code, selling.serviceDate, "vente"),
+      sequenceKey(code, selling.serviceDate, "vente")
     )
     const shipmentSeq = await nextSequence(
       ctx,
-      sequenceKey(code, selling.serviceDate, "colis"),
+      sequenceKey(code, selling.serviceDate, "colis")
     )
 
     const saleId = await ctx.db.insert("sales", {
@@ -265,7 +371,7 @@ export const sellParcel = mutation({
       "colis",
       code,
       selling.serviceDate,
-      shipmentSeq,
+      shipmentSeq
     )
     const parcelId = await ctx.db.insert("parcels", {
       saleId,
@@ -287,13 +393,13 @@ export const sellParcel = mutation({
     for (const [index, item] of args.items.entries()) {
       const stickerSeq = await nextSequence(
         ctx,
-        sequenceKey(code, selling.serviceDate, "vignette"),
+        sequenceKey(code, selling.serviceDate, "vignette")
       )
       const stickerNumber = formatNumber(
         "vignette",
         code,
         selling.serviceDate,
-        stickerSeq,
+        stickerSeq
       )
       stickers.push(stickerNumber)
       await ctx.db.insert("parcelItems", {
@@ -304,7 +410,7 @@ export const sellParcel = mutation({
         weightTier: fare.items[index]!.weightTier,
         amountTtc: round0(
           fare.items[index]!.totalHt *
-            (1 + schedule.vatPct / 100 + schedule.cssPct / 100),
+            (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
         ),
       })
     }
@@ -313,7 +419,7 @@ export const sellParcel = mutation({
       ctx,
       selling.accountingDay,
       amounts.ttc,
-      amounts.received,
+      amounts.received
     )
     await audit(ctx, {
       actorId: actor._id,
@@ -349,7 +455,7 @@ export const setParcelStatus = mutation({
       v.literal("enregistre"),
       v.literal("en_transport"),
       v.literal("arrive"),
-      v.literal("retire"),
+      v.literal("retire")
     ),
   },
   handler: async (ctx, args) => {
@@ -387,6 +493,49 @@ export const setParcelStatus = mutation({
 
 /* ──────────────── Transport auto accompagné et funéraire ───────────────── */
 
+export const quoteSpecialTransport = query({
+  args: {
+    product: v.union(v.literal("taa"), v.literal("funeraire")),
+    ticketId: v.optional(v.id("tickets")),
+    originStationId: v.optional(v.id("stations")),
+    destinationStationId: v.optional(v.id("stations")),
+    tonnage: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "ventes", "consulter")
+    let originId = args.originStationId
+    let destinationId = args.destinationStationId
+    if (args.product === "taa") {
+      if (!args.ticketId) {
+        throw new Error("Le billet voyageur est obligatoire")
+      }
+      const ticket = await ctx.db.get(args.ticketId)
+      if (!ticket) throw new Error("Billet voyageur introuvable")
+      originId = ticket.originStationId
+      destinationId = ticket.destinationStationId
+    }
+    if (!originId || !destinationId) {
+      throw new Error("Le trajet est obligatoire")
+    }
+    const distanceKm = await distanceBetweenStations(
+      ctx,
+      originId,
+      destinationId
+    )
+    const { schedule, ancillary } = await activeFareSchedule(ctx)
+    const breakdown = computeTonnageFare({
+      product: args.product,
+      distanceKm,
+      tonnage: args.tonnage,
+      grid: toGrid(ancillary),
+    })
+    const totalTtc = round0(
+      breakdown.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
+    )
+    return { distanceKm, breakdown, totalTtc }
+  },
+})
+
 /**
  * Enregistre un transport auto accompagné.
  * Rattaché à un billet voyageur (CDC §7.1.4 : « un client disposant d'un
@@ -414,7 +563,7 @@ export const sellVehicleTransport = mutation({
     const distanceKm = await distanceBetweenStations(
       ctx,
       ticket.originStationId,
-      ticket.destinationStationId,
+      ticket.destinationStationId
     )
     const { schedule, ancillary } = await activeFareSchedule(ctx)
     const fare = computeTonnageFare({
@@ -425,18 +574,18 @@ export const sellVehicleTransport = mutation({
     })
 
     const ttc = round0(
-      fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100),
+      fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
     )
     const amounts = buildAmounts(ttc, schedule.vatPct, schedule.cssPct, ttc)
 
     const code = selling.pointOfSale.code
     const saleSeq = await nextSequence(
       ctx,
-      sequenceKey(code, selling.serviceDate, "vente"),
+      sequenceKey(code, selling.serviceDate, "vente")
     )
     const shipmentSeq = await nextSequence(
       ctx,
-      sequenceKey(code, selling.serviceDate, "taa"),
+      sequenceKey(code, selling.serviceDate, "taa")
     )
 
     const saleId = await ctx.db.insert("sales", {
@@ -458,7 +607,7 @@ export const sellVehicleTransport = mutation({
       "taa",
       code,
       selling.serviceDate,
-      shipmentSeq,
+      shipmentSeq
     )
     const id = await ctx.db.insert("vehicleTransports", {
       saleId,
@@ -480,7 +629,7 @@ export const sellVehicleTransport = mutation({
       ctx,
       selling.accountingDay,
       amounts.ttc,
-      amounts.received,
+      amounts.received
     )
     await audit(ctx, {
       actorId: actor._id,
@@ -522,7 +671,7 @@ export const sellFuneralTransport = mutation({
     const distanceKm = await distanceBetweenStations(
       ctx,
       args.originStationId,
-      args.destinationStationId,
+      args.destinationStationId
     )
     const { schedule, ancillary } = await activeFareSchedule(ctx)
     const fare = computeTonnageFare({
@@ -533,18 +682,18 @@ export const sellFuneralTransport = mutation({
     })
 
     const ttc = round0(
-      fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100),
+      fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
     )
     const amounts = buildAmounts(ttc, schedule.vatPct, schedule.cssPct, ttc)
 
     const code = selling.pointOfSale.code
     const saleSeq = await nextSequence(
       ctx,
-      sequenceKey(code, selling.serviceDate, "vente"),
+      sequenceKey(code, selling.serviceDate, "vente")
     )
     const shipmentSeq = await nextSequence(
       ctx,
-      sequenceKey(code, selling.serviceDate, "funeraire"),
+      sequenceKey(code, selling.serviceDate, "funeraire")
     )
 
     const saleId = await ctx.db.insert("sales", {
@@ -566,7 +715,7 @@ export const sellFuneralTransport = mutation({
       "funeraire",
       code,
       selling.serviceDate,
-      shipmentSeq,
+      shipmentSeq
     )
     const id = await ctx.db.insert("funeralTransports", {
       saleId,
@@ -585,7 +734,7 @@ export const sellFuneralTransport = mutation({
       ctx,
       selling.accountingDay,
       amounts.ttc,
-      amounts.received,
+      amounts.received
     )
     await audit(ctx, {
       actorId: actor._id,
@@ -621,7 +770,11 @@ export const listByTrip = query({
         .filter((q) => q.eq(q.field("tripId"), args.tripId))
         .collect(),
     ])
-    return { baggages, vehicleTransports: vehicles, funeralTransports: funerals }
+    return {
+      baggages,
+      vehicleTransports: vehicles,
+      funeralTransports: funerals,
+    }
   },
 })
 
@@ -632,7 +785,7 @@ export const trackParcel = query({
     const parcel = await ctx.db
       .query("parcels")
       .withIndex("by_shipment", (q) =>
-        q.eq("shipmentNumber", args.shipmentNumber),
+        q.eq("shipmentNumber", args.shipmentNumber)
       )
       .unique()
     if (!parcel) return null

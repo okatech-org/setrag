@@ -44,6 +44,28 @@ export const openAccountingDay = mutation({
   },
 })
 
+/** Journées disponibles pour le rapprochement et l'export comptable. */
+export const listAccountingDays = query({
+  args: {
+    status: v.optional(v.union(v.literal("ouverte"), v.literal("cloturee"))),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "journee_comptable", "consulter")
+    const limit = Math.min(Math.max(Math.trunc(args.limit ?? 31), 1), 100)
+    const days = args.status
+      ? await ctx.db
+          .query("accountingDays")
+          .withIndex("by_status", (q) => q.eq("status", args.status!))
+          .collect()
+      : await ctx.db.query("accountingDays").collect()
+
+    return days
+      .sort((left, right) => right.date.localeCompare(left.date))
+      .slice(0, limit)
+  },
+})
+
 /** Ouvre la session de caisse du vendeur courant. */
 export const openSession = mutation({
   args: { openingFloatXaf: v.number() },
@@ -133,6 +155,114 @@ export const mySession = query({
 })
 
 /**
+ * Contexte complet de l'accueil vendeur.
+ *
+ * Une seule requête réactive alimente l'en-tête, l'état de caisse, les
+ * compteurs et les dernières opérations. Cela évite d'ouvrir plusieurs
+ * souscriptions qui pourraient brièvement afficher des états incompatibles
+ * lors d'une vente ou de l'ouverture de caisse.
+ */
+export const sellerDashboard = query({
+  args: {},
+  handler: async (ctx) => {
+    const actor = await requirePermission(ctx, "ventes", "consulter")
+    if (!actor.pointOfSaleId) {
+      throw new Error("Agent non rattaché à un point de vente")
+    }
+
+    const pointOfSale = await ctx.db.get(actor.pointOfSaleId)
+    if (!pointOfSale) throw new Error("Point de vente introuvable")
+
+    const station = pointOfSale.stationId
+      ? await ctx.db.get(pointOfSale.stationId)
+      : null
+    const session = await ctx.db
+      .query("cashSessions")
+      .withIndex("by_seller", (q) => q.eq("sellerId", actor._id))
+      .filter((q) => q.eq(q.field("status"), "ouverte"))
+      .first()
+
+    if (!session) {
+      return {
+        seller: {
+          id: actor._id,
+          firstName: actor.firstName,
+          lastName: actor.lastName,
+          matricule: actor.matricule,
+          role: actor.role,
+        },
+        pointOfSale: {
+          code: pointOfSale.code,
+          name: pointOfSale.name,
+          type: pointOfSale.type,
+          stationName: station?.name,
+        },
+        session: null,
+        metrics: {
+          salesCount: 0,
+          totalReceived: 0,
+          cancellations: 0,
+          refunded: 0,
+        },
+        lastOperations: [],
+      }
+    }
+
+    const sales = await ctx.db
+      .query("sales")
+      .withIndex("by_cash_session", (q) => q.eq("cashSessionId", session._id))
+      .collect()
+    const ordered = [...sales].sort(
+      (left, right) => right._creationTime - left._creationTime
+    )
+
+    return {
+      seller: {
+        id: actor._id,
+        firstName: actor.firstName,
+        lastName: actor.lastName,
+        matricule: actor.matricule,
+        role: actor.role,
+      },
+      pointOfSale: {
+        code: pointOfSale.code,
+        name: pointOfSale.name,
+        type: pointOfSale.type,
+        stationName: station?.name,
+      },
+      session: {
+        id: session._id,
+        openedAt: session.openedAt,
+        openingFloatXaf: session.openingFloatXaf,
+      },
+      metrics: {
+        salesCount: sales.filter((sale) => sale.kind === "vente").length,
+        totalReceived: sales.reduce(
+          (sum, sale) => sum + sale.amounts.received,
+          0
+        ),
+        cancellations: sales.filter((sale) => sale.kind === "annulation")
+          .length,
+        refunded: Math.abs(
+          sales
+            .filter((sale) => sale.kind === "remboursement")
+            .reduce((sum, sale) => sum + sale.amounts.received, 0)
+        ),
+      },
+      lastOperations: ordered.slice(0, 10).map((sale) => ({
+        id: sale._id,
+        number: sale.number,
+        product: sale.product,
+        kind: sale.kind,
+        status: sale.status,
+        amountXaf: sale.amounts.ttc,
+        createdAt: sale._creationTime,
+      })),
+    }
+  },
+})
+
+/**
  * Clôture la session de caisse avec le comptage réel.
  *
  * Un écart non justifié bloque la clôture : le vendeur doit expliquer la
@@ -141,7 +271,7 @@ export const mySession = query({
 export const closeSession = mutation({
   args: {
     countedByMethod: v.array(
-      v.object({ method: paymentMethod, amountXaf: v.number() }),
+      v.object({ method: paymentMethod, amountXaf: v.number() })
     ),
     varianceReason: v.optional(v.string()),
   },
@@ -163,22 +293,20 @@ export const closeSession = mutation({
     const expectedTotal = sales.reduce((sum, s) => sum + s.amounts.received, 0)
     const countedTotal = args.countedByMethod.reduce(
       (sum, c) => sum + c.amountXaf,
-      0,
+      0
     )
     const varianceXaf = Math.round((countedTotal - expectedTotal) * 100) / 100
 
     if (varianceXaf !== 0 && !args.varianceReason?.trim()) {
       throw new Error(
         `Écart de caisse de ${varianceXaf} XAF : une justification est ` +
-          `obligatoire pour clôturer`,
+          `obligatoire pour clôturer`
       )
     }
 
     await ctx.db.patch(session._id, {
       closedAt: Date.now(),
-      expectedByMethod: [
-        { method: "especes", amountXaf: expectedTotal },
-      ],
+      expectedByMethod: [{ method: "especes", amountXaf: expectedTotal }],
       countedByMethod: args.countedByMethod,
       varianceXaf,
       varianceReason: args.varianceReason,
@@ -226,17 +354,17 @@ export const closeAccountingDay = mutation({
     if (ouvertes.length > 0) {
       throw new Error(
         `${ouvertes.length} session(s) de caisse encore ouverte(s) : ` +
-          `clôture impossible`,
+          `clôture impossible`
       )
     }
 
     const nonJustifiees = sessions.filter(
-      (s) => (s.varianceXaf ?? 0) !== 0 && !s.varianceReason?.trim(),
+      (s) => (s.varianceXaf ?? 0) !== 0 && !s.varianceReason?.trim()
     )
     if (nonJustifiees.length > 0) {
       throw new Error(
         `${nonJustifiees.length} écart(s) de caisse non justifié(s) : ` +
-          `clôture impossible`,
+          `clôture impossible`
       )
     }
 
@@ -250,9 +378,13 @@ export const closeAccountingDay = mutation({
     // Les indicateurs se calculent une fois la journée figée, et hors de
     // cette mutation : ils parcourent toutes les ventes du jour, ce qui n'a
     // rien à faire dans la transaction de clôture.
-    await ctx.scheduler.runAfter(0, internal.functions.rollup.rollupAccountingDay, {
-      accountingDayId: args.accountingDayId,
-    })
+    await ctx.scheduler.runAfter(
+      0,
+      internal.functions.rollup.rollupAccountingDay,
+      {
+        accountingDayId: args.accountingDayId,
+      }
+    )
 
     await audit(ctx, {
       actorId: actor._id,
@@ -286,7 +418,7 @@ export const controlStates = query({
     const sales = await ctx.db
       .query("sales")
       .withIndex("by_accounting_day", (q) =>
-        q.eq("accountingDayId", args.accountingDayId),
+        q.eq("accountingDayId", args.accountingDayId)
       )
       .collect()
 
@@ -302,7 +434,7 @@ export const controlStates = query({
       },
       openSessions: sessions.filter((s) => s.status === "ouverte").length,
       unjustifiedVariances: sessions.filter(
-        (s) => (s.varianceXaf ?? 0) !== 0 && !s.varianceReason?.trim(),
+        (s) => (s.varianceXaf ?? 0) !== 0 && !s.varianceReason?.trim()
       ).length,
     }
   },

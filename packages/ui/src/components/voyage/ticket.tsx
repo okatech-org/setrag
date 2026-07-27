@@ -3,7 +3,8 @@ import * as React from "react"
 import { cn } from "@workspace/ui/lib/utils"
 import { formatTime, spellTime } from "@workspace/ui/lib/format"
 
-export type TicketState = "valide" | "utilise" | "echange" | "rembourse" | "hors_ligne"
+export type TicketState =
+  "valide" | "utilise" | "echange" | "rembourse" | "hors_ligne"
 
 const STATE_LABELS: Record<TicketState, string> = {
   valide: "Valide",
@@ -75,10 +76,10 @@ function Ticket({
       )}
       {...props}
     >
-      <header className="flex items-start justify-between gap-4">
-        <div className="grid gap-1">
+      <header className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
+        <div className="grid min-w-0 gap-1">
           <span className="text-mono-label text-accent-on-ink">{legLabel}</span>
-          <h3 className="text-h3 font-bold">{routeLabel}</h3>
+          <h3 className="text-h3 font-bold break-words">{routeLabel}</h3>
         </div>
         <span
           className={cn(
@@ -106,17 +107,17 @@ function Ticket({
         )}
       </div>
 
-      <div className="flex items-center gap-5 border-t border-dashed border-ink-muted/50 pt-6">
+      <div className="flex min-w-0 flex-col items-start gap-5 border-t border-dashed border-ink-muted/50 pt-6 sm:flex-row sm:items-center">
         {qrCode && (
           <div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-md bg-surface p-1.5">
             {qrCode}
           </div>
         )}
-        <div className="grid gap-1.5">
+        <div className="grid min-w-0 gap-1.5">
           <span className="text-[12px] leading-none font-medium text-ink-inverse/75">
             {passengerLabel}
           </span>
-          <span className="tabular text-[14px] leading-none font-medium">
+          <span className="tabular text-[14px] leading-tight font-medium break-all">
             DOSSIER · {reference}
           </span>
           {conditionsNote && (
@@ -148,7 +149,9 @@ function TicketFact({
         {children}
       </span>
       {place && (
-        <span className="text-[12px] leading-snug text-ink-inverse/75">{place}</span>
+        <span className="text-[12px] leading-snug text-ink-inverse/75">
+          {place}
+        </span>
       )}
     </div>
   )

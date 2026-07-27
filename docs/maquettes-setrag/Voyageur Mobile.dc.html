@@ -1,0 +1,1994 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/fonts/fonts.css">
+  <link rel="stylesheet" href="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/_ds_bundle.css">
+  <link rel="stylesheet" href="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/styles.css">
+  <script src="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/_ds_bundle.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { background: #05070c; font-family: var(--font-ui); overflow: hidden; }
+    a { color: var(--c-accent-ink); text-decoration: none; }
+    a:hover { color: var(--c-accent); }
+    input, select, textarea, button { font-family: inherit; }
+    .vm-scroll::-webkit-scrollbar { width: 0; height: 0; }
+    .vm-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+    @keyframes vm-pulse { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+    @keyframes vm-rise { from { transform: translateY(14px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+  </style>
+</helmet>
+
+<div style="height:100vh;width:100vw;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 0%, #1b2436, #05070c 70%);overflow:hidden">
+  <div style="transform:scale({{ scale }});transform-origin:center center">
+    <div style="width:{{ bezelW }};height:{{ bezelH }};background:#05070c;border-radius:{{ bezelRadius }};padding:{{ bezelPad }};box-shadow:0 40px 90px rgba(0,0,0,.6), 0 0 0 2px #1c2230">
+      <div data-theme="{{ theme }}" style="width:390px;height:844px;border-radius:{{ screenRadius }};overflow:hidden;position:relative;background:var(--c-canvas);color:var(--c-ink);display:flex;flex-direction:column;font:var(--t-body);font-family:var(--font-ui)">
+
+        <!-- barre d'état -->
+        <div style="height:52px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 8px;position:relative;z-index:6;background:{{ statusBg }};color:{{ statusInk }}">
+          <span class="tabular" style="font-size:14px;font-weight:600;letter-spacing:.01em">{{ clock }}</span>
+          <span style="position:absolute;top:9px;left:50%;transform:translateX(-50%);width:118px;height:30px;background:#05070c;border-radius:20px"></span>
+          <span style="display:flex;align-items:flex-end;gap:6px">
+            <span class="tabular" style="font-size:11px;font-weight:600">{{ netLabel }}</span>
+            <span style="display:flex;align-items:flex-end;gap:2px">
+              <span style="width:3px;height:5px;border-radius:1px;background:currentColor;opacity:{{ bar1 }}"></span>
+              <span style="width:3px;height:8px;border-radius:1px;background:currentColor;opacity:{{ bar2 }}"></span>
+              <span style="width:3px;height:11px;border-radius:1px;background:currentColor;opacity:{{ bar3 }}"></span>
+            </span>
+            <span style="width:24px;height:12px;border:1.5px solid currentColor;border-radius:3px;padding:1.5px;opacity:.9">
+              <span style="display:block;height:100%;width:72%;background:currentColor;border-radius:1px"></span>
+            </span>
+          </span>
+        </div>
+
+        <!-- barre de navigation -->
+        <sc-if value="{{ navBarVisible }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:var(--s-2);padding:var(--s-2) var(--s-3) var(--s-3);background:{{ statusBg }};color:{{ statusInk }};border-bottom:1px solid {{ navBorder }}">
+            <button type="button" onClick="{{ back }}" aria-label="Retour" style="width:44px;height:44px;display:grid;place-items:center;background:none;border:none;color:inherit;font-size:24px;cursor:pointer;flex:0 0 auto">‹</button>
+            <span style="flex:1;display:grid;gap:1px;min-width:0">
+              <span class="text-body" style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ navTitle }}</span>
+              <span class="text-caption" style="opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ navSubtitle }}</span>
+            </span>
+            <sc-if value="{{ navActionVisible }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ navAction }}" style="min-width:44px;height:44px;display:grid;place-items:center;background:none;border:none;color:inherit;font-size:17px;cursor:pointer;flex:0 0 auto">{{ navActionIcon }}</button>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <main class="vm-scroll" style="flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch">
+
+          <!-- ══════════ VM-00 · Splash ══════════ -->
+          <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-00 Splash" style="min-height:100%;background:oklch(0.24 0.058 257);display:grid;align-content:center;justify-items:center;gap:var(--s-6);padding:var(--s-8)">
+              <img src="uploads/Setrag_logo.png" alt="SETRAG — Société d'Exploitation du Transgabonais" style="width:210px;height:auto;background:#fff;border-radius:14px;padding:var(--s-4)" />
+              <span class="text-mono-label" style="color:var(--c-accent-on-ink);text-align:center">Billetterie du Transgabonais</span>
+              <span style="display:flex;gap:6px">
+                <span style="width:7px;height:7px;border-radius:999px;background:#fff;animation:vm-pulse 1.2s infinite"></span>
+                <span style="width:7px;height:7px;border-radius:999px;background:#fff;animation:vm-pulse 1.2s infinite .2s"></span>
+                <span style="width:7px;height:7px;border-radius:999px;background:#fff;animation:vm-pulse 1.2s infinite .4s"></span>
+              </span>
+              <span class="tabular text-caption" style="position:absolute;bottom:var(--s-8);color:oklch(1 0 0 / 0.5)">Version 1.0.0</span>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-0W · Bienvenue ══════════ -->
+          <sc-if value="{{ isBienvenue }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-0W Bienvenue" style="min-height:100%;display:flex;flex-direction:column">
+              <div class="bg-surface" style="padding:var(--s-4) var(--s-5) var(--s-6);display:grid;gap:var(--s-3);border-bottom:1px solid var(--c-line)">
+                <img src="uploads/Setrag_logo.png" alt="SETRAG" style="height:34px;width:auto;justify-self:start" />
+                <h1 class="text-h2" style="margin:var(--s-1) 0 0;color:var(--c-ink);text-wrap:balance">Votre billet vit dans le téléphone.</h1>
+                <p class="text-small text-ink-muted" style="margin:0;text-wrap:pretty">Owendo ↔ Franceville, 648 km, 22 gares. Achetez, embarquez, suivez votre train — même sans réseau.</p>
+              </div>
+
+              <div style="flex:1;padding:var(--s-5) var(--s-5) var(--s-4);display:grid;gap:var(--s-4);align-content:start">
+                <sc-for list="{{ welcomePoints }}" as="p" hint-placeholder-count="3">
+                  <div style="display:flex;gap:var(--s-4);align-items:flex-start">
+                    <span class="rounded-pill bg-accent-soft text-accent-ink" style="width:40px;height:40px;flex:0 0 auto;display:grid;place-items:center;font-size:17px">{{ p.icon }}</span>
+                    <span style="flex:1;display:grid;gap:2px">
+                      <span class="text-body" style="font-weight:600;color:var(--c-ink)">{{ p.titre }}</span>
+                      <span class="text-small text-ink-muted" style="text-wrap:pretty">{{ p.detail }}</span>
+                    </span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="padding:0 var(--s-5) var(--s-4);display:grid;gap:var(--s-2)">
+                <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ startSignup }}" hint-size="100%,56px">Créer mon compte</x-import>
+                <x-import component-from-global-scope="SetragUI.Button" variant="secondary" size="lg" block="{{ true }}" onClick="{{ startLogin }}" hint-size="100%,56px">J'ai déjà un compte</x-import>
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ guestEnter }}" hint-size="100%,48px">Poursuivre sans compte</x-import>
+                <p class="text-caption text-ink-muted" style="margin:0;text-align:center;text-wrap:pretty">En continuant, vous acceptez les conditions générales de vente, version 2026-03.</p>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-0I · Inscription ══════════ -->
+          <sc-if value="{{ isInscription }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-0I Inscription" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-4)">
+              <x-import component-from-global-scope="SetragUI.InlineMessage" tone="success" title="Numéro vérifié · +241 06 12 34 56" hint-size="100%,64px">Il reste à compléter votre profil pour établir vos titres de transport.</x-import>
+
+              <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-4)">
+                <div style="display:flex;gap:var(--s-3)">
+                  <x-import component-from-global-scope="SetragUI.Field" label="Nom" hint-size="140px,80px" style="flex:1">
+                    <x-import component-from-global-scope="SetragUI.Input" placeholder="MBADINGA" hint-size="100%,52px"></x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Prénom" hint-size="140px,80px" style="flex:1">
+                    <x-import component-from-global-scope="SetragUI.Input" placeholder="Paul" hint-size="100%,52px"></x-import>
+                  </x-import>
+                </div>
+                <div style="display:grid;gap:var(--s-2)">
+                  <span class="text-caption" style="font-weight:500;color:var(--c-ink)">Sexe</span>
+                  <x-import component-from-global-scope="SetragUI.SegmentedControl" label="Sexe" value="{{ profilSexe }}" onValueChange="{{ setProfilSexe }}" options="{{ sexeOptions }}" hint-size="100%,44px"></x-import>
+                </div>
+                <x-import component-from-global-scope="SetragUI.Field" label="Téléphone d'urgence" hint="Exigé pour les secours en ligne, différent du vôtre." hint-size="100%,86px">
+                  <x-import component-from-global-scope="SetragUI.Input" placeholder="+241 …" inputMode="tel" hint-size="100%,52px"></x-import>
+                </x-import>
+                <x-import component-from-global-scope="SetragUI.Field" label="Adresse e-mail (facultative)" hint="Pour recevoir vos reçus. Le téléphone reste votre identifiant." hint-size="100%,86px">
+                  <x-import component-from-global-scope="SetragUI.Input" placeholder="paul.mbadinga@example.ga" hint-size="100%,52px"></x-import>
+                </x-import>
+              </div>
+
+              <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-4);display:grid;gap:var(--s-3)">
+                <x-import component-from-global-scope="SetragUI.Checkbox" label="J'accepte les conditions générales de vente et de transport, version 2026-03" checked="{{ signupCgv }}" onCheckedChange="{{ setSignupCgv }}" hint-size="100%,44px"></x-import>
+                <x-import component-from-global-scope="SetragUI.Switch" label="Recevoir les informations de voyage par SMS" defaultChecked="{{ true }}" hint-size="100%,44px"></x-import>
+                <x-import component-from-global-scope="SetragUI.Switch" label="Recevoir les offres commerciales" defaultChecked="{{ false }}" hint-size="100%,44px"></x-import>
+              </div>
+
+              <sc-if value="{{ signupError }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Acceptez les conditions générales pour créer le compte." hint-size="100%,60px">La version acceptée est enregistrée avec votre profil.</x-import>
+              </sc-if>
+
+              <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ createAccount }}" hint-size="100%,56px">Créer mon compte</x-import>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-01 · Connexion OTP ══════════ -->
+          <sc-if value="{{ isConnexion }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-01 Connexion OTP" style="min-height:100%;padding:var(--s-6) var(--s-5) var(--s-8);display:grid;gap:var(--s-5);align-content:start">
+              <sc-if value="{{ otpStep1 }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-5)">
+                  <div style="display:grid;gap:var(--s-2)">
+                    <img src="uploads/Setrag_logo.png" alt="SETRAG" style="height:34px;width:auto;justify-self:start;background:#fff;border-radius:8px;padding:3px 7px" />
+                    <h1 class="text-h2" style="margin:var(--s-4) 0 0">{{ otpTitle }}</h1>
+                    <p class="text-body text-ink-muted" style="margin:0;text-wrap:pretty">{{ otpIntro }}</p>
+                  </div>
+                  <div style="display:flex;gap:var(--s-2);align-items:end">
+                    <x-import component-from-global-scope="SetragUI.Field" label="Indicatif" hint-size="88px,80px" style="flex:0 0 88px">
+                      <x-import component-from-global-scope="SetragUI.SelectNative" defaultValue="241" hint-size="100%,52px">
+                        <option value="241">+241</option>
+                      </x-import>
+                    </x-import>
+                    <x-import component-from-global-scope="SetragUI.Field" label="Numéro de téléphone" hint="Opérateur détecté : Airtel" hint-size="180px,86px" style="flex:1 1 auto">
+                      <x-import component-from-global-scope="SetragUI.Input" defaultValue="06 12 34 56" inputMode="numeric" hint-size="100%,52px"></x-import>
+                    </x-import>
+                  </div>
+                  <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ sendOtp }}" hint-size="100%,56px">Recevoir le code</x-import>
+                  <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="La connexion exige le réseau." hint-size="100%,72px">Vos billets déjà émis restent consultables dans le téléphone.</x-import>
+                  </sc-if>
+                  <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-4);display:grid;gap:var(--s-3)">
+                    <span class="text-small text-ink-muted">Vous avez acheté un billet sans compte&nbsp;?</span>
+                    <x-import component-from-global-scope="SetragUI.Button" variant="secondary" block="{{ true }}" onClick="{{ guestEnter }}" hint-size="100%,48px">Poursuivre sans compte</x-import>
+                  </div>
+                  <p class="text-caption text-ink-muted" style="margin:0">En continuant, vous acceptez les conditions générales de vente, version 2026-03.</p>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ otpStep2 }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-5)">
+                  <div style="display:grid;gap:var(--s-2)">
+                    <h1 class="text-h2" style="margin:0">Vérification</h1>
+                    <p class="text-body text-ink-muted" style="margin:0">Code envoyé au <span class="tabular">+241 06 12 34 56</span>.</p>
+                  </div>
+                  <div style="display:flex;gap:6px">
+                    <sc-for list="{{ otpBoxes }}" as="box" hint-placeholder-count="6">
+                      <input type="text" inputMode="numeric" maxLength="1" size="1" aria-label="{{ box.aria }}" value="{{ box.value }}" onChange="{{ box.onInput }}" class="rounded-md border border-line-strong bg-surface tabular" style="flex:1 1 0;width:0;min-width:0;height:56px;text-align:center;font-size:22px;color:var(--c-ink);padding:0" />
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:var(--s-3)">
+                    <span class="tabular text-small text-ink-muted" style="flex:1">{{ resendLabel }}</span>
+                    <x-import component-from-global-scope="SetragUI.Tag" tone="neutral" hint-size="120px,26px">2 essais restants</x-import>
+                  </div>
+                  <sc-if value="{{ otpError }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Code incomplet ou erroné." hint-size="100%,64px">Saisissez les six chiffres reçus par SMS.</x-import>
+                  </sc-if>
+                  <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ validateOtp }}" hint-size="100%,56px">Valider</x-import>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ otpBack }}" hint-size="100%,48px">Changer de numéro</x-import>
+                  <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-4)">
+                    <span class="text-small text-ink-muted">SMS non reçu&nbsp;? Vérifiez la couverture réseau, puis réessayez dans un instant.</span>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-02 · Accueil ══════════ -->
+          <sc-if value="{{ isAccueil }}" hint-placeholder-val="{{ true }}">
+            <div data-screen-label="VM-02 Accueil" style="display:grid;gap:var(--s-5);padding:0 0 var(--s-6)">
+
+              <div data-theme="dark" style="background:oklch(0.24 0.058 257);padding:0 var(--s-5) var(--s-8);margin-top:-1px;display:grid;gap:var(--s-4)">
+                <div style="display:flex;align-items:center;gap:var(--s-3);padding-top:var(--s-2)">
+                  <span style="flex:1;display:grid;gap:1px">
+                    <span class="text-caption" style="color:var(--c-accent-on-ink)">{{ dayLabel }}</span>
+                    <span class="text-h3" style="color:#fff">{{ greeting }}</span>
+                  </span>
+                  <button type="button" onClick="{{ goNotifs }}" aria-label="Notifications" class="rounded-pill" style="width:44px;height:44px;display:grid;place-items:center;background:oklch(1 0 0 / 0.1);border:none;color:#fff;cursor:pointer;position:relative">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7"></path><path d="M13.7 20a2 2 0 0 1-3.4 0"></path></svg>
+                    <sc-if value="{{ unread }}" hint-placeholder-val="{{ true }}">
+                      <span class="tabular" style="position:absolute;top:2px;right:2px;min-width:16px;height:16px;border-radius:999px;background:var(--c-danger);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px">{{ unread }}</span>
+                    </sc-if>
+                  </button>
+                </div>
+
+                <sc-if value="{{ noTicket }}" hint-placeholder-val="{{ false }}">
+                  <div class="rounded-lg" style="background:oklch(1 0 0 / 0.08);border:1px dashed oklch(1 0 0 / 0.3);padding:var(--s-5);display:grid;gap:var(--s-2)">
+                    <span class="text-h4" style="color:#fff">Aucun voyage prévu</span>
+                    <span class="text-small" style="color:oklch(0.985 0.004 257 / 0.72);text-wrap:pretty">Cherchez une desserte du Transgabonais : votre billet sera conservé dans le téléphone et restera consultable sans réseau.</span>
+                  </div>
+                </sc-if>
+              </div>
+
+              <div style="padding:0 var(--s-5);display:grid;gap:var(--s-5);margin-top:calc(-1 * var(--s-6))">
+                <sc-if value="{{ hasTicket }}" hint-placeholder-val="{{ true }}">
+                  <div class="rounded-lg bg-surface shadow-lg" style="border:1px solid var(--c-line);padding:var(--s-4);display:grid;gap:var(--s-3)">
+                    <div style="display:flex;align-items:center;gap:var(--s-2)">
+                      <span class="text-mono-label" style="flex:1;color:var(--c-ink-muted)">Prochain billet</span>
+                      <x-import component-from-global-scope="SetragUI.Tag" tone="success" hint-size="110px,26px">hors ligne prêt</x-import>
+                    </div>
+                    <div style="display:flex;gap:var(--s-4);align-items:center">
+                      <span style="flex:1;display:grid;gap:3px">
+                        <span class="text-h4">Owendo → Franceville</span>
+                        <span class="tabular text-small text-ink-muted">TR-201 · ven. 14 août · 08:00</span>
+                        <span class="text-small text-ink-muted">{{ paxLabel }} · 2e classe · B-4821</span>
+                      </span>
+                      <span aria-hidden="true" style="width:60px;height:60px;flex:0 0 auto;border-radius:6px;background-color:#fff;background-image:repeating-linear-gradient(0deg,#111 0 5px,transparent 5px 10px),repeating-linear-gradient(90deg,#111 0 5px,transparent 5px 10px);border:3px solid #fff;box-shadow:0 0 0 1px var(--c-line)"></span>
+                    </div>
+                    <div style="display:flex;gap:var(--s-2)">
+                      <span style="flex:1"><x-import component-from-global-scope="SetragUI.Button" block="{{ true }}" onClick="{{ goBillet }}" hint-size="100%,48px">Afficher le billet</x-import></span>
+                      <x-import component-from-global-scope="SetragUI.Button" variant="secondary" onClick="{{ goSuivi }}" hint-size="120px,48px">Suivre</x-import>
+                    </div>
+                  </div>
+                </sc-if>
+                <div class="rounded-lg border border-line bg-surface shadow-md" style="padding:var(--s-4);display:grid;gap:var(--s-3)">
+                  <span class="text-mono-label" style="color:var(--c-ink-muted)">Où allez-vous&nbsp;?</span>
+                  <button type="button" onClick="{{ goRecherche }}" class="rounded-md border border-line-strong bg-surface min-h-target" style="display:flex;align-items:center;gap:var(--s-3);padding:0 var(--s-4);cursor:pointer;text-align:left;height:52px">
+                    <span class="text-body" style="flex:1;color:var(--c-ink)">{{ origin }} → {{ destination }}</span>
+                    <span class="text-ink-muted" style="font-size:16px">⇄</span>
+                  </button>
+                  <div style="display:flex;gap:var(--s-2)">
+                    <button type="button" onClick="{{ goRecherche }}" class="rounded-md border border-line-strong bg-surface min-h-target" style="flex:2;padding:0 var(--s-3);cursor:pointer;text-align:left;height:52px;display:flex;align-items:center">
+                      <span class="tabular text-body" style="color:var(--c-ink)">ven. 14 août</span>
+                    </button>
+                    <button type="button" onClick="{{ goRecherche }}" class="rounded-md border border-line-strong bg-surface min-h-target" style="flex:1;padding:0 var(--s-3);cursor:pointer;text-align:left;height:52px;display:flex;align-items:center">
+                      <span class="tabular text-body" style="color:var(--c-ink)">{{ paxShort }}</span>
+                    </button>
+                  </div>
+                  <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Recherche indisponible hors ligne." hint-size="100%,72px">Vos billets restent consultables. Dernières informations du 14/08 à 07:41.</x-import>
+                  </sc-if>
+                  <sc-if value="{{ online }}" hint-placeholder-val="{{ true }}">
+                    <x-import component-from-global-scope="SetragUI.Button" variant="secondary" block="{{ true }}" onClick="{{ goRecherche }}" hint-size="100%,48px">Rechercher une desserte</x-import>
+                  </sc-if>
+                </div>
+
+                <div style="display:grid;gap:var(--s-2)">
+                  <span class="text-mono-label" style="color:var(--c-ink-muted)">Trajets mémorisés</span>
+                  <div class="vm-scroll" style="display:flex;gap:var(--s-2);overflow-x:auto;padding-bottom:2px">
+                    <sc-for list="{{ savedTrips }}" as="tr" hint-placeholder-count="3">
+                      <button type="button" onClick="{{ tr.onPick }}" class="rounded-pill {{ tr.cls }} min-h-target" style="flex:0 0 auto;padding:0 var(--s-4);cursor:pointer;white-space:nowrap;font-size:14px;font-weight:500">{{ tr.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <div style="display:grid;gap:var(--s-2)">
+                  <div style="display:flex;align-items:baseline;gap:var(--s-2)">
+                    <span class="text-mono-label" style="flex:1;color:var(--c-ink-muted)">{{ departuresTitle }}</span>
+                    <span class="tabular text-caption text-ink-faint">{{ syncStamp }}</span>
+                  </div>
+                  <sc-for list="{{ departures }}" as="dep" hint-placeholder-count="3">
+                    <button type="button" onClick="{{ dep.onOpen }}" class="rounded-md border border-line bg-surface" style="display:flex;align-items:center;gap:var(--s-3);padding:var(--s-4);cursor:pointer;text-align:left;width:100%">
+                      <span style="flex:1;display:grid;gap:2px">
+                        <span class="tabular text-h4">{{ dep.heure }}</span>
+                        <span class="text-small text-ink-muted">{{ dep.trajet }}</span>
+                      </span>
+                      <x-import component-from-global-scope="SetragUI.Tag" tone="{{ dep.tone }}" hint-size="90px,26px">{{ dep.statut }}</x-import>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-03 · Recherche & résultats ══════════ -->
+          <sc-if value="{{ isRecherche }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-03 Recherche et résultats" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-5)">
+              <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ tunnel }}" current="{{ 0 }}" hint-size="100%,60px"></x-import>
+
+              <sc-if value="{{ searchForm }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-5)">
+                  <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-3);position:relative">
+                    <x-import component-from-global-scope="SetragUI.Field" label="Départ" hint-size="100%,80px">
+                      <x-import component-from-global-scope="SetragUI.SelectNative" value="{{ origin }}" onChange="{{ setOrigin }}" hint-size="100%,52px">
+                        <option value="Owendo">Owendo · PK 0</option>
+                        <option value="Ntoum">Ntoum · PK 66</option>
+                        <option value="Ndjolé">Ndjolé · PK 187</option>
+                        <option value="Lopé">Lopé · PK 276</option>
+                        <option value="Booué">Booué · PK 335</option>
+                        <option value="Lastoursville">Lastoursville · PK 464</option>
+                        <option value="Moanda">Moanda · PK 583</option>
+                        <option value="Franceville">Franceville · PK 648</option>
+                      </x-import>
+                    </x-import>
+                    <x-import component-from-global-scope="SetragUI.Field" label="Arrivée" hint-size="100%,80px">
+                      <x-import component-from-global-scope="SetragUI.SelectNative" value="{{ destination }}" onChange="{{ setDestination }}" hint-size="100%,52px">
+                        <option value="Owendo">Owendo · PK 0</option>
+                        <option value="Ntoum">Ntoum · PK 66</option>
+                        <option value="Ndjolé">Ndjolé · PK 187</option>
+                        <option value="Lopé">Lopé · PK 276</option>
+                        <option value="Booué">Booué · PK 335</option>
+                        <option value="Lastoursville">Lastoursville · PK 464</option>
+                        <option value="Moanda">Moanda · PK 583</option>
+                        <option value="Franceville">Franceville · PK 648</option>
+                      </x-import>
+                    </x-import>
+                    <button type="button" onClick="{{ swap }}" aria-label="Inverser les gares" class="rounded-pill border border-line bg-surface" style="position:absolute;right:var(--s-4);top:64px;width:40px;height:40px;display:grid;place-items:center;color:var(--c-ink-muted);cursor:pointer;z-index:2">⇅</button>
+                  </div>
+
+                  <div style="display:grid;gap:var(--s-2)">
+                    <span class="text-mono-label" style="color:var(--c-ink-muted)">Date</span>
+                    <div class="vm-scroll" style="display:flex;gap:var(--s-2);overflow-x:auto;padding-bottom:2px">
+                      <sc-for list="{{ dateChips }}" as="d" hint-placeholder-count="4">
+                        <button type="button" onClick="{{ d.onPick }}" disabled="{{ d.off }}" class="rounded-pill {{ d.cls }} min-h-target" style="flex:0 0 auto;padding:0 var(--s-4);cursor:pointer;white-space:nowrap;font-size:14px;font-weight:500">{{ d.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+
+                  <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-4)">
+                    <div style="display:flex;align-items:center;gap:var(--s-3)">
+                      <span style="flex:1;display:grid;gap:1px">
+                        <span class="text-body" style="color:var(--c-ink)">Adultes</span>
+                        <span class="text-caption text-ink-muted">12 ans et plus</span>
+                      </span>
+                      <span style="display:flex;align-items:center;gap:var(--s-2)">
+                        <button type="button" onClick="{{ lessAdults }}" aria-label="Un adulte de moins" class="rounded-pill border border-line-strong bg-surface min-h-target" style="width:44px;color:var(--c-ink);cursor:pointer;font-size:18px">−</button>
+                        <span class="tabular text-h4" style="min-width:22px;text-align:center">{{ adults }}</span>
+                        <button type="button" onClick="{{ moreAdults }}" aria-label="Un adulte de plus" class="rounded-pill border border-line-strong bg-surface min-h-target" style="width:44px;color:var(--c-ink);cursor:pointer;font-size:18px">+</button>
+                      </span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:var(--s-3);border-top:1px solid var(--c-line);padding-top:var(--s-4)">
+                      <span style="flex:1;display:grid;gap:1px">
+                        <span class="text-body" style="color:var(--c-ink)">Enfants</span>
+                        <span class="text-caption text-ink-muted">4 à 11 ans · −50 %</span>
+                      </span>
+                      <span style="display:flex;align-items:center;gap:var(--s-2)">
+                        <button type="button" onClick="{{ lessKids }}" aria-label="Un enfant de moins" class="rounded-pill border border-line-strong bg-surface min-h-target" style="width:44px;color:var(--c-ink);cursor:pointer;font-size:18px">−</button>
+                        <span class="tabular text-h4" style="min-width:22px;text-align:center">{{ kids }}</span>
+                        <button type="button" onClick="{{ moreKids }}" aria-label="Un enfant de plus" class="rounded-pill border border-line-strong bg-surface min-h-target" style="width:44px;color:var(--c-ink);cursor:pointer;font-size:18px">+</button>
+                      </span>
+                    </div>
+                  </div>
+
+                  <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Recherche impossible : réseau indisponible." hint-size="100%,72px">Réessayez une fois la couverture retrouvée. La liste des 22 gares reste embarquée.</x-import>
+                  </sc-if>
+                  <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ runSearch }}" hint-size="100%,56px">Voir les dessertes</x-import>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ searchResults }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="vm-scroll" style="display:flex;gap:var(--s-2);overflow-x:auto;padding-bottom:2px">
+                    <sc-for list="{{ typeChips }}" as="c" hint-placeholder-count="4">
+                      <button type="button" onClick="{{ c.onPick }}" class="rounded-pill {{ c.cls }} min-h-target" style="flex:0 0 auto;padding:0 var(--s-4);cursor:pointer;white-space:nowrap;font-size:14px;font-weight:500">{{ c.label }}</button>
+                    </sc-for>
+                  </div>
+
+                  <sc-for list="{{ trips }}" as="trip" hint-placeholder-count="3">
+                    <div class="rounded-md {{ trip.cardCls }}" style="padding:var(--s-4);display:grid;gap:var(--s-3)">
+                      <div style="display:flex;align-items:baseline;gap:var(--s-3)">
+                        <span class="tabular text-time" style="flex:1;color:{{ trip.timeColor }};text-decoration:{{ trip.strike }}">{{ trip.heures }}</span>
+                        <x-import component-from-global-scope="SetragUI.Tag" tone="{{ trip.tone }}" hint-size="80px,26px">{{ trip.badge }}</x-import>
+                      </div>
+                      <span class="text-small text-ink-muted">{{ trip.detail }}</span>
+                      <sc-if value="{{ trip.sellable }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:grid;gap:var(--s-2)">
+                          <sc-for list="{{ trip.classes }}" as="cl" hint-placeholder-count="2">
+                            <div class="rounded-sm bg-surface-sunk" style="display:flex;align-items:center;gap:var(--s-3);padding:var(--s-2) var(--s-3)">
+                              <span class="text-small" style="flex:1;color:var(--c-ink)">{{ cl.nom }}</span>
+                              <span class="tabular text-small text-ink-muted">{{ cl.places }}</span>
+                              <span class="tabular text-body" style="font-weight:600;color:var(--c-ink)">{{ cl.prix }}</span>
+                            </div>
+                          </sc-for>
+                        </div>
+                        <sc-if value="{{ trip.lastSeats }}" hint-placeholder-val="{{ false }}">
+                          <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Dernières places sur votre portion." hint-size="100%,56px">3 places restantes en 2e classe.</x-import>
+                        </sc-if>
+                        <x-import component-from-global-scope="SetragUI.Button" variant="secondary" block="{{ true }}" onClick="{{ trip.onPick }}" hint-size="100%,48px">Choisir cette desserte</x-import>
+                      </sc-if>
+                      <sc-if value="{{ trip.cancelled }}" hint-placeholder-val="{{ false }}">
+                        <span class="text-small text-danger-ink">Desserte supprimée ce jour — travaux de voie entre Lopé et Booué.</span>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+
+                  <p class="text-caption text-ink-muted" style="margin:0;text-wrap:pretty">Prix indicatifs. Le tarif est figé pendant 15 minutes dès l'ouverture du dossier.</p>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ backToForm }}" hint-size="100%,48px">Modifier la recherche</x-import>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-04 · Détail & voyageurs ══════════ -->
+          <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-04 Détail et voyageurs" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-5)">
+              <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ tunnel }}" current="{{ 1 }}" hint-size="100%,60px"></x-import>
+
+              <div class="rounded-md bg-accent-soft" style="padding:var(--s-3) var(--s-4);display:grid;gap:2px">
+                <span class="tabular text-small text-accent-ink">Owendo 08:00 → Franceville 22:15</span>
+                <span class="text-caption text-ink-muted">TR-201 · Express · 648 km · {{ paxLabel }}</span>
+              </div>
+
+              <x-import component-from-global-scope="SetragUI.SegmentedControl" label="Étape du dossier" value="{{ detailPhase }}" onValueChange="{{ setDetailPhase }}" options="{{ detailPhases }}" hint-size="100%,44px"></x-import>
+
+              <sc-if value="{{ phaseClasse }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div style="display:grid;gap:var(--s-2)">
+                    <sc-for list="{{ classes }}" as="cl" hint-placeholder-count="3">
+                      <button type="button" onClick="{{ cl.onSelect }}" disabled="{{ cl.disabled }}" class="rounded-md {{ cl.cls }}" style="display:flex;align-items:center;gap:var(--s-3);padding:var(--s-4);cursor:pointer;text-align:left;width:100%;min-height:64px">
+                        <span style="flex:1;display:grid;gap:2px">
+                          <span class="text-body" style="font-weight:600;color:var(--c-ink)">{{ cl.nom }}</span>
+                          <span class="text-caption text-ink-muted">{{ cl.note }}</span>
+                        </span>
+                        <span class="tabular text-h4" style="color:var(--c-ink)">{{ cl.prix }}</span>
+                        <span class="rounded-pill {{ cl.dotCls }}" style="width:20px;height:20px;flex:0 0 auto;display:grid;place-items:center">
+                          <span style="width:10px;height:10px;border-radius:999px;background:{{ cl.dotFill }}"></span>
+                        </span>
+                      </button>
+                    </sc-for>
+                  </div>
+
+                  <div style="display:grid;gap:var(--s-3)">
+                    <div style="display:flex;align-items:center;gap:var(--s-2)">
+                      <span class="text-mono-label" style="flex:1;color:var(--c-ink-muted)">Places · voiture 1</span>
+                      <span class="tabular text-caption text-ink-muted">{{ seatCountLabel }}</span>
+                    </div>
+                    <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-3)">
+                      <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px">
+                        <sc-for list="{{ seats }}" as="seat" hint-placeholder-count="40">
+                          <button type="button" onClick="{{ seat.onPick }}" disabled="{{ seat.disabled }}" aria-label="{{ seat.aria }}" class="rounded-xs" style="aspect-ratio:1;border:1px solid {{ seat.border }};background:{{ seat.bg }};cursor:{{ seat.cursor }};padding:0;display:grid;place-items:center;font-size:9px;color:{{ seat.ink }}">{{ seat.mark }}</button>
+                        </sc-for>
+                      </div>
+                      <div style="display:flex;flex-wrap:wrap;gap:var(--s-2)">
+                        <x-import component-from-global-scope="SetragUI.Tag" tone="neutral" hint-size="60px,26px">libre</x-import>
+                        <x-import component-from-global-scope="SetragUI.Tag" tone="accent" hint-size="70px,26px">choisie</x-import>
+                        <x-import component-from-global-scope="SetragUI.Tag" tone="second" hint-size="80px,26px">occupée ✕</x-import>
+                      </div>
+                    </div>
+                    <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ autoSeats }}" hint-size="100%,48px">Placement automatique</x-import>
+                  </div>
+
+                  <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ toVoyageurs }}" hint-size="100%,56px">Continuer</x-import>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ phaseVoyageurs }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="vm-scroll" style="display:flex;gap:var(--s-2);overflow-x:auto;padding-bottom:2px">
+                    <sc-for list="{{ paxTabs }}" as="tab" hint-placeholder-count="3">
+                      <button type="button" onClick="{{ tab.onPick }}" class="rounded-pill {{ tab.cls }} min-h-target" style="flex:0 0 auto;padding:0 var(--s-4);cursor:pointer;white-space:nowrap;font-size:14px;font-weight:500">{{ tab.label }}</button>
+                    </sc-for>
+                  </div>
+
+                  <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-4)">
+                    <div style="display:flex;gap:var(--s-3)">
+                      <x-import component-from-global-scope="SetragUI.Field" label="Nom" hint-size="140px,80px" style="flex:1">
+                        <x-import component-from-global-scope="SetragUI.Input" defaultValue="{{ pax.nom }}" hint-size="100%,52px"></x-import>
+                      </x-import>
+                      <x-import component-from-global-scope="SetragUI.Field" label="Prénom" hint-size="140px,80px" style="flex:1">
+                        <x-import component-from-global-scope="SetragUI.Input" defaultValue="{{ pax.prenom }}" hint-size="100%,52px"></x-import>
+                      </x-import>
+                    </div>
+                    <div style="display:grid;gap:var(--s-2)">
+                      <span class="text-caption" style="font-weight:500;color:var(--c-ink)">Sexe</span>
+                      <x-import component-from-global-scope="SetragUI.SegmentedControl" label="Sexe du voyageur" value="{{ pax.sexe }}" onValueChange="{{ setSexe }}" options="{{ sexeOptions }}" hint-size="100%,44px"></x-import>
+                    </div>
+                    <x-import component-from-global-scope="SetragUI.Field" label="Téléphone" hint-size="100%,80px">
+                      <x-import component-from-global-scope="SetragUI.Input" defaultValue="{{ pax.tel }}" inputMode="tel" hint-size="100%,52px"></x-import>
+                    </x-import>
+                    <x-import component-from-global-scope="SetragUI.Field" label="Téléphone d'urgence" hint="Exigé par le cahier des charges, différent du vôtre." hint-size="100%,86px">
+                      <x-import component-from-global-scope="SetragUI.Input" defaultValue="{{ pax.urgence }}" placeholder="+241 …" inputMode="tel" hint-size="100%,52px"></x-import>
+                    </x-import>
+                    <sc-if value="{{ pax.enfant }}" hint-placeholder-val="{{ false }}">
+                      <x-import component-from-global-scope="SetragUI.Field" label="Date de naissance" hint="Nécessaire pour appliquer la réduction enfant." hint-size="100%,86px">
+                        <x-import component-from-global-scope="SetragUI.Input" placeholder="jj/mm/aaaa" hint-size="100%,52px"></x-import>
+                      </x-import>
+                    </sc-if>
+                  </div>
+
+                  <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-3) var(--s-4);display:flex;align-items:center;gap:var(--s-3)">
+                    <span class="text-small text-ink-muted" style="flex:1">Copier mes informations de compte</span>
+                    <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ copyProfile }}" hint-size="90px,40px">Utiliser</x-import>
+                  </div>
+
+                  <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ toRecap }}" hint-size="100%,56px">Continuer</x-import>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ phaseRecap }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-3)">
+                    <span class="text-mono-label" style="color:var(--c-ink-muted)">Récapitulatif</span>
+                    <sc-for list="{{ recap }}" as="line" hint-placeholder-count="4">
+                      <div style="display:flex;align-items:baseline;gap:var(--s-3)">
+                        <span class="text-small text-ink-muted" style="flex:1">{{ line.label }}</span>
+                        <span class="tabular text-caption text-ink-faint">{{ line.qte }}</span>
+                        <span class="tabular text-small" style="color:var(--c-ink);white-space:nowrap">{{ line.montant }}</span>
+                      </div>
+                    </sc-for>
+                    <div style="border-top:1px solid var(--c-line);padding-top:var(--s-3);display:flex;align-items:baseline;justify-content:space-between">
+                      <span class="text-body" style="font-weight:600">Total</span>
+                      <span class="tabular text-h3">{{ totalLabel }}</span>
+                    </div>
+                  </div>
+                  <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Prix garanti encore {{ holdLabel }}." hint-size="100%,72px">Passé ce délai, le dossier est libéré et le tarif recalculé.</x-import>
+                  <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-4)">
+                    <span class="text-caption text-ink-muted">Barème : 648 km × tarif kilométrique, ajusté au remplissage de la desserte.</span>
+                  </div>
+                  <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ goPaiement }}" hint-size="100%,56px">Passer au paiement</x-import>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-05 · Paiement ══════════ -->
+          <sc-if value="{{ isPaiement }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-05 Paiement" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-5)">
+              <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ tunnel }}" current="{{ 2 }}" hint-size="100%,60px"></x-import>
+
+              <sc-if value="{{ payChoosing }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="rounded-lg border border-line bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-2)">
+                    <span class="tabular text-h1">{{ totalLabel }}</span>
+                    <span class="text-small text-ink-muted">Owendo → Franceville · TR-201 · 14 août 08:00 · {{ paxLabel }} · {{ classeLabel }}</span>
+                  </div>
+
+                  <div style="display:grid;gap:var(--s-2)">
+                    <span class="text-mono-label" style="color:var(--c-ink-muted)">Moyen de paiement</span>
+                    <sc-for list="{{ payMethods }}" as="m" hint-placeholder-count="4">
+                      <button type="button" onClick="{{ m.onPick }}" class="rounded-md {{ m.cls }}" style="display:flex;align-items:center;gap:var(--s-3);padding:var(--s-4);cursor:pointer;text-align:left;width:100%;min-height:64px">
+                        <span style="flex:1;display:grid;gap:2px">
+                          <span class="text-body" style="font-weight:600;color:var(--c-ink)">{{ m.nom }}</span>
+                          <span class="text-caption text-ink-muted">{{ m.note }}</span>
+                        </span>
+                        <span class="rounded-pill {{ m.dotCls }}" style="width:20px;height:20px;flex:0 0 auto;display:grid;place-items:center">
+                          <span style="width:10px;height:10px;border-radius:999px;background:{{ m.dotFill }}"></span>
+                        </span>
+                      </button>
+                    </sc-for>
+                  </div>
+
+                  <sc-if value="{{ payMobile }}" hint-placeholder-val="{{ true }}">
+                    <x-import component-from-global-scope="SetragUI.Field" label="Numéro payeur" hint="Le compte mobile money à débiter." hint-size="100%,86px">
+                      <x-import component-from-global-scope="SetragUI.Input" defaultValue="+241 06 12 34 56" inputMode="tel" hint-size="100%,52px"></x-import>
+                    </x-import>
+                  </sc-if>
+
+                  <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-4)">
+                    <x-import component-from-global-scope="SetragUI.Checkbox" label="J'accepte les conditions générales de vente, version 2026-03" checked="{{ cgv }}" onCheckedChange="{{ setCgv }}" hint-size="100%,44px"></x-import>
+                  </div>
+                  <sc-if value="{{ cgvError }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Acceptez les conditions générales pour payer." hint-size="100%,60px">La version acceptée est conservée avec votre dossier.</x-import>
+                  </sc-if>
+
+                  <x-import component-from-global-scope="SetragUI.Tag" tone="{{ holdTone }}" hint-size="220px,26px">Places tenues encore {{ holdLabel }}</x-import>
+                  <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ pay }}" hint-size="100%,56px">{{ payLabel }}</x-import>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ payWaiting }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="rounded-lg border border-line bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-3)">
+                    <span style="display:flex;align-items:center;gap:var(--s-3)">
+                      <span style="width:10px;height:10px;border-radius:999px;background:var(--c-accent);animation:vm-pulse 1.6s infinite"></span>
+                      <span class="text-h4" style="flex:1">Validation en cours</span>
+                    </span>
+                    <span class="tabular text-h3">{{ totalLabel }} · Airtel Money</span>
+                    <span class="text-small text-ink-muted" style="text-wrap:pretty">Composez votre code PIN sur la demande reçue au +241 06 12 34 56. Aucun code ne se saisit dans l'application.</span>
+                  </div>
+                  <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-3)">
+                    <sc-for list="{{ payTimeline }}" as="step" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;gap:var(--s-3)">
+                        <span class="text-small" style="flex:1;color:var(--c-ink)">{{ step.label }}</span>
+                        <x-import component-from-global-scope="SetragUI.Tag" tone="{{ step.tone }}" hint-size="80px,26px">{{ step.etat }}</x-import>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Ne fermez pas l'application." hint-size="100%,72px">La demande expire dans {{ payClockLabel }}. Le statut arrive tout seul, sans rafraîchir.</x-import>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ cancelPay }}" hint-size="100%,48px">Annuler le paiement</x-import>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ payFailed }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="{{ payFailTitle }}" hint-size="100%,72px">{{ payFailBody }}</x-import>
+                  <div class="rounded-md bg-warning-soft" style="padding:var(--s-4)">
+                    <span class="tabular text-small text-warning-ink">Vos places sont encore tenues {{ holdLabel }}. Passé ce délai, elles repartent à la vente.</span>
+                  </div>
+                  <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ retryPay }}" hint-size="100%,56px">Réessayer</x-import>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="secondary" block="{{ true }}" onClick="{{ retryPay }}" hint-size="100%,48px">Changer de moyen de paiement</x-import>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ payAtCounter }}" hint-size="100%,48px">Réserver et payer au guichet</x-import>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-06 · Mes billets ══════════ -->
+          <sc-if value="{{ isBillets }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-06 Mes billets" style="padding:var(--s-4) var(--s-5) var(--s-6);display:grid;gap:var(--s-4)">
+              <div style="display:flex;align-items:center;gap:var(--s-3)">
+                <h1 class="text-h2" style="margin:0;flex:1">Mes billets</h1>
+                <button type="button" onClick="{{ sync }}" aria-label="Synchroniser" class="rounded-pill border border-line bg-surface min-h-target" style="width:44px;color:var(--c-ink-muted);cursor:pointer;font-size:16px">↻</button>
+              </div>
+
+              <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Hors ligne — 3 billets disponibles dans le téléphone." hint-size="100%,72px">Dernière synchronisation le 14/08 à 07:41. Un billet acheté depuis un autre appareil n'apparaîtra qu'après reconnexion.</x-import>
+              </sc-if>
+
+              <x-import component-from-global-scope="SetragUI.SegmentedControl" label="Période" value="{{ ticketTab }}" onValueChange="{{ setTicketTab }}" options="{{ ticketTabs }}" hint-size="100%,44px"></x-import>
+
+              <sc-if value="{{ ticketsUpcoming }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-3)">
+                  <span class="text-mono-label text-ink-muted" style="font-size:11px">Prochain départ</span>
+                  <sc-for list="{{ ticketsNow }}" as="t" hint-placeholder-count="1">
+                    <div class="rounded-lg shadow-lg" style="display:grid;gap:var(--s-3);padding:var(--s-4) var(--s-4) var(--s-3);background:{{ t.bg }}">
+                      <span style="display:flex;align-items:flex-start;gap:var(--s-2)">
+                        <span style="flex:1;display:grid;gap:2px;min-width:0">
+                          <span class="text-mono-label" style="color:{{ t.overline }};font-size:11px">{{ t.legLabel }}</span>
+                          <span class="text-h4" style="color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.trajet }}</span>
+                        </span>
+                        <x-import component-from-global-scope="SetragUI.Tag" tone="{{ t.tone }}" hint-size="90px,24px">{{ t.statut }}</x-import>
+                      </span>
+                      <span style="display:flex;align-items:center;gap:var(--s-3)">
+                        <span aria-hidden="true" style="flex:0 0 58px;height:58px;border-radius:6px;background-color:#fff;background-image:repeating-linear-gradient(0deg,#0b0f16 0 4px,transparent 4px 8px),repeating-linear-gradient(90deg,#0b0f16 0 4px,transparent 4px 8px);background-position:5px 5px;background-size:48px 48px;background-repeat:no-repeat"></span>
+                        <span style="flex:1;display:grid;gap:6px;min-width:0">
+                          <span style="display:flex;align-items:baseline;gap:8px">
+                            <span class="tabular" style="color:#fff;font-size:22px;font-weight:600">{{ t.depart }}</span>
+                            <span style="color:oklch(1 0 0 / 0.6);font-size:14px">→</span>
+                            <span class="tabular" style="color:#fff;font-size:22px;font-weight:600">{{ t.arrivee }}</span>
+                          </span>
+                          <span class="tabular text-caption" style="color:oklch(1 0 0 / 0.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Voiture · place {{ t.seatLabel }} · {{ t.reference }}</span>
+                        </span>
+                      </span>
+                      <button type="button" onClick="{{ t.onOpen }}" class="rounded-pill min-h-target" style="border:none;background:var(--c-accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer;width:100%">Ouvrir le billet</button>
+                    </div>
+                  </sc-for>
+                  <span class="text-mono-label text-ink-muted" style="font-size:11px;padding-top:var(--s-2)">Plus tard</span>
+                  <sc-for list="{{ ticketsLater }}" as="t" hint-placeholder-count="2">
+                    <button type="button" onClick="{{ t.onOpen }}" class="rounded-md" style="display:grid;gap:var(--s-2);padding:var(--s-4);cursor:pointer;text-align:left;width:100%;background:{{ t.bg }};border:none;opacity:{{ t.opacity }}">
+                      <span style="display:flex;align-items:center;gap:var(--s-2)">
+                        <span class="text-mono-label" style="flex:1;color:{{ t.overline }};font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.legLabel }}</span>
+                        <x-import component-from-global-scope="SetragUI.Tag" tone="{{ t.tone }}" hint-size="90px,24px">{{ t.statut }}</x-import>
+                      </span>
+                      <span class="text-h4" style="color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.trajet }}</span>
+                      <span style="display:flex;align-items:flex-end;gap:var(--s-3);border-top:1px dashed oklch(1 0 0 / 0.22);padding-top:var(--s-2)">
+                        <span style="flex:1;display:grid;gap:1px;min-width:0">
+                          <span class="tabular text-body" style="color:#fff;font-weight:600">{{ t.depart }} → {{ t.arrivee }}</span>
+                          <span class="tabular text-caption" style="color:oklch(1 0 0 / 0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.ligne }} · {{ t.reference }}</span>
+                        </span>
+                        <sc-if value="{{ t.qr }}" hint-placeholder-val="{{ true }}">
+                          <span aria-hidden="true" style="flex:0 0 42px;height:42px;border-radius:5px;background-color:#fff;background-image:repeating-linear-gradient(0deg,#0b0f16 0 3px,transparent 3px 6px),repeating-linear-gradient(90deg,#0b0f16 0 3px,transparent 3px 6px);background-position:4px 4px;background-size:34px 34px;background-repeat:no-repeat"></span>
+                        </sc-if>
+                        <span style="flex:0 0 auto;color:oklch(1 0 0 / 0.5);font-size:18px;line-height:1">›</span>
+                      </span>
+                    </button>
+                  </sc-for>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ goSuivi }}" hint-size="100%,48px">Suivre TR-201 en direct</x-import>
+                  <span class="tabular text-caption text-ink-faint" style="text-align:center">{{ syncStamp }}</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ ticketsPast }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-3)">
+                  <x-import component-from-global-scope="SetragUI.EmptyState" title="14 voyages effectués" description="Vos titres passés restent consultables cinq ans, avec leurs reçus téléchargeables." hint-size="100%,170px"></x-import>
+                  <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-4);display:grid;gap:var(--s-3)">
+                    <span class="text-mono-label" style="color:var(--c-ink-muted)">Billet reçu par SMS</span>
+                    <div style="display:flex;gap:var(--s-2);align-items:end">
+                      <x-import component-from-global-scope="SetragUI.Input" placeholder="Référence B-…" hint-size="100%,52px" style="flex:1"></x-import>
+                      <x-import component-from-global-scope="SetragUI.Button" variant="secondary" onClick="{{ addByRef }}" hint-size="100px,52px">Ajouter</x-import>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-07 · Billet plein écran ══════════ -->
+          <sc-if value="{{ isBillet }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-07 Billet plein écran" style="min-height:100%;background:var(--c-canvas);padding:var(--s-3) var(--s-4) var(--s-4);display:flex;flex-direction:column;gap:var(--s-3)">
+
+              <div style="display:flex;align-items:center;gap:var(--s-2)">
+                <span style="flex:1;display:grid;gap:2px">
+                  <span class="text-body" style="font-weight:600;color:var(--c-ink)">{{ holder.nom }}</span>
+                  <span class="tabular text-caption text-ink-muted">{{ holder.role }} · billet {{ holder.ref }}</span>
+                </span>
+                <span style="display:flex;gap:6px">
+                  <sc-for list="{{ ticketDots }}" as="d" hint-placeholder-count="3">
+                    <button type="button" onClick="{{ d.onPick }}" aria-label="{{ d.aria }}" style="width:28px;height:28px;display:grid;place-items:center;background:none;border:none;cursor:pointer;padding:0">
+                      <span style="width:8px;height:8px;border-radius:999px;background:{{ d.bg }}"></span>
+                    </button>
+                  </sc-for>
+                </span>
+              </div>
+
+              <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+                <div class="rounded-md bg-warning-soft" style="padding:var(--s-3) var(--s-4);display:grid;gap:2px">
+                  <span class="text-small text-warning-ink" style="font-weight:600">Hors ligne — le billet reste valable</span>
+                  <span class="tabular text-caption text-warning-ink">Le contrôleur vérifie la signature sans réseau.</span>
+                </div>
+              </sc-if>
+
+              <div class="rounded-lg" style="background:oklch(0.22 0.025 257);padding:var(--s-4);display:grid;gap:var(--s-3)">
+                <div style="display:flex;gap:var(--s-3)">
+                  <span style="flex:1;display:grid;gap:1px">
+                    <span class="text-caption" style="color:oklch(1 0 0 / 0.55)">Départ</span>
+                    <span class="tabular text-time" style="color:#fff">08:00</span>
+                    <span class="text-caption" style="color:oklch(1 0 0 / 0.7)">Owendo</span>
+                  </span>
+                  <span style="flex:1;display:grid;gap:1px">
+                    <span class="text-caption" style="color:oklch(1 0 0 / 0.55)">Arrivée</span>
+                    <span class="tabular text-time" style="color:#fff">22:15</span>
+                    <span class="text-caption" style="color:oklch(1 0 0 / 0.7)">Franceville</span>
+                  </span>
+                  <span style="flex:1;display:grid;gap:1px">
+                    <span class="text-caption" style="color:oklch(1 0 0 / 0.55)">Voiture · place</span>
+                    <span class="tabular text-h3" style="color:#fff;white-space:nowrap">{{ holder.place }}</span>
+                    <span class="text-caption" style="color:oklch(1 0 0 / 0.7)">{{ classeLabel }}</span>
+                  </span>
+                </div>
+                <div style="border-top:1px dashed oklch(1 0 0 / 0.25);padding-top:var(--s-3);display:flex;align-items:center;gap:var(--s-3)">
+                  <span aria-hidden="true" style="flex:0 0 132px;height:132px;border-radius:8px;background-color:#fff;background-image:repeating-linear-gradient(0deg,#0b0f16 0 7px,transparent 7px 14px),repeating-linear-gradient(90deg,#0b0f16 0 7px,transparent 7px 14px);background-position:10px 10px;background-size:112px 112px;background-repeat:no-repeat"></span>
+                  <span style="flex:1;display:grid;gap:var(--s-2);min-width:0">
+                    <span style="display:grid;gap:1px">
+                      <span class="text-caption" style="color:oklch(1 0 0 / 0.55)">Référence du billet</span>
+                      <span class="tabular text-body" style="color:#fff;font-weight:600;letter-spacing:.04em">{{ holder.ref }}</span>
+                    </span>
+                    <span class="text-caption" style="color:oklch(1 0 0 / 0.6);text-wrap:pretty">Code Aztec signé · vérifiable sans réseau</span>
+                    <button type="button" onClick="{{ refreshCode }}" class="rounded-pill" style="justify-self:start;border:1px solid oklch(1 0 0 / 0.3);background:none;padding:6px 12px;cursor:pointer;color:oklch(1 0 0 / 0.8);font-size:11px;text-align:left">{{ codeFreshLabel }}</button>
+                  </span>
+                </div>
+              </div>
+
+              <div class="rounded-md border border-line bg-surface" style="display:flex;align-items:center;gap:var(--s-3);padding:var(--s-3) var(--s-4)">
+                <span class="rounded-pill" style="width:9px;height:9px;background:var(--c-success);flex:0 0 auto"></span>
+                <span class="text-small" style="flex:1;color:var(--c-ink)">{{ countdownLabel }} · quai 2</span>
+                <button type="button" onClick="{{ goSuivi }}" style="background:none;border:none;color:var(--c-accent-ink);font-size:13px;font-weight:600;cursor:pointer;padding:6px">Suivre ›</button>
+              </div>
+
+              <span style="flex:1;min-height:var(--s-2)"></span>
+
+              <div style="display:grid;gap:var(--s-2)">
+                <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ openWallet }}" hint-size="100%,52px">{{ walletBtnLabel }}</x-import>
+                <div style="display:flex;gap:var(--s-2)">
+                  <button type="button" onClick="{{ shareTicket }}" class="rounded-pill border border-line bg-surface" style="flex:1;min-height:44px;cursor:pointer;color:var(--c-accent-ink);font-size:14px;font-weight:600">Partager</button>
+                  <button type="button" onClick="{{ pdfTicket }}" class="rounded-pill border border-line bg-surface" style="flex:1;min-height:44px;cursor:pointer;color:var(--c-accent-ink);font-size:14px;font-weight:600">PDF</button>
+                  <button type="button" onClick="{{ exchangeTicket }}" class="rounded-pill border border-line bg-surface" style="flex:1;min-height:44px;cursor:pointer;color:var(--c-accent-ink);font-size:14px;font-weight:600">Échanger</button>
+                </div>
+              </div>
+              <p class="text-caption text-ink-faint" style="margin:0;text-align:center">Capture d'écran désactivée · luminosité poussée au maximum</p>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-08 · Suivi du voyage ══════════ -->
+          <sc-if value="{{ isSuivi }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-08 Suivi du voyage" style="padding:0 0 var(--s-8)">
+              <div class="bg-surface" style="padding:var(--s-4) var(--s-5) var(--s-5);display:grid;gap:var(--s-3);border-bottom:1px solid var(--c-line)">
+                <sc-if value="{{ suiviIsTab }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:grid;gap:var(--s-3);padding-bottom:var(--s-1)">
+                    <h1 class="text-h2" style="margin:0;color:var(--c-ink)">Suivre un train</h1>
+                    <div style="display:flex;gap:var(--s-2);align-items:center">
+                      <span style="flex:1;position:relative">
+                        <span aria-hidden="true" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--c-ink-faint);display:grid">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+                        </span>
+                        <input type="text" value="{{ trainQuery }}" onChange="{{ setTrainQuery }}" aria-label="Numéro de train" placeholder="TR-201" class="rounded-pill tabular bg-surface-sunk" style="width:100%;height:48px;padding:0 var(--s-4) 0 42px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px" />
+                      </span>
+                      <x-import component-from-global-scope="SetragUI.Button" onClick="{{ lookupTrain }}" hint-size="96px,48px">Suivre</x-import>
+                    </div>
+                    <div class="vm-scroll" style="display:flex;gap:var(--s-2);overflow-x:auto;padding-bottom:2px">
+                      <sc-for list="{{ trainChips }}" as="t" hint-placeholder-count="3">
+                        <button type="button" onClick="{{ t.onPick }}" class="rounded-pill tabular {{ t.cls }}" style="flex:0 0 auto;min-height:36px;padding:0 var(--s-3);font-size:13px;font-weight:600;cursor:pointer">{{ t.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <div class="rounded-md" style="background:{{ suiviBg }};padding:var(--s-4);display:grid;gap:var(--s-2)">
+                  <span class="text-mono-label" style="color:oklch(1 0 0 / 0.6)">TR-201 · Owendo → Franceville · 14 août</span>
+                  <div style="display:flex;align-items:baseline;gap:var(--s-3)">
+                    <span class="text-h2" style="color:#fff;flex:1">{{ suiviTitre }}</span>
+                    <x-import component-from-global-scope="SetragUI.Tag" tone="{{ suiviTone }}" hint-size="100px,26px">{{ suiviBadge }}</x-import>
+                  </div>
+                  <span class="text-small" style="color:oklch(1 0 0 / 0.75);text-wrap:pretty">{{ suiviDetail }}</span>
+                </div>
+
+                <div style="display:flex;gap:var(--s-3)">
+                  <div class="rounded-md border border-line bg-surface-sunk" style="flex:1;padding:var(--s-3);display:grid;gap:2px">
+                    <span class="tabular text-h4" style="color:var(--c-ink)">328 km</span>
+                    <span class="text-caption text-ink-muted">parcourus sur 648</span>
+                  </div>
+                  <div class="rounded-md border border-line bg-surface-sunk" style="flex:1;padding:var(--s-3);display:grid;gap:2px">
+                    <span class="tabular text-h4" style="color:var(--c-ink)">6 h 10</span>
+                    <span class="text-caption text-ink-muted">restantes</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="padding:var(--s-5);display:grid;gap:var(--s-4)">
+                <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+                  <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Statut du 14/08 à 07:41." hint-size="100%,72px">Susceptible d'avoir changé depuis. La position ne peut pas être actualisée hors ligne.</x-import>
+                </sc-if>
+
+                <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4) var(--s-4) var(--s-4) var(--s-3)">
+                  <sc-for list="{{ stops }}" as="stop" hint-placeholder-count="7">
+                    <div style="display:grid;grid-template-columns:46px 20px 1fr auto;gap:var(--s-2);align-items:start;min-height:52px">
+                      <span class="tabular text-caption text-ink-muted" style="padding-top:3px">{{ stop.prevu }}</span>
+                      <span style="position:relative;height:100%;min-height:48px">
+                        <span style="position:absolute;left:8px;top:0;bottom:0;width:2px;background:{{ stop.barColor }}"></span>
+                        <span style="position:absolute;left:3px;top:3px;width:12px;height:12px;border-radius:999px;border:2px solid {{ stop.dotColor }};background:{{ stop.dotFill }}"></span>
+                      </span>
+                      <span style="display:grid;gap:1px;padding-bottom:var(--s-3)">
+                        <span class="text-small" style="font-weight:600;color:{{ stop.gareColor }}">{{ stop.gare }}</span>
+                        <span class="text-caption text-ink-muted">{{ stop.etat }}</span>
+                      </span>
+                      <span class="tabular text-small" style="color:{{ stop.estimeColor }};padding-top:2px">{{ stop.estime }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:4px">
+                  <x-import component-from-global-scope="SetragUI.Switch" label="M'avertir de tout changement" defaultChecked="{{ true }}" hint-size="100%,44px"></x-import>
+                  <span class="text-caption text-ink-muted" style="padding-left:52px">Notification et SMS pour cette desserte</span>
+                </div>
+
+                <sc-if value="{{ suiviCancelled }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:grid;gap:var(--s-3)">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Remboursement intégral engagé, sans démarche de votre part." hint-size="100%,72px">38 000 FCFA remboursés sur le compte Airtel Money ayant servi au paiement, sous 72 heures.</x-import>
+                    <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ goRecherche }}" hint-size="100%,56px">Chercher une autre desserte</x-import>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ suiviRunning }}" hint-placeholder-val="{{ true }}">
+                  <x-import component-from-global-scope="SetragUI.Button" variant="secondary" block="{{ true }}" onClick="{{ goBillet }}" hint-size="100%,48px">Afficher mon billet</x-import>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-09 · Notifications ══════════ -->
+          <sc-if value="{{ isNotifs }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-09 Notifications" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-4)">
+              <sc-if value="{{ notifList }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="vm-scroll" style="display:flex;gap:var(--s-2);overflow-x:auto;padding-bottom:2px">
+                    <sc-for list="{{ notifFilters }}" as="f" hint-placeholder-count="3">
+                      <button type="button" onClick="{{ f.onPick }}" class="rounded-pill {{ f.cls }} min-h-target" style="flex:0 0 auto;padding:0 var(--s-4);cursor:pointer;white-space:nowrap;font-size:14px;font-weight:500">{{ f.label }}</button>
+                    </sc-for>
+                  </div>
+                  <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="4">
+                    <button type="button" onClick="{{ n.onOpen }}" class="rounded-md {{ n.cardCls }}" style="display:flex;gap:var(--s-3);padding:var(--s-4);cursor:pointer;text-align:left;width:100%;align-items:flex-start">
+                      <span style="flex:1;display:grid;gap:3px">
+                        <span style="display:flex;align-items:center;gap:var(--s-2)">
+                          <span class="text-body" style="font-weight:600;flex:1;color:var(--c-ink)">{{ n.titre }}</span>
+                          <x-import component-from-global-scope="SetragUI.Tag" tone="{{ n.tone }}" hint-size="80px,26px">{{ n.type }}</x-import>
+                        </span>
+                        <span class="text-small text-ink-muted">{{ n.detail }}</span>
+                        <span class="tabular text-caption text-ink-faint">{{ n.quand }}</span>
+                      </span>
+                    </button>
+                  </sc-for>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ markAllRead }}" hint-size="100%,48px">Tout marquer comme lu</x-import>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ notifPrefs }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Notifications système désactivées pour cette application." hint-size="100%,72px">Le SMS reste actif pour les événements critiques : c'est le seul canal qui atteint un téléphone sans données.</x-import>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="secondary" block="{{ true }}" onClick="{{ openSettings }}" hint-size="100%,48px">Ouvrir les réglages du téléphone</x-import>
+                  <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-3)">
+                    <div style="display:flex;gap:var(--s-3);border-bottom:1px solid var(--c-line);padding-bottom:var(--s-2)">
+                      <span class="text-caption text-ink-muted" style="flex:1">Événement</span>
+                      <span class="text-caption text-ink-muted" style="width:44px;text-align:center">Push</span>
+                      <span class="text-caption text-ink-muted" style="width:44px;text-align:center">SMS</span>
+                    </div>
+                    <sc-for list="{{ notifPrefRows }}" as="row" hint-placeholder-count="6">
+                      <div style="display:flex;align-items:center;gap:var(--s-3);min-height:44px">
+                        <span class="text-small" style="flex:1;color:var(--c-ink)">{{ row.label }}</span>
+                        <button type="button" onClick="{{ row.togglePush }}" aria-label="{{ row.pushAria }}" class="rounded-sm" style="width:44px;height:44px;border:none;background:none;cursor:pointer;font-size:17px;color:{{ row.pushColor }}">{{ row.pushMark }}</button>
+                        <button type="button" onClick="{{ row.toggleSms }}" aria-label="{{ row.smsAria }}" class="rounded-sm" style="width:44px;height:44px;border:none;background:none;cursor:pointer;font-size:17px;color:{{ row.smsColor }}">{{ row.smsMark }}</button>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-P1 · Profil ══════════ -->
+          <sc-if value="{{ isProfil }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-P1 Profil" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-4)">
+              <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-4)">
+                <div style="display:flex;gap:var(--s-3)">
+                  <x-import component-from-global-scope="SetragUI.Field" label="Nom" hint-size="140px,80px" style="flex:1">
+                    <x-import component-from-global-scope="SetragUI.Input" defaultValue="MBADINGA" hint-size="100%,52px"></x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Prénom" hint-size="140px,80px" style="flex:1">
+                    <x-import component-from-global-scope="SetragUI.Input" defaultValue="Paul" hint-size="100%,52px"></x-import>
+                  </x-import>
+                </div>
+                <div style="display:grid;gap:var(--s-2)">
+                  <span class="text-caption" style="font-weight:500;color:var(--c-ink)">Sexe</span>
+                  <x-import component-from-global-scope="SetragUI.SegmentedControl" label="Sexe" value="{{ profilSexe }}" onValueChange="{{ setProfilSexe }}" options="{{ sexeOptions }}" hint-size="100%,44px"></x-import>
+                </div>
+                <x-import component-from-global-scope="SetragUI.Field" label="Téléphone principal" hint="Toute modification exige une vérification par code SMS." hint-size="100%,86px">
+                  <x-import component-from-global-scope="SetragUI.Input" defaultValue="+241 06 12 34 56" inputMode="tel" hint-size="100%,52px"></x-import>
+                </x-import>
+                <x-import component-from-global-scope="SetragUI.Field" label="Téléphone d'urgence" hint="Utilisé par les secours en ligne, différent du vôtre." hint-size="100%,86px">
+                  <x-import component-from-global-scope="SetragUI.Input" defaultValue="+241 07 88 21 04" inputMode="tel" hint-size="100%,52px"></x-import>
+                </x-import>
+                <x-import component-from-global-scope="SetragUI.Field" label="Adresse e-mail (facultative)" hint-size="100%,80px">
+                  <x-import component-from-global-scope="SetragUI.Input" defaultValue="paul.mbadinga@example.ga" hint-size="100%,52px"></x-import>
+                </x-import>
+              </div>
+              <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ saveProfile }}" hint-size="100%,56px">Enregistrer</x-import>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-P2 · Voyageurs enregistrés ══════════ -->
+          <sc-if value="{{ isVoyageurs }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-P2 Voyageurs enregistrés" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-3)">
+              <p class="text-small text-ink-muted" style="margin:0;text-wrap:pretty">Ces profils sont proposés à chaque achat : plus rien à ressaisir dans le train de la file d'attente.</p>
+              <sc-for list="{{ savedPax }}" as="p" hint-placeholder-count="3">
+                <button type="button" onClick="{{ p.onOpen }}" class="rounded-md border border-line bg-surface" style="display:flex;align-items:center;gap:var(--s-3);padding:var(--s-4);cursor:pointer;text-align:left;width:100%;min-height:68px">
+                  <x-import component-from-global-scope="SetragUI.Avatar" name="{{ p.full }}" hint-size="34px,34px"></x-import>
+                  <span style="flex:1;display:grid;gap:2px">
+                    <span class="text-body" style="font-weight:600;color:var(--c-ink)">{{ p.nom }}</span>
+                    <span class="tabular text-caption text-ink-muted">{{ p.note }}</span>
+                  </span>
+                  <x-import component-from-global-scope="SetragUI.Tag" tone="neutral" hint-size="66px,26px">{{ p.tag }}</x-import>
+                </button>
+              </sc-for>
+              <x-import component-from-global-scope="SetragUI.Button" variant="secondary" block="{{ true }}" onClick="{{ addPax }}" hint-size="100%,48px">Ajouter un voyageur</x-import>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-P3 · Affichage et langue ══════════ -->
+          <sc-if value="{{ isAffichage }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-P3 Affichage et langue" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-4)">
+              <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-3)">
+                <span class="text-mono-label" style="color:var(--c-ink-muted)">Thème</span>
+                <x-import component-from-global-scope="SetragUI.SegmentedControl" label="Thème de l'application" value="{{ themeChoice }}" onValueChange="{{ setThemeChoice }}" options="{{ themeChoices }}" hint-size="100%,44px"></x-import>
+                <p class="text-caption text-ink-muted" style="margin:0;text-wrap:pretty">Le thème sombre économise la batterie sur écran OLED et reste lisible la nuit dans le train.</p>
+              </div>
+              <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-3)">
+                <span class="text-mono-label" style="color:var(--c-ink-muted)">Langue</span>
+                <x-import component-from-global-scope="SetragUI.SelectNative" value="{{ lang }}" onChange="{{ setLang }}" hint-size="100%,52px">
+                  <option value="fr">Français</option>
+                  <option value="en">English — bientôt</option>
+                </x-import>
+                <p class="text-caption text-ink-muted" style="margin:0">Les montants restent en francs CFA quelle que soit la langue.</p>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ══════════ VM-10 · Compte ══════════ -->
+          <sc-if value="{{ isCompte }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="VM-10 Compte" style="padding:var(--s-4) var(--s-5) var(--s-6);display:grid;gap:var(--s-4)">
+              <h1 class="text-h2" style="margin:0">Mon compte</h1>
+
+              <sc-if value="{{ guest }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="rounded-lg bg-accent-soft" style="padding:var(--s-5);display:grid;gap:var(--s-3)">
+                    <span class="rounded-pill bg-surface" style="width:44px;height:44px;display:grid;place-items:center;font-size:19px;color:var(--c-accent-ink)">◍</span>
+                    <span class="text-h4 text-accent-ink">Mode consultation</span>
+                    <span class="text-small text-accent-ink" style="text-wrap:pretty">Vous consultez un billet reçu par SMS. Créez un compte pour retrouver tous vos titres sur n'importe quel appareil, recevoir les alertes de retard et réutiliser vos voyageurs.</span>
+                    <div style="display:grid;gap:var(--s-2);padding-top:var(--s-2)">
+                      <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ startSignup }}" hint-size="100%,56px">Créer mon compte</x-import>
+                      <x-import component-from-global-scope="SetragUI.Button" variant="secondary" block="{{ true }}" onClick="{{ startLogin }}" hint-size="100%,48px">J'ai déjà un compte</x-import>
+                    </div>
+                  </div>
+
+                  <div class="rounded-md border border-line bg-surface" style="overflow:hidden">
+                    <sc-for list="{{ guestRows }}" as="row" hint-placeholder-count="3">
+                      <button type="button" onClick="{{ row.onOpen }}" style="display:flex;align-items:center;gap:var(--s-3);padding:var(--s-4);cursor:pointer;text-align:left;width:100%;min-height:60px;background:none;border:none;border-bottom:1px solid var(--c-line)">
+                        <span style="flex:1;display:grid;gap:2px">
+                          <span class="text-body" style="color:var(--c-ink)">{{ row.label }}</span>
+                          <span class="text-caption text-ink-muted">{{ row.note }}</span>
+                        </span>
+                        <span class="text-ink-faint" style="font-size:18px">›</span>
+                      </button>
+                    </sc-for>
+                  </div>
+                  <p class="tabular text-caption text-ink-faint" style="margin:0;text-align:center">Version 1.0.0 · cache local 0,4 Mo</p>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ signedIn }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="rounded-lg border border-line bg-surface" style="padding:var(--s-4);display:flex;align-items:center;gap:var(--s-4)">
+                    <x-import component-from-global-scope="SetragUI.Avatar" name="Paul Mbadinga" size="lg" hint-size="44px,44px"></x-import>
+                    <span style="flex:1;display:grid;gap:2px">
+                      <span class="text-h4">MBADINGA Paul</span>
+                      <span class="tabular text-caption text-ink-muted">+241 06 12 34 56 · vérifié</span>
+                      <span class="text-caption text-ink-muted">paul.mbadinga@example.ga · non vérifié</span>
+                    </span>
+                  </div>
+
+                  <div class="rounded-md border border-line bg-surface" style="overflow:hidden">
+                    <sc-for list="{{ settingsRows }}" as="row" hint-placeholder-count="4">
+                      <button type="button" onClick="{{ row.onOpen }}" style="display:flex;align-items:center;gap:var(--s-3);padding:var(--s-4);cursor:pointer;text-align:left;width:100%;min-height:60px;background:none;border:none;border-bottom:1px solid var(--c-line)">
+                        <span style="flex:1;display:grid;gap:2px">
+                          <span class="text-body" style="color:var(--c-ink)">{{ row.label }}</span>
+                          <span class="text-caption text-ink-muted">{{ row.note }}</span>
+                        </span>
+                        <span class="text-ink-faint" style="font-size:18px">›</span>
+                      </button>
+                    </sc-for>
+                  </div>
+
+                  <span class="text-mono-label" style="color:var(--c-ink-muted)">Données personnelles</span>
+                  <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-3)">
+                    <sc-for list="{{ consents }}" as="c" hint-placeholder-count="4">
+                      <div style="display:grid;gap:4px;padding-bottom:var(--s-2)">
+                        <sc-if value="{{ c.optional }}" hint-placeholder-val="{{ true }}">
+                          <x-import component-from-global-scope="SetragUI.Switch" label="{{ c.label }}" defaultChecked="{{ c.actif }}" hint-size="100%,44px"></x-import>
+                        </sc-if>
+                        <sc-if value="{{ c.required }}" hint-placeholder-val="{{ false }}">
+                          <div style="display:flex;align-items:center;gap:var(--s-3);min-height:44px">
+                            <span class="text-small" style="flex:1;color:var(--c-ink)">{{ c.label }}</span>
+                            <x-import component-from-global-scope="SetragUI.Tag" tone="neutral" hint-size="70px,26px">requis</x-import>
+                          </div>
+                        </sc-if>
+                        <span class="tabular text-caption text-ink-muted" style="padding-left:{{ c.notePad }}">{{ c.note }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+
+                  <div style="display:grid;gap:var(--s-2)">
+                    <x-import component-from-global-scope="SetragUI.Button" variant="secondary" block="{{ true }}" onClick="{{ exportData }}" hint-size="100%,48px">Exporter mes données</x-import>
+                    <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ openDelete }}" hint-size="100%,48px">Supprimer mon compte</x-import>
+                    <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ logout }}" hint-size="100%,48px">Se déconnecter</x-import>
+                  </div>
+                  <p class="tabular text-caption text-ink-faint" style="margin:0;text-align:center">Version 1.0.0 · cache local 2,4 Mo</p>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+        </main>
+
+        <!-- barre d'onglets -->
+        <sc-if value="{{ tabBarVisible }}" hint-placeholder-val="{{ true }}">
+          <nav aria-label="Navigation" style="flex:0 0 auto;display:flex;background:var(--c-surface);border-top:1px solid var(--c-line);padding-bottom:var(--s-2)">
+            <button type="button" onClick="{{ tabAccueil.onPick }}" aria-current="{{ tabAccueil.current }}" style="flex:1;background:none;border:none;padding:var(--s-2) 0 0;display:grid;gap:4px;justify-items:center;cursor:pointer;color:{{ tabAccueil.color }};min-height:56px">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ tabAccueil.stroke }}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3.5 10.6 12 3.8l8.5 6.8"></path>
+                <path d="M5.8 9.6V19a1.2 1.2 0 0 0 1.2 1.2h10a1.2 1.2 0 0 0 1.2-1.2V9.6"></path>
+                <path d="M10 20.2v-5.4h4v5.4"></path>
+              </svg>
+              <span class="text-caption" style="font-weight:{{ tabAccueil.weight }}">Accueil</span>
+            </button>
+            <button type="button" onClick="{{ tabBillets.onPick }}" aria-current="{{ tabBillets.current }}" style="flex:1;background:none;border:none;padding:var(--s-2) 0 0;display:grid;gap:4px;justify-items:center;cursor:pointer;color:{{ tabBillets.color }};min-height:56px">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ tabBillets.stroke }}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3.2 8.4a1.6 1.6 0 0 1 1.6-1.6h14.4a1.6 1.6 0 0 1 1.6 1.6v1.3a2.3 2.3 0 0 0 0 4.6v1.3a1.6 1.6 0 0 1-1.6 1.6H4.8a1.6 1.6 0 0 1-1.6-1.6v-1.3a2.3 2.3 0 0 0 0-4.6z"></path>
+                <path d="M14.4 6.8v1.8M14.4 11.1v1.8M14.4 15.4v1.8"></path>
+              </svg>
+              <span class="text-caption" style="font-weight:{{ tabBillets.weight }}">Billets</span>
+            </button>
+            <button type="button" onClick="{{ tabTrains.onPick }}" aria-current="{{ tabTrains.current }}" style="flex:1;background:none;border:none;padding:var(--s-2) 0 0;display:grid;gap:4px;justify-items:center;cursor:pointer;color:{{ tabTrains.color }};min-height:56px">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ tabTrains.stroke }}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="5.2" y="3.2" width="13.6" height="13.2" rx="3.4"></rect>
+                <path d="M5.2 9.6h13.6"></path>
+                <path d="M8.6 13.1h.01M15.4 13.1h.01"></path>
+                <path d="M8.6 16.4 6.2 20.4M15.4 16.4l2.4 4"></path>
+              </svg>
+              <span class="text-caption" style="font-weight:{{ tabTrains.weight }}">Trains</span>
+            </button>
+            <button type="button" onClick="{{ tabCompte.onPick }}" aria-current="{{ tabCompte.current }}" style="flex:1;background:none;border:none;padding:var(--s-2) 0 0;display:grid;gap:4px;justify-items:center;cursor:pointer;color:{{ tabCompte.color }};min-height:56px">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ tabCompte.stroke }}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="8.2" r="3.6"></circle>
+                <path d="M5.2 20.2c0-3.4 3-5.4 6.8-5.4s6.8 2 6.8 5.4"></path>
+              </svg>
+              <span class="text-caption" style="font-weight:{{ tabCompte.weight }}">Compte</span>
+            </button>
+          </nav>
+        </sc-if>
+
+        <div style="flex:0 0 auto;height:22px;display:grid;place-items:center;background:{{ homeBarBg }}">
+          <span style="width:134px;height:5px;border-radius:999px;background:{{ homeBarInk }}"></span>
+        </div>
+
+        <!-- ajout au wallet -->
+        <sc-if value="{{ walletOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:40;background:oklch(0.22 0.025 257 / 0.6);display:grid;align-items:end">
+            <div class="rounded-lg bg-surface" style="border-radius:20px 20px 0 0;padding:var(--s-5) var(--s-5) var(--s-6);display:grid;gap:var(--s-4);animation:vm-rise .2s var(--ease);justify-items:center">
+              <span style="width:44px;height:5px;border-radius:999px;background:var(--c-line-strong)"></span>
+              <span class="text-h4" style="justify-self:start">Ajouter au Wallet</span>
+              <x-import component-from-global-scope="SetragUI.WalletPass" logoText="SETRAG" headerFields="{{ walletHeader }}" origin="{{ walletOrigin }}" destination="{{ walletDestination }}" secondaryFields="{{ walletSecondary }}" qrCode="{{ walletQr }}" barcodeAltText="B-4821 · RS-2026-084517" hint-size="320px,420px"></x-import>
+              <div style="display:flex;gap:var(--s-2);width:100%">
+                <span style="flex:1"><x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ closeWallet }}" hint-size="100%,48px">Annuler</x-import></span>
+                <span style="flex:2"><x-import component-from-global-scope="SetragUI.Button" block="{{ true }}" onClick="{{ confirmWallet }}" hint-size="100%,48px">Ajouter la carte</x-import></span>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- confirmation de suppression -->
+        <sc-if value="{{ deleteOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:40;background:oklch(0.22 0.025 257 / 0.6);display:grid;align-items:end;padding:var(--s-4)">
+            <div class="rounded-lg bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-4);animation:vm-rise .2s var(--ease)">
+              <span class="text-h4">Supprimer le compte&nbsp;?</span>
+              <span class="text-small text-ink-muted" style="text-wrap:pretty">Vos billets à venir seront annulés et remboursés. Les pièces comptables sont conservées dix ans, comme l'impose la réglementation.</span>
+              <x-import component-from-global-scope="SetragUI.Field" label="Saisissez SUPPRIMER pour confirmer" hint-size="100%,80px">
+                <x-import component-from-global-scope="SetragUI.Input" placeholder="SUPPRIMER" hint-size="100%,52px"></x-import>
+              </x-import>
+              <div style="display:flex;gap:var(--s-2)">
+                <span style="flex:1"><x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ closeDelete }}" hint-size="100%,48px">Annuler</x-import></span>
+                <span style="flex:1"><x-import component-from-global-scope="SetragUI.Button" variant="danger" block="{{ true }}" onClick="{{ confirmDelete }}" hint-size="100%,48px">Supprimer</x-import></span>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- dossier expiré -->
+        <sc-if value="{{ holdExpired }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:40;background:oklch(0.22 0.025 257 / 0.6);display:grid;place-items:center;padding:var(--s-5)">
+            <div class="rounded-lg bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-4)">
+              <span class="text-h4">Dossier expiré</span>
+              <span class="text-small text-ink-muted" style="text-wrap:pretty">Les 15 minutes sont écoulées : les places ont été relâchées et le prix garanti est perdu. Aucun paiement n'a été lancé.</span>
+              <x-import component-from-global-scope="SetragUI.Button" block="{{ true }}" onClick="{{ restartSearch }}" hint-size="100%,48px">Relancer la recherche</x-import>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:var(--s-4);right:var(--s-4);bottom:96px;z-index:50;animation:vm-rise .2s var(--ease)">
+            <div class="rounded-md" style="background:oklch(0.22 0.025 257);color:#fff;padding:var(--s-3) var(--s-4);display:flex;align-items:center;gap:var(--s-3);box-shadow:0 12px 32px oklch(0 0 0 / 0.4)">
+              <span class="text-small" style="flex:1;color:#fff">{{ toast }}</span>
+              <button type="button" onClick="{{ closeToast }}" style="background:none;border:none;color:var(--c-accent-on-ink);cursor:pointer;font-size:13px;font-weight:600;padding:4px 6px">OK</button>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;VM-00 Splash&quot;,&quot;VM-0W Bienvenue&quot;,&quot;VM-01 Connexion OTP&quot;,&quot;VM-0I Inscription&quot;,&quot;VM-02 Accueil&quot;,&quot;VM-03 Recherche et résultats&quot;,&quot;VM-04 Détail et voyageurs&quot;,&quot;VM-05 Paiement&quot;,&quot;VM-06 Mes billets&quot;,&quot;VM-07 Billet plein écran&quot;,&quot;VM-08 Suivi du voyage&quot;,&quot;VM-09 Notifications&quot;,&quot;VM-10 Compte&quot;,&quot;VM-P1 Profil&quot;,&quot;VM-P2 Voyageurs enregistrés&quot;,&quot;VM-P3 Affichage et langue&quot;],&quot;default&quot;:&quot;VM-02 Accueil&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Écran&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Clair&quot;,&quot;Sombre&quot;],&quot;default&quot;:&quot;Clair&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Écran&quot;},&quot;chrome&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Téléphone&quot;,&quot;Plein écran&quot;],&quot;default&quot;:&quot;Téléphone&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Écran&quot;},&quot;session&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Connecté&quot;,&quot;Invité&quot;],&quot;default&quot;:&quot;Connecté&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;États simulés&quot;},&quot;reseau&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;En ligne&quot;,&quot;Hors ligne&quot;],&quot;default&quot;:&quot;En ligne&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;États simulés&quot;},&quot;suivi&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;À l'heure&quot;,&quot;Retard 35 min&quot;,&quot;Annulée&quot;],&quot;default&quot;:&quot;À l'heure&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;États simulés&quot;},&quot;holdState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Dossier en cours&quot;,&quot;Bientôt expiré&quot;,&quot;Expiré&quot;],&quot;default&quot;:&quot;Dossier en cours&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;États simulés&quot;},&quot;paymentOutcome&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Paiement confirmé&quot;,&quot;Paiement refusé&quot;,&quot;Sans réponse de l'opérateur&quot;],&quot;default&quot;:&quot;Paiement confirmé&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;États simulés&quot;}}">
+const TABS = [
+  { id: "accueil", screen: "VM-02", label: "Accueil" },
+  { id: "billets", screen: "VM-06", label: "Billets" },
+  { id: "trains", screen: "VM-08", label: "Trains" },
+  { id: "compte", screen: "VM-10", label: "Compte" }
+];
+
+const SCREEN_TAB = { "VM-02": "accueil", "VM-06": "billets", "VM-08": "trains", "VM-10": "compte" };
+
+const NAV_META = {
+  "VM-01": ["Connexion", "Par code SMS"],
+  "VM-03": ["Rechercher", "Owendo → Franceville"],
+  "VM-04": ["TR-201 · 14 août", "Express · 648 km"],
+  "VM-05": ["Paiement", "Dossier RS-2026-084517"],
+  "VM-07": ["Billet 1 / 3", "MBADINGA Paul · B-4821"],
+  "VM-08": ["Suivi du voyage", "TR-201 du 14 août"],
+  "VM-09": ["Notifications", "3 non lues"],
+  "VM-P1": ["Profil", "Identité et contacts"],
+  "VM-P2": ["Voyageurs enregistrés", "3 profils réutilisables à l'achat"],
+  "VM-P3": ["Affichage et langue", "Thème de l'application"],
+  "VM-0I": ["Créer mon compte", "Étape 2 sur 2 · votre profil"]
+};
+
+const CLASSES = [
+  { id: "deuxieme", nom: "2e classe", note: "12 places sur ce segment", prix: 15000 },
+  { id: "premiere", nom: "1re classe", note: "4 places · climatisation", prix: 25000 },
+  { id: "couchette", nom: "Couchette", note: "Aucune place sur ce segment", prix: 0, indispo: true }
+];
+
+const STOPS = [
+  ["Owendo", "08:00", "08:02", "Parti", "past"],
+  ["N'Djolé", "11:20", "11:24", "Parti", "past"],
+  ["Booué", "14:05", "14:05", "Parti", "past"],
+  ["Lopé", "15:30", "15:32", "En approche", "now"],
+  ["Lastoursville", "18:10", "18:12", "À venir", "next"],
+  ["Moanda", "20:40", "20:41", "À venir", "next"],
+  ["Franceville", "22:15", "22:15", "Terminus", "next"]
+];
+
+const PAX_POOL = [
+  { nom: "MBADINGA", prenom: "Paul", sexe: "M", tel: "+241 06 12 34 56", urgence: "+241 07 88 21 04", enfant: false },
+  { nom: "MBADINGA", prenom: "Aline", sexe: "F", tel: "+241 07 88 21 04", urgence: "+241 06 12 34 56", enfant: false },
+  { nom: "MBADINGA", prenom: "Ivan", sexe: "M", tel: "+241 06 12 34 56", urgence: "", enfant: true }
+];
+
+const PREF_ROWS = [
+  ["Confirmation d'achat", true, true],
+  ["Rappel la veille", true, false],
+  ["Rappel à H−2", true, false],
+  ["Retard ou annulation", true, true],
+  ["Remboursement traité", true, true],
+  ["Offres commerciales", false, false]
+];
+
+class Component extends DCLogic {
+  state = {
+    tab: "accueil", stack: [], scale: 1,
+    origin: "Owendo", destination: "Franceville", adults: 2, kids: 1,
+    searchPhase: "form", typeFilter: "toutes", dateChoice: "ven14",
+    detailPhase: "classe", classe: "deuxieme", seats: null, paxIndex: 0, paxSexe: null,
+    payMethod: "airtel", cgv: false, cgvError: false, payPhase: "choix", payElapsed: 0, payClock: 180,
+    holdLeft: null, ticketTab: "avenir", notifView: "liste", notifFilter: "toutes",
+    prefs: null, otpStep: 1, otp: ["4", "1", "7", "", "", ""], otpResend: 47, otpError: false,
+    loggedIn: null, deleteOpen: false, toast: "", codeAge: 12, unread: 3,
+    themeChoice: "systeme", lang: "fr", walletOpen: false, walletAdded: false,
+    booted: false, signupMode: false, signupCgv: false, signupError: false
+  };
+
+  componentDidMount() {
+    this.bootTimer = setTimeout(() => {
+      const logged = this.state.loggedIn === null ? String(this.props.session || "").indexOf("Connecté") === 0 : this.state.loggedIn;
+      this.setState({ booted: true, stack: logged ? [] : ["VM-0W"] });
+    }, 1700);
+    this.fit();
+    this.onResize = () => this.fit();
+    window.addEventListener("resize", this.onResize);
+    this.timer = setInterval(() => this.tick(), 1000);
+    if (!window.SetragUI) {
+      this.poll = setInterval(() => {
+        if (window.SetragUI) { clearInterval(this.poll); this.forceUpdate(); }
+      }, 120);
+    }
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("resize", this.onResize);
+    clearInterval(this.timer); clearInterval(this.poll); clearTimeout(this.toastTimer); clearTimeout(this.bootTimer);
+  }
+
+  componentDidUpdate(prev) {
+    if (prev.screen !== this.props.screen) this.applyScreenProp();
+    if (prev.chrome !== this.props.chrome) this.fit();
+    if (prev.holdState !== this.props.holdState) this.setState({ holdLeft: null });
+    if (prev.paymentOutcome !== this.props.paymentOutcome) this.setState({ payPhase: "choix", payElapsed: 0, payClock: 180 });
+  }
+
+  fit() {
+    if (this.full()) { this.setState({ scale: 1 }); return; }
+    const availH = window.innerHeight - 40;
+    const availW = window.innerWidth - 40;
+    this.setState({ scale: Math.min(1, availH / 868, availW / 414) });
+  }
+
+  full() { return String(this.props.chrome || "").indexOf("Plein") === 0; }
+
+  applyScreenProp() {
+    clearTimeout(this.bootTimer);
+    const id = String(this.props.screen || "VM-02").slice(0, 5);
+    if (id === "VM-00") { this.setState({ booted: false, stack: [], toast: "" }); return; }
+    if (SCREEN_TAB[id]) this.setState({ booted: true, tab: SCREEN_TAB[id], stack: [], toast: "" });
+    else this.setState({ booted: true, stack: [id], toast: "" });
+  }
+
+  cur() {
+    if (!this.state.booted) return "VM-00";
+    const st = this.state.stack;
+    if (st.length) return st[st.length - 1];
+    const t = TABS.find((x) => x.id === this.state.tab) || TABS[0];
+    return t.screen;
+  }
+
+  offline() { return String(this.props.reseau || "").indexOf("Hors") === 0; }
+
+  hold() {
+    if (this.state.holdLeft !== null) return this.state.holdLeft;
+    const h = String(this.props.holdState || "");
+    if (h.indexOf("Expiré") === 0) return 0;
+    if (h.indexOf("Bientôt") === 0) return 75;
+    return 872;
+  }
+
+  outcome() {
+    const o = String(this.props.paymentOutcome || "");
+    if (o.indexOf("refusé") > -1) return "refuse";
+    if (o.indexOf("Sans") === 0) return "expire";
+    return "confirme";
+  }
+
+  tick() {
+    const sc = this.cur();
+    const s = this.state;
+    const patch = {};
+    if ((sc === "VM-04" || sc === "VM-05") && this.hold() > 0) patch.holdLeft = this.hold() - 1;
+    if (sc === "VM-05" && s.payPhase === "attente") {
+      const e = s.payElapsed + 1;
+      patch.payElapsed = e;
+      if (s.payClock > 0) patch.payClock = s.payClock - 1;
+      if (e >= 5) {
+        const out = this.outcome();
+        if (out === "confirme") {
+          patch.payPhase = "choix";
+          patch.stack = ["VM-07"];
+          patch.tab = "billets";
+          this.flash("Paiement reçu · 3 billets émis et enregistrés dans le téléphone.");
+        } else {
+          patch.payPhase = out;
+        }
+      }
+    }
+    if (sc === "VM-01" && s.otpResend > 0) patch.otpResend = s.otpResend - 1;
+    if (sc === "VM-07" && !this.offline()) patch.codeAge = (s.codeAge + 1) % 60;
+    if (Object.keys(patch).length) this.setState(patch);
+  }
+
+  push(id) {
+    if (SCREEN_TAB[id]) { this.setState({ tab: SCREEN_TAB[id], stack: [], toast: "" }); return; }
+    this.setState((s) => ({ stack: s.stack.concat([id]), toast: "" }));
+    this.scrollTop();
+  }
+
+  back() {
+    this.setState((s) => ({ stack: s.stack.slice(0, -1) }));
+    this.scrollTop();
+  }
+
+  scrollTop() {
+    setTimeout(() => {
+      const el = document.querySelector(".vm-scroll");
+      if (el) el.scrollTop = 0;
+    }, 0);
+  }
+
+  tabVals(id) {
+    const on = this.state.tab === id;
+    return {
+      current: on ? "page" : undefined,
+      color: on ? "var(--c-accent-ink)" : "var(--c-ink-faint)",
+      weight: on ? "600" : "500",
+      stroke: on ? 2 : 1.6,
+      onPick: () => { this.setState({ tab: id, stack: [], toast: "" }); this.scrollTop(); }
+    };
+  }
+
+  at(h, m, day) { return Date.UTC(2026, 7, day || 14, h - 1, m); }
+
+  money(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " FCFA"; }
+
+  mmss(t) {
+    const m = Math.max(0, Math.floor(t / 60));
+    const s = Math.max(0, t % 60);
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.setState({ toast: "" }), 4000);
+  }
+
+  seatModel() {
+    if (this.state.seats) return this.state.seats;
+    const busy = [1, 5, 8, 12, 16, 22, 27, 31, 35];
+    const blocked = [18, 19];
+    const out = [];
+    for (let i = 0; i < 40; i++) {
+      out.push(blocked.indexOf(i) > -1 ? "blk" : busy.indexOf(i) > -1 ? "busy" : i === 3 || i === 10 || i === 14 ? "sel" : "free");
+    }
+    return out;
+  }
+
+  renderVals() {
+    const DS = window.SetragUI;
+    const R = React;
+    const s = this.state;
+    const sc = this.cur();
+    const off = this.offline();
+    const loggedIn = s.loggedIn === null ? String(this.props.session || "").indexOf("Connecté") === 0 : s.loggedIn;
+    const meta = NAV_META[sc] || ["", ""];
+    const dark = s.themeChoice === "systeme" ? String(this.props.theme || "").indexOf("Sombre") === 0 : s.themeChoice === "sombre";
+    const pax = s.adults + s.kids;
+    const classe = CLASSES.find((c) => c.id === s.classe) || CLASSES[0];
+    const unit = classe.prix || CLASSES[0].prix;
+    const total = unit * s.adults + unit * 0.5 * s.kids + 500;
+    const holdLeft = this.hold();
+    const seats = this.seatModel();
+    const chosen = seats.filter((x) => x === "sel").length;
+    const prefs = s.prefs || PREF_ROWS.map((r) => [r[1], r[2]]);
+    const paxData = PAX_POOL[Math.min(s.paxIndex, PAX_POOL.length - 1)];
+    const suiviState = off ? "offline" : String(this.props.suivi || "");
+    const cancelled = suiviState.indexOf("Annulée") === 0;
+    const late = suiviState.indexOf("Retard") === 0;
+
+    const onDark = sc === "VM-02" || sc === "VM-00";
+
+    const btn = (label, opts) => (DS ? R.createElement(DS.Button, Object.assign({ variant: "secondary", size: "sm" }, opts), label) : null);
+
+    const qr = R.createElement("span", {
+      "aria-hidden": true,
+      style: { width: "100%", height: "100%", borderRadius: 4, backgroundColor: "#fff", backgroundImage: "repeating-linear-gradient(0deg,#111 0 5px,transparent 5px 10px),repeating-linear-gradient(90deg,#111 0 5px,transparent 5px 10px)" }
+    });
+
+    const vals = {
+      scale: s.scale,
+      bezelW: this.full() ? "100%" : "414px",
+      bezelH: this.full() ? "100%" : "868px",
+      bezelPad: this.full() ? "0" : "12px",
+      bezelRadius: this.full() ? "0" : "58px",
+      screenRadius: this.full() ? "0" : "46px",
+      theme: dark ? "dark" : "light",
+
+      clock: "08:12",
+      netLabel: off ? "Hors ligne" : "4G",
+      bar1: off ? 0.25 : 1,
+      bar2: off ? 0.25 : 1,
+      bar3: off ? 0.25 : 0.4,
+      statusBg: sc === "VM-00" || sc === "VM-02" ? "oklch(0.24 0.058 257)" : "var(--c-canvas)",
+      statusInk: onDark ? "#ffffff" : "var(--c-ink)",
+      navBorder: onDark ? "oklch(1 0 0 / 0.12)" : "var(--c-line)",
+      homeBarBg: sc === "VM-00" ? "oklch(0.24 0.058 257)" : "var(--c-surface)",
+      homeBarInk: sc === "VM-00" ? "oklch(1 0 0 / 0.35)" : "var(--c-ink-faint)",
+
+      navBarVisible: s.stack.length > 0 && sc !== "VM-0W" && s.booted,
+      navTitle: sc === "VM-01" ? (s.signupMode ? "Créer mon compte" : "Se connecter") : sc === "VM-07" ? "Billet " + ((s.ticketIndex || 0) + 1) + " sur " + pax : meta[0],
+      navSubtitle: sc === "VM-01" ? (s.signupMode ? "Étape 1 sur 2 · votre numéro" : "Par code SMS") : sc === "VM-07" ? "TR-201 · vendredi 14 août" : meta[1],
+      navActionVisible: sc === "VM-09" || sc === "VM-07",
+      navActionIcon: sc === "VM-09" ? "⚙" : "⋯",
+      navAction: () => {
+        if (sc === "VM-09") this.setState({ notifView: s.notifView === "liste" ? "prefs" : "liste" });
+        else this.flash("Envoyer par SMS · télécharger le PDF · ajouter au calendrier · signaler un problème");
+      },
+      back: () => this.back(),
+
+      tabBarVisible: s.stack.length === 0 && s.booted,
+      chromeVisible: s.booted,
+      tabAccueil: this.tabVals("accueil"),
+      tabBillets: this.tabVals("billets"),
+      tabTrains: this.tabVals("trains"),
+      tabCompte: this.tabVals("compte"),
+
+      isSplash: sc === "VM-00",
+      isBienvenue: sc === "VM-0W",
+      isInscription: sc === "VM-0I",
+      isConnexion: sc === "VM-01",
+      isAccueil: sc === "VM-02",
+      isRecherche: sc === "VM-03",
+      isDetail: sc === "VM-04",
+      isPaiement: sc === "VM-05",
+      isBillets: sc === "VM-06",
+      isBillet: sc === "VM-07",
+      isSuivi: sc === "VM-08",
+      isNotifs: sc === "VM-09",
+      isCompte: sc === "VM-10",
+
+      offline: off,
+      online: !off,
+      guest: !loggedIn,
+      signedIn: loggedIn,
+
+      goConnexion: () => this.push("VM-01"),
+      goRecherche: () => { if (off) { this.flash("Recherche indisponible hors ligne."); return; } this.push("VM-03"); },
+      goDetail: () => this.push("VM-04"),
+      goPaiement: () => this.push("VM-05"),
+      goBillet: () => this.push("VM-07"),
+      goSuivi: () => this.push("VM-08"),
+      goNotifs: () => { this.setState({ unread: 0 }); this.push("VM-09"); },
+
+      // VM-01
+      otpStep1: s.otpStep === 1,
+      otpStep2: s.otpStep === 2,
+      otpBoxes: s.otp.map((v, i) => ({
+        value: v,
+        aria: "Chiffre " + (i + 1) + " sur 6",
+        onInput: (e) => {
+          const next = s.otp.slice();
+          next[i] = (e.target.value || "").replace(/\D/g, "").slice(-1);
+          this.setState({ otp: next, otpError: false });
+        }
+      })),
+      otpError: s.otpError,
+      resendLabel: s.otpResend > 0 ? "Renvoyer dans " + this.mmss(s.otpResend) : "Renvoyer le code",
+      sendOtp: () => { if (off) { this.flash("La connexion exige le réseau."); return; } this.setState({ otpStep: 2, otpResend: 47 }); },
+      otpBack: () => this.setState({ otpStep: 1, otpError: false }),
+      validateOtp: () => {
+        if (s.otp.some((d) => !d)) { this.setState({ otpError: true }); return; }
+        if (s.signupMode) { this.setState({ otpStep: 1, stack: ["VM-0I"] }); return; }
+        this.setState({ loggedIn: true, otpStep: 1, tab: "accueil", stack: [] });
+        this.flash("Bienvenue Paul. Vos billets sont synchronisés.");
+      },
+      guestEnter: () => { this.setState({ loggedIn: false, booted: true, tab: "billets", stack: [] }); this.flash("Mode consultation : ajoutez un billet par sa référence SMS."); },
+
+      // VM-0W · bienvenue
+      startLogin: () => { this.setState({ signupMode: false, otpStep: 1, stack: ["VM-01"] }); },
+      startSignup: () => { this.setState({ signupMode: true, otpStep: 1, stack: ["VM-01"] }); },
+      otpTitle: s.signupMode ? "Créer mon compte" : "Se connecter",
+      otpIntro: s.signupMode
+        ? "Étape 1 sur 2 : vérifions votre numéro. Aucun mot de passe à retenir."
+        : "Nous vous envoyons un code à six chiffres par SMS. Aucun mot de passe à retenir.",
+
+      welcomePoints: [
+        { icon: "◱", titre: "Le billet reste dans le téléphone", detail: "Code présentable au contrôleur sans réseau, dans les tunnels comme sous la forêt." },
+        { icon: "◷", titre: "Le train suivi en direct", detail: "Retard en minutes, cause communiquée, arrivée estimée gare par gare." },
+        { icon: "⌗", titre: "Payé en mobile money", detail: "Airtel Money, Moov Money ou carte — et le paiement au guichet reste possible." }
+      ],
+      guestRows: [
+        { label: "Ajouter un billet reçu par SMS", note: "Saisissez la référence B-… pour l'afficher ici", go: "billets" },
+        { label: "Affichage et langue", note: "Thème et langue de l'application", go: "VM-P3" },
+        { label: "Notifications", note: "Réglables une fois connecté", go: "VM-09" }
+      ].map((r) => ({
+        label: r.label, note: r.note,
+        onOpen: () => {
+          if (r.go === "billets") { this.setState({ tab: "billets", stack: [], ticketTab: "passes" }); return; }
+          if (r.go === "VM-09") this.setState({ notifView: "prefs" });
+          this.push(r.go);
+        }
+      })),
+
+      // VM-0I · inscription
+      signupCgv: s.signupCgv,
+      setSignupCgv: (v) => this.setState({ signupCgv: !!v, signupError: false }),
+      signupError: s.signupError,
+      createAccount: () => {
+        if (!s.signupCgv) { this.setState({ signupError: true }); return; }
+        this.setState({ loggedIn: true, signupMode: false, tab: "accueil", stack: [] });
+        this.flash("Compte créé. Vos billets seront conservés dans le téléphone.");
+      },
+
+      // VM-02
+      dayLabel: "vendredi 14 août",
+      greeting: loggedIn ? "Bonjour Paul" : "Bonjour",
+      unread: s.unread,
+      hasTicket: loggedIn,
+      noTicket: !loggedIn,
+      paxLabel: pax + (pax > 1 ? " voyageurs" : " voyageur"),
+      paxShort: pax + (pax > 1 ? " voy." : " voy."),
+      origin: s.origin,
+      destination: s.destination,
+      syncStamp: off ? "Synchronisé le 14/08 à 07:41" : "Synchronisé il y a 3 min",
+      departuresTitle: off ? "Départs du jour · non actualisés" : "Départs du jour",
+      departures: [
+        { heure: "TR-201 · 08:00", trajet: "Owendo → Franceville", statut: off ? "périmé" : "à l'heure", tone: off ? "neutral" : "success" },
+        { heure: "TR-202 · 18:30", trajet: "Franceville → Owendo", statut: off ? "périmé" : "+35 min", tone: off ? "neutral" : "warning" },
+        { heure: "TR-203 · 21:00", trajet: "Owendo → Booué", statut: off ? "périmé" : "à l'heure", tone: off ? "neutral" : "success" }
+      ].map((d) => Object.assign(d, { onOpen: () => this.push("VM-08") })),
+      savedTrips: [
+        { label: "Owendo → Booué", on: true },
+        { label: "Ntoum → Lopé" },
+        { label: "Moanda → Owendo" }
+      ].map((t) => ({
+        label: t.label,
+        cls: t.on ? "bg-accent-soft text-accent-ink" : "border border-line bg-surface text-ink",
+        onPick: () => { const p = t.label.split(" → "); this.setState({ origin: p[0], destination: p[1] }); this.flash("Trajet " + t.label + " repris."); }
+      })),
+
+      // VM-03
+      tunnel: [{ label: "Desserte" }, { label: "Voyageurs" }, { label: "Payer" }],
+      searchForm: s.searchPhase === "form",
+      searchResults: s.searchPhase === "resultats",
+      setOrigin: (e) => this.setState({ origin: e.target.value }),
+      setDestination: (e) => this.setState({ destination: e.target.value }),
+      swap: () => this.setState({ origin: s.destination, destination: s.origin }),
+      adults: s.adults,
+      kids: s.kids,
+      moreAdults: () => this.setState({ adults: Math.min(9 - s.kids, s.adults + 1) }),
+      lessAdults: () => this.setState({ adults: Math.max(1, s.adults - 1) }),
+      moreKids: () => this.setState({ kids: Math.min(9 - s.adults, s.kids + 1) }),
+      lessKids: () => this.setState({ kids: Math.max(0, s.kids - 1) }),
+      dateChips: [
+        { id: "auj", label: "Aujourd'hui" },
+        { id: "ven14", label: "Ven. 14 août" },
+        { id: "sam15", label: "Sam. 15 août" },
+        { id: "dim16", label: "Dim. 16 août" }
+      ].map((d) => ({
+        label: d.label, off: false,
+        cls: s.dateChoice === d.id ? "bg-accent-soft text-accent-ink" : "border border-line bg-surface text-ink",
+        onPick: () => this.setState({ dateChoice: d.id })
+      })),
+      runSearch: () => {
+        if (off) { this.flash("Recherche impossible : réseau indisponible."); return; }
+        if (s.origin === s.destination) { this.flash("Choisissez deux gares différentes."); return; }
+        this.setState({ searchPhase: "resultats" });
+        this.scrollTop();
+      },
+      backToForm: () => { this.setState({ searchPhase: "form" }); this.scrollTop(); },
+      typeChips: [
+        { id: "toutes", label: "Toutes" },
+        { id: "express", label: "Express" },
+        { id: "omnibus", label: "Omnibus" },
+        { id: "couchette", label: "Couchette" }
+      ].map((c) => ({
+        label: c.label,
+        cls: s.typeFilter === c.id ? "bg-accent-soft text-accent-ink" : "border border-line bg-surface text-ink",
+        onPick: () => this.setState({ typeFilter: c.id })
+      })),
+      trips: [
+        {
+          heures: "08:00 → 22:15", badge: "14 h 15", tone: "neutral",
+          detail: "TR-201 · Express · 648 km · sans changement",
+          classes: [
+            { nom: "2e classe", places: "12 places", prix: this.money(15000) },
+            { nom: "1re classe", places: "4 places", prix: this.money(25000) }
+          ],
+          sellable: true, lastSeats: false, cancelled: false
+        },
+        {
+          heures: "18:30 → 09:40", badge: "15 h 10", tone: "warning",
+          detail: "TR-203 · Omnibus · dessert les 22 gares",
+          classes: [
+            { nom: "2e classe", places: "3 places", prix: this.money(13500) },
+            { nom: "Couchette", places: "complet", prix: "—" }
+          ],
+          sellable: true, lastSeats: true, cancelled: false
+        },
+        {
+          heures: "21:00 → 11:30", badge: "annulée", tone: "danger",
+          detail: "TR-205 · desserte supprimée ce jour",
+          classes: [], sellable: false, lastSeats: false, cancelled: true
+        }
+      ].map((t) => Object.assign(t, {
+        cardCls: t.cancelled ? "border border-line bg-surface-sunk" : "border border-line bg-surface",
+        timeColor: t.cancelled ? "var(--c-ink-faint)" : "var(--c-ink)",
+        strike: t.cancelled ? "line-through" : "none",
+        onPick: () => { this.setState({ holdLeft: null, detailPhase: "classe" }); this.push("VM-04"); }
+      })),
+
+      // VM-04
+      detailPhase: s.detailPhase,
+      setDetailPhase: (v) => { this.setState({ detailPhase: v }); this.scrollTop(); },
+      detailPhases: [
+        { value: "classe", label: "Classe" },
+        { value: "voyageurs", label: "Voyageurs" },
+        { value: "recap", label: "Prix" }
+      ],
+      phaseClasse: s.detailPhase === "classe",
+      phaseVoyageurs: s.detailPhase === "voyageurs",
+      phaseRecap: s.detailPhase === "recap",
+      classes: CLASSES.map((c) => ({
+        nom: c.nom, note: c.note,
+        prix: c.indispo ? "complet" : this.money(c.prix),
+        disabled: !!c.indispo,
+        cls: c.indispo ? "border border-line bg-surface-sunk" : c.id === s.classe ? "border-[1.5px] border-accent-base bg-accent-soft" : "border border-line bg-surface",
+        dotCls: c.id === s.classe ? "border-[1.5px] border-accent-base" : "border border-line-strong",
+        dotFill: c.id === s.classe ? "var(--c-accent)" : "transparent",
+        onSelect: c.indispo ? undefined : () => this.setState({ classe: c.id })
+      })),
+      classeLabel: classe.nom,
+      seatCountLabel: chosen + " / " + pax + " places choisies",
+      seats: seats.map((st, i) => ({
+        mark: st === "busy" ? "✕" : st === "blk" ? "·" : st === "sel" ? "✓" : "",
+        aria: "Place " + (i + 1) + " · " + (st === "busy" ? "occupée" : st === "blk" ? "indisponible" : st === "sel" ? "choisie" : "libre"),
+        disabled: st === "busy" || st === "blk",
+        border: st === "sel" ? "var(--c-accent)" : st === "busy" ? "var(--c-line-strong)" : st === "blk" ? "var(--c-line)" : "var(--c-line-strong)",
+        bg: st === "sel" ? "var(--c-accent)" : st === "busy" ? "var(--c-second-soft)" : st === "blk" ? "var(--c-surface-sunk)" : "var(--c-surface)",
+        ink: st === "sel" ? "var(--c-ink-inverse)" : "var(--c-ink-muted)",
+        cursor: st === "busy" || st === "blk" ? "not-allowed" : "pointer",
+        onPick: st === "busy" || st === "blk" ? undefined : () => {
+          const next = seats.slice();
+          if (next[i] === "sel") next[i] = "free";
+          else if (chosen >= pax) { this.flash("Vous avez déjà choisi " + pax + " places."); return; }
+          else next[i] = "sel";
+          this.setState({ seats: next });
+        }
+      })),
+      autoSeats: () => { this.setState({ seats: null }); this.flash("Placement automatique : voiture 1, places 4, 11 et 15."); },
+      toVoyageurs: () => {
+        if (chosen !== pax) { this.flash("Choisissez " + pax + " places, ou utilisez le placement automatique."); return; }
+        this.setState({ detailPhase: "voyageurs" }); this.scrollTop();
+      },
+      paxTabs: PAX_POOL.slice(0, pax).map((p, i) => ({
+        label: (i + 1) + " · " + (p.enfant ? "enfant" : "adulte"),
+        cls: s.paxIndex === i ? "bg-accent-soft text-accent-ink" : "border border-line bg-surface text-ink",
+        onPick: () => this.setState({ paxIndex: i, paxSexe: null })
+      })),
+      pax: {
+        nom: paxData.nom, prenom: paxData.prenom, tel: paxData.tel, urgence: paxData.urgence,
+        sexe: s.paxSexe || paxData.sexe, enfant: paxData.enfant
+      },
+      sexeOptions: [{ value: "M", label: "Masculin" }, { value: "F", label: "Féminin" }],
+      setSexe: (v) => this.setState({ paxSexe: v }),
+      copyProfile: () => this.flash("Informations du compte recopiées sur le voyageur 1."),
+      toRecap: () => { this.setState({ detailPhase: "recap" }); this.scrollTop(); },
+      recap: [
+        { label: classe.nom + " adulte", qte: "×" + s.adults, montant: this.money(unit * s.adults) },
+        { label: classe.nom + " enfant −50 %", qte: "×" + s.kids, montant: this.money(unit * 0.5 * s.kids) },
+        { label: "Frais de service", qte: "—", montant: this.money(500) }
+      ],
+      totalLabel: this.money(total),
+      holdLabel: this.mmss(holdLeft),
+      holdTone: holdLeft < 120 ? "danger" : "warning",
+      holdExpired: holdLeft <= 0 && (sc === "VM-04" || sc === "VM-05"),
+      restartSearch: () => { this.setState({ holdLeft: 872, stack: ["VM-03"], searchPhase: "form" }); },
+
+      // VM-05
+      payChoosing: s.payPhase === "choix",
+      payWaiting: s.payPhase === "attente",
+      payFailed: s.payPhase === "refuse" || s.payPhase === "expire",
+      payFailTitle: s.payPhase === "refuse" ? "Refusé par l'opérateur : solde insuffisant." : "La demande a expiré sans réponse de l'opérateur.",
+      payFailBody: "Aucun montant n'a été débité. La référence de transaction est idempotente : aucun double débit n'est possible.",
+      payMobile: s.payMethod === "airtel" || s.payMethod === "moov",
+      payMethods: [
+        { id: "airtel", nom: "Airtel Money", note: "Validation par code PIN sur votre téléphone" },
+        { id: "moov", nom: "Moov Money", note: "Validation par code PIN sur votre téléphone" },
+        { id: "carte", nom: "Carte bancaire", note: "Visa · Mastercard" },
+        { id: "guichet", nom: "Payer au guichet", note: "Réservation tenue 24 h, à régler en gare" }
+      ].map((m) => ({
+        nom: m.nom, note: m.note,
+        cls: s.payMethod === m.id ? "border-[1.5px] border-accent-base bg-accent-soft" : "border border-line bg-surface",
+        dotCls: s.payMethod === m.id ? "border-[1.5px] border-accent-base" : "border border-line-strong",
+        dotFill: s.payMethod === m.id ? "var(--c-accent)" : "transparent",
+        onPick: () => this.setState({ payMethod: m.id })
+      })),
+      payLabel: s.payMethod === "guichet" ? "Réserver sans payer" : "Payer " + this.money(total),
+      cgv: s.cgv,
+      setCgv: (v) => this.setState({ cgv: !!v, cgvError: false }),
+      cgvError: s.cgvError,
+      pay: () => {
+        if (!s.cgv) { this.setState({ cgvError: true }); return; }
+        if (s.payMethod === "guichet") {
+          this.setState({ tab: "billets", stack: [] });
+          this.flash("Réservation R-9034 tenue 24 h. Référence envoyée par SMS.");
+          return;
+        }
+        this.setState({ payPhase: "attente", payElapsed: 0, payClock: 180 });
+      },
+      payClockLabel: this.mmss(s.payClock),
+      payTimeline: [
+        { label: "Demande envoyée à l'opérateur", etat: "fait", tone: "success" },
+        { label: "Attente du code PIN", etat: "en cours", tone: "info" },
+        { label: "Émission du billet", etat: "à venir", tone: "neutral" }
+      ],
+      cancelPay: () => this.setState({ payPhase: "choix" }),
+      retryPay: () => this.setState({ payPhase: "choix" }),
+      payAtCounter: () => { this.setState({ payMethod: "guichet", payPhase: "choix", tab: "billets", stack: [] }); this.flash("Réservation R-9034 tenue 24 h, à régler en gare."); },
+
+      // VM-06
+      ticketTab: s.ticketTab,
+      setTicketTab: (v) => this.setState({ ticketTab: v }),
+      ticketTabs: [{ value: "avenir", label: "À venir" }, { value: "passes", label: "Passés" }],
+      ticketsUpcoming: s.ticketTab === "avenir",
+      ticketsPast: s.ticketTab === "passes",
+      tickets: [
+        {
+          trajet: "Owendo → Franceville", legLabel: "Aller · vendredi 14 août",
+          departureAt: this.at(8, 0), arrivalAt: this.at(22, 15),
+          departurePlace: "Gare d'Owendo · hall 1", arrivalPlace: "Gare de Franceville",
+          seatLabel: "1 · 12A", seatNote: "3 voyageurs · 2e classe",
+          passengerLabel: "MBADINGA Paul + 2", reference: "B-4821",
+          depart: "08:00", arrivee: "22:15", ligne: "TR-201 · ven. 14 août · 3 voy.",
+          statut: off ? "hors ligne · valide" : "valide · dans 2 jours", tone: "success",
+          detail: off ? "Disponible hors ligne · dernier code du 14/08 à 07:41" : "Disponible hors ligne · départ dans 2 jours",
+          state: off ? "hors_ligne" : "valide", qr: true, open: "VM-07"
+        },
+        {
+          trajet: "Moanda → Owendo", legLabel: "Aller · dimanche 23 août",
+          departureAt: this.at(18, 30, 23), arrivalAt: this.at(9, 40, 24),
+          departurePlace: "Gare de Moanda", arrivalPlace: "Gare d'Owendo",
+          seatLabel: "—", seatNote: "1 voyageur · 2e classe",
+          passengerLabel: "MBADINGA Paul", reference: "R-9034",
+          depart: "18:30", arrivee: "09:40", ligne: "TR-202 · dim. 23 août · 1 voy.",
+          statut: "à régler avant le 15/08", tone: "warning",
+          detail: "À régler au guichet avant le 15 août — aucun code émis",
+          state: "echange", qr: false, open: null
+        },
+        {
+          trajet: "Ntoum → Lopé", legLabel: "Aller · mercredi 27 août",
+          departureAt: this.at(9, 30, 27), arrivalAt: this.at(15, 10, 27),
+          departurePlace: "Gare de Ntoum", arrivalPlace: "Gare de Lopé",
+          seatLabel: "—", seatNote: "1 voyageur",
+          passengerLabel: "MBADINGA Paul", reference: "B-4655",
+          depart: "09:30", arrivee: "15:10", ligne: "TR-203 · mer. 27 août · 1 voy.",
+          statut: "annulé — remboursé", tone: "danger",
+          detail: "Annulé le 12/08 — 15 000 FCFA remboursés sur Airtel Money",
+          state: "rembourse", qr: false, open: null
+        }
+      ].map((t) => Object.assign(t, {
+        qrCode: t.qr ? qr : undefined,
+        bg: "oklch(0.22 0.025 257)",
+        opacity: t.open ? 1 : 0.62,
+        overline: "var(--c-accent-on-ink)",
+        onOpen: () => {
+          if (t.open) this.push(t.open);
+          else this.flash(t.state === "echange" ? "Présentez la référence R-9034 dans n'importe quelle gare avant le 15 août." : "Billet annulé : le code n'est plus présentable.");
+        }
+      })),
+      sync: () => this.flash(off ? "Synchronisation impossible : aucun réseau." : "Billets et codes synchronisés à l'instant."),
+      addByRef: () => this.flash("Billet rattaché à votre compte après vérification de la référence."),
+
+      // VM-07
+      holder: (() => {
+        const i = Math.min(s.ticketIndex || 0, pax - 1);
+        const p = PAX_POOL[i];
+        return {
+          nom: p.nom + " " + p.prenom,
+          role: p.enfant ? "Enfant 4-11 ans · −50 %" : "Adulte",
+          ref: "B-482" + (i + 1),
+          place: "1 · " + (12 + i) + "A"
+        };
+      })(),
+      ticketDots: PAX_POOL.slice(0, pax).map((p, i) => ({
+        aria: "Billet " + (i + 1) + " sur " + pax + " · " + p.prenom,
+        bg: (s.ticketIndex || 0) === i ? "var(--c-accent)" : "var(--c-line-strong)",
+        onPick: () => this.setState({ ticketIndex: i })
+      })),
+      countdownLabel: off ? "Départ à 08:00 · statut non actualisé" : "Départ dans 34 min",
+      bigQr: R.createElement("span", {
+        "aria-hidden": true,
+        style: { width: "100%", height: "100%", borderRadius: 6, backgroundColor: "#fff", backgroundImage: "repeating-linear-gradient(0deg,#0b0f16 0 6px,transparent 6px 12px),repeating-linear-gradient(90deg,#0b0f16 0 6px,transparent 6px 12px)" }
+      }),
+      codeFreshLabel: off ? "Dernier code du 14/08 à 07:41" : "Actualisé il y a " + s.codeAge + " s · appuyer pour rafraîchir",
+      refreshCode: () => { if (off) { this.flash("Le code ne peut pas être actualisé hors ligne — il reste valable."); return; } this.setState({ codeAge: 0 }); },
+      exchangeTicket: () => this.flash("Échange possible jusqu'à 30 min avant le départ, sans frais sur la même relation."),
+      shareTicket: () => this.flash("Référence et lien court envoyés par SMS à votre accompagnant."),
+      pdfTicket: () => this.flash("Billet téléchargé en PDF dans le téléphone."),
+
+      // VM-08
+      suiviIsTab: s.stack.length === 0,
+      trainQuery: s.trainQuery === undefined ? "TR-201" : s.trainQuery,
+      setTrainQuery: (e) => this.setState({ trainQuery: e.target.value }),
+      lookupTrain: () => this.flash("Desserte " + (s.trainQuery || "TR-201") + " du 14 août affichée."),
+      trainChips: [
+        { label: "TR-201 · 08:00" },
+        { label: "TR-202 · 18:30" },
+        { label: "TR-203 · 21:00" },
+        { label: "TR-205 · 21:00" }
+      ].map((t, i) => ({
+        label: t.label,
+        cls: i === 0 ? "bg-accent-soft text-accent-ink" : "border border-line bg-surface text-ink",
+        onPick: () => this.flash("Desserte " + t.label.split(" · ")[0] + " affichée.")
+      })),
+      suiviBg: cancelled ? "oklch(0.32 0.1 25)" : late ? "oklch(0.3 0.07 92)" : "oklch(0.24 0.058 257)",
+      suiviTitre: cancelled ? "Desserte annulée" : late ? "Retard · 35 min" : "À l'heure",
+      suiviBadge: cancelled ? "annulée" : late ? "+35 min" : "à l'heure",
+      suiviTone: cancelled ? "danger" : late ? "warning" : "success",
+      suiviDetail: cancelled
+        ? "Circulation supprimée le 14 août — travaux de voie entre Lopé et Booué."
+        : late
+          ? "Motif : croisement de convoi minéralier. Arrivée à Franceville estimée à 22:50."
+          : "Arrivée prévue à Franceville à 22:15. Position approximative : entre Booué et Lopé.",
+      suiviCancelled: cancelled,
+      suiviRunning: !cancelled,
+      stops: STOPS.map((r) => ({
+        gare: r[0], prevu: r[1],
+        estime: cancelled ? "—" : late ? r[2] : r[2],
+        etat: cancelled ? "supprimé" : r[3],
+        gareColor: r[4] === "next" ? "var(--c-ink-muted)" : "var(--c-ink)",
+        estimeColor: r[4] === "now" ? "var(--c-accent-ink)" : "var(--c-ink)",
+        dotColor: r[4] === "next" ? "var(--c-line-strong)" : "var(--c-accent)",
+        dotFill: r[4] === "past" ? "var(--c-accent)" : "var(--c-surface)",
+        barColor: r[4] === "past" ? "var(--c-accent)" : "var(--c-line)"
+      })),
+
+      // VM-09
+      notifList: s.notifView === "liste",
+      notifPrefs: s.notifView === "prefs",
+      notifFilters: [
+        { id: "toutes", label: "Toutes" },
+        { id: "nonlues", label: "Non lues" },
+        { id: "voyages", label: "Voyages" }
+      ].map((f) => ({
+        label: f.label,
+        cls: s.notifFilter === f.id ? "bg-accent-soft text-accent-ink" : "border border-line bg-surface text-ink",
+        onPick: () => this.setState({ notifFilter: f.id })
+      })),
+      notifs: [
+        { titre: "Retard de 35 min", type: "retard", tone: "warning", detail: "TR-202 du 14 août · arrivée estimée 10:15", quand: "il y a 12 min", unread: true, go: "VM-08" },
+        { titre: "Départ demain", type: "rappel", tone: "neutral", detail: "TR-201 · Owendo 08:00 · présentez-vous 30 min avant", quand: "hier, 08:00", unread: true, go: "VM-07" },
+        { titre: "Billet émis", type: "achat", tone: "success", detail: "3 billets · B-4821 · 38 000 FCFA", quand: "12 août", unread: false, go: "VM-07" },
+        { titre: "Remboursement traité", type: "remboursement", tone: "success", detail: "15 000 FCFA · Airtel Money · sous 72 h", quand: "10 août", unread: false, go: null }
+      ].map((n) => Object.assign(n, {
+        cardCls: n.unread ? "border-[1.5px] border-accent-line bg-accent-soft" : "border border-line bg-surface",
+        onOpen: () => { if (n.go) this.push(n.go); else this.flash("Remboursement de 15 000 FCFA versé sur Airtel Money."); }
+      })),
+      markAllRead: () => { this.setState({ unread: 0 }); this.flash("Toutes les notifications sont marquées comme lues."); },
+      openSettings: () => this.flash("Ouverture des réglages du téléphone…"),
+      notifPrefRows: PREF_ROWS.map((r, i) => ({
+        label: r[0],
+        pushMark: prefs[i][0] ? "☑" : "☐",
+        smsMark: prefs[i][1] ? "☑" : "☐",
+        pushColor: prefs[i][0] ? "var(--c-accent-ink)" : "var(--c-ink-faint)",
+        smsColor: prefs[i][1] ? "var(--c-accent-ink)" : "var(--c-ink-faint)",
+        pushAria: "Notification push · " + r[0],
+        smsAria: "SMS · " + r[0],
+        togglePush: () => { const n = prefs.map((x) => x.slice()); n[i][0] = !n[i][0]; this.setState({ prefs: n }); },
+        toggleSms: () => { const n = prefs.map((x) => x.slice()); n[i][1] = !n[i][1]; this.setState({ prefs: n }); }
+      })),
+
+      // VM-10
+      settingsRows: [
+        { label: "Profil", note: "Nom, sexe, téléphone d'urgence", go: "VM-P1" },
+        { label: "Voyageurs enregistrés", note: "3 profils réutilisables à l'achat", go: "VM-P2" },
+        { label: "Affichage et langue", note: (dark ? "Thème sombre" : "Thème clair") + " · français", go: "VM-P3" },
+        { label: "Notifications", note: "Préférences par canal", go: "VM-09", prefs: true }
+      ].map((r) => ({
+        label: r.label, note: r.note,
+        onOpen: () => {
+          if (r.prefs) this.setState({ notifView: "prefs" });
+          this.push(r.go);
+        }
+      })),
+
+      // VM-P1 · profil
+      isProfil: sc === "VM-P1",
+      saveProfile: () => { this.back(); this.flash("Profil enregistré. Le nouveau numéro devra être vérifié par code SMS."); },
+
+      // VM-P2 · voyageurs enregistrés
+      isVoyageurs: sc === "VM-P2",
+      savedPax: PAX_POOL.map((p) => ({
+        nom: p.nom + " " + p.prenom,
+        note: p.enfant ? "Enfant 4-11 ans · réduction 50 %" : "Adulte · " + p.tel,
+        full: p.prenom + " " + p.nom,
+        tag: p.enfant ? "enfant" : "adulte",
+        onOpen: () => this.flash(p.prenom + " " + p.nom + " : profil repris au prochain achat.")
+      })),
+      addPax: () => this.flash("Nouveau voyageur : il sera proposé à chaque achat."),
+
+      // VM-P3 · affichage et langue
+      isAffichage: sc === "VM-P3",
+      themeChoice: s.themeChoice,
+      setThemeChoice: (v) => this.setState({ themeChoice: v }),
+      themeChoices: [
+        { value: "systeme", label: "Système" },
+        { value: "clair", label: "Clair" },
+        { value: "sombre", label: "Sombre" }
+      ],
+      lang: s.lang,
+      setLang: (e) => { this.setState({ lang: e.target.value }); this.flash(e.target.value === "fr" ? "Interface en français." : "L'anglais arrive avec la version 1.1."); },
+
+      profilSexe: s.profilSexe || "M",
+      setProfilSexe: (v) => this.setState({ profilSexe: v }),
+
+      // Wallet
+      walletBtnLabel: s.walletAdded ? "Dans le Wallet ✓" : "Ajouter au Wallet",
+      walletOpen: s.walletOpen,
+      walletAdded: s.walletAdded,
+      openWallet: () => this.setState({ walletOpen: true }),
+      closeWallet: () => this.setState({ walletOpen: false }),
+      confirmWallet: () => { this.setState({ walletOpen: false, walletAdded: true }); this.flash("Billet B-4821 ajouté au Wallet du téléphone."); },
+      walletHeader: [{ label: "Train", value: "TR-201" }],
+      walletOrigin: { label: "Owendo", value: "08:00" },
+      walletDestination: { label: "Franceville", value: "22:15" },
+      walletSecondary: [
+        { label: "Voyageur", value: "P. Mbadinga" },
+        { label: "Voiture", value: "1" },
+        { label: "Place", value: "12A" },
+        { label: "Classe", value: "2e" }
+      ],
+      walletQr: R.createElement("span", { "aria-hidden": true, style: { width: "100%", height: "100%", borderRadius: 4, backgroundColor: "#fff", backgroundImage: "repeating-linear-gradient(0deg,#111 0 5px,transparent 5px 10px),repeating-linear-gradient(90deg,#111 0 5px,transparent 5px 10px)" } }),
+      consents: [
+        { label: "Exécution du contrat de transport", note: "base légale : contrat", required: true, optional: false, actif: true },
+        { label: "Informations de voyage par SMS", note: "accordé le 02/07/26", required: false, optional: true, actif: true },
+        { label: "Offres commerciales", note: "retiré le 12/08/26", required: false, optional: true, actif: false },
+        { label: "Statistiques d'usage anonymes", note: "accordé le 02/07/26", required: false, optional: true, actif: true }
+      ].map((c) => Object.assign({}, c, { notePad: c.required ? "0" : "52px" })),
+      exportData: () => this.flash("Archive en préparation : un lien vous sera envoyé par SMS."),
+      deleteOpen: s.deleteOpen,
+      openDelete: () => this.setState({ deleteOpen: true }),
+      closeDelete: () => this.setState({ deleteOpen: false }),
+      confirmDelete: () => { this.setState({ deleteOpen: false, loggedIn: false, stack: ["VM-01"] }); this.flash("Compte supprimé. Vos billets à venir sont remboursés."); },
+      logout: () => { this.setState({ loggedIn: false, stack: ["VM-0W"], otpStep: 1, signupMode: false, tab: "accueil" }); },
+
+      toast: s.toast,
+      closeToast: () => this.setState({ toast: "" })
+    };
+    vals.ticketsNow = vals.tickets.slice(0, 1);
+    vals.ticketsLater = vals.tickets.slice(1);
+    return vals;
+  }
+}
+
+</script>
+</body>
+</html>

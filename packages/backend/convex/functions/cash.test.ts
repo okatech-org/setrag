@@ -23,14 +23,14 @@ async function seedPointOfSale(t: ReturnType<typeof convexTest>) {
       type: "gare",
       counters: { passengers: 4, baggage: 2, parcels: 2 },
       isActive: true,
-    }),
+    })
   )
 }
 
 async function asUser(
   t: ReturnType<typeof convexTest>,
   role: AppRole,
-  posId?: Id<"pointsOfSale">,
+  posId?: Id<"pointsOfSale">
 ) {
   const authId = `${role}-${Math.floor(Math.random() * 1e9)}`
   const userId = await t.run(async (ctx) =>
@@ -40,7 +40,7 @@ async function asUser(
       pointOfSaleId: posId,
       identitySource: "annuaire",
       isActive: true,
-    }),
+    })
   )
   return { ctx: t.withIdentity({ subject: authId }), userId }
 }
@@ -70,7 +70,7 @@ describe("Ouverture de caisse", () => {
       openingFloatXaf: 0,
     })
     const jours = await t.run(async (c) =>
-      c.db.query("accountingDays").collect(),
+      c.db.query("accountingDays").collect()
     )
     expect(jours).toHaveLength(1)
     expect(jours[0]?.status).toBe("ouverte")
@@ -84,7 +84,7 @@ describe("Ouverture de caisse", () => {
       openingFloatXaf: 10000,
     })
     await expect(
-      ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: 10000 }),
+      ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: 10000 })
     ).rejects.toThrow(/déjà ouverte/)
   })
 
@@ -93,7 +93,7 @@ describe("Ouverture de caisse", () => {
     const pos = await seedPointOfSale(t)
     const { ctx } = await asUser(t, "vendeur_guichet", pos)
     await expect(
-      ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: -1 }),
+      ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: -1 })
     ).rejects.toThrow(/Fond de caisse invalide/)
   })
 
@@ -101,7 +101,7 @@ describe("Ouverture de caisse", () => {
     const t = convexTest(schema, modules)
     const { ctx } = await asUser(t, "vendeur_guichet")
     await expect(
-      ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: 0 }),
+      ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: 0 })
     ).rejects.toThrow(/non rattaché/)
   })
 
@@ -110,7 +110,7 @@ describe("Ouverture de caisse", () => {
     const pos = await seedPointOfSale(t)
     const { ctx } = await asUser(t, "responsable_kpi", pos)
     await expect(
-      ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: 0 }),
+      ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: 0 })
     ).rejects.toThrow(/Accès refusé/)
   })
 
@@ -119,6 +119,38 @@ describe("Ouverture de caisse", () => {
     const pos = await seedPointOfSale(t)
     const { ctx } = await asUser(t, "vendeur_guichet", pos)
     expect(await ctx.query(api.functions.cash.mySession, {})).toBeNull()
+  })
+
+  it("alimente l'accueil vendeur avec un état cohérent", async () => {
+    const t = convexTest(schema, modules)
+    const pos = await seedPointOfSale(t)
+    const authId = "vendeur-accueil"
+    await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        authId,
+        firstName: "Aly",
+        lastName: "MBOUMBA",
+        matricule: "V-101",
+        role: "vendeur_guichet",
+        pointOfSaleId: pos,
+        identitySource: "annuaire",
+        isActive: true,
+      })
+    )
+    const ctx = t.withIdentity({ subject: authId })
+
+    const ferme = await ctx.query(api.functions.cash.sellerDashboard, {})
+    expect(ferme.seller.lastName).toBe("MBOUMBA")
+    expect(ferme.pointOfSale.code).toBe("OWE-PV")
+    expect(ferme.session).toBeNull()
+
+    await ctx.mutation(api.functions.cash.openSession, {
+      openingFloatXaf: 50000,
+    })
+    const ouvert = await ctx.query(api.functions.cash.sellerDashboard, {})
+    expect(ouvert.session?.openingFloatXaf).toBe(50000)
+    expect(ouvert.metrics.salesCount).toBe(0)
+    expect(ouvert.lastOperations).toEqual([])
   })
 })
 
@@ -148,7 +180,7 @@ describe("Clôture de caisse", () => {
     await expect(
       ctx.mutation(api.functions.cash.closeSession, {
         countedByMethod: [{ method: "especes", amountXaf: -2000 }],
-      }),
+      })
     ).rejects.toThrow(/justification est obligatoire/)
   })
 
@@ -162,7 +194,7 @@ describe("Clôture de caisse", () => {
     expect(resultat.varianceXaf).toBe(-2000)
 
     const sessions = await t.run(async (c) =>
-      c.db.query("cashSessions").collect(),
+      c.db.query("cashSessions").collect()
     )
     expect(sessions[0]?.status).toBe("cloturee")
     expect(sessions[0]?.varianceReason).toContain("rendu de monnaie")
@@ -175,7 +207,7 @@ describe("Clôture de caisse", () => {
       ctx.mutation(api.functions.cash.closeSession, {
         countedByMethod: [{ method: "especes", amountXaf: 500 }],
         varianceReason: "   ",
-      }),
+      })
     ).rejects.toThrow(/justification est obligatoire/)
   })
 
@@ -184,7 +216,7 @@ describe("Clôture de caisse", () => {
     const pos = await seedPointOfSale(t)
     const { ctx } = await asUser(t, "vendeur_guichet", pos)
     await expect(
-      ctx.mutation(api.functions.cash.closeSession, { countedByMethod: [] }),
+      ctx.mutation(api.functions.cash.closeSession, { countedByMethod: [] })
     ).rejects.toThrow(/Aucune session de caisse ouverte/)
   })
 
@@ -208,9 +240,7 @@ describe("Clôture de la journée comptable", () => {
     await vendeur.ctx.mutation(api.functions.cash.openSession, {
       openingFloatXaf: 0,
     })
-    const jour = await t.run(async (c) =>
-      c.db.query("accountingDays").first(),
-    )
+    const jour = await t.run(async (c) => c.db.query("accountingDays").first())
     const controleur = await asUser(t, "controleur_recettes", pos)
     return { vendeur, controleur, dayId: jour!._id as Id<"accountingDays"> }
   }
@@ -221,7 +251,7 @@ describe("Clôture de la journée comptable", () => {
     await expect(
       controleur.ctx.mutation(api.functions.cash.closeAccountingDay, {
         accountingDayId: dayId,
-      }),
+      })
     ).rejects.toThrow(/encore ouverte/)
   })
 
@@ -233,7 +263,7 @@ describe("Clôture de la journée comptable", () => {
     })
     const resultat = await controleur.ctx.mutation(
       api.functions.cash.closeAccountingDay,
-      { accountingDayId: dayId },
+      { accountingDayId: dayId }
     )
     expect(resultat.sessions).toBe(1)
 
@@ -255,7 +285,7 @@ describe("Clôture de la journée comptable", () => {
     await expect(
       controleur.ctx.mutation(api.functions.cash.closeAccountingDay, {
         accountingDayId: dayId,
-      }),
+      })
     ).rejects.toThrow(/déjà clôturée/)
   })
 
@@ -268,17 +298,16 @@ describe("Clôture de la journée comptable", () => {
     await expect(
       vendeur.ctx.mutation(api.functions.cash.closeAccountingDay, {
         accountingDayId: dayId,
-      }),
+      })
     ).rejects.toThrow(/Accès refusé/)
   })
 
   it("expose les états de contrôle de la journée", async () => {
     const t = convexTest(schema, modules)
     const { controleur, dayId } = await dayWithSession(t)
-    const etats = await controleur.ctx.query(
-      api.functions.cash.controlStates,
-      { accountingDayId: dayId },
-    )
+    const etats = await controleur.ctx.query(api.functions.cash.controlStates, {
+      accountingDayId: dayId,
+    })
     expect(etats.sessions).toHaveLength(1)
     expect(etats.openSessions).toBe(1)
     expect(etats.unjustifiedVariances).toBe(0)
@@ -292,10 +321,9 @@ describe("Clôture de la journée comptable", () => {
       countedByMethod: [{ method: "especes", amountXaf: -500 }],
       varianceReason: "Écart constaté",
     })
-    const etats = await controleur.ctx.query(
-      api.functions.cash.controlStates,
-      { accountingDayId: dayId },
-    )
+    const etats = await controleur.ctx.query(api.functions.cash.controlStates, {
+      accountingDayId: dayId,
+    })
     expect(etats.openSessions).toBe(0)
     expect(etats.unjustifiedVariances).toBe(0)
     expect(etats.sessions[0]?.varianceXaf).toBe(-500)
@@ -305,14 +333,11 @@ describe("Clôture de la journée comptable", () => {
     const t = convexTest(schema, modules)
     const pos = await seedPointOfSale(t)
     const { ctx } = await asUser(t, "controleur_recettes", pos)
-    const premier = await ctx.mutation(
-      api.functions.cash.openAccountingDay,
-      {},
-    )
+    const premier = await ctx.mutation(api.functions.cash.openAccountingDay, {})
     const second = await ctx.mutation(api.functions.cash.openAccountingDay, {})
     expect(second).toBe(premier)
     const jours = await t.run(async (c) =>
-      c.db.query("accountingDays").collect(),
+      c.db.query("accountingDays").collect()
     )
     expect(jours).toHaveLength(1)
   })

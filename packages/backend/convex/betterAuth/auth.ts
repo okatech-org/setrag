@@ -66,6 +66,17 @@ function resolveSiteUrl(origin?: string | null): string {
   return process.env.SITE_URL ?? "http://localhost:3000"
 }
 
+function emailOtpConfigured(): boolean {
+  return (
+    process.env.AUTH_EMAIL_ENABLED === "true" &&
+    Boolean(process.env.RESEND_API_KEY?.trim()) &&
+    Boolean(
+      process.env.AUTH_EMAIL_FROM?.trim() ||
+      process.env.TICKETS_EMAIL_FROM?.trim()
+    )
+  )
+}
+
 /**
  * Retient le code émis pour le rendre relisible en développement.
  *
@@ -96,6 +107,50 @@ async function recordDevCode(
   } catch (error) {
     console.warn(`[Auth] code non retenu pour le développement : ${error}`)
   }
+}
+
+async function deliverEmailOtp(
+  ctx: GenericCtx<DataModel>,
+  email: string,
+  otp: string
+): Promise<void> {
+  await recordDevCode(ctx, email, otp, "email")
+
+  if (emailOtpConfigured()) {
+    const runAction = (ctx as { runAction?: unknown }).runAction
+    if (typeof runAction !== "function") {
+      throw new Error("Service d'authentification temporairement indisponible")
+    }
+    await (
+      ctx as unknown as {
+        runAction: (ref: unknown, args: unknown) => Promise<unknown>
+      }
+    ).runAction(internal.functions.notifications.sendAuthOtpEmail, {
+      email,
+      otp,
+    })
+    return
+  }
+
+  if (process.env.DEV_SIGNIN_ENABLED !== "true") {
+    throw new Error("L'envoi des codes par e-mail n'est pas encore configuré.")
+  }
+}
+
+async function deliverSmsOtp(
+  ctx: GenericCtx<DataModel>,
+  phone: string,
+  code: string
+): Promise<void> {
+  await recordDevCode(ctx, phone, code, "sms")
+  if (process.env.DEV_SIGNIN_ENABLED !== "true") {
+    throw new Error("L'envoi des codes par SMS n'est pas encore configuré.")
+  }
+}
+
+function temporaryPhoneEmail(phone: string): string {
+  const digits = phone.replace(/\D/g, "")
+  return `telephone-${digits}@auth.setrag.local`
 }
 
 export const createAuth = (
@@ -132,9 +187,7 @@ export const createAuth = (
         otpLength: 6,
         expiresIn: 10 * 60,
         async sendVerificationOTP({ email, otp }) {
-          // TODO: brancher sur un fournisseur d'e-mail (Resend).
-          console.info(`[Auth] OTP e-mail pour ${email} : ${otp}`)
-          await recordDevCode(ctx, email, otp, "email")
+          await deliverEmailOtp(ctx, email, otp)
         },
       }),
       // OTP par SMS — parcours mobile, majoritaire au Gabon.
@@ -142,9 +195,12 @@ export const createAuth = (
         otpLength: 6,
         expiresIn: 10 * 60,
         async sendOTP({ phoneNumber: phone, code }) {
-          // TODO: brancher sur le fournisseur SMS.
-          console.info(`[Auth] OTP SMS pour ${phone} : ${code}`)
-          await recordDevCode(ctx, phone, code, "sms")
+          await deliverSmsOtp(ctx, phone, code)
+        },
+        phoneNumberValidator: (phone) => /^\+241\d{8}$/.test(phone),
+        signUpOnVerification: {
+          getTempEmail: temporaryPhoneEmail,
+          getTempName: (phone) => phone,
         },
       }),
     ],

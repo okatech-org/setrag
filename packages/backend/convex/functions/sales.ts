@@ -30,6 +30,7 @@ import {
 import { daysUntilDeparture, toServiceDate, weekdayOf } from "../model/calendar"
 import { PAYLOAD_VERSION, expiryFromArrival } from "../model/barcode"
 import { CURRENT_KEY_VERSION, signTicket } from "../lib/signature"
+import { quoteTrip } from "../lib/tripQuote"
 
 /**
  * Vente de billets — le cœur transactionnel du système.
@@ -62,9 +63,13 @@ const passengerArg = v.object({
 export async function performCounterSale(
   ctx: MutationCtx,
   actor: Doc<"users">,
-  args: CounterSaleArgs,
+  args: CounterSaleArgs
 ) {
-  return await performSale(ctx, { actor, channel: "guichet", mode: "ferme" }, args)
+  return await performSale(
+    ctx,
+    { actor, channel: "guichet", mode: "ferme" },
+    args
+  )
 }
 
 export const createCounterSale = mutation({
@@ -83,6 +88,23 @@ export const createCounterSale = mutation({
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "ventes", "creer")
     return await performCounterSale(ctx, actor, args)
+  },
+})
+
+/** Devis utilisant exactement le canal et les règles tarifaires du guichet. */
+export const quoteCounterSale = query({
+  args: {
+    tripId: v.id("trips"),
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
+    serviceClass,
+    passengerCount: v.number(),
+    discountCodes: v.optional(v.array(v.string())),
+    promoCode: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "ventes", "consulter")
+    return await quoteTrip(ctx, args, "guichet")
   },
 })
 
@@ -161,7 +183,7 @@ export interface PerformSaleContext {
 export async function performSale(
   ctx: MutationCtx,
   sale: PerformSaleContext,
-  args: CounterSaleArgs,
+  args: CounterSaleArgs
 ) {
   {
     const actor = sale.actor
@@ -177,7 +199,7 @@ export async function performSale(
     if (isInternal) {
       if (!actor?.pointOfSaleId) {
         throw new Error(
-          "Agent non rattaché à un point de vente : vente impossible",
+          "Agent non rattaché à un point de vente : vente impossible"
         )
       }
       pointOfSale = await ctx.db.get(actor.pointOfSaleId)
@@ -214,10 +236,10 @@ export async function performSale(
     ).sort((a, b) => a.sequence - b.sequence)
 
     const fromIndex = stops.findIndex(
-      (s) => s.stationId === args.originStationId,
+      (s) => s.stationId === args.originStationId
     )
     const toIndex = stops.findIndex(
-      (s) => s.stationId === args.destinationStationId,
+      (s) => s.stationId === args.destinationStationId
     )
     if (fromIndex === -1) throw new Error("Gare de départ non desservie")
     if (toIndex === -1) throw new Error("Gare d'arrivée non desservie")
@@ -226,7 +248,7 @@ export async function performSale(
     }
 
     const distanceKm = Math.abs(
-      stops[toIndex]!.kilometerPoint - stops[fromIndex]!.kilometerPoint,
+      stops[toIndex]!.kilometerPoint - stops[fromIndex]!.kilometerPoint
     )
     const request = segmentMask({ fromIndex, toIndex }, trip.segmentCount)
     const seatsNeeded = args.passengers.length
@@ -241,18 +263,18 @@ export async function performSale(
 
     if (counters.length === 0) {
       throw new Error(
-        `Classe ${args.serviceClass} non commercialisée sur cette desserte`,
+        `Classe ${args.serviceClass} non commercialisée sur cette desserte`
       )
     }
 
     const onRoute = counters.filter(
-      (c) => c.segmentIndex >= fromIndex && c.segmentIndex < toIndex,
+      (c) => c.segmentIndex >= fromIndex && c.segmentIndex < toIndex
     )
     const available = Math.min(...onRoute.map((c) => c.available))
     if (available < seatsNeeded) {
       throw new Error(
         `Places insuffisantes : ${seatsNeeded} demandée(s), ` +
-          `${available} disponible(s) sur le segment le plus chargé`,
+          `${available} disponible(s) sur le segment le plus chargé`
       )
     }
 
@@ -275,7 +297,7 @@ export async function performSale(
 
       if (passenger.seatId) {
         chosen = occupancies.find(
-          (o) => o.seatId === passenger.seatId && !taken.has(o._id),
+          (o) => o.seatId === passenger.seatId && !taken.has(o._id)
         )
         if (!chosen) {
           throw new Error("Place demandée inconnue sur cette desserte")
@@ -292,13 +314,16 @@ export async function performSale(
         })
         if (!chosen) {
           throw new Error(
-            "Aucune place libre sur l'intégralité du trajet demandé",
+            "Aucune place libre sur l'intégralité du trajet demandé"
           )
         }
       }
 
       taken.add(chosen._id)
-      assigned.push({ occupancy: chosen, seat: await ctx.db.get(chosen.seatId) })
+      assigned.push({
+        occupancy: chosen,
+        seat: await ctx.db.get(chosen.seatId),
+      })
     }
 
     /* ── Tarification ────────────────────────────────────────────────── */
@@ -328,7 +353,8 @@ export async function performSale(
     const scopedRules: PricingRule[] = rules
       .filter((r) => r.tripId === undefined || r.tripId === args.tripId)
       .filter(
-        (r) => r.serviceClass === undefined || r.serviceClass === args.serviceClass,
+        (r) =>
+          r.serviceClass === undefined || r.serviceClass === args.serviceClass
       )
       .map((r) => ({
         id: r._id,
@@ -366,7 +392,7 @@ export async function performSale(
 
     const saleSeq = await nextSequence(
       ctx,
-      sequenceKey(code, serviceDate, "vente"),
+      sequenceKey(code, serviceDate, "vente")
     )
     const saleNumber = formatNumber("vente", code, serviceDate, saleSeq)
 
@@ -391,13 +417,11 @@ export async function performSale(
 
     for (const [index, passenger] of args.passengers.entries()) {
       const discount = passenger.discountCode
-        ? discounts.find(
-            (d) => d.code === passenger.discountCode && d.isActive,
-          )
+        ? discounts.find((d) => d.code === passenger.discountCode && d.isActive)
         : undefined
       if (passenger.discountCode && !discount) {
         throw new Error(
-          `Réduction « ${passenger.discountCode} » inconnue ou désactivée`,
+          `Réduction « ${passenger.discountCode} » inconnue ou désactivée`
         )
       }
 
@@ -435,7 +459,7 @@ export async function performSale(
 
       const ticketSeq = await nextSequence(
         ctx,
-        sequenceKey(code, serviceDate, "billet"),
+        sequenceKey(code, serviceDate, "billet")
       )
       ticketDrafts.push({
         number: formatNumber("billet", code, serviceDate, ticketSeq),
@@ -459,8 +483,8 @@ export async function performSale(
           quote.unitPriceTtc,
           schedule.vatPct,
           schedule.cssPct,
-          quote.unitPriceTtc,
-        ),
+          quote.unitPriceTtc
+        )
       )
     }
 
@@ -470,7 +494,7 @@ export async function performSale(
     if (args.method === "especes" && args.tendered !== undefined) {
       if (args.tendered < total.ttc) {
         throw new Error(
-          `Règlement insuffisant : ${args.tendered} remis pour ${total.ttc} dus`,
+          `Règlement insuffisant : ${args.tendered} remis pour ${total.ttc} dus`
         )
       }
     }
@@ -478,8 +502,7 @@ export async function performSale(
     /* ── Écritures : vente, titres, inventaire ───────────────────────── */
     // Une réservation n'encaisse rien : le montant perçu reste à zéro tant
     // que le règlement n'est pas intervenu.
-    const recorded =
-      sale.mode === "hold" ? { ...total, received: 0 } : total
+    const recorded = sale.mode === "hold" ? { ...total, received: 0 } : total
 
     const saleId = await ctx.db.insert("sales", {
       number: saleNumber,
@@ -514,7 +537,7 @@ export async function performSale(
         draft.occupancy._id,
         sale.mode === "hold"
           ? { heldMask: draft.occupancy.heldMask | request }
-          : { soldMask: draft.occupancy.soldMask | request },
+          : { soldMask: draft.occupancy.soldMask | request }
       )
 
       // Le code-barres est signé dès l'émission, y compris pour une
@@ -577,13 +600,15 @@ export async function performSale(
     // les places passent en réservation temporaire plutôt qu'en vente ferme :
     // la disponibilité chute pareillement, mais l'expiration les libère.
     for (const counter of onRoute) {
-      const sold = sale.mode === "hold" ? counter.sold : counter.sold + seatsNeeded
-      const held = sale.mode === "hold" ? counter.held + seatsNeeded : counter.held
+      const sold =
+        sale.mode === "hold" ? counter.sold : counter.sold + seatsNeeded
+      const held =
+        sale.mode === "hold" ? counter.held + seatsNeeded : counter.held
       const available = counter.capacity - sold - held - counter.reserved
       if (available < 0) {
         throw new Error(
           `Survente détectée sur le segment ${counter.segmentIndex} : ` +
-            `transaction annulée`,
+            `transaction annulée`
         )
       }
       await ctx.db.patch(counter._id, { sold, held, available })
@@ -651,13 +676,12 @@ export async function performSale(
  */
 async function refundCashSession(
   ctx: MutationCtx,
-  sale: Doc<"sales">,
+  sale: Doc<"sales">
 ): Promise<Id<"cashSessions"> | undefined> {
   if (!sale.cashSessionId) return undefined
   const session = await ctx.db.get(sale.cashSessionId)
   return session?.status === "ouverte" ? session._id : undefined
 }
-
 
 /**
  * Libère l'inventaire occupé par une liste de titres.
@@ -669,19 +693,19 @@ async function refundCashSession(
 async function releaseTicketsInventory(
   ctx: MutationCtx,
   tickets: readonly Doc<"tickets">[],
-  trip: Doc<"trips">,
+  trip: Doc<"trips">
 ): Promise<void> {
   for (const ticket of tickets) {
     const mask = segmentMask(
       { fromIndex: ticket.fromStopIndex, toIndex: ticket.toStopIndex },
-      trip.segmentCount,
+      trip.segmentCount
     )
 
     if (ticket.seatId) {
       const occupancy = await ctx.db
         .query("seatOccupancy")
         .withIndex("by_trip_seat", (q) =>
-          q.eq("tripId", ticket.tripId).eq("seatId", ticket.seatId!),
+          q.eq("tripId", ticket.tripId).eq("seatId", ticket.seatId!)
         )
         .unique()
       if (occupancy) {
@@ -700,7 +724,7 @@ async function releaseTicketsInventory(
       (c) =>
         c.serviceClass === ticket.serviceClass &&
         c.segmentIndex >= ticket.fromStopIndex &&
-        c.segmentIndex < ticket.toStopIndex,
+        c.segmentIndex < ticket.toStopIndex
     )
 
     for (const counter of counters) {
@@ -709,7 +733,7 @@ async function releaseTicketsInventory(
         sold,
         available: Math.min(
           counter.capacity,
-          counter.capacity - sold - counter.held - counter.reserved,
+          counter.capacity - sold - counter.held - counter.reserved
         ),
       })
     }
@@ -736,7 +760,7 @@ async function releaseTicketsInventory(
 async function resolveTickets(
   ctx: MutationCtx,
   saleId: Id<"sales">,
-  ticketIds?: readonly Id<"tickets">[],
+  ticketIds?: readonly Id<"tickets">[]
 ): Promise<Doc<"tickets">[]> {
   const all = await ctx.db
     .query("tickets")
@@ -749,6 +773,21 @@ async function resolveTickets(
     throw new Error("Un titre demandé n'appartient pas à cette vente")
   }
   return selected
+}
+
+/** Retire les représentations PDF devenues obsolètes après un changement. */
+async function invalidateSaleDocuments(
+  ctx: MutationCtx,
+  sale: Doc<"sales">,
+  tickets: readonly Doc<"tickets">[]
+): Promise<void> {
+  for (const ticket of tickets) {
+    if (ticket.pdfStorageId) await ctx.storage.delete(ticket.pdfStorageId)
+  }
+  if (sale.bundlePdfStorageId) {
+    await ctx.storage.delete(sale.bundlePdfStorageId)
+  }
+  await ctx.db.patch(sale._id, { bundlePdfStorageId: undefined })
 }
 
 /**
@@ -788,7 +827,7 @@ export const cancel = mutation({
     if (utilises.length > 0) {
       throw new Error(
         `${utilises.length} titre(s) déjà contrôlé(s) à bord : annulation ` +
-          `impossible`,
+          `impossible`
       )
     }
 
@@ -801,8 +840,12 @@ export const cancel = mutation({
     if (!trip) throw new Error("Desserte introuvable")
 
     await releaseTicketsInventory(ctx, actifs, trip)
+    await invalidateSaleDocuments(ctx, sale, actifs)
     for (const ticket of actifs) {
-      await ctx.db.patch(ticket._id, { status: "annule" })
+      await ctx.db.patch(ticket._id, {
+        status: "annule",
+        pdfStorageId: undefined,
+      })
     }
 
     const annuleTtc = actifs.reduce((sum, t) => sum + t.unitPriceTtc, 0)
@@ -814,7 +857,7 @@ export const cancel = mutation({
       annuleTtc,
       schedule?.vatPct ?? 0,
       schedule?.cssPct ?? 0,
-      annuleTtc,
+      annuleTtc
     )
 
     const now = Date.now()
@@ -825,7 +868,7 @@ export const cancel = mutation({
     const code = pointOfSale?.code ?? "SYS"
     const seq = await nextSequence(
       ctx,
-      sequenceKey(code, serviceDate, "annulation"),
+      sequenceKey(code, serviceDate, "annulation")
     )
     const day = await currentAccountingDay(ctx)
 
@@ -928,8 +971,12 @@ export const refund = mutation({
     if (!trip) throw new Error("Desserte introuvable")
 
     await releaseTicketsInventory(ctx, remboursables, trip)
+    await invalidateSaleDocuments(ctx, sale, remboursables)
     for (const ticket of remboursables) {
-      await ctx.db.patch(ticket._id, { status: "rembourse" })
+      await ctx.db.patch(ticket._id, {
+        status: "rembourse",
+        pdfStorageId: undefined,
+      })
     }
 
     const payeTtc = remboursables.reduce((sum, t) => sum + t.unitPriceTtc, 0)
@@ -943,7 +990,7 @@ export const refund = mutation({
       rembourseTtc,
       schedule?.vatPct ?? 0,
       schedule?.cssPct ?? 0,
-      rembourseTtc,
+      rembourseTtc
     )
 
     const now = Date.now()
@@ -954,7 +1001,7 @@ export const refund = mutation({
     const code = pointOfSale?.code ?? "SYS"
     const seq = await nextSequence(
       ctx,
-      sequenceKey(code, serviceDate, "remboursement"),
+      sequenceKey(code, serviceDate, "remboursement")
     )
     const day = await currentAccountingDay(ctx)
 
@@ -1032,9 +1079,7 @@ export const reprintTicket = mutation({
     const ticket = await ctx.db.get(args.ticketId)
     if (!ticket) throw new Error("Titre introuvable")
     if (ticket.status !== "valide") {
-      throw new Error(
-        `Titre « ${ticket.status} » : réimpression impossible`,
-      )
+      throw new Error(`Titre « ${ticket.status} » : réimpression impossible`)
     }
 
     const duplicateCount = ticket.duplicateCount + 1
@@ -1092,7 +1137,7 @@ export const search = query({
       return await ctx.db
         .query("sales")
         .withIndex("by_accounting_day", (q) =>
-          q.eq("accountingDayId", args.accountingDayId),
+          q.eq("accountingDayId", args.accountingDayId)
         )
         .collect()
     }

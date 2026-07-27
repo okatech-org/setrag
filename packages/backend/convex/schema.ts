@@ -19,14 +19,14 @@ export const trainType = v.union(
   v.literal("EXPRESS"),
   v.literal("OMNIBUS"),
   v.literal("AUTORAIL"),
-  v.literal("SPECIAL"),
+  v.literal("SPECIAL")
 )
 
 /** Classes de service (CDC §7.1.1). */
 export const serviceClass = v.union(
   v.literal("DEUXIEME"),
   v.literal("PREMIERE"),
-  v.literal("VIP"),
+  v.literal("VIP")
 )
 
 /**
@@ -44,7 +44,7 @@ export const role = v.union(
   v.literal("comptable"),
   v.literal("responsable_kpi"),
   v.literal("admin_fonctionnel"),
-  v.literal("admin_it"),
+  v.literal("admin_it")
 )
 
 /** Canal de vente — détermine le circuit d'encaissement et les contrôles. */
@@ -53,7 +53,7 @@ export const saleChannel = v.union(
   v.literal("ligne"),
   v.literal("agence"),
   v.literal("bord"),
-  v.literal("manuel"),
+  v.literal("manuel")
 )
 
 /** Produits voyageurs commercialisés (CDC §7.1). */
@@ -62,7 +62,7 @@ export const productType = v.union(
   v.literal("bagage"),
   v.literal("colis"),
   v.literal("taa"),
-  v.literal("funeraire"),
+  v.literal("funeraire")
 )
 
 /**
@@ -73,7 +73,7 @@ export const productType = v.union(
 export const saleKind = v.union(
   v.literal("vente"),
   v.literal("annulation"),
-  v.literal("remboursement"),
+  v.literal("remboursement")
 )
 
 export const saleStatus = v.union(
@@ -82,7 +82,7 @@ export const saleStatus = v.union(
   v.literal("confirmee"),
   v.literal("annulee"),
   v.literal("remboursee"),
-  v.literal("expiree"),
+  v.literal("expiree")
 )
 
 export const paymentMethod = v.union(
@@ -92,7 +92,7 @@ export const paymentMethod = v.union(
   v.literal("clickpay"),
   v.literal("visa"),
   v.literal("mastercard"),
-  v.literal("en_compte"),
+  v.literal("en_compte")
 )
 
 export const paymentStatus = v.union(
@@ -101,7 +101,7 @@ export const paymentStatus = v.union(
   v.literal("confirme"),
   v.literal("echoue"),
   v.literal("expire"),
-  v.literal("rembourse"),
+  v.literal("rembourse")
 )
 
 /** Cycle de validation partagé par les livrets horaires et les tarifs. */
@@ -110,7 +110,7 @@ export const approvalStatus = v.union(
   v.literal("a_valider"),
   v.literal("actif"),
   v.literal("rejete"),
-  v.literal("expire"),
+  v.literal("expire")
 )
 
 export const tripStatus = v.union(
@@ -118,7 +118,7 @@ export const tripStatus = v.union(
   v.literal("a_lheure"),
   v.literal("retarde"),
   v.literal("annule"),
-  v.literal("termine"),
+  v.literal("termine")
 )
 
 export const ticketStatus = v.union(
@@ -128,13 +128,13 @@ export const ticketStatus = v.union(
   v.literal("utilise"),
   v.literal("annule"),
   v.literal("rembourse"),
-  v.literal("expire"),
+  v.literal("expire")
 )
 
 export const pointOfSaleType = v.union(
   v.literal("gare"),
   v.literal("agence_accreditee"),
-  v.literal("agence_premium"),
+  v.literal("agence_premium")
 )
 
 /** Résultat d'un contrôle à bord — motifs exigés par l'écran CM-05. */
@@ -145,7 +145,15 @@ export const scanResult = v.union(
   v.literal("hors_segment"),
   v.literal("expire"),
   v.literal("deja_controle"),
-  v.literal("annule"),
+  v.literal("annule")
+)
+
+/** Canaux conversationnels raccordés au même assistant voyageur. */
+export const messagingChannel = v.union(
+  v.literal("telegram"),
+  v.literal("whatsapp"),
+  v.literal("messenger"),
+  v.literal("apple_messages")
 )
 
 /* ════════════════════════ Objets composés réutilisés ════════════════════ */
@@ -303,7 +311,7 @@ export default defineSchema({
         sequence: v.number(),
         arrivalOffsetMinutes: v.optional(v.number()),
         departureOffsetMinutes: v.optional(v.number()),
-      }),
+      })
     ),
   })
     .index("by_booklet", ["bookletId"])
@@ -328,6 +336,7 @@ export default defineSchema({
     isOpenForSale: v.boolean(),
   })
     .index("by_departure", ["departureAt"])
+    .index("by_origin_departure", ["originStationId", "departureAt"])
     .index("by_route_date", [
       "originStationId",
       "destinationStationId",
@@ -450,7 +459,7 @@ export default defineSchema({
     scope: v.union(
       v.literal("reseau"),
       v.literal("ligne"),
-      v.literal("desserte"),
+      v.literal("desserte")
     ),
     tripId: v.optional(v.id("trips")),
     serviceClass: v.optional(serviceClass),
@@ -459,7 +468,7 @@ export default defineSchema({
       v.literal("anticipation"),
       v.literal("periode"),
       v.literal("canal"),
-      v.literal("promotion"),
+      v.literal("promotion")
     ),
     /** Seuil de déclenchement : taux de remplissage, jours d'anticipation… */
     threshold: v.optional(v.number()),
@@ -530,7 +539,7 @@ export default defineSchema({
       v.literal("maintenance"),
       v.literal("exploitation"),
       v.literal("protocole"),
-      v.literal("autre"),
+      v.literal("autre")
     ),
     comment: v.optional(v.string()),
     createdBy: v.id("users"),
@@ -626,6 +635,11 @@ export default defineSchema({
     penaltyPct: v.optional(v.number()),
     /** Prix figé pendant le hold de la vente en ligne. */
     priceLockedUntil: v.optional(v.number()),
+    /** Conditions acceptées au paiement, y compris lors d'un achat invité. */
+    cgvVersion: v.optional(v.string()),
+    cgvAcceptedAt: v.optional(v.number()),
+    /** PDF multi-billets mis en cache pour le dossier voyageur. */
+    bundlePdfStorageId: v.optional(v.id("_storage")),
     soldAt: v.number(),
     cancelledAt: v.optional(v.number()),
   })
@@ -711,7 +725,7 @@ export default defineSchema({
       v.literal("enregistre"),
       v.literal("en_transport"),
       v.literal("arrive"),
-      v.literal("retire"),
+      v.literal("retire")
     ),
     amounts,
   })
@@ -774,7 +788,7 @@ export default defineSchema({
       v.literal("AN"),
       v.literal("SIX_MOIS"),
       v.literal("TROIS_MOIS"),
-      v.literal("DEMI_TARIF"),
+      v.literal("DEMI_TARIF")
     ),
     originStationId: v.id("stations"),
     destinationStationId: v.id("stations"),
@@ -785,7 +799,7 @@ export default defineSchema({
     status: v.union(
       v.literal("active"),
       v.literal("expiree"),
-      v.literal("suspendue"),
+      v.literal("suspendue")
     ),
     barcodePayload: v.optional(v.string()),
     barcodeSignature: v.optional(v.string()),
@@ -852,8 +866,8 @@ export default defineSchema({
         v.literal("en_attente"),
         v.literal("envoye"),
         v.literal("integre"),
-        v.literal("echec"),
-      ),
+        v.literal("echec")
+      )
     ),
     exportError: v.optional(v.string()),
   })
@@ -869,17 +883,17 @@ export default defineSchema({
     openingFloatXaf: v.number(),
     /** Totaux théoriques et comptés, par mode de règlement. */
     expectedByMethod: v.array(
-      v.object({ method: paymentMethod, amountXaf: v.number() }),
+      v.object({ method: paymentMethod, amountXaf: v.number() })
     ),
     countedByMethod: v.optional(
-      v.array(v.object({ method: paymentMethod, amountXaf: v.number() })),
+      v.array(v.object({ method: paymentMethod, amountXaf: v.number() }))
     ),
     varianceXaf: v.optional(v.number()),
     varianceReason: v.optional(v.string()),
     status: v.union(
       v.literal("ouverte"),
       v.literal("cloturee"),
-      v.literal("validee"),
+      v.literal("validee")
     ),
     validatedBy: v.optional(v.id("users")),
   })
@@ -961,7 +975,7 @@ export default defineSchema({
       v.literal("sans_titre"),
       v.literal("titre_invalide"),
       v.literal("classe_superieure"),
-      v.literal("autre"),
+      v.literal("autre")
     ),
     notes: v.optional(v.string()),
     amountXaf: v.number(),
@@ -969,7 +983,7 @@ export default defineSchema({
       v.literal("emis"),
       v.literal("paye"),
       v.literal("conteste"),
-      v.literal("annule"),
+      v.literal("annule")
     ),
     paymentId: v.optional(v.id("payments")),
     issuedAt: v.number(),
@@ -993,19 +1007,19 @@ export default defineSchema({
       v.literal("technique"),
       v.literal("comportement"),
       v.literal("medical"),
-      v.literal("autre"),
+      v.literal("autre")
     ),
     severity: v.union(
       v.literal("information"),
       v.literal("important"),
-      v.literal("critique"),
+      v.literal("critique")
     ),
     description: v.string(),
     photoStorageIds: v.array(v.id("_storage")),
     status: v.union(
       v.literal("ouvert"),
       v.literal("en_cours"),
-      v.literal("resolu"),
+      v.literal("resolu")
     ),
     reportedAt: v.number(),
     offline: v.boolean(),
@@ -1030,14 +1044,14 @@ export default defineSchema({
     type: v.union(
       v.literal("sage_export"),
       v.literal("colirail_status"),
-      v.literal("notification"),
+      v.literal("notification")
     ),
     entityId: v.string(),
     payload: v.string(),
     status: v.union(
       v.literal("en_attente"),
       v.literal("envoye"),
-      v.literal("echec"),
+      v.literal("echec")
     ),
     attempts: v.number(),
     lastError: v.optional(v.string()),
@@ -1048,12 +1062,34 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_type_status", ["type", "status"]),
 
+  /**
+   * Voyageurs mémorisés d'un compte.
+   *
+   * Le CDC autorise l'achat sans compte : ces fiches ne servent qu'à
+   * préremplir un dossier, jamais à identifier le porteur d'un billet. Le
+   * titre reste nominatif par la copie figée dans `tickets.passenger`, qui ne
+   * suit pas les modifications faites ici.
+   */
+  savedPassengers: defineTable({
+    userId: v.id("users"),
+    lastName: v.string(),
+    firstName: v.string(),
+    gender: v.union(v.literal("M"), v.literal("F")),
+    phone: v.optional(v.string()),
+    emergencyPhone: v.optional(v.string()),
+    birthDate: v.optional(v.string()),
+    /** Réduction habituelle du voyageur — « ENFANT », « MILITAIRE »… */
+    discountCode: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   consents: defineTable({
     userId: v.id("users"),
     type: v.union(
       v.literal("cgv"),
       v.literal("donnees"),
-      v.literal("marketing"),
+      v.literal("marketing")
     ),
     /** Version du texte accepté, ex. « cgv-2026-07 ». */
     version: v.string(),
@@ -1062,7 +1098,7 @@ export default defineSchema({
     channel: v.union(
       v.literal("web"),
       v.literal("mobile"),
-      v.literal("guichet"),
+      v.literal("guichet")
     ),
     ipAddress: v.optional(v.string()),
   })
@@ -1090,6 +1126,241 @@ export default defineSchema({
     createdAt: v.number(),
     expiresAt: v.number(),
   }).index("by_identifier", ["identifier"]),
+
+  /* ═════════════════════ Messagerie multicanale ═════════════════════════ */
+
+  messagingIdentities: defineTable({
+    channel: messagingChannel,
+    externalUserId: v.string(),
+    userId: v.optional(v.id("users")),
+    displayName: v.optional(v.string()),
+    locale: v.optional(v.string()),
+    createdAt: v.number(),
+    lastSeenAt: v.number(),
+  })
+    .index("by_channel_and_external_user", ["channel", "externalUserId"])
+    .index("by_user", ["userId"]),
+
+  messagingThreads: defineTable({
+    channel: messagingChannel,
+    externalThreadId: v.string(),
+    identityId: v.id("messagingIdentities"),
+    conversationId: v.id("assistantConversations"),
+    state: v.union(
+      v.literal("active"),
+      v.literal("handoff_requested"),
+      v.literal("human_active"),
+      v.literal("closed")
+    ),
+    createdAt: v.number(),
+    lastInboundAt: v.number(),
+    lastOutboundAt: v.optional(v.number()),
+    processingEventId: v.optional(v.id("messagingEvents")),
+    processingStartedAt: v.optional(v.number()),
+  })
+    .index("by_channel_and_external_thread", ["channel", "externalThreadId"])
+    .index("by_conversation", ["conversationId"])
+    .index("by_identity", ["identityId"]),
+
+  messagingEvents: defineTable({
+    channel: messagingChannel,
+    externalEventId: v.string(),
+    externalThreadId: v.string(),
+    externalUserId: v.string(),
+    threadId: v.optional(v.id("messagingThreads")),
+    type: v.union(
+      v.literal("text"),
+      v.literal("action"),
+      v.literal("command"),
+      v.literal("unsupported")
+    ),
+    text: v.optional(v.string()),
+    actionToken: v.optional(v.string()),
+    providerInteractionId: v.optional(v.string()),
+    displayName: v.optional(v.string()),
+    locale: v.optional(v.string()),
+    rawPayload: v.optional(v.string()),
+    status: v.union(
+      v.literal("received"),
+      v.literal("processing"),
+      v.literal("processed"),
+      v.literal("failed"),
+      v.literal("exhausted")
+    ),
+    attempts: v.number(),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    processingStartedAt: v.optional(v.number()),
+    processedAt: v.optional(v.number()),
+  })
+    .index("by_channel_and_external_event", ["channel", "externalEventId"])
+    .index("by_channel_thread_status_and_created_at", [
+      "channel",
+      "externalThreadId",
+      "status",
+      "createdAt",
+    ])
+    .index("by_status_and_created_at", ["status", "createdAt"])
+    .index("by_thread_and_created_at", ["threadId", "createdAt"]),
+
+  messagingApprovals: defineTable({
+    threadId: v.id("messagingThreads"),
+    token: v.string(),
+    callId: v.string(),
+    toolName: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("resolved"),
+      v.literal("failed"),
+      v.literal("expired")
+    ),
+    decision: v.optional(v.union(v.literal("approve"), v.literal("reject"))),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+  })
+    .index("by_token", ["token"])
+    .index("by_thread_and_status", ["threadId", "status"])
+    .index("by_thread_and_call", ["threadId", "callId"]),
+
+  messagingOutbox: defineTable({
+    threadId: v.id("messagingThreads"),
+    sourceEventId: v.optional(v.id("messagingEvents")),
+    kind: v.union(v.literal("text"), v.literal("document")),
+    text: v.optional(v.string()),
+    documentUrl: v.optional(v.string()),
+    filename: v.optional(v.string()),
+    buttons: v.optional(
+      v.array(
+        v.object({
+          label: v.string(),
+          data: v.string(),
+        })
+      )
+    ),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("failed")
+    ),
+    attempts: v.number(),
+    nextAttemptAt: v.optional(v.number()),
+    providerMessageId: v.optional(v.string()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    sentAt: v.optional(v.number()),
+  })
+    .index("by_thread_and_status", ["threadId", "status"])
+    .index("by_status_and_next_attempt", ["status", "nextAttemptAt"])
+    .index("by_source_event", ["sourceEventId"]),
+
+  /* ═════════════════════ Assistants IA voyageurs ════════════════════════ */
+
+  assistantConversations: defineTable({
+    userId: v.optional(v.id("users")),
+    /** Empreinte SHA-256 du secret de session pour un visiteur non connecté. */
+    guestKeyHash: v.string(),
+    assistantId: v.union(
+      v.literal("concierge"),
+      v.literal("booking"),
+      v.literal("tickets"),
+      v.literal("account")
+    ),
+    provider: v.union(
+      v.literal("openai"),
+      v.literal("anthropic"),
+      v.literal("google")
+    ),
+    model: v.string(),
+    title: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("closed")),
+    createdAt: v.number(),
+    lastMessageAt: v.number(),
+  })
+    .index("by_user_and_last_message_at", ["userId", "lastMessageAt"])
+    .index("by_status_and_last_message_at", ["status", "lastMessageAt"]),
+
+  assistantMessages: defineTable({
+    conversationId: v.id("assistantConversations"),
+    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("tool")),
+    content: v.string(),
+    /** Clé d'idempotence du tour texte fournie par le client. */
+    requestId: v.optional(v.string()),
+    toolName: v.optional(v.string()),
+    toolCallId: v.optional(v.string()),
+    provider: v.optional(
+      v.union(v.literal("openai"), v.literal("anthropic"), v.literal("google"))
+    ),
+    model: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_conversation_and_created_at", ["conversationId", "createdAt"])
+    .index("by_conversation_and_tool_call_id", ["conversationId", "toolCallId"])
+    .index("by_conversation_and_request_id_and_role", [
+      "conversationId",
+      "requestId",
+      "role",
+    ]),
+
+  assistantTurns: defineTable({
+    conversationId: v.id("assistantConversations"),
+    requestId: v.string(),
+    status: v.union(
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    resultJson: v.optional(v.string()),
+    error: v.optional(v.string()),
+    attempts: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_conversation_and_request", ["conversationId", "requestId"])
+    .index("by_status_and_updated_at", ["status", "updatedAt"]),
+
+  assistantToolExecutions: defineTable({
+    conversationId: v.id("assistantConversations"),
+    callId: v.string(),
+    toolName: v.string(),
+    inputJson: v.string(),
+    outputJson: v.optional(v.string()),
+    status: v.union(
+      v.literal("approval_required"),
+      v.literal("running"),
+      v.literal("succeeded"),
+      v.literal("failed"),
+      v.literal("rejected")
+    ),
+    requiresApproval: v.boolean(),
+    approvedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_conversation_and_call_id", ["conversationId", "callId"])
+    .index("by_conversation_and_status", ["conversationId", "status"]),
+
+  assistantVoiceSessions: defineTable({
+    conversationId: v.id("assistantConversations"),
+    provider: v.literal("openai"),
+    model: v.string(),
+    providerSessionId: v.optional(v.string()),
+    status: v.union(
+      v.literal("created"),
+      v.literal("connected"),
+      v.literal("ended"),
+      v.literal("failed")
+    ),
+    expiresAt: v.optional(v.number()),
+    createdAt: v.number(),
+    endedAt: v.optional(v.number()),
+  })
+    .index("by_conversation_and_created_at", ["conversationId", "createdAt"])
+    .index("by_status_and_created_at", ["status", "createdAt"]),
 
   /* ═══════════════════════ Indicateurs pré-agrégés ═══════════════════════ */
 
@@ -1177,19 +1448,79 @@ export default defineSchema({
     .index("by_action", ["action"])
     .index("by_createdAt", ["createdAt"]),
 
+  /** Rapports récurrents demandés depuis le back-office de gestion. */
+  reportSchedules: defineTable({
+    label: v.string(),
+    reportType: v.union(
+      v.literal("ventes_canaux"),
+      v.literal("remplissage"),
+      v.literal("annulations"),
+      v.literal("recettes")
+    ),
+    frequency: v.union(
+      v.literal("quotidien"),
+      v.literal("hebdomadaire"),
+      v.literal("mensuel")
+    ),
+    format: v.union(v.literal("csv"), v.literal("xlsx"), v.literal("pdf")),
+    recipients: v.array(v.string()),
+    nextRunAt: v.number(),
+    lastRunAt: v.optional(v.number()),
+    isActive: v.boolean(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_next_run", ["nextRunAt"])
+    .index("by_active_next_run", ["isActive", "nextRunAt"]),
+
   notifications: defineTable({
     userId: v.id("users"),
     channel: v.union(
       v.literal("push"),
       v.literal("email"),
       v.literal("sms"),
-      v.literal("in_app"),
+      v.literal("in_app")
+    ),
+    /** Nature du message, qui pilote le filtre de la liste et les préférences. */
+    category: v.optional(
+      v.union(
+        v.literal("retard"),
+        v.literal("rappel"),
+        v.literal("achat"),
+        v.literal("remboursement")
+      )
     ),
     title: v.string(),
     body: v.string(),
     data: v.optional(v.string()),
     sentAt: v.optional(v.number()),
     readAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_read", ["userId", "readAt"]),
+
+  /**
+   * Préférences de notification.
+   *
+   * Une ligne par voyageur, absente tant qu'il n'a rien réglé : l'absence vaut
+   * consentement aux seules alertes d'exploitation, jamais au marketing, qui
+   * relève de `consents`.
+   */
+  notificationPreferences: defineTable({
+    userId: v.id("users"),
+    pushEnabled: v.boolean(),
+    smsEnabled: v.boolean(),
+    /** Catégories désactivées par le voyageur. */
+    mutedCategories: v.array(
+      v.union(
+        v.literal("retard"),
+        v.literal("rappel"),
+        v.literal("achat"),
+        v.literal("remboursement")
+      )
+    ),
+    updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
   pushTokens: defineTable({

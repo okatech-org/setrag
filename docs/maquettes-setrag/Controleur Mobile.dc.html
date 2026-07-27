@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/fonts/fonts.css">
+  <link rel="stylesheet" href="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/_ds_bundle.css">
+  <link rel="stylesheet" href="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/styles.css">
+  <script src="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/_ds_bundle.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { background: #05070c; font-family: var(--font-ui); overflow: hidden; }
+    a { color: var(--c-accent-ink); text-decoration: none; }
+    a:hover { color: var(--c-accent); }
+    input, select, textarea, button { font-family: inherit; }
+    .cm-scroll::-webkit-scrollbar { width: 0; height: 0; }
+    .cm-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+    @keyframes cm-sweep { 0% { top: 6% } 50% { top: 90% } 100% { top: 6% } }
+    @keyframes cm-pulse { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+  </style>
+</helmet>
+
+<div style="height:100vh;width:100vw;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 0%, #1b2436, #05070c 70%);overflow:hidden">
+  <div style="transform:scale({{ scale }});transform-origin:center center">
+    <div style="width:{{ bezelW }};height:{{ bezelH }};background:#05070c;border-radius:{{ bezelRadius }};padding:{{ bezelPad }};box-shadow:0 40px 90px rgba(0,0,0,.6), 0 0 0 2px #1c2230">
+      <div data-theme="{{ theme }}" style="width:390px;height:844px;border-radius:{{ screenRadius }};overflow:hidden;position:relative;background:var(--c-canvas);color:var(--c-ink);display:flex;flex-direction:column;font:var(--t-body);font-family:var(--font-ui)">
+
+        <div style="height:52px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 8px;position:relative;z-index:6;background:{{ statusBg }};color:{{ statusInk }}">
+          <span class="tabular" style="font-size:14px;font-weight:600">{{ clock }}</span>
+          <span style="position:absolute;top:9px;left:50%;transform:translateX(-50%);width:118px;height:30px;background:#05070c;border-radius:20px"></span>
+          <span style="display:flex;align-items:flex-end;gap:6px">
+            <span class="tabular" style="font-size:11px;font-weight:600">{{ netShort }}</span>
+            <span style="display:flex;align-items:flex-end;gap:2px">
+              <span style="width:3px;height:5px;border-radius:1px;background:currentColor;opacity:{{ bar1 }}"></span>
+              <span style="width:3px;height:8px;border-radius:1px;background:currentColor;opacity:{{ bar2 }}"></span>
+              <span style="width:3px;height:11px;border-radius:1px;background:currentColor;opacity:{{ bar3 }}"></span>
+            </span>
+            <span style="width:24px;height:12px;border:1.5px solid currentColor;border-radius:3px;padding:1.5px;opacity:.9">
+              <span style="display:block;height:100%;width:64%;background:currentColor;border-radius:1px"></span>
+            </span>
+          </span>
+        </div>
+
+        <sc-if value="{{ navBarVisible }}" hint-placeholder-val="{{ false }}">
+          <div class="bg-surface" style="flex:0 0 auto;display:flex;align-items:center;gap:var(--s-2);padding:var(--s-1) var(--s-3) var(--s-2);border-bottom:1px solid var(--c-line)">
+            <button type="button" onClick="{{ back }}" aria-label="Retour" style="width:44px;height:44px;display:grid;place-items:center;background:none;border:none;color:var(--c-ink);font-size:24px;cursor:pointer;flex:0 0 auto">‹</button>
+            <span style="flex:1;display:grid;gap:1px;min-width:0">
+              <span class="text-body" style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ navTitle }}</span>
+              <span class="text-caption text-ink-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ navSubtitle }}</span>
+            </span>
+            <span class="rounded-pill {{ netCls }}" style="flex:0 0 auto;padding:4px 10px;font-size:11px;font-weight:600">{{ netLabel }}</span>
+          </div>
+        </sc-if>
+
+        <div class="cm-scroll" style="flex:1;overflow-y:auto;overflow-x:hidden;position:relative">
+
+          <!-- ============ CM-01 · Connexion ============ -->
+          <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="CM-01 Connexion et MFA" style="min-height:100%;display:flex;flex-direction:column;padding:var(--s-6) var(--s-5) var(--s-8);gap:var(--s-5)">
+              <div style="display:grid;gap:var(--s-2)">
+                <img src="uploads/Setrag_logo.png" alt="SETRAG" style="height:34px;width:auto;justify-self:start;background:#fff;border-radius:6px;padding:3px 6px" />
+                <span class="text-mono-label" style="color:var(--c-ink-muted)">Application de contrôle à bord</span>
+              </div>
+
+              <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ authSteps }}" current="{{ authCurrent }}" hint-size="100%,56px"></x-import>
+
+              <sc-if value="{{ authIdentity }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <h1 class="text-h2" style="margin:0">Ouvrir une session</h1>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Identifiant interne" hint-size="100%,80px">
+                    <x-import component-from-global-scope="SetragUI.Input" defaultValue="CTRL-0428" hint-size="100%,52px"></x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Mot de passe" hint-size="100%,80px">
+                    <input type="password" value="{{ pwd }}" onChange="{{ setPwd }}" placeholder="Saisir le mot de passe" aria-label="Mot de passe" class="rounded-sm bg-surface" style="width:100%;height:52px;padding:0 var(--s-4);border:1px solid var(--c-line-strong);color:var(--c-ink);font-size:16px" />
+                  </x-import>
+                  <button type="button" onClick="{{ submitIdentity }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:56px;border:none;font-size:16px;font-weight:600;cursor:pointer">Continuer</button>
+                  <div style="display:flex;align-items:center;gap:var(--s-2)">
+                    <span class="rounded-pill {{ netCls }}" style="padding:4px 10px;font-size:11px;font-weight:600">{{ netLabel }}</span>
+                    <span class="text-caption text-ink-muted" style="flex:1;text-wrap:pretty">{{ loginNetNote }}</span>
+                  </div>
+                  <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="L'ouverture de session exige le réseau." hint-size="100%,72px">Rapprochez-vous du bâtiment voyageurs de la gare : la session ne peut pas être créée en pleine voie.</x-import>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ authTotp }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <h1 class="text-h2" style="margin:0">Code de vérification</h1>
+                  <p class="text-small text-ink-muted" style="margin:0;text-wrap:pretty">Saisissez le code à six chiffres affiché par votre application d'authentification.</p>
+                  <sc-if value="{{ totpError }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Code refusé — 2 essais restants avant blocage." hint-size="100%,72px">Vérifiez que l'heure du terminal est correcte : un décalage horaire invalide le code.</x-import>
+                  </sc-if>
+                  <div style="display:flex;gap:var(--s-2)">
+                    <sc-for list="{{ totpBoxes }}" as="box" hint-placeholder-count="6">
+                      <input type="text" inputMode="numeric" maxLength="1" aria-label="{{ box.aria }}" value="{{ box.value }}" onChange="{{ box.onInput }}" class="rounded-md bg-surface tabular" style="flex:1;height:62px;text-align:center;font-size:24px;border:1px solid var(--c-line-strong);color:var(--c-ink);min-width:0" />
+                    </sc-for>
+                  </div>
+                  <button type="button" onClick="{{ submitTotp }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:56px;border:none;font-size:16px;font-weight:600;cursor:pointer">Ouvrir la session</button>
+                  <button type="button" onClick="{{ callRegulator }}" class="rounded-pill bg-surface" style="width:100%;height:52px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px;cursor:pointer">Code perdu — appeler le régulateur</button>
+                  <span class="text-caption text-ink-muted">Session valable 12 h, jusqu'à 21:40.</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ authLocked }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4);flex:1;align-content:center">
+                  <span class="rounded-pill bg-surface-sunk" style="width:52px;height:52px;display:grid;place-items:center;border:1px solid var(--c-line);color:var(--c-ink)">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+                  </span>
+                  <h1 class="text-h2" style="margin:0">Terminal verrouillé</h1>
+                  <p class="text-small text-ink-muted" style="margin:0;text-wrap:pretty">Session ouverte, inactive depuis 5 min. CTRL-0428 · desserte TR-201. Vos écritures locales sont intactes.</p>
+                  <div style="display:flex;gap:var(--s-2);max-width:200px">
+                    <sc-for list="{{ pinBoxes }}" as="box" hint-placeholder-count="4">
+                      <input type="text" inputMode="numeric" maxLength="1" aria-label="{{ box.aria }}" value="{{ box.value }}" onChange="{{ box.onInput }}" class="rounded-md bg-surface tabular" style="flex:1;height:56px;text-align:center;font-size:22px;border:1px solid var(--c-line-strong);color:var(--c-ink);min-width:0" />
+                    </sc-for>
+                  </div>
+                  <button type="button" onClick="{{ unlock }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:56px;border:none;font-size:16px;font-weight:600;cursor:pointer">Déverrouiller</button>
+                  <div style="display:flex;align-items:center;gap:var(--s-2)">
+                    <span class="rounded-pill {{ netCls }}" style="padding:4px 10px;font-size:11px;font-weight:600">{{ netLabel }}</span>
+                    <span class="tabular text-caption text-ink-muted">{{ queueTotal }} écritures en attente d'envoi</span>
+                  </div>
+                  <span class="text-caption text-ink-faint">Le déverrouillage se fait sans réseau : le code court est vérifié localement.</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ============ CM-02 · Tableau de bord ============ -->
+          <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+            <div data-screen-label="CM-02 Tableau de bord" style="padding:var(--s-4) var(--s-5) var(--s-6);display:grid;gap:var(--s-4)">
+              <div style="display:flex;align-items:center;gap:var(--s-3)">
+                <span style="flex:1;display:grid;gap:1px">
+                  <span class="text-caption text-ink-muted">jeudi 14 août · 18:04</span>
+                  <span class="text-h3">Bonjour, CTRL-0428</span>
+                </span>
+                <span class="rounded-pill {{ netCls }}" style="padding:6px 12px;font-size:12px;font-weight:600">{{ netLabel }}</span>
+              </div>
+
+              <sc-if value="{{ manifestStale }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Données périmées — manifeste vieux de 31 h." hint-size="100%,86px">Les annulations et remboursements survenus depuis ne sont pas connus du terminal. La vérification de signature, elle, reste fiable.</x-import>
+              </sc-if>
+              <sc-if value="{{ manifestPartial }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Manifeste incomplet — 612 titres sur 694." hint-size="100%,86px">Les 82 titres manquants seront sans statut connu. Leur signature restera vérifiable.</x-import>
+              </sc-if>
+
+              <div class="rounded-lg border border-line bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-3)">
+                <span class="text-h4">TR-201 · Owendo → Franceville</span>
+                <span class="tabular text-small text-ink-muted">Départ 14/08 à 18:20 · 22 gares · 648 km</span>
+                <span class="text-small text-ink-muted">Voitures 1 à 6 · 694 voyageurs attendus</span>
+                <div style="display:flex;flex-wrap:wrap;gap:var(--s-2);padding-top:var(--s-1)">
+                  <span class="rounded-pill {{ manifestCls }}" style="padding:5px 11px;font-size:12px;font-weight:600">{{ manifestLabel }}</span>
+                  <span class="rounded-pill bg-surface-sunk text-ink-muted tabular" style="padding:5px 11px;font-size:12px">{{ manifestAge }}</span>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:var(--s-2)">
+                <div class="rounded-md border border-line bg-surface" style="flex:1;padding:var(--s-3);display:grid;gap:1px">
+                  <span class="tabular text-h3">{{ controls }}</span>
+                  <span class="text-caption text-ink-muted">contrôlés</span>
+                </div>
+                <div class="rounded-md border border-line bg-surface" style="flex:1;padding:var(--s-3);display:grid;gap:1px">
+                  <span class="tabular text-h3">694</span>
+                  <span class="text-caption text-ink-muted">attendus</span>
+                </div>
+                <div class="rounded-md {{ queueCardCls }}" style="flex:1;padding:var(--s-3);display:grid;gap:1px">
+                  <span class="tabular text-h3">{{ queueTotal }}</span>
+                  <span class="text-caption text-ink-muted">à envoyer</span>
+                </div>
+              </div>
+
+              <button type="button" onClick="{{ startControl }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:60px;border:none;font-size:17px;font-weight:600;cursor:pointer">{{ dashPrimary }}</button>
+              <button type="button" onClick="{{ goManifest }}" class="rounded-pill bg-surface" style="width:100%;height:52px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px;cursor:pointer">Détail des données embarquées</button>
+
+              <div style="display:grid;gap:var(--s-2);padding-top:var(--s-2)">
+                <span class="text-mono-label" style="color:var(--c-ink-muted)">Dessertes à venir</span>
+                <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:flex;align-items:center;gap:var(--s-3)">
+                  <span style="flex:1;display:grid;gap:1px">
+                    <span class="tabular text-body" style="font-weight:600">TR-204 · 16/08 · 07:40</span>
+                    <span class="text-caption text-ink-muted">Franceville → Owendo</span>
+                  </span>
+                  <span class="rounded-pill bg-surface-sunk text-ink-muted" style="padding:4px 10px;font-size:11px;font-weight:600">non affecté</span>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ============ CM-03 · Manifeste ============ -->
+          <sc-if value="{{ isManifest }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="CM-03 Manifeste embarqué" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-4)">
+              <sc-if value="{{ dlIdle }}" hint-placeholder-val="{{ false }}">
+                <div class="rounded-lg bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-5);display:grid;gap:var(--s-2)">
+                  <span class="text-h4">Rien d'embarqué pour TR-201</span>
+                  <span class="text-small text-ink-muted" style="text-wrap:pretty">Téléchargez avant le départ : au-delà de Ntoum, le réseau devient très irrégulier.</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ dlRunning }}" hint-placeholder-val="{{ false }}">
+                <div class="rounded-lg border border-line bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-3)">
+                  <div style="display:flex;align-items:baseline;gap:var(--s-3)">
+                    <span class="text-h4" style="flex:1">Téléchargement…</span>
+                    <span class="tabular text-small text-ink-muted">{{ dlCount }} / 694</span>
+                  </div>
+                  <div class="rounded-pill bg-surface-sunk" style="height:8px;overflow:hidden">
+                    <span style="display:block;height:100%;width:{{ dlPct }};background:var(--c-accent);transition:width .4s linear"></span>
+                  </div>
+                  <span class="tabular text-small text-ink-muted">{{ dlLot }} · {{ dlMo }} reçus</span>
+                  <span class="text-small text-ink-muted" style="text-wrap:pretty">Ne quittez pas la gare avant la fin du téléchargement.</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ dlFailed }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Échec — réseau perdu au lot 7 sur 8." hint-size="100%,86px">612 titres sur 694 sont embarqués. Les 82 restants seront sans statut connu, mais leur signature restera vérifiable.</x-import>
+              </sc-if>
+
+              <sc-if value="{{ dlDone }}" hint-placeholder-val="{{ true }}">
+                <x-import component-from-global-scope="SetragUI.InlineMessage" tone="success" title="Données embarquées à jour." hint-size="100%,64px">Mises à jour il y a 6 min, avant le départ d'Owendo.</x-import>
+              </sc-if>
+
+              <div class="rounded-md border border-line bg-surface" style="overflow:hidden">
+                <div style="display:flex;gap:var(--s-3);padding:var(--s-3) var(--s-4);background:var(--c-surface-sunk)">
+                  <span class="text-caption text-ink-muted" style="flex:1">Contenu embarqué</span>
+                  <span class="text-caption text-ink-muted">Volume</span>
+                </div>
+                <sc-for list="{{ manifestRows }}" as="row" hint-placeholder-count="5">
+                  <div style="display:flex;gap:var(--s-3);padding:var(--s-3) var(--s-4);border-top:1px solid var(--c-line);align-items:center">
+                    <span class="text-small" style="flex:1;color:var(--c-ink)">{{ row.label }}</span>
+                    <span class="tabular text-small text-ink-muted">{{ row.value }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="display:flex;flex-wrap:wrap;gap:var(--s-2)">
+                <span class="rounded-pill bg-success-soft text-success-ink" style="padding:5px 11px;font-size:12px;font-weight:600">base chiffrée · SQLCipher</span>
+                <span class="rounded-pill bg-surface-sunk text-ink-muted tabular" style="padding:5px 11px;font-size:12px">4,2 Mo</span>
+              </div>
+
+              <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Téléchargement impossible sans réseau." hint-size="100%,72px">Le bouton reste inactif tant que le terminal n'a pas de signal : mieux vaut le dire que faire miroiter une action inopérante.</x-import>
+              </sc-if>
+
+              <button type="button" onClick="{{ dlAction }}" disabled="{{ dlDisabled }}" class="rounded-pill {{ dlBtnCls }}" style="width:100%;height:60px;border:none;font-size:16px;font-weight:600;cursor:pointer">{{ dlBtnLabel }}</button>
+              <sc-if value="{{ dlRunning }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ dlAbort }}" class="rounded-pill bg-surface" style="width:100%;height:52px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px;cursor:pointer">Interrompre — garder les lots déjà écrits</button>
+              </sc-if>
+              <sc-if value="{{ dlFailed }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ goScan }}" class="rounded-pill bg-surface" style="width:100%;height:52px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px;cursor:pointer">Continuer avec ce qui est embarqué</button>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ============ CM-04 · Scanner ============ -->
+          <sc-if value="{{ isScanner }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="CM-04 Scanner" data-theme="dark" style="min-height:100%;display:flex;flex-direction:column;background:#0b0f17;color:var(--c-ink)">
+              <div style="padding:var(--s-3) var(--s-5);display:flex;align-items:center;gap:var(--s-3)">
+                <span class="text-h4" style="flex:1">Voiture {{ voiture }}</span>
+                <span class="rounded-pill {{ netCls }}" style="padding:5px 11px;font-size:12px;font-weight:600">{{ netLabel }}</span>
+              </div>
+
+              <sc-if value="{{ manifestStale }}" hint-placeholder-val="{{ false }}">
+                <div style="margin:0 var(--s-5) var(--s-3);padding:var(--s-3);border-radius:12px;background:oklch(0.72 0.15 85 / 0.18);border:1px solid oklch(0.72 0.15 85 / 0.5)">
+                  <span class="text-small" style="color:oklch(0.88 0.1 92);font-weight:600">Manifeste périmé — statuts fins inconnus</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ cameraOn }}" hint-placeholder-val="{{ true }}">
+                <button type="button" onClick="{{ doScan }}" aria-label="Simuler la lecture d'un code Aztec" style="margin:0 var(--s-5);flex:1;min-height:330px;border-radius:20px;border:none;background:radial-gradient(circle at 50% 40%, #16202f, #080c13 80%);position:relative;overflow:hidden;cursor:pointer;display:grid;place-items:center">
+                  <span style="position:absolute;inset:10%;border-radius:14px;box-shadow:0 0 0 2px oklch(1 0 0 / 0.12) inset"></span>
+                  <span style="position:absolute;left:9%;top:9%;width:34px;height:34px;border-left:3px solid var(--c-accent);border-top:3px solid var(--c-accent);border-radius:6px 0 0 0"></span>
+                  <span style="position:absolute;right:9%;top:9%;width:34px;height:34px;border-right:3px solid var(--c-accent);border-top:3px solid var(--c-accent);border-radius:0 6px 0 0"></span>
+                  <span style="position:absolute;left:9%;bottom:9%;width:34px;height:34px;border-left:3px solid var(--c-accent);border-bottom:3px solid var(--c-accent);border-radius:0 0 0 6px"></span>
+                  <span style="position:absolute;right:9%;bottom:9%;width:34px;height:34px;border-right:3px solid var(--c-accent);border-bottom:3px solid var(--c-accent);border-radius:0 0 6px 0"></span>
+                  <span style="position:absolute;left:12%;right:12%;height:2px;background:linear-gradient(90deg, transparent, var(--c-accent), transparent);animation:cm-sweep 2.6s ease-in-out infinite"></span>
+                  <span class="text-small" style="position:relative;color:oklch(1 0 0 / 0.75);text-align:center;max-width:70%;text-wrap:pretty">{{ scanHint }}</span>
+                </button>
+              </sc-if>
+
+              <sc-if value="{{ cameraOff }}" hint-placeholder-val="{{ false }}">
+                <div style="margin:0 var(--s-5);flex:1;min-height:280px;border-radius:20px;border:1px dashed oklch(1 0 0 / 0.3);display:grid;align-content:center;gap:var(--s-3);padding:var(--s-5)">
+                  <span class="text-h4">Caméra indisponible</span>
+                  <span class="text-small" style="color:oklch(1 0 0 / 0.7);text-wrap:pretty">L'autorisation d'accès à la caméra a été refusée. Le contrôle reste possible par recherche manuelle : il n'y a jamais d'impasse.</span>
+                  <button type="button" onClick="{{ grantCamera }}" class="rounded-pill bg-accent-base text-ink-inverse" style="height:56px;border:none;font-size:16px;font-weight:600;cursor:pointer">Autoriser la caméra</button>
+                  <button type="button" onClick="{{ goSearch }}" class="rounded-pill" style="height:52px;border:1px solid oklch(1 0 0 / 0.3);background:none;font-size:15px;cursor:pointer">Rechercher manuellement</button>
+                </div>
+              </sc-if>
+
+              <div style="padding:var(--s-4) var(--s-5) var(--s-5);display:grid;gap:var(--s-3)">
+                <div style="display:flex;gap:var(--s-2)">
+                  <div style="flex:1;border-radius:12px;background:oklch(1 0 0 / 0.08);padding:var(--s-3);display:grid;gap:1px">
+                    <span class="tabular text-h3">{{ controls }}</span>
+                    <span class="text-caption" style="color:oklch(1 0 0 / 0.6)">contrôlés</span>
+                  </div>
+                  <div style="flex:1;border-radius:12px;background:oklch(1 0 0 / 0.08);padding:var(--s-3);display:grid;gap:1px">
+                    <span class="tabular text-h3">{{ queueTotal }}</span>
+                    <span class="text-caption" style="color:oklch(1 0 0 / 0.6)">à envoyer</span>
+                  </div>
+                </div>
+                <div style="display:flex;gap:var(--s-2)">
+                  <button type="button" onClick="{{ toggleTorch }}" class="rounded-pill" style="flex:1;min-height:52px;border:1px solid {{ torchBorder }};background:{{ torchBg }};color:{{ torchInk }};font-size:14px;font-weight:600;cursor:pointer">{{ torchLabel }}</button>
+                  <button type="button" onClick="{{ nextVoiture }}" class="rounded-pill" style="flex:1;min-height:52px;border:1px solid oklch(1 0 0 / 0.25);background:none;font-size:14px;font-weight:600;cursor:pointer">Voiture {{ voiture }}</button>
+                  <button type="button" onClick="{{ goSearch }}" class="rounded-pill" style="flex:1;min-height:52px;border:1px solid oklch(1 0 0 / 0.25);background:none;font-size:14px;font-weight:600;cursor:pointer">Recherche</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ============ CM-05 · Résultat de scan ============ -->
+          <sc-if value="{{ isVerdict }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="CM-05 Résultat de scan" style="min-height:100%;display:flex;flex-direction:column">
+              <div style="background:{{ vBg }};padding:var(--s-6) var(--s-5);display:grid;gap:var(--s-1)">
+                <span class="text-mono-label" style="color:{{ vInkSoft }}">{{ vSource }}</span>
+                <span class="text-h1" style="color:{{ vInk }}">{{ vTitle }}</span>
+                <span class="text-body" style="color:{{ vInk }};text-wrap:pretty">{{ vReason }}</span>
+              </div>
+
+              <div style="padding:var(--s-5);display:grid;gap:var(--s-4);flex:1">
+                <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-2)">
+                  <span class="text-h4">{{ vName }}</span>
+                  <sc-for list="{{ vLines }}" as="line" hint-placeholder-count="3">
+                    <span class="text-small text-ink-muted">{{ line.txt }}</span>
+                  </sc-for>
+                </div>
+
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-2)">
+                  <sc-for list="{{ vTags }}" as="tag" hint-placeholder-count="2">
+                    <span class="rounded-pill {{ tag.cls }}" style="padding:5px 11px;font-size:12px;font-weight:600;align-self:center">{{ tag.label }}</span>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ vFromManifest }}" hint-placeholder-val="{{ false }}">
+                  <x-import component-from-global-scope="SetragUI.InlineMessage" tone="info" title="Information issue du manifeste embarqué." hint-size="100%,72px">Mis à jour il y a 6 min. La signature du titre, elle, est vérifiée localement sans réseau.</x-import>
+                </sc-if>
+
+                <div style="display:grid;gap:var(--s-2);margin-top:auto">
+                  <sc-for list="{{ vActions }}" as="act" hint-placeholder-count="2">
+                    <button type="button" onClick="{{ act.onClick }}" class="rounded-pill {{ act.cls }}" style="width:100%;height:{{ act.h }};border:{{ act.border }};font-size:16px;font-weight:600;cursor:pointer">{{ act.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ============ CM-06 · Recherche manuelle ============ -->
+          <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="CM-06 Recherche manuelle" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-4)">
+              <x-import component-from-global-scope="SetragUI.SegmentedControl" label="Chercher par" value="{{ searchBy }}" onValueChange="{{ setSearchBy }}" options="{{ searchByOptions }}" hint-size="100%,44px"></x-import>
+
+              <input type="text" value="{{ query }}" onChange="{{ setQuery }}" placeholder="{{ queryPlaceholder }}" aria-label="Recherche dans le manifeste" class="rounded-sm bg-surface tabular" style="width:100%;height:56px;padding:0 var(--s-4);border:1px solid var(--c-line-strong);color:var(--c-ink);font-size:17px" />
+              <span class="text-caption text-ink-muted" style="text-wrap:pretty">{{ searchHelp }}</span>
+
+              <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-2)">
+                  <sc-for list="{{ results }}" as="r" hint-placeholder-count="3">
+                    <button type="button" onClick="{{ r.onOpen }}" class="rounded-md border border-line bg-surface" style="width:100%;min-height:64px;padding:var(--s-3) var(--s-4);display:flex;align-items:center;gap:var(--s-3);text-align:left;cursor:pointer">
+                      <span style="flex:1;display:grid;gap:2px;min-width:0">
+                        <span class="tabular text-body" style="font-weight:600;color:var(--c-ink)">{{ r.title }}</span>
+                        <span class="text-caption text-ink-muted">{{ r.sub }}</span>
+                      </span>
+                      <span class="rounded-pill {{ r.cls }}" style="padding:4px 10px;font-size:11px;font-weight:600;flex:0 0 auto">{{ r.statut }}</span>
+                    </button>
+                  </sc-for>
+                  <span class="text-caption text-ink-muted">{{ resultCount }} · recherche locale, aucune donnée envoyée.</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-3)">
+                  <div class="rounded-lg bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-5);display:grid;gap:var(--s-2)">
+                    <span class="text-h4">Aucun titre trouvé</span>
+                    <span class="text-small text-ink-muted" style="text-wrap:pretty">Cette référence n'existe pas dans le manifeste de TR-201. Elle peut concerner une autre desserte, ou n'avoir jamais été émise.</span>
+                  </div>
+                  <sc-if value="{{ manifestPartial }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Manifeste incomplet : l'absence ne vaut pas preuve." hint-size="100%,72px">82 titres n'ont pas été embarqués. Vérifiez la signature du code avant de conclure.</x-import>
+                  </sc-if>
+                  <button type="button" onClick="{{ goSale }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:58px;border:none;font-size:16px;font-weight:600;cursor:pointer">Vendre un titre à bord</button>
+                  <button type="button" onClick="{{ goPv }}" class="rounded-pill bg-surface" style="width:100%;height:54px;border:1px solid var(--c-line-strong);color:var(--c-ink);font-size:15px;font-weight:600;cursor:pointer">Établir un procès-verbal</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ============ CM-07 · Vente à bord ============ -->
+          <sc-if value="{{ isSale }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="CM-07 Vente à bord" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-4)">
+              <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ saleSteps }}" current="{{ saleCurrent }}" hint-size="100%,56px"></x-import>
+
+              <sc-if value="{{ saleStep1 }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <x-import component-from-global-scope="SetragUI.Field" label="Départ du trajet restant" hint="Pré-rempli avec la dernière gare atteinte." hint-size="100%,86px">
+                    <x-import component-from-global-scope="SetragUI.SelectNative" value="{{ saleFrom }}" onChange="{{ setSaleFrom }}" hint-size="100%,52px">
+                      <sc-for list="{{ gares }}" as="g" hint-placeholder-count="6">
+                        <option value="{{ g.nom }}">{{ g.label }}</option>
+                      </sc-for>
+                    </x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Destination" hint-size="100%,80px">
+                    <x-import component-from-global-scope="SetragUI.SelectNative" value="{{ saleTo }}" onChange="{{ setSaleTo }}" hint-size="100%,52px">
+                      <sc-for list="{{ gares }}" as="g" hint-placeholder-count="6">
+                        <option value="{{ g.nom }}">{{ g.label }}</option>
+                      </sc-for>
+                    </x-import>
+                  </x-import>
+                  <div style="display:grid;gap:var(--s-2)">
+                    <span class="text-caption text-ink-muted">Classe</span>
+                    <div style="display:flex;gap:var(--s-2)">
+                      <sc-for list="{{ saleClasses }}" as="c" hint-placeholder-count="2">
+                        <button type="button" onClick="{{ c.onPick }}" class="rounded-pill {{ c.cls }}" style="flex:1;min-height:52px;font-size:15px;font-weight:600;cursor:pointer">{{ c.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div class="rounded-md border border-line bg-surface-sunk" style="padding:var(--s-4);display:flex;align-items:center;gap:var(--s-3)">
+                    <span class="text-small text-ink-muted" style="flex:1">{{ saleKm }} · barème v4</span>
+                    <span class="tabular text-h3">{{ saleFare }}</span>
+                  </div>
+                  <sc-if value="{{ saleInvalid }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="La destination doit être en aval de la gare de départ." hint-size="100%,64px">Le barème kilométrique ne peut pas calculer un trajet à rebours.</x-import>
+                  </sc-if>
+                  <button type="button" onClick="{{ saleToStep2 }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:60px;border:none;font-size:17px;font-weight:600;cursor:pointer">Encaisser {{ saleFare }}</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ saleStep2 }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:flex;align-items:baseline;gap:var(--s-3)">
+                    <span class="text-small text-ink-muted" style="flex:1">Montant dû</span>
+                    <span class="tabular text-h2">{{ saleFare }}</span>
+                  </div>
+                  <div style="display:grid;gap:var(--s-2)">
+                    <span class="text-caption text-ink-muted">Mode de paiement</span>
+                    <div style="display:flex;gap:var(--s-2)">
+                      <sc-for list="{{ payModes }}" as="p" hint-placeholder-count="2">
+                        <button type="button" onClick="{{ p.onPick }}" class="rounded-pill {{ p.cls }}" style="flex:1;min-height:52px;font-size:15px;font-weight:600;cursor:pointer">{{ p.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <sc-if value="{{ payMobile }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Le mobile money exige le réseau." hint-size="100%,72px">La demande partira à la reconnexion et le titre reste dû. Ne laissez pas croire au voyageur que le paiement est passé.</x-import>
+                  </sc-if>
+                  <sc-if value="{{ payCash }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:grid;gap:var(--s-3)">
+                      <x-import component-from-global-scope="SetragUI.Field" label="Montant remis" hint-size="100%,80px">
+                        <input type="text" inputMode="numeric" value="{{ cash }}" onChange="{{ setCash }}" aria-label="Montant remis" class="rounded-sm bg-surface tabular" style="width:100%;height:56px;padding:0 var(--s-4);border:1px solid var(--c-line-strong);color:var(--c-ink);font-size:20px" />
+                      </x-import>
+                      <div style="display:flex;gap:var(--s-2)">
+                        <sc-for list="{{ cashShortcuts }}" as="k" hint-placeholder-count="4">
+                          <button type="button" onClick="{{ k.onPick }}" class="rounded-pill bg-surface tabular" style="flex:1;min-height:48px;border:1px solid var(--c-line);color:var(--c-ink);font-size:14px;font-weight:600;cursor:pointer">{{ k.label }}</button>
+                        </sc-for>
+                      </div>
+                      <div class="rounded-md {{ changeCls }}" style="padding:var(--s-4);display:flex;align-items:baseline;gap:var(--s-3)">
+                        <span class="text-small" style="flex:1">{{ changeLabel }}</span>
+                        <span class="tabular text-h3">{{ changeValue }}</span>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <button type="button" onClick="{{ confirmSale }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:60px;border:none;font-size:17px;font-weight:600;cursor:pointer">Confirmer le paiement</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ saleStep3 }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <x-import component-from-global-scope="SetragUI.InlineMessage" tone="success" title="Titre délivré — {{ salePaidLabel }}" hint-size="100%,64px">Le titre est signé localement et inscrit dans la file d'envoi.</x-import>
+                  <div class="rounded-lg" data-theme="dark" style="background:oklch(0.24 0.058 257);padding:var(--s-5);display:flex;gap:var(--s-4);align-items:center;color:var(--c-ink)">
+                    <span style="width:86px;height:86px;border-radius:8px;background:repeating-linear-gradient(90deg,#fff 0 3px,oklch(0.24 0.058 257) 3px 6px);flex:0 0 auto"></span>
+                    <span style="display:grid;gap:3px;min-width:0">
+                      <span class="tabular text-h3">{{ saleRef }}</span>
+                      <span class="text-small" style="color:oklch(1 0 0 / 0.75)">{{ saleFrom }} → {{ saleTo }}</span>
+                      <span class="tabular text-small" style="color:oklch(1 0 0 / 0.75)">{{ saleClassLabel }} · {{ saleFare }}</span>
+                      <span class="tabular text-caption" style="color:oklch(1 0 0 / 0.55)">14/08 · 22:14</span>
+                    </span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:var(--s-2)">
+                    <span class="rounded-pill bg-warning-soft text-warning-ink" style="padding:5px 11px;font-size:12px;font-weight:600">en attente d'envoi</span>
+                    <span class="text-caption text-ink-muted" style="flex:1">Sera synchronisé au retour du réseau.</span>
+                  </div>
+                  <button type="button" onClick="{{ finishSale }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:60px;border:none;font-size:17px;font-weight:600;cursor:pointer">Terminer et scanner le suivant</button>
+                  <button type="button" onClick="{{ smsTicket }}" class="rounded-pill bg-surface" style="width:100%;height:52px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px;cursor:pointer">Envoyer la référence par SMS</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ============ CM-08 · Procès-verbal ============ -->
+          <sc-if value="{{ isPv }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="CM-08 Procès-verbal" style="padding:var(--s-4) var(--s-5) var(--s-8);display:grid;gap:var(--s-4)">
+              <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ pvSteps }}" current="{{ pvCurrent }}" hint-size="100%,56px"></x-import>
+
+              <sc-if value="{{ pvStep1 }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div style="display:grid;gap:var(--s-2)">
+                    <span class="text-caption text-ink-muted">Motif</span>
+                    <div style="display:flex;flex-wrap:wrap;gap:var(--s-2)">
+                      <sc-for list="{{ pvMotifs }}" as="m" hint-placeholder-count="4">
+                        <button type="button" onClick="{{ m.onPick }}" class="rounded-pill {{ m.cls }}" style="min-height:48px;padding:0 var(--s-4);font-size:14px;font-weight:600;cursor:pointer">{{ m.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Nom déclaré" hint-size="100%,80px">
+                    <x-import component-from-global-scope="SetragUI.Input" defaultValue="NGUEMA Serge" hint-size="100%,52px"></x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Pièce présentée" hint-size="100%,80px">
+                    <x-import component-from-global-scope="SetragUI.Input" defaultValue="CNI 04-889-231" hint-size="100%,52px"></x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Téléphone (facultatif)" hint-size="100%,80px">
+                    <x-import component-from-global-scope="SetragUI.Input" placeholder="+241 …" hint-size="100%,52px"></x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Identité déclarée par le contrevenant." hint-size="100%,64px">Le terminal ne la vérifie pas : c'est une déclaration, consignée comme telle.</x-import>
+                  <button type="button" onClick="{{ pvToStep2 }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:60px;border:none;font-size:17px;font-weight:600;cursor:pointer">Continuer</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ pvStep2 }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-2)">
+                    <div style="display:flex;align-items:baseline;gap:var(--s-3)">
+                      <span class="text-small text-ink-muted" style="flex:1">Amende · {{ pvMotifLabel }}</span>
+                      <span class="tabular text-h2">{{ pvFine }}</span>
+                    </div>
+                    <span class="text-caption text-ink-muted" style="text-wrap:pretty">Barème v4 embarqué, non modifiable par l'agent.</span>
+                    <div style="display:flex;align-items:baseline;gap:var(--s-3);border-top:1px solid var(--c-line);padding-top:var(--s-2)">
+                      <span class="text-small text-ink-muted" style="flex:1">Trajet dû · {{ pvLeg }}</span>
+                      <span class="tabular text-body">{{ pvLegFare }}</span>
+                    </div>
+                  </div>
+                  <div style="display:grid;gap:var(--s-2)">
+                    <span class="text-caption text-ink-muted">Encaissement</span>
+                    <div style="display:flex;gap:var(--s-2)">
+                      <sc-for list="{{ pvPayModes }}" as="p" hint-placeholder-count="2">
+                        <button type="button" onClick="{{ p.onPick }}" class="rounded-pill {{ p.cls }}" style="flex:1;min-height:52px;font-size:15px;font-weight:600;cursor:pointer">{{ p.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div class="rounded-md bg-accent-soft" style="padding:var(--s-4);display:flex;align-items:baseline;gap:var(--s-3)">
+                    <span class="text-small text-accent-ink" style="flex:1">Total à percevoir</span>
+                    <span class="tabular text-h2 text-accent-ink">{{ pvTotal }}</span>
+                  </div>
+                  <button type="button" onClick="{{ savePv }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:60px;border:none;font-size:17px;font-weight:600;cursor:pointer">Enregistrer le procès-verbal</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ pvStep3 }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <x-import component-from-global-scope="SetragUI.InlineMessage" tone="{{ pvDoneTone }}" title="{{ pvDoneTitle }}" hint-size="100%,72px">{{ pvDoneBody }}</x-import>
+                  <div class="rounded-md border border-line bg-surface-sunk" style="padding:var(--s-4);display:grid;gap:var(--s-2)">
+                    <span class="text-body" style="font-weight:600">NGUEMA Serge · CNI 04-889-231</span>
+                    <span class="text-small text-ink-muted">{{ pvMotifLabel }} · TR-201 · voiture {{ voiture }} · 14/08 à 22:41</span>
+                    <span class="tabular text-small">{{ pvBreakdown }}</span>
+                  </div>
+                  <div class="rounded-md bg-surface" style="border:1px dashed var(--c-line-strong);padding:var(--s-4);display:grid;gap:var(--s-3)">
+                    <span class="text-caption text-ink-muted">Signature du contrevenant — facultative</span>
+                    <div class="rounded-sm bg-surface-sunk" style="height:72px;display:grid;place-items:center">
+                      <span class="text-small text-ink-faint">{{ signatureLabel }}</span>
+                    </div>
+                    <div style="display:flex;gap:var(--s-2)">
+                      <button type="button" onClick="{{ signPv }}" class="rounded-pill bg-surface" style="flex:1;min-height:48px;border:1px solid var(--c-line-strong);color:var(--c-ink);font-size:14px;font-weight:600;cursor:pointer">Faire signer</button>
+                      <button type="button" onClick="{{ refusePv }}" class="rounded-pill bg-surface" style="flex:1;min-height:48px;border:1px solid var(--c-line);color:var(--c-ink-muted);font-size:14px;cursor:pointer">Refus de signer</button>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:var(--s-2)">
+                    <span class="rounded-pill bg-warning-soft text-warning-ink" style="padding:5px 11px;font-size:12px;font-weight:600">en attente d'envoi</span>
+                    <span class="text-caption text-ink-muted" style="flex:1">Le procès-verbal existe même s'il n'est pas encore parti.</span>
+                  </div>
+                  <button type="button" onClick="{{ finishPv }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:60px;border:none;font-size:17px;font-weight:600;cursor:pointer">Terminer</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ============ CM-09 · Incident ============ -->
+          <sc-if value="{{ isIncident }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="CM-09 Signalement d'incident" style="padding:var(--s-4) var(--s-5) var(--s-6);display:grid;gap:var(--s-4)">
+              <div style="display:flex;align-items:center;gap:var(--s-3)">
+                <span class="text-h3" style="flex:1">Incidents</span>
+                <span class="rounded-pill {{ netCls }}" style="padding:5px 11px;font-size:12px;font-weight:600">{{ netLabel }}</span>
+              </div>
+
+              <sc-if value="{{ incSaved }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <x-import component-from-global-scope="SetragUI.InlineMessage" tone="{{ incTone }}" title="{{ incSavedTitle }}" hint-size="100%,86px">{{ incSavedBody }}</x-import>
+                  <div style="display:flex;flex-wrap:wrap;gap:var(--s-2)">
+                    <span class="rounded-pill {{ incPrioCls }}" style="padding:5px 11px;font-size:12px;font-weight:600">{{ incPrioLabel }}</span>
+                    <span class="rounded-pill bg-warning-soft text-warning-ink" style="padding:5px 11px;font-size:12px;font-weight:600">en attente d'envoi</span>
+                  </div>
+                  <button type="button" onClick="{{ callChief }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:58px;border:none;font-size:16px;font-weight:600;cursor:pointer">Prévenir le chef de train</button>
+                  <button type="button" onClick="{{ newIncident }}" class="rounded-pill bg-surface" style="width:100%;height:52px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px;cursor:pointer">Nouveau signalement</button>
+                  <button type="button" onClick="{{ goScan }}" class="rounded-pill bg-surface" style="width:100%;height:52px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px;cursor:pointer">Retour au contrôle</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ incForm }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div style="display:grid;gap:var(--s-2)">
+                    <span class="text-caption text-ink-muted">Catégorie</span>
+                    <div style="display:flex;flex-wrap:wrap;gap:var(--s-2)">
+                      <sc-for list="{{ incCats }}" as="c" hint-placeholder-count="5">
+                        <button type="button" onClick="{{ c.onPick }}" class="rounded-pill {{ c.cls }}" style="min-height:48px;padding:0 var(--s-4);font-size:14px;font-weight:600;cursor:pointer">{{ c.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="display:grid;gap:var(--s-2)">
+                    <span class="text-caption text-ink-muted">Gravité — elle détermine la priorité d'envoi</span>
+                    <div style="display:flex;gap:var(--s-2)">
+                      <sc-for list="{{ incSevs }}" as="g" hint-placeholder-count="3">
+                        <button type="button" onClick="{{ g.onPick }}" class="rounded-pill {{ g.cls }}" style="flex:1;min-height:52px;font-size:14px;font-weight:600;cursor:pointer">{{ g.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Localisation" hint-size="100%,80px">
+                    <x-import component-from-global-scope="SetragUI.SelectNative" defaultValue="v3" hint-size="100%,52px">
+                      <option value="v3">Voiture 3 · entre Booué et Lopé</option>
+                      <option value="v1">Voiture 1 · entre Booué et Lopé</option>
+                      <option value="v5">Voiture 5 · entre Booué et Lopé</option>
+                    </x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Description" hint-size="100%,120px">
+                    <x-import component-from-global-scope="SetragUI.Textarea" rows="{{ 3 }}" defaultValue="Porte de la voiture 3 bloquée en position ouverte depuis Booué. Voyageurs écartés de la zone." hint-size="100%,88px"></x-import>
+                  </x-import>
+                  <div style="display:grid;gap:var(--s-2)">
+                    <span class="text-caption text-ink-muted">Photos — stockées chiffrées, envoyées à la reconnexion</span>
+                    <div style="display:flex;gap:var(--s-2)">
+                      <span class="rounded-md bg-surface-sunk" style="width:60px;height:60px;border:1px solid var(--c-line)"></span>
+                      <span class="rounded-md bg-surface-sunk" style="width:60px;height:60px;border:1px solid var(--c-line)"></span>
+                      <button type="button" onClick="{{ addPhoto }}" class="rounded-md bg-surface" style="width:60px;height:60px;border:1px dashed var(--c-line-strong);color:var(--c-ink-muted);font-size:22px;cursor:pointer">+</button>
+                    </div>
+                  </div>
+                  <button type="button" onClick="{{ saveIncident }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:60px;border:none;font-size:17px;font-weight:600;cursor:pointer">Enregistrer le signalement</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ============ CM-10 · Historique et synchronisation ============ -->
+          <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="CM-10 Historique et synchronisation" style="padding:var(--s-4) var(--s-5) var(--s-6);display:grid;gap:var(--s-4)">
+              <div style="display:flex;align-items:center;gap:var(--s-3)">
+                <span style="flex:1;display:grid;gap:1px">
+                  <span class="text-h3">Tournée TR-201</span>
+                  <span class="text-caption text-ink-muted">14 août · Owendo → Franceville</span>
+                </span>
+                <span class="rounded-pill {{ netCls }}" style="padding:5px 11px;font-size:12px;font-weight:600">{{ netLabel }}</span>
+              </div>
+
+              <x-import component-from-global-scope="SetragUI.SegmentedControl" label="Vue" value="{{ histTab }}" onValueChange="{{ setHistTab }}" options="{{ histOptions }}" hint-size="100%,44px"></x-import>
+
+              <sc-if value="{{ histQueue }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div class="rounded-md border border-line bg-surface" style="overflow:hidden">
+                    <div style="display:flex;gap:var(--s-3);padding:var(--s-3) var(--s-4);background:var(--c-surface-sunk)">
+                      <span class="text-caption text-ink-muted" style="flex:1">Élément</span>
+                      <span class="text-caption text-ink-muted" style="width:38px;text-align:right">Nb</span>
+                      <span class="text-caption text-ink-muted" style="width:86px;text-align:right">État</span>
+                    </div>
+                    <sc-for list="{{ queueRows }}" as="row" hint-placeholder-count="4">
+                      <div style="display:flex;gap:var(--s-3);padding:var(--s-3) var(--s-4);border-top:1px solid var(--c-line);align-items:center">
+                        <span class="text-small" style="flex:1;color:var(--c-ink)">{{ row.label }}</span>
+                        <span class="tabular text-small" style="width:38px;text-align:right;color:var(--c-ink)">{{ row.count }}</span>
+                        <span class="text-caption {{ row.cls }}" style="width:86px;text-align:right;font-weight:600">{{ row.state }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+
+                  <sc-if value="{{ syncIdle }}" hint-placeholder-val="{{ true }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="{{ syncIdleTone }}" title="{{ syncIdleTitle }}" hint-size="100%,72px">{{ syncIdleBody }}</x-import>
+                  </sc-if>
+
+                  <sc-if value="{{ syncRunning }}" hint-placeholder-val="{{ false }}">
+                    <div class="rounded-md border border-line bg-surface" style="padding:var(--s-4);display:grid;gap:var(--s-3)">
+                      <div style="display:flex;align-items:baseline;gap:var(--s-3)">
+                        <span class="text-h4" style="flex:1">{{ syncLot }}</span>
+                        <span class="tabular text-small text-ink-muted">{{ syncSent }} / {{ syncTotalLabel }}</span>
+                      </div>
+                      <div class="rounded-pill bg-surface-sunk" style="height:8px;overflow:hidden">
+                        <span style="display:block;height:100%;width:{{ syncPct }};background:var(--c-accent);transition:width .4s linear"></span>
+                      </div>
+                      <span class="text-small text-ink-muted" style="text-wrap:pretty">Incidents critiques envoyés en premier. Les lots sont idempotents : une reprise ne crée pas de doublon.</span>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ syncFailed }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:grid;gap:var(--s-3)">
+                      <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="4 éléments en échec — non perdus, conservés localement." hint-size="100%,72px">Rien n'est jamais supprimé après un échec. L'identifiant client de chaque écriture garantit l'absence de doublon.</x-import>
+                      <div class="rounded-md border border-line bg-surface" style="overflow:hidden">
+                        <sc-for list="{{ failedRows }}" as="f" hint-placeholder-count="2">
+                          <div style="display:flex;gap:var(--s-3);padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--c-line);align-items:center">
+                            <span style="flex:1;display:grid;gap:1px">
+                              <span class="tabular text-small" style="font-weight:600;color:var(--c-ink)">{{ f.label }}</span>
+                              <span class="text-caption text-ink-muted">{{ f.motif }}</span>
+                            </span>
+                            <span class="rounded-pill bg-danger-soft text-danger-ink" style="padding:4px 10px;font-size:11px;font-weight:600">échec</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="2 conflits signalés — à arbitrer." hint-size="100%,64px">Un même titre a été contrôlé sur deux terminaux.</x-import>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ syncDone }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:grid;gap:var(--s-3)">
+                      <x-import component-from-global-scope="SetragUI.InlineMessage" tone="success" title="Tournée synchronisée — {{ sentTotal }} éléments confirmés." hint-size="100%,64px">La purge des données locales est maintenant possible.</x-import>
+                      <div style="display:flex;gap:var(--s-2)">
+                        <div class="rounded-md border border-line bg-surface" style="flex:1;padding:var(--s-3);display:grid;gap:1px">
+                          <span class="tabular text-h3">{{ sentControls }}</span>
+                          <span class="text-caption text-ink-muted">contrôles</span>
+                        </div>
+                        <div class="rounded-md border border-line bg-surface" style="flex:1;padding:var(--s-3);display:grid;gap:1px">
+                          <span class="tabular text-h3">{{ sentSales }}</span>
+                          <span class="text-caption text-ink-muted">ventes</span>
+                        </div>
+                        <div class="rounded-md border border-line bg-surface" style="flex:1;padding:var(--s-3);display:grid;gap:1px">
+                          <span class="tabular text-h3">{{ sentPvs }}</span>
+                          <span class="text-caption text-ink-muted">PV</span>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <div style="display:grid;gap:var(--s-2)">
+                    <button type="button" onClick="{{ syncAction }}" disabled="{{ syncDisabled }}" class="rounded-pill {{ syncBtnCls }}" style="width:100%;height:58px;border:none;font-size:16px;font-weight:600;cursor:pointer">{{ syncBtnLabel }}</button>
+                    <sc-if value="{{ hasConflicts }}" hint-placeholder-val="{{ false }}">
+                      <button type="button" onClick="{{ goConflicts }}" class="rounded-pill bg-surface" style="width:100%;height:52px;border:1px solid var(--c-line-strong);color:var(--c-ink);font-size:15px;font-weight:600;cursor:pointer">Voir les {{ conflictCount }} conflits</button>
+                    </sc-if>
+                    <sc-if value="{{ canPurge }}" hint-placeholder-val="{{ false }}">
+                      <button type="button" onClick="{{ askPurge }}" class="rounded-pill bg-surface" style="width:100%;height:52px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px;cursor:pointer">Purger les données locales</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ histControls }}" hint-placeholder-val="{{ false }}">
+                <div class="rounded-md border border-line bg-surface" style="overflow:hidden">
+                  <sc-for list="{{ controlLog }}" as="c" hint-placeholder-count="5">
+                    <div style="display:flex;gap:var(--s-3);padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--c-line);align-items:center">
+                      <span class="tabular text-small text-ink-muted" style="width:44px">{{ c.heure }}</span>
+                      <span style="flex:1;display:grid;gap:1px;min-width:0">
+                        <span class="tabular text-small" style="font-weight:600;color:var(--c-ink)">{{ c.ref }}</span>
+                        <span class="text-caption text-ink-muted">{{ c.who }}</span>
+                      </span>
+                      <span class="rounded-pill {{ c.cls }}" style="padding:4px 9px;font-size:11px;font-weight:600">{{ c.verdict }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ============ CM-11 · Conflits ============ -->
+          <sc-if value="{{ isConflicts }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="CM-11 Conflits" style="padding:var(--s-4) var(--s-5) var(--s-6);display:grid;gap:var(--s-4)">
+              <sc-if value="{{ conflictList }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <sc-if value="{{ hasConflicts }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:grid;gap:var(--s-3)">
+                      <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="{{ conflictCount }} titres en conflit — arbitrage humain requis." hint-size="100%,86px">Un même titre a été contrôlé sur deux terminaux. Le système ne peut pas distinguer une fraude d'un second contrôle légitime : il signale, il ne tranche pas.</x-import>
+                      <sc-for list="{{ conflicts }}" as="c" hint-placeholder-count="2">
+                        <button type="button" onClick="{{ c.onOpen }}" class="rounded-md border border-line bg-surface" style="width:100%;padding:var(--s-4);display:flex;align-items:center;gap:var(--s-3);text-align:left;cursor:pointer">
+                          <span style="flex:1;display:grid;gap:2px;min-width:0">
+                            <span class="tabular text-body" style="font-weight:600;color:var(--c-ink)">{{ c.titre }}</span>
+                            <span class="tabular text-caption text-ink-muted">{{ c.agents }}</span>
+                          </span>
+                          <span class="rounded-pill {{ c.cls }}" style="padding:4px 10px;font-size:11px;font-weight:600;flex:0 0 auto">{{ c.statut }}</span>
+                        </button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ noConflicts }}" hint-placeholder-val="{{ false }}">
+                    <div class="rounded-lg bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-5);display:grid;gap:var(--s-2)">
+                      <span class="text-h4">Aucun conflit sur cette tournée</span>
+                      <span class="text-small text-ink-muted" style="text-wrap:pretty">{{ noConflictBody }}</span>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ conflictDetail }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;gap:var(--s-4)">
+                  <div style="display:grid;gap:2px">
+                    <span class="tabular text-h3">{{ cTitre }}</span>
+                    <span class="text-small text-ink-muted">{{ cTrajet }}</span>
+                  </div>
+                  <sc-if value="{{ cSuspect }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Écart suspect — 2 min, voitures éloignées." hint-size="100%,72px">Deux personnes ont vraisemblablement présenté le même titre.</x-import>
+                  </sc-if>
+                  <div class="rounded-md border border-line bg-surface" style="overflow:hidden">
+                    <div style="display:flex;gap:var(--s-3);padding:var(--s-3) var(--s-4);background:var(--c-surface-sunk)">
+                      <span class="text-caption text-ink-muted" style="width:52px">Agent</span>
+                      <span class="text-caption text-ink-muted" style="width:44px">Heure</span>
+                      <span class="text-caption text-ink-muted" style="flex:1">Lieu</span>
+                    </div>
+                    <sc-for list="{{ cRows }}" as="r" hint-placeholder-count="2">
+                      <div style="display:flex;gap:var(--s-3);padding:var(--s-3) var(--s-4);border-top:1px solid var(--c-line);align-items:center">
+                        <span class="tabular text-small" style="width:52px;color:var(--c-ink)">{{ r.agent }}</span>
+                        <span class="tabular text-small" style="width:44px;color:var(--c-ink)">{{ r.heure }}</span>
+                        <span class="text-small text-ink-muted" style="flex:1">{{ r.lieu }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-4)">
+                    <span class="text-small text-ink-muted" style="text-wrap:pretty">{{ cAnalyse }}</span>
+                  </div>
+                  <div style="display:grid;gap:var(--s-2)">
+                    <button type="button" onClick="{{ acceptConflict }}" class="rounded-pill bg-accent-base text-ink-inverse" style="width:100%;height:58px;border:none;font-size:16px;font-weight:600;cursor:pointer">Accepter — double contrôle légitime</button>
+                    <button type="button" onClick="{{ reportConflict }}" class="rounded-pill bg-surface" style="width:100%;height:54px;border:1px solid var(--c-line-strong);color:var(--c-ink);font-size:15px;font-weight:600;cursor:pointer">Signaler pour enquête</button>
+                    <button type="button" onClick="{{ goPv }}" class="rounded-pill bg-surface" style="width:100%;height:52px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px;cursor:pointer">Établir un PV a posteriori</button>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+        </div>
+
+        <sc-if value="{{ tabsVisible }}" hint-placeholder-val="{{ true }}">
+          <nav aria-label="Navigation" class="bg-surface" style="flex:0 0 auto;display:flex;border-top:1px solid var(--c-line);padding-bottom:var(--s-2)">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+              <button type="button" onClick="{{ t.onClick }}" aria-current="{{ t.current }}" style="flex:1;background:none;border:none;padding:9px 2px 4px;display:grid;gap:3px;justify-items:center;cursor:pointer;color:{{ t.color }};position:relative">
+                <span style="display:grid;place-items:center;position:relative">
+                  <span style="display:grid" dangerouslySetInnerHTML="{{ t.icon }}"></span>
+                  <sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}">
+                    <span class="rounded-pill tabular" style="position:absolute;top:-5px;left:11px;min-width:17px;height:17px;padding:0 4px;background:var(--c-danger);color:var(--c-ink-inverse);font-size:10px;font-weight:700;display:grid;place-items:center">{{ t.badge }}</span>
+                  </sc-if>
+                </span>
+                <span style="font-size:10px;font-weight:600">{{ t.label }}</span>
+              </button>
+            </sc-for>
+          </nav>
+        </sc-if>
+
+        <div style="flex:0 0 auto;height:22px;display:grid;place-items:center;background:{{ homeBarBg }}">
+          <span style="width:132px;height:5px;border-radius:3px;background:{{ homeBarInk }}"></span>
+        </div>
+
+        <sc-if value="{{ purgeOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:40;background:oklch(0.22 0.025 257 / 0.6);display:grid;place-items:center;padding:var(--s-5)">
+            <div class="rounded-lg bg-surface shadow-lg" style="width:100%;padding:var(--s-5);display:grid;gap:var(--s-4)">
+              <span class="text-h4">Purger les données locales ?</span>
+              <span class="text-small text-ink-muted" style="text-wrap:pretty">Le manifeste et les données voyageurs seront effacés du terminal. Action irréversible, possible uniquement parce que tout est confirmé côté serveur — c'est une exigence de minimisation des données.</span>
+              <div style="display:flex;gap:var(--s-2)">
+                <button type="button" onClick="{{ cancelPurge }}" class="rounded-pill bg-surface" style="flex:1;min-height:52px;border:1px solid var(--c-line);color:var(--c-ink);font-size:15px;cursor:pointer">Plus tard</button>
+                <button type="button" onClick="{{ doPurge }}" class="rounded-pill bg-danger text-ink-inverse" style="flex:1;min-height:52px;border:none;font-size:15px;font-weight:600;cursor:pointer">Purger</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:var(--s-4);right:var(--s-4);bottom:{{ toastBottom }};z-index:45">
+            <div class="rounded-md shadow-lg" style="background:var(--c-ink);color:var(--c-ink-inverse);padding:var(--s-3) var(--s-4);display:flex;align-items:center;gap:var(--s-3)">
+              <span class="text-small" style="flex:1;text-wrap:pretty">{{ toast }}</span>
+              <button type="button" onClick="{{ hideToast }}" style="background:none;border:none;color:inherit;font-size:15px;cursor:pointer;padding:4px 6px">Fermer</button>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;CM-01 Connexion et MFA&quot;,&quot;CM-02 Tableau de bord&quot;,&quot;CM-03 Manifeste embarqué&quot;,&quot;CM-04 Scanner&quot;,&quot;CM-05 Résultat de scan&quot;,&quot;CM-06 Recherche manuelle&quot;,&quot;CM-07 Vente à bord&quot;,&quot;CM-08 Procès-verbal&quot;,&quot;CM-09 Signalement d'incident&quot;,&quot;CM-10 Historique et synchronisation&quot;,&quot;CM-11 Conflits à arbitrer&quot;],&quot;default&quot;:&quot;CM-02 Tableau de bord&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Écran&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Clair&quot;,&quot;Sombre&quot;],&quot;default&quot;:&quot;Clair&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Écran&quot;},&quot;chassis&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Téléphone&quot;,&quot;Plein écran&quot;],&quot;default&quot;:&quot;Téléphone&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Écran&quot;},&quot;reseau&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Hors ligne (nominal)&quot;,&quot;En ligne&quot;],&quot;default&quot;:&quot;Hors ligne (nominal)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Terrain&quot;},&quot;manifeste&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;À jour&quot;,&quot;Périmé&quot;,&quot;Partiel&quot;,&quot;Absent&quot;],&quot;default&quot;:&quot;À jour&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Terrain&quot;},&quot;verdict&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Valide&quot;,&quot;Abonnement&quot;,&quot;Hors segment&quot;,&quot;Signature invalide&quot;,&quot;Déjà contrôlé&quot;,&quot;Titre annulé&quot;],&quot;default&quot;:&quot;Valide&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Terrain&quot;},&quot;syncState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;En attente&quot;,&quot;En cours&quot;,&quot;Échecs&quot;,&quot;Terminée&quot;],&quot;default&quot;:&quot;En attente&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Terrain&quot;}}">
+const GARES = [
+  ["Owendo", 0], ["Ntoum", 30], ["Andem", 60], ["Ndjolé", 187],
+  ["Lopé", 276], ["Booué", 335], ["Ivindo", 390], ["Lastoursville", 464],
+  ["Moanda", 583], ["Franceville", 648]
+];
+
+const AMENDES = {
+  sans: ["Sans titre", 25000],
+  invalide: ["Titre invalide", 20000],
+  classe: ["Classe supérieure", 10000],
+  autre: ["Autre motif", 15000]
+};
+
+const MANIFESTE = [
+  ["MBADINGA Paul", "B-4821", "Owendo → Franceville", "12A", "valide"],
+  ["KOUMBA Alice", "B-4830", "Owendo → Lopé", "04C", "valide"],
+  ["OBAME Jean", "B-4655", "Owendo → Booué", "07B", "à vérifier"],
+  ["OBAME Marie", "B-4702", "Ndjolé → Lopé", "09A", "valide"],
+  ["OBAME NGUEMA Paul", "B-4711", "Owendo → Moanda", "02D", "annulé"],
+  ["NZE Antoinette", "A-0912", "Ndjolé → Lopé", "abonnement", "valide"],
+  ["NDONG Sylvain", "B-4402", "Owendo → Booué", "11B", "remboursé"],
+  ["MOUSSAVOU Édith", "B-4488", "Booué → Franceville", "03A", "valide"]
+];
+
+const VERDICTS = {
+  "Valide": {
+    tone: "ok", title: "Valide", reason: "Titre authentique, segment couvert.",
+    source: "Signature vérifiée localement", name: "MBADINGA Paul",
+    lines: ["Owendo → Franceville", "2e classe · voiture 1 · place 12A", "N° B-4821 · TR-201 du 14/08"],
+    tags: [["segment couvert", "ok"], ["1er contrôle", "n"]], kind: "ok"
+  },
+  "Abonnement": {
+    tone: "ok", title: "Valide", reason: "Carte d'abonnement en cours de validité.",
+    source: "Signature vérifiée localement", name: "NZE Antoinette",
+    lines: ["Abonnement mensuel Ndjolé → Lopé", "Valable du 01/08 au 31/08 · 2e classe", "Carte A-0912"],
+    tags: [["segment couvert", "ok"], ["1er contrôle", "n"]], kind: "ok"
+  },
+  "Hors segment": {
+    tone: "err", title: "Invalide", reason: "Le voyageur circule au-delà du parcours payé.",
+    source: "Signature valide · segment refusé", name: "OBAME Jean",
+    lines: ["Titre valable Owendo → Booué", "Contrôle effectué après Booué", "N° B-4655 · TR-201 du 14/08"],
+    tags: [["hors segment", "err"]], kind: "regul"
+  },
+  "Signature invalide": {
+    tone: "err", title: "Invalide", reason: "Le code présenté n'est pas signé par la clé de la SETRAG.",
+    source: "Verdict certain, y compris sans réseau", name: "Titre non émis par la SETRAG",
+    lines: ["Aucune correspondance de signature Ed25519", "Aucune identité rattachée"],
+    tags: [["contrefaçon probable", "err"]], kind: "pv"
+  },
+  "Déjà contrôlé": {
+    tone: "warn", title: "Déjà contrôlé", reason: "Ce terminal a déjà validé ce titre à 09:12.",
+    source: "Journal local du terminal", name: "MBADINGA Paul",
+    lines: ["Place 12A · voiture 1", "Contrôlé il y a 34 min par CTRL-0428"],
+    tags: [["anti-repassage", "warn"]], kind: "dup"
+  },
+  "Titre annulé": {
+    tone: "err", title: "Invalide", reason: "Titre annulé puis remboursé le 13/08.",
+    source: "Manifeste embarqué", name: "NDONG Sylvain",
+    lines: ["N° B-4402 · Owendo → Booué", "Remboursé le 13/08 à 16:22"],
+    tags: [["annulé", "err"]], kind: "regul", fromManifest: true
+  }
+};
+
+const CONFLICTS = [
+  {
+    titre: "B-4821 · MBADINGA Paul", trajet: "Owendo → Franceville · 2e classe · 12A",
+    agents: "CTRL-0428 à 21:04 · CTRL-0512 à 21:39", suspect: false,
+    rows: [["0428", "21:04", "Voiture 1, après Ndjolé"], ["0512", "21:39", "Voiture 4, après Lopé"]],
+    analyse: "35 min et 3 voitures d'écart : un second contrôle en tournée croisée est plausible."
+  },
+  {
+    titre: "B-4655 · OBAME Jean", trajet: "Owendo → Booué · 2e classe · 07B",
+    agents: "CTRL-0428 à 22:10 · CTRL-0512 à 22:12", suspect: true,
+    rows: [["0428", "22:10", "Voiture 1"], ["0512", "22:12", "Voiture 6"]],
+    analyse: "2 min d'écart entre deux voitures éloignées : le même titre a vraisemblablement servi deux fois. L'application signale, elle ne tranche pas."
+  }
+];
+
+const ICONS = {
+  accueil: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"></path></svg>',
+  scan: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16"></path></svg>',
+  historique: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>',
+  incident: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"></path><path d="M12 10v4M12 17.2v.1"></path></svg>'
+};
+
+class Component extends DCLogic {
+  state = {
+    route: null, scale: 1, session: null, authStep: 1, pwd: "", totp: ["4", "1", "7", "", "", ""],
+    totpError: false, pin: ["", "", "", ""],
+    dl: null, dlCount: 0,
+    voiture: 3, torch: false, camera: true, scanning: false,
+    controls: 218, sales: 11, pvs: 3, incidents: 1,
+    sentControls: 0, sentSales: 0, sentPvs: 0, sentIncidents: 0,
+    searchBy: "ref", query: "", 
+    saleStep: 1, saleFrom: "Booué", saleTo: "Franceville", saleClass: "2e", payMode: "especes", cash: "15000", saleRef: "B-9002",
+    pvStep: 1, pvMotif: "sans", pvPay: "immediat", pvSign: null,
+    incSaved: false, incCat: "technique", incSev: "important", incPhotos: 2,
+    histTab: "file", sync: null, syncSent: 0,
+    conflictIdx: null, resolved: {},
+    purgeOpen: false, purged: false, toast: ""
+  };
+
+  componentDidMount() {
+    this.fit();
+    this._onResize = () => this.fit();
+    window.addEventListener("resize", this._onResize);
+    this.timer = setInterval(() => this.tick(), 700);
+    if (!window.SetragUI) {
+      this.poll = setInterval(() => {
+        if (window.SetragUI) { clearInterval(this.poll); this.forceUpdate(); }
+      }, 120);
+    }
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("resize", this._onResize);
+    clearInterval(this.timer); clearInterval(this.poll); clearTimeout(this.toastTimer);
+  }
+
+  componentDidUpdate(prev) {
+    if (prev.chassis !== this.props.chassis) this.fit();
+    if (prev.screen !== this.props.screen) {
+      this.setState({ route: null, conflictIdx: null, purgeOpen: false, toast: "", saleStep: 1, pvStep: 1, incSaved: false, dl: null, sync: null, session: null, authStep: 1 });
+    }
+    if (prev.reseau !== this.props.reseau || prev.manifeste !== this.props.manifeste || prev.syncState !== this.props.syncState) {
+      this.setState({ dl: null, sync: null, syncSent: 0 });
+    }
+  }
+
+  full() { return String(this.props.chassis || "").indexOf("Plein") === 0; }
+
+  fit() {
+    if (this.full()) { this.setState({ scale: 1 }); return; }
+    const availH = window.innerHeight - 40;
+    const availW = window.innerWidth - 40;
+    this.setState({ scale: Math.min(1, availH / 868, availW / 414) });
+  }
+
+  propRoute() { return String(this.props.screen || "CM-02").slice(0, 5); }
+  cur() { return this.state.route || this.propRoute(); }
+
+  offline() { return String(this.props.reseau || "").indexOf("Hors") === 0; }
+  manifestState() {
+    const m = this.props.manifeste || "";
+    if (m.indexOf("Périmé") === 0) return "perime";
+    if (m.indexOf("Partiel") === 0) return "partiel";
+    if (m.indexOf("Absent") === 0) return "absent";
+    return "ajour";
+  }
+  syncProp() {
+    const q = this.props.syncState || "";
+    if (q.indexOf("En cours") === 0) return "running";
+    if (q.indexOf("Échecs") === 0) return "failed";
+    if (q.indexOf("Terminée") === 0) return "done";
+    return "idle";
+  }
+  syncPhase() { return this.state.sync || this.syncProp(); }
+  dlPhase() { return this.state.dl || (this.manifestState() === "absent" ? "idle" : this.manifestState() === "partiel" ? "failed" : "done"); }
+
+  loggedIn() {
+    if (this.state.session !== null) return this.state.session;
+    return this.propRoute() !== "CM-01";
+  }
+
+  tick() {
+    const patch = {};
+    if (this.state.dl === "running") {
+      const n = Math.min(694, this.state.dlCount + 62);
+      patch.dlCount = n;
+      if (n >= 694) patch.dl = "done";
+    }
+    if (this.state.sync === "running") {
+      const total = this.pending();
+      const n = Math.min(total, this.state.syncSent + 38);
+      patch.syncSent = n;
+      if (n >= total) {
+        patch.sync = "done";
+        patch.sentControls = this.state.controls; patch.sentSales = this.state.sales;
+        patch.sentPvs = this.state.pvs; patch.sentIncidents = this.state.incidents;
+        patch.controls = 0; patch.sales = 0; patch.pvs = 0; patch.incidents = 0;
+      }
+    }
+    if (Object.keys(patch).length) this.setState(patch);
+  }
+
+  pending() { const s = this.state; return s.controls + s.sales + s.pvs + s.incidents; }
+
+  nav(id) {
+    this.setState({ route: id, toast: "", purgeOpen: false });
+    const el = document.querySelector(".cm-scroll");
+    if (el) el.scrollTop = 0;
+  }
+
+  money(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " FCFA"; }
+
+  pk(nom) { const g = GARES.find((x) => x[0] === nom); return g ? g[1] : 0; }
+
+  fare(from, to, cls) {
+    const km = Math.abs(this.pk(to) - this.pk(from));
+    return { km: km, montant: Math.round(km * (cls === "1re" ? 60 : 40) / 100) * 100 };
+  }
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.setState({ toast: "" }), 4000);
+  }
+
+  renderVals() {
+    const R = React;
+    const s = this.state;
+    const sc = this.cur();
+    const off = this.offline();
+    const man = this.manifestState();
+    const dl = this.dlPhase();
+    const sync = this.syncPhase();
+    const logged = this.loggedIn();
+    const dark = String(this.props.theme || "").indexOf("Sombre") === 0;
+    const verdictKey = this.props.verdict || "Valide";
+    const V = VERDICTS[verdictKey] || VERDICTS["Valide"];
+
+    const route = logged ? sc : "CM-01";
+    const stacked = ["CM-03", "CM-05", "CM-06", "CM-07", "CM-08", "CM-11"].indexOf(route) > -1;
+    const tabRoutes = ["CM-02", "CM-04", "CM-09", "CM-10"];
+    const parentOf = { "CM-03": "CM-02", "CM-05": "CM-04", "CM-06": "CM-04", "CM-07": "CM-05", "CM-08": "CM-05", "CM-11": "CM-10" };
+
+    const navTitles = {
+      "CM-03": ["Données embarquées", "TR-201 · avant le départ"],
+      "CM-05": ["Résultat du contrôle", "TR-201 · voiture " + s.voiture],
+      "CM-06": ["Recherche manuelle", "Manifeste embarqué · hors ligne"],
+      "CM-07": ["Vente à bord", "Barème v4 embarqué"],
+      "CM-08": ["Procès-verbal", "TR-201 · voiture " + s.voiture],
+      "CM-11": ["Conflits", "Après synchronisation"]
+    };
+
+    const tone = (t) => t === "ok" ? "bg-success-soft text-success-ink" : t === "err" ? "bg-danger-soft text-danger-ink" : t === "warn" ? "bg-warning-soft text-warning-ink" : "bg-surface-sunk text-ink-muted";
+
+    const fareNow = this.fare(s.saleFrom, s.saleTo, s.saleClass);
+    const cashNum = parseInt(String(s.cash).replace(/\D/g, ""), 10) || 0;
+    const change = cashNum - fareNow.montant;
+
+    const pvFine = AMENDES[s.pvMotif][1];
+    const pvLegFare = this.fare("Booué", "Lastoursville", "2e");
+    const pvTotal = pvFine + pvLegFare.montant;
+
+    // recherche
+    const q = s.query.trim().toLowerCase();
+    const matches = MANIFESTE.filter((m) => {
+      if (!q) return true;
+      if (s.searchBy === "ref") return m[1].toLowerCase().indexOf(q) > -1;
+      if (s.searchBy === "nom") return m[0].toLowerCase().indexOf(q) > -1;
+      return m[3].toLowerCase().indexOf(q) > -1;
+    });
+
+    const conflictsLeft = CONFLICTS.filter((c, i) => !s.resolved[i]);
+    const conflictsVisible = sync === "failed" || sync === "done" ? conflictsLeft : [];
+
+    const openConflict = s.conflictIdx !== null ? CONFLICTS[s.conflictIdx] : null;
+
+    const vActions = [];
+    const push = (label, onClick, kind) => vActions.push({
+      label: label, onClick: onClick,
+      cls: kind === "pri" ? "bg-accent-base text-ink-inverse" : kind === "danger" ? "bg-surface" : "bg-surface",
+      h: kind === "pri" ? "60px" : "54px",
+      border: kind === "pri" ? "none" : kind === "danger" ? "1.5px solid var(--c-danger)" : "1px solid var(--c-line)"
+    });
+    if (V.kind === "ok") {
+      push("Valider et scanner le suivant", () => { this.setState({ controls: s.controls + 1 }); this.nav("CM-04"); }, "pri");
+      push("Voir le détail du titre", () => this.flash("Détail du titre B-4821 — émis le 02/08, payé par Airtel Money."), "gho");
+    } else if (V.kind === "dup") {
+      push("Continuer sans second contrôle", () => this.nav("CM-04"), "pri");
+      push("Signaler un doute", () => { this.nav("CM-09"); }, "gho");
+    } else if (V.kind === "regul") {
+      push("Régulariser — vendre le complément", () => { this.setState({ saleStep: 1, saleFrom: "Booué", saleTo: "Franceville" }); this.nav("CM-07"); }, "pri");
+      push("Établir un procès-verbal", () => { this.setState({ pvStep: 1, pvMotif: "invalide" }); this.nav("CM-08"); }, "danger");
+      push("Ignorer", () => this.nav("CM-04"), "gho");
+    } else {
+      push("Établir un procès-verbal", () => { this.setState({ pvStep: 1, pvMotif: "sans" }); this.nav("CM-08"); }, "pri");
+      push("Vendre un titre à bord", () => { this.setState({ saleStep: 1 }); this.nav("CM-07"); }, "gho");
+    }
+
+    const vBgMap = { ok: "var(--c-success-soft)", err: "var(--c-danger-soft)", warn: "var(--c-warning-soft)" };
+    const vInkMap = { ok: "var(--c-success-ink)", err: "var(--c-danger-ink)", warn: "var(--c-warning-ink)" };
+
+    const queueRows = [
+      { label: "Contrôles", count: s.controls, state: s.controls ? "en attente" : "envoyé", cls: s.controls ? "text-ink-muted" : "text-success-ink" },
+      { label: "Ventes à bord", count: s.sales, state: s.sales ? "en attente" : "envoyé", cls: s.sales ? "text-ink-muted" : "text-success-ink" },
+      { label: "Procès-verbaux", count: s.pvs, state: s.pvs ? "en attente" : "envoyé", cls: s.pvs ? "text-ink-muted" : "text-success-ink" },
+      { label: "Incidents", count: s.incidents, state: s.incidents ? "priorité" : "envoyé", cls: s.incidents ? "text-danger-ink" : "text-success-ink" }
+    ];
+
+    const sentTotal = s.sentControls + s.sentSales + s.sentPvs + s.sentIncidents;
+
+    return {
+      scale: s.scale,
+      bezelW: this.full() ? "100%" : "414px",
+      bezelH: this.full() ? "100%" : "868px",
+      bezelPad: this.full() ? "0" : "12px",
+      bezelRadius: this.full() ? "0" : "58px",
+      screenRadius: this.full() ? "0" : "46px",
+      theme: dark ? "dark" : "light",
+
+      clock: "22:14",
+      netShort: off ? "Hors ligne" : "4G",
+      netLabel: off ? "hors ligne" : "réseau",
+      netCls: off ? "bg-warning-soft text-warning-ink" : "bg-success-soft text-success-ink",
+      bar1: off ? 0.25 : 1, bar2: off ? 0.25 : 1, bar3: off ? 0.25 : 0.5,
+      statusBg: route === "CM-04" ? "#0b0f17" : "var(--c-canvas)",
+      statusInk: route === "CM-04" ? "#ffffff" : "var(--c-ink)",
+      homeBarBg: route === "CM-04" ? "#0b0f17" : "var(--c-surface)",
+      homeBarInk: route === "CM-04" ? "oklch(1 0 0 / 0.5)" : "var(--c-line-strong)",
+      offline: off,
+
+      navBarVisible: logged && stacked,
+      navTitle: (navTitles[route] || ["", ""])[0],
+      navSubtitle: (navTitles[route] || ["", ""])[1],
+      back: () => this.nav(parentOf[route] || "CM-02"),
+
+      isLogin: !logged,
+      isDashboard: logged && route === "CM-02",
+      isManifest: logged && route === "CM-03",
+      isScanner: logged && route === "CM-04",
+      isVerdict: logged && route === "CM-05",
+      isSearch: logged && route === "CM-06",
+      isSale: logged && route === "CM-07",
+      isPv: logged && route === "CM-08",
+      isIncident: logged && route === "CM-09",
+      isHistory: logged && route === "CM-10",
+      isConflicts: logged && route === "CM-11",
+
+      // ---- CM-01
+      authSteps: [{ label: "Identifiant" }, { label: "Code" }, { label: "Session" }],
+      authCurrent: s.authStep === "locked" ? 2 : s.authStep - 1,
+      authIdentity: s.authStep === 1,
+      authTotp: s.authStep === 2,
+      authLocked: s.authStep === "locked",
+      pwd: s.pwd,
+      setPwd: (e) => this.setState({ pwd: e.target.value }),
+      loginNetNote: off ? "Aucun signal : rapprochez-vous du bâtiment voyageurs." : "Connexion possible depuis la gare d'Owendo.",
+      submitIdentity: () => {
+        if (off) { this.flash("Impossible d'ouvrir une session sans réseau."); return; }
+        this.setState({ authStep: 2, totpError: false });
+      },
+      totpBoxes: s.totp.map((v, i) => ({
+        value: v, aria: "Chiffre " + (i + 1) + " sur 6",
+        onInput: (e) => { const n = s.totp.slice(); n[i] = (e.target.value || "").replace(/\D/g, "").slice(-1); this.setState({ totp: n, totpError: false }); }
+      })),
+      totpError: s.totpError,
+      submitTotp: () => {
+        if (s.totp.some((d) => !d)) { this.setState({ totpError: true }); return; }
+        this.setState({ session: true, route: "CM-02" });
+      },
+      callRegulator: () => this.flash("Régulateur PC Owendo · +241 01 76 20 00."),
+      pinBoxes: s.pin.map((v, i) => ({
+        value: v, aria: "Chiffre " + (i + 1) + " sur 4",
+        onInput: (e) => { const n = s.pin.slice(); n[i] = (e.target.value || "").replace(/\D/g, "").slice(-1); this.setState({ pin: n }); }
+      })),
+      unlock: () => this.setState({ session: true, route: "CM-04", pin: ["", "", "", ""] }),
+
+      // ---- CM-02
+      manifestStale: man === "perime",
+      manifestPartial: man === "partiel",
+      manifestCls: man === "ajour" ? "bg-success-soft text-success-ink" : "bg-warning-soft text-warning-ink",
+      manifestLabel: man === "ajour" ? "manifeste à jour" : man === "perime" ? "manifeste périmé" : man === "partiel" ? "manifeste incomplet" : "rien d'embarqué",
+      manifestAge: man === "ajour" ? "il y a 6 min" : man === "perime" ? "il y a 31 h" : man === "partiel" ? "612 / 694" : "—",
+      controls: s.controls,
+      queueTotal: this.pending(),
+      queueCardCls: this.pending() ? "border border-line bg-warning-soft" : "border border-line bg-surface",
+      dashPrimary: man === "absent" ? "Télécharger le manifeste" : s.controls ? "Reprendre le contrôle" : "Commencer le contrôle",
+      startControl: () => this.nav(man === "absent" ? "CM-03" : "CM-04"),
+      goManifest: () => this.nav("CM-03"),
+      goScan: () => this.nav("CM-04"),
+      goSearch: () => this.nav("CM-06"),
+      goSale: () => { this.setState({ saleStep: 1 }); this.nav("CM-07"); },
+      goPv: () => { this.setState({ pvStep: 1, conflictIdx: null }); this.nav("CM-08"); },
+      goConflicts: () => this.nav("CM-11"),
+
+      // ---- CM-03
+      dlIdle: dl === "idle",
+      dlRunning: dl === "running",
+      dlDone: dl === "done",
+      dlFailed: dl === "failed",
+      dlCount: s.dlCount,
+      dlPct: Math.round((s.dlCount / 694) * 100) + "%",
+      dlLot: "Lot " + Math.min(8, Math.ceil(s.dlCount / 90) || 1) + " sur 8",
+      dlMo: (Math.round((s.dlCount / 694) * 42) / 10).toFixed(1).replace(".", ",") + " Mo",
+      manifestRows: [
+        { label: "Titres de la desserte", value: dl === "done" ? "694" : dl === "failed" ? "612" : dl === "running" ? String(s.dlCount) : "—" },
+        { label: "Abonnements actifs", value: dl === "idle" ? "—" : "128" },
+        { label: "Clé publique de signature", value: dl === "idle" ? "—" : "Ed25519" },
+        { label: "Barème kilométrique", value: dl === "idle" ? "—" : "22 gares" },
+        { label: "Barème des amendes", value: dl === "idle" ? "—" : "v4" }
+      ],
+      dlDisabled: off && dl !== "done",
+      dlBtnCls: off && dl !== "done" ? "bg-surface-sunk text-ink-faint" : dl === "done" ? "bg-surface text-ink" : "bg-accent-base text-ink-inverse",
+      dlBtnLabel: dl === "done" ? "Mettre à jour maintenant" : dl === "failed" ? "Reprendre où l'on s'est arrêté" : dl === "running" ? "Téléchargement en cours…" : "Télécharger (environ 4,2 Mo)",
+      dlAction: () => {
+        if (off) { this.flash("Le téléchargement exige le réseau."); return; }
+        if (dl === "done") { this.flash("Différentiel récupéré : 3 titres modifiés depuis la dernière mise à jour."); return; }
+        this.setState({ dl: "running", dlCount: dl === "failed" ? 612 : 0 });
+      },
+      dlAbort: () => this.setState({ dl: "failed" }),
+
+      // ---- CM-04
+      voiture: s.voiture,
+      cameraOn: s.camera,
+      cameraOff: !s.camera,
+      scanHint: s.scanning ? "Lecture… maintenez le terminal stable" : "Présentez le code Aztec dans le cadre",
+      doScan: () => {
+        this.setState({ scanning: true });
+        setTimeout(() => { this.setState({ scanning: false }); this.nav("CM-05"); }, 550);
+      },
+      torchLabel: s.torch ? "Lampe allumée" : "Lampe",
+      torchBg: s.torch ? "oklch(0.85 0.16 92)" : "none",
+      torchInk: s.torch ? "oklch(0.22 0.025 257)" : "var(--c-ink)",
+      torchBorder: s.torch ? "oklch(0.85 0.16 92)" : "oklch(1 0 0 / 0.25)",
+      toggleTorch: () => this.setState({ torch: !s.torch }),
+      nextVoiture: () => this.setState({ voiture: s.voiture >= 6 ? 1 : s.voiture + 1 }),
+      grantCamera: () => this.setState({ camera: true }),
+
+      // ---- CM-05
+      vBg: vBgMap[V.tone], vInk: vInkMap[V.tone], vInkSoft: vInkMap[V.tone],
+      vTitle: V.title, vReason: V.reason, vSource: V.source, vName: V.name,
+      vLines: V.lines.map((t) => ({ txt: t })),
+      vTags: V.tags.map((t) => ({ label: t[0], cls: tone(t[1]) })),
+      vFromManifest: !!V.fromManifest,
+      vActions: vActions,
+
+      // ---- CM-06
+      searchBy: s.searchBy,
+      setSearchBy: (v) => this.setState({ searchBy: v, query: "" }),
+      searchByOptions: [{ value: "ref", label: "Référence" }, { value: "nom", label: "Nom" }, { value: "place", label: "Place" }],
+      query: s.query,
+      setQuery: (e) => this.setState({ query: e.target.value }),
+      queryPlaceholder: s.searchBy === "ref" ? "B-48…" : s.searchBy === "nom" ? "OBAME" : "12A",
+      searchHelp: s.searchBy === "ref" ? "Référence reçue par SMS, telle que le voyageur vous la montre." : s.searchBy === "nom" ? "Nom du voyageur ; la place et le trajet permettent de trancher entre homonymes." : "Numéro de place figurant sur le titre.",
+      hasResults: matches.length > 0,
+      noResults: matches.length === 0,
+      resultCount: matches.length + (matches.length > 1 ? " résultats" : " résultat"),
+      results: matches.map((m) => ({
+        title: m[1] + " · " + m[0],
+        sub: m[2] + " · " + m[3],
+        statut: m[4],
+        cls: tone(m[4] === "valide" ? "ok" : m[4] === "à vérifier" ? "warn" : "err"),
+        onOpen: () => this.nav("CM-05")
+      })),
+
+      // ---- CM-07
+      saleSteps: [{ label: "Trajet" }, { label: "Encaissement" }, { label: "Titre" }],
+      saleCurrent: s.saleStep - 1,
+      saleStep1: s.saleStep === 1, saleStep2: s.saleStep === 2, saleStep3: s.saleStep === 3,
+      gares: GARES.map((g) => ({ nom: g[0], label: g[0] + " · PK " + g[1] })),
+      saleFrom: s.saleFrom, saleTo: s.saleTo,
+      setSaleFrom: (e) => this.setState({ saleFrom: e.target.value }),
+      setSaleTo: (e) => this.setState({ saleTo: e.target.value }),
+      saleClasses: [
+        { label: "2e classe", cls: s.saleClass === "2e" ? "bg-accent-base text-ink-inverse" : "bg-surface", onPick: () => this.setState({ saleClass: "2e" }) },
+        { label: "1re classe", cls: s.saleClass === "1re" ? "bg-accent-base text-ink-inverse" : "bg-surface", onPick: () => this.setState({ saleClass: "1re" }) }
+      ].map((c, i) => ({
+        label: c.label, onPick: c.onPick,
+        cls: (i === 0 ? s.saleClass === "2e" : s.saleClass === "1re") ? "bg-accent-base text-ink-inverse" : "bg-surface border border-line-strong text-ink"
+      })),
+      saleKm: fareNow.km + " km",
+      saleFare: this.money(fareNow.montant),
+      saleInvalid: this.pk(s.saleTo) <= this.pk(s.saleFrom),
+      saleToStep2: () => {
+        if (this.pk(s.saleTo) <= this.pk(s.saleFrom)) { this.flash("Choisissez une destination en aval."); return; }
+        this.setState({ saleStep: 2 });
+      },
+      payModes: [
+        { key: "especes", label: "Espèces" },
+        { key: "mobile", label: "Mobile money" }
+      ].map((p) => ({
+        label: p.label,
+        cls: s.payMode === p.key ? "bg-accent-base text-ink-inverse" : "bg-surface border border-line-strong text-ink",
+        onPick: () => this.setState({ payMode: p.key })
+      })),
+      payCash: s.payMode === "especes",
+      payMobile: s.payMode === "mobile",
+      cash: s.cash,
+      setCash: (e) => this.setState({ cash: e.target.value }),
+      cashShortcuts: [5000, 10000, 15000, 20000].map((n) => ({
+        label: String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " "),
+        onPick: () => this.setState({ cash: String(n) })
+      })),
+      changeCls: change < 0 ? "bg-danger-soft text-danger-ink" : "bg-surface-sunk text-ink",
+      changeLabel: change < 0 ? "Montant insuffisant" : "À rendre",
+      changeValue: this.money(Math.abs(change)),
+      confirmSale: () => {
+        if (s.payMode === "especes" && change < 0) { this.flash("Le montant remis ne couvre pas le titre."); return; }
+        this.setState({ saleStep: 3, sales: s.sales + 1, saleRef: "B-90" + String(2 + s.sales).padStart(2, "0") });
+      },
+      saleRef: s.saleRef,
+      saleClassLabel: s.saleClass === "1re" ? "1re classe" : "2e classe",
+      salePaidLabel: s.payMode === "especes" ? "encaissé en espèces" : "mobile money en file d'envoi",
+      finishSale: () => this.nav("CM-04"),
+      smsTicket: () => this.flash(off ? "SMS mis en file : il partira au retour du réseau." : "Référence envoyée par SMS."),
+
+      // ---- CM-08
+      pvSteps: [{ label: "Motif" }, { label: "Montant" }, { label: "Signature" }],
+      pvCurrent: s.pvStep - 1,
+      pvStep1: s.pvStep === 1, pvStep2: s.pvStep === 2, pvStep3: s.pvStep === 3,
+      pvMotifs: Object.keys(AMENDES).map((k) => ({
+        label: AMENDES[k][0],
+        cls: s.pvMotif === k ? "bg-accent-base text-ink-inverse" : "bg-surface border border-line-strong text-ink",
+        onPick: () => this.setState({ pvMotif: k })
+      })),
+      pvMotifLabel: AMENDES[s.pvMotif][0],
+      pvToStep2: () => this.setState({ pvStep: 2 }),
+      pvFine: this.money(pvFine),
+      pvLeg: "Booué → Lastoursville · " + pvLegFare.km + " km",
+      pvLegFare: this.money(pvLegFare.montant),
+      pvTotal: this.money(pvTotal),
+      pvPayModes: [
+        { key: "immediat", label: "Immédiat, espèces" },
+        { key: "differe", label: "Différé" }
+      ].map((p) => ({
+        label: p.label,
+        cls: s.pvPay === p.key ? "bg-accent-base text-ink-inverse" : "bg-surface border border-line-strong text-ink",
+        onPick: () => this.setState({ pvPay: p.key })
+      })),
+      savePv: () => this.setState({ pvStep: 3, pvs: s.pvs + 1 }),
+      pvDoneTone: s.pvPay === "differe" ? "warning" : "success",
+      pvDoneTitle: s.pvPay === "differe" ? "Paiement différé — recouvrement à la descente" : "Procès-verbal enregistré — n° PV-0117",
+      pvDoneBody: s.pvPay === "differe" ? "Le contrevenant descend à Lastoursville. Le dossier part au back-office pour recouvrement du montant dû." : "Écrit localement avec l'encaissement, dans une seule transaction.",
+      pvBreakdown: "Amende " + this.money(pvFine) + " + trajet " + this.money(pvLegFare.montant) + " = " + this.money(pvTotal),
+      signatureLabel: s.pvSign === "signe" ? "Signé par le contrevenant à 22:42" : s.pvSign === "refus" ? "Refus de signer — consigné" : "Zone de signature",
+      signPv: () => this.setState({ pvSign: "signe" }),
+      refusePv: () => this.setState({ pvSign: "refus" }),
+      finishPv: () => this.nav("CM-04"),
+
+      // ---- CM-09
+      incForm: !s.incSaved,
+      incSaved: s.incSaved,
+      incCats: [
+        ["securite", "Sécurité"], ["technique", "Technique"], ["comportement", "Comportement"], ["medical", "Médical"], ["autre", "Autre"]
+      ].map((c) => ({
+        label: c[1],
+        cls: s.incCat === c[0] ? "bg-accent-base text-ink-inverse" : "bg-surface border border-line-strong text-ink",
+        onPick: () => this.setState({ incCat: c[0] })
+      })),
+      incSevs: [
+        ["info", "Information"], ["important", "Important"], ["critique", "Critique"]
+      ].map((g) => ({
+        label: g[1],
+        cls: s.incSev === g[0] ? (g[0] === "critique" ? "bg-danger text-ink-inverse" : "bg-accent-base text-ink-inverse") : "bg-surface border border-line-strong text-ink",
+        onPick: () => this.setState({ incSev: g[0] })
+      })),
+      addPhoto: () => this.flash("Photo ajoutée · stockée chiffrée sur le terminal."),
+      saveIncident: () => this.setState({ incSaved: true, incidents: s.incidents + 1 }),
+      incTone: s.incSev === "critique" ? "danger" : "info",
+      incSavedTitle: (s.incSev === "critique" ? "Incident critique enregistré" : "Signalement enregistré") + " — n° INC-04" + (2 + s.incidents),
+      incSavedBody: s.incSev === "critique"
+        ? "Enregistré hors couverture réseau. Il partira en tête de file dès le premier signal, avant les contrôles et les ventes."
+        : "Enregistré localement avec ses photos. Il partira dans l'ordre de la file d'envoi.",
+      incPrioCls: s.incSev === "critique" ? "bg-danger-soft text-danger-ink" : "bg-surface-sunk text-ink-muted",
+      incPrioLabel: s.incSev === "critique" ? "priorité haute" : "priorité normale",
+      callChief: () => this.flash("Chef de train · canal radio 3 — l'application n'est pas un canal d'alerte temps réel."),
+      newIncident: () => this.setState({ incSaved: false }),
+
+      // ---- CM-10
+      histTab: s.histTab,
+      setHistTab: (v) => this.setState({ histTab: v }),
+      histOptions: [{ value: "file", label: "File d'envoi" }, { value: "controles", label: "Contrôles" }],
+      histQueue: s.histTab === "file",
+      histControls: s.histTab === "controles",
+      queueRows: queueRows,
+      syncIdle: sync === "idle",
+      syncRunning: sync === "running",
+      syncFailed: sync === "failed",
+      syncDone: sync === "done",
+      syncIdleTone: off ? "warning" : "info",
+      syncIdleTitle: off ? "Aucun réseau — l'envoi partira automatiquement dès le retour du signal." : "Réseau disponible — " + this.pending() + " éléments prêts à partir.",
+      syncIdleBody: off ? "C'est le cas nominal en pleine voie : rien n'est perdu, tout est écrit dans la base chiffrée du terminal." : "Lancez la synchronisation avant de quitter le terminal en fin de tournée.",
+      syncLot: "Lot " + Math.min(5, Math.ceil(s.syncSent / 50) || 1) + " sur 5",
+      syncSent: s.syncSent,
+      syncTotalLabel: String(this.pending()),
+      syncPct: Math.round((s.syncSent / Math.max(1, this.pending())) * 100) + "%",
+      failedRows: [
+        { label: "Vente B-9002", motif: "refus serveur · 3 tentatives" },
+        { label: "Contrôle B-4655", motif: "délai dépassé" }
+      ],
+      syncDisabled: off || sync === "running" || sync === "done",
+      syncBtnCls: off || sync === "running" || sync === "done" ? "bg-surface-sunk text-ink-faint" : "bg-accent-base text-ink-inverse",
+      syncBtnLabel: sync === "done" ? "Tout est confirmé" : sync === "running" ? "Synchronisation en cours…" : sync === "failed" ? "Relancer les envois en échec" : off ? "Envoi impossible sans réseau" : "Synchroniser maintenant",
+      syncAction: () => {
+        if (off) { this.flash("Aucun signal : l'envoi partira tout seul au retour du réseau."); return; }
+        this.setState({ sync: "running", syncSent: 0 });
+      },
+      hasConflicts: conflictsVisible.length > 0,
+      conflictCount: conflictsVisible.length,
+      canPurge: sync === "done" && conflictsVisible.length === 0 && !s.purged,
+      askPurge: () => this.setState({ purgeOpen: true }),
+      cancelPurge: () => this.setState({ purgeOpen: false }),
+      doPurge: () => { this.setState({ purgeOpen: false, purged: true }); this.nav("CM-02"); this.flash("Données locales purgées. Le terminal ne contient plus aucune donnée voyageur."); },
+      purgeOpen: s.purgeOpen,
+      sentTotal: sentTotal,
+      sentControls: s.sentControls, sentSales: s.sentSales, sentPvs: s.sentPvs,
+      controlLog: [
+        ["22:10", "B-4821", "MBADINGA Paul", "valide", "ok"],
+        ["22:07", "B-4830", "KOUMBA Alice", "valide", "ok"],
+        ["22:03", "B-4655", "OBAME Jean", "hors segment", "err"],
+        ["21:58", "A-0912", "NZE Antoinette", "abonnement", "ok"],
+        ["21:54", "B-4711", "OBAME NGUEMA Paul", "annulé", "err"],
+        ["21:49", "B-4488", "MOUSSAVOU Édith", "valide", "ok"]
+      ].map((c) => ({ heure: c[0], ref: c[1], who: c[2], verdict: c[3], cls: tone(c[4]) })),
+
+      // ---- CM-11
+      conflictList: s.conflictIdx === null,
+      conflictDetail: s.conflictIdx !== null,
+      noConflicts: conflictsVisible.length === 0,
+      noConflictBody: sync === "done" ? "Les " + Math.max(sentTotal, 233) + " éléments de la tournée ont été acceptés sans doublon." : "La liste des conflits n'existe qu'après synchronisation : rien à arbitrer pour l'instant.",
+      conflicts: conflictsVisible.map((c) => {
+        const idx = CONFLICTS.indexOf(c);
+        return {
+          titre: c.titre, agents: c.agents,
+          statut: c.suspect ? "suspect" : "à arbitrer",
+          cls: tone(c.suspect ? "err" : "warn"),
+          onOpen: () => this.setState({ conflictIdx: idx })
+        };
+      }),
+      cTitre: openConflict ? openConflict.titre : "",
+      cTrajet: openConflict ? openConflict.trajet : "",
+      cSuspect: openConflict ? openConflict.suspect : false,
+      cAnalyse: openConflict ? openConflict.analyse : "",
+      cRows: openConflict ? openConflict.rows.map((r) => ({ agent: r[0], heure: r[1], lieu: r[2] })) : [],
+      acceptConflict: () => {
+        const n = Object.assign({}, s.resolved); n[s.conflictIdx] = "accepte";
+        this.setState({ resolved: n, conflictIdx: null });
+        this.flash("Conflit clos — double contrôle légitime. La décision est tracée avec son auteur.");
+      },
+      reportConflict: () => {
+        const n = Object.assign({}, s.resolved); n[s.conflictIdx] = "signale";
+        this.setState({ resolved: n, conflictIdx: null });
+        this.flash("Dossier transmis au back-office pour enquête. Aucun effet immédiat pour le voyageur.");
+      },
+
+      // ---- chrome
+      tabsVisible: logged && tabRoutes.indexOf(route) > -1,
+      tabs: [
+        { key: "accueil", label: "Accueil", target: "CM-02" },
+        { key: "scan", label: "Scan", target: "CM-04" },
+        { key: "historique", label: "Historique", target: "CM-10" },
+        { key: "incident", label: "Incident", target: "CM-09" }
+      ].map((t) => ({
+        label: t.label,
+        icon: { __html: ICONS[t.key] },
+        current: route === t.target ? "page" : "false",
+        color: route === t.target ? "var(--c-accent-ink)" : "var(--c-ink-muted)",
+        badge: t.key === "historique" && this.pending() ? String(this.pending()) : "",
+        onClick: () => this.nav(t.target)
+      })),
+
+      toast: s.toast,
+      toastBottom: logged && tabRoutes.indexOf(route) > -1 ? "96px" : "40px",
+      hideToast: () => this.setState({ toast: "" })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

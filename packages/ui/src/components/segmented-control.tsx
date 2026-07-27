@@ -16,6 +16,15 @@ export interface SegmentedControlProps
   onValueChange?: (value: string) => void
   /** Étiquette du groupe, annoncée aux lecteurs d'écran. */
   label: string
+  /**
+   * `touch` porte les options à 44 px de haut.
+   *
+   * À utiliser dès que le contrôle est une commande de premier plan sur
+   * mobile — étape d'un dossier, période affichée — où la règle SETRAG des
+   * cibles tactiles s'applique. `compact`, la valeur par défaut, garde la
+   * densité d'origine des filtres du bureau.
+   */
+  size?: "compact" | "touch"
 }
 
 /**
@@ -29,6 +38,7 @@ function SegmentedControl({
   value,
   onValueChange,
   label,
+  size = "compact",
   className,
   ...props
 }: SegmentedControlProps) {
@@ -51,9 +61,15 @@ function SegmentedControl({
             onClick={() => onValueChange?.(option.value)}
             className={cn(
               "rounded-pill text-[12px] leading-none whitespace-nowrap transition-colors duration-200 ease-setrag",
+              size === "touch" &&
+                "inline-flex h-target items-center px-s-4 text-[13px]",
               active
-                ? "bg-ink px-[11px] py-2 font-semibold text-ink-inverse"
-                : "border border-line-strong px-[11px] py-[7px] font-medium text-ink-muted hover:bg-surface-sunk"
+                ? "bg-ink font-semibold text-ink-inverse"
+                : "border border-line-strong font-medium text-ink-muted hover:bg-surface-sunk",
+              // Retraits d'origine du mode compact, appliqués après les
+              // variantes d'état pour rester prioritaires sur elles.
+              size === "compact" &&
+                (active ? "px-[11px] py-2" : "px-[11px] py-[7px]")
             )}
           >
             {option.label}

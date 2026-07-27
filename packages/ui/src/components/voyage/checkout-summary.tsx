@@ -22,14 +22,20 @@ export interface PaymentOption {
   noteMono?: boolean
 }
 
-export interface CheckoutSummaryProps
-  extends Omit<React.ComponentProps<"div">, "onSubmit"> {
+export interface CheckoutSummaryProps extends Omit<
+  React.ComponentProps<"div">,
+  "onSubmit"
+> {
   lines: CheckoutLine[]
   options: PaymentOption[]
   selectedOption?: string
   onSelectOption?: (id: string) => void
   onSubmit?: () => void
   submitting?: boolean
+  submitLabel?: string
+  submitDisabled?: boolean
+  /** Champs et messages liés au moyen sélectionné, placés avant l'action. */
+  paymentDetails?: React.ReactNode
   /** Rassure sur la suite : livraison du billet, conditions d'annulation. */
   footnote?: string
 }
@@ -45,6 +51,9 @@ function CheckoutSummary({
   onSelectOption,
   onSubmit,
   submitting = false,
+  submitLabel,
+  submitDisabled = false,
+  paymentDetails,
   footnote,
   className,
   ...props
@@ -116,7 +125,9 @@ function CheckoutSummary({
                   checked ? "border-accent-base" : "border-line-strong"
                 )}
               >
-                {checked && <span className="size-2.5 rounded-pill bg-accent-base" />}
+                {checked && (
+                  <span className="size-2.5 rounded-pill bg-accent-base" />
+                )}
               </span>
               <span className="flex-1 text-[15px] leading-none font-medium">
                 {option.label}
@@ -136,14 +147,17 @@ function CheckoutSummary({
         })}
       </fieldset>
 
+      {paymentDetails}
+
       <Button
         size="lg"
         block
         onClick={onSubmit}
+        disabled={submitDisabled}
         loading={submitting}
         loadingLabel="Paiement en cours…"
       >
-        Payer {formatPrice(total)}
+        {submitLabel ?? `Payer ${formatPrice(total)}`}
       </Button>
 
       {footnote && (

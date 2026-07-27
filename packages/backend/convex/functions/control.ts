@@ -58,7 +58,7 @@ export const manifest = query({
           arrivalAt: s.arrivalAt,
           departureAt: s.departureAt,
         }
-      }),
+      })
     )
 
     const tickets = await ctx.db
@@ -70,7 +70,7 @@ export const manifest = query({
     // ou remboursé doit être refusé à bord, il est donc transmis avec son
     // statut plutôt qu'omis.
     const embarquables = tickets.filter((t) =>
-      ["valide", "utilise", "annule", "rembourse"].includes(t.status),
+      ["valide", "utilise", "annule", "rembourse"].includes(t.status)
     )
 
     const scans = await ctx.db
@@ -166,7 +166,7 @@ export const verifyTicket = query({
       const verdict: TicketVerdict = /hors service/.test(motif)
         ? "cle_hors_service"
         : /étranger|Base45|tronqué|CBOR|charge utile|Version de format/.test(
-              motif,
+              motif
             )
           ? "illisible"
           : "contrefait"
@@ -230,9 +230,21 @@ export const verifyTicket = query({
  * fixer les montants. À arrêter par la direction commerciale.
  */
 export const PENALTY_SCALE = [
-  { reason: "sans_titre", label: "Voyage sans titre de transport", amountXaf: 25000 },
-  { reason: "titre_invalide", label: "Titre invalide ou expiré", amountXaf: 15000 },
-  { reason: "classe_superieure", label: "Classe supérieure à celle payée", amountXaf: 8000 },
+  {
+    reason: "sans_titre",
+    label: "Voyage sans titre de transport",
+    amountXaf: 25000,
+  },
+  {
+    reason: "titre_invalide",
+    label: "Titre invalide ou expiré",
+    amountXaf: 15000,
+  },
+  {
+    reason: "classe_superieure",
+    label: "Classe supérieure à celle payée",
+    amountXaf: 8000,
+  },
   { reason: "autre", label: "Autre motif", amountXaf: 10000 },
 ] as const
 
@@ -258,7 +270,7 @@ export const syncScans = mutation({
         stopIndex: v.optional(v.number()),
         scannedAt: v.number(),
         offline: v.boolean(),
-      }),
+      })
     ),
   },
   handler: async (ctx, args) => {
@@ -273,7 +285,7 @@ export const syncScans = mutation({
       const existing = await ctx.db
         .query("ticketScans")
         .withIndex("by_client_id", (q) =>
-          q.eq("clientScanId", scan.clientScanId),
+          q.eq("clientScanId", scan.clientScanId)
         )
         .unique()
       if (existing) {
@@ -289,7 +301,7 @@ export const syncScans = mutation({
           .withIndex("by_ticket", (q) => q.eq("ticketId", scan.ticketId))
           .collect()
         conflict = previous.some(
-          (p) => p.result === "valide" && p.agentId !== actor._id,
+          (p) => p.result === "valide" && p.agentId !== actor._id
         )
       }
 
@@ -332,7 +344,13 @@ export const syncScans = mutation({
       after: { received: args.scans.length, created, duplicates, conflicts },
     })
 
-    return { received: args.scans.length, created, duplicates, conflicts, conflictIds }
+    return {
+      received: args.scans.length,
+      created,
+      duplicates,
+      conflicts,
+      conflictIds,
+    }
   },
 })
 
@@ -376,7 +394,7 @@ export const listConflicts = query({
               .collect()
           : []
         return { scan, ticket, agent, trip, allScans: siblings }
-      }),
+      })
     )
   },
 })
@@ -425,7 +443,7 @@ export const sellOnboard = mutation({
         firstName: v.string(),
         gender: v.union(v.literal("M"), v.literal("F")),
         phone: v.optional(v.string()),
-      }),
+      })
     ),
     deviceId: v.optional(v.string()),
   },
@@ -442,12 +460,45 @@ export const sellOnboard = mutation({
         passengers: args.passengers,
         method: "especes",
         deviceId: args.deviceId,
-      },
+      }
     )
   },
 })
 
 /* ────────────────────────── Procès-verbaux ─────────────────────────────── */
+
+/** Dessertes récentes proposées dans le formulaire de procès-verbal. */
+export const penaltyTripOptions = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "proces_verbaux", "creer")
+    const limit = Math.min(Math.max(Math.trunc(args.limit ?? 30), 1), 100)
+    const trips = await ctx.db
+      .query("trips")
+      .withIndex("by_departure")
+      .order("desc")
+      .take(limit)
+
+    return await Promise.all(
+      trips
+        .filter((trip) => trip.status !== "annule")
+        .map(async (trip) => {
+          const [origin, destination] = await Promise.all([
+            ctx.db.get(trip.originStationId),
+            ctx.db.get(trip.destinationStationId),
+          ])
+          return {
+            id: trip._id,
+            trainNumber: trip.trainNumber,
+            serviceDate: trip.serviceDate,
+            departureAt: trip.departureAt,
+            origin: origin?.name ?? "?",
+            destination: destination?.name ?? "?",
+          }
+        })
+    )
+  },
+})
 
 /**
  * Remonte un lot de procès-verbaux rédigés à bord.
@@ -471,14 +522,14 @@ export const syncPenalties = mutation({
           v.literal("sans_titre"),
           v.literal("titre_invalide"),
           v.literal("classe_superieure"),
-          v.literal("autre"),
+          v.literal("autre")
         ),
         notes: v.optional(v.string()),
         amountXaf: v.number(),
         paidOnBoard: v.boolean(),
         issuedAt: v.number(),
         offline: v.boolean(),
-      }),
+      })
     ),
   },
   handler: async (ctx, args) => {
@@ -548,7 +599,7 @@ export const syncPenalties = mutation({
 
 /** Numérotation continue des procès-verbaux, à l'échelle du réseau. */
 async function nextPenaltyNumber(
-  ctx: Parameters<typeof audit>[0],
+  ctx: Parameters<typeof audit>[0]
 ): Promise<number> {
   const key = "reseau:pv"
   const existing = await ctx.db
@@ -572,8 +623,8 @@ export const listPenalties = query({
         v.literal("emis"),
         v.literal("paye"),
         v.literal("conteste"),
-        v.literal("annule"),
-      ),
+        v.literal("annule")
+      )
     ),
   },
   handler: async (ctx, args) => {
@@ -592,7 +643,7 @@ export const listPenalties = query({
           penalty: pv,
           agent: await ctx.db.get(pv.agentId),
           trip: await ctx.db.get(pv.tripId),
-        })),
+        }))
     )
   },
 })
@@ -605,7 +656,7 @@ export const setPenaltyStatus = mutation({
       v.literal("emis"),
       v.literal("paye"),
       v.literal("conteste"),
-      v.literal("annule"),
+      v.literal("annule")
     ),
     resolutionNote: v.optional(v.string()),
   },
@@ -648,18 +699,18 @@ export const syncIncidents = mutation({
           v.literal("technique"),
           v.literal("comportement"),
           v.literal("medical"),
-          v.literal("autre"),
+          v.literal("autre")
         ),
         severity: v.union(
           v.literal("information"),
           v.literal("important"),
-          v.literal("critique"),
+          v.literal("critique")
         ),
         description: v.string(),
         photoStorageIds: v.optional(v.array(v.id("_storage"))),
         reportedAt: v.number(),
         offline: v.boolean(),
-      }),
+      })
     ),
   },
   handler: async (ctx, args) => {
@@ -732,7 +783,7 @@ export const syncIncidents = mutation({
 export const listIncidents = query({
   args: {
     status: v.optional(
-      v.union(v.literal("ouvert"), v.literal("en_cours"), v.literal("resolu")),
+      v.union(v.literal("ouvert"), v.literal("en_cours"), v.literal("resolu"))
     ),
   },
   handler: async (ctx, args) => {
@@ -751,7 +802,7 @@ export const listIncidents = query({
           incident,
           reporter: await ctx.db.get(incident.reporterId),
           trip: incident.tripId ? await ctx.db.get(incident.tripId) : null,
-        })),
+        }))
     )
   },
 })
@@ -763,7 +814,7 @@ export const setIncidentStatus = mutation({
     status: v.union(
       v.literal("ouvert"),
       v.literal("en_cours"),
-      v.literal("resolu"),
+      v.literal("resolu")
     ),
     resolutionNote: v.optional(v.string()),
   },

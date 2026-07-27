@@ -1,4 +1,4 @@
-import type { MutationCtx } from "../_generated/server"
+import type { MutationCtx, QueryCtx } from "../_generated/server"
 import type { Doc } from "../_generated/dataModel"
 import { toServiceDate } from "../model/calendar"
 
@@ -62,7 +62,7 @@ export async function currentAccountingDay(
 }
 
 /** Grille tarifaire en vigueur, avec ses bases, réductions et barèmes annexes. */
-export async function activeFareSchedule(ctx: MutationCtx) {
+export async function activeFareSchedule(ctx: MutationCtx | QueryCtx) {
   const schedule = await ctx.db
     .query("fareSchedules")
     .withIndex("by_status", (q) => q.eq("status", "actif"))

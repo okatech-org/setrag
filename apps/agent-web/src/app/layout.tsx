@@ -6,11 +6,11 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: {
-    default: "SETRAG — Portail agent",
-    template: "%s · Portail agent SETRAG",
+    default: "SETRAG — Portail de vente",
+    template: "%s · Vente SETRAG",
   },
   description:
-    "Back-office SETRAG : vente au guichet, contrôle des billets, suivi des dessertes et pilotage de l'exploitation.",
+    "Portail SETRAG pour la vente au guichet, l’encaissement et le suivi des opérations.",
   robots: { index: false, follow: false },
 }
 
@@ -25,7 +25,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body className="min-h-dvh bg-background-muted">
+      <body className="bg-background-muted min-h-dvh">
         <Providers>
           {children}
           <Toaster position="bottom-right" richColors />

@@ -5,22 +5,22 @@ Société d'Exploitation du Transgabonais (ligne Owendo–Franceville).
 
 ## Applications
 
-| Chemin                    | Nom               | Rôle                                                              | Port  |
-| ------------------------- | ----------------- | ----------------------------------------------------------------- | ----- |
-| `apps/billetterie-web`    | `billetterie-web` | Billetterie voyageur : recherche, réservation, paiement, billets   | 3000  |
-| `apps/agent-web`          | `agent-web`       | Portail agent / back-office : guichet, contrôle, exploitation      | 3001  |
-| `apps/voyageur-mobile`    | `voyageur-mobile` | Application mobile voyageur (iOS / Android)                        | Expo  |
+| Chemin                 | Nom               | Rôle                                                             | Port |
+| ---------------------- | ----------------- | ---------------------------------------------------------------- | ---- |
+| `apps/billetterie-web` | `billetterie-web` | Billetterie voyageur : recherche, réservation, paiement, billets | 3000 |
+| `apps/agent-web`       | `agent-web`       | Portail agent / back-office : guichet, contrôle, exploitation    | 3001 |
+| `apps/voyageur-mobile` | `voyageur-mobile` | Application mobile voyageur (iOS / Android)                      | Expo |
 
 ## Paquets partagés
 
-| Paquet                  | Contenu                                                        |
-| ----------------------- | -------------------------------------------------------------- |
-| `@workspace/backend`    | Backend Convex — schéma, fonctions, crons, authentification     |
-| `@workspace/ui`         | Design system web — Tailwind 4, tokens SETRAG, composants React |
-| `@workspace/mobile-ui`  | Design system React Native — mêmes tokens, composants natifs    |
-| `@workspace/shared`     | Types, schémas Zod et règles métier (tarifs, remboursements)    |
-| `@workspace/api`        | Provider Convex + client Better Auth pour les applications web  |
-| `@workspace/tsconfig`   | Configurations TypeScript de base                               |
+| Paquet                 | Contenu                                                         |
+| ---------------------- | --------------------------------------------------------------- |
+| `@workspace/backend`   | Backend Convex — schéma, fonctions, crons, authentification     |
+| `@workspace/ui`        | Design system web — Tailwind 4, tokens SETRAG, composants React |
+| `@workspace/mobile-ui` | Design system React Native — mêmes tokens, composants natifs    |
+| `@workspace/shared`    | Types, schémas Zod et règles métier (tarifs, remboursements)    |
+| `@workspace/api`       | Provider Convex + client Better Auth pour les applications web  |
+| `@workspace/tsconfig`  | Configurations TypeScript de base                               |
 
 Le backend vit dans `packages/backend`. Les applications l'importent comme
 n'importe quel autre paquet du workspace :
@@ -41,6 +41,23 @@ ce paquet. Aucune application ne référence `convex/` par chemin relatif.
 - **Backend** — Convex 1.42 (base temps réel, fonctions, crons, composants)
 - **Authentification** — Better Auth 1.6 via `@convex-dev/better-auth` (OTP e-mail et SMS)
 - **Qualité** — TypeScript 5.9 strict, ESLint 9, Prettier, Vitest + `convex-test`
+
+## Assistants IA voyageurs
+
+Le backend expose quatre assistants (`concierge`, `booking`, `tickets`,
+`account`) capables d'utiliser les mêmes actions que le parcours client. Le
+chat texte accepte OpenAI, Anthropic et Gemini ; la voix utilise OpenAI
+Realtime avec des secrets WebRTC éphémères. Les réservations, paiements,
+annulations et modifications de données exigent une confirmation serveur
+idempotente.
+
+Contrat d'intégration web/mobile :
+[docs/assistant-ia-frontend.md](docs/assistant-ia-frontend.md).
+
+Le socle de messagerie permet de raccorder les mêmes assistants à des canaux
+externes. Telegram est le premier adaptateur ; WhatsApp, Messenger et Apple
+Messages partagent les mêmes threads, événements, approbations et outbox :
+[docs/messagerie-multicanale.md](docs/messagerie-multicanale.md).
 
 ## Démarrage
 
@@ -84,12 +101,12 @@ cd packages/backend && bunx convex env list
 
 **Déploiement Convex** (`bunx convex env set …`) :
 
-| Variable              | Rôle                                                        |
-| --------------------- | ----------------------------------------------------------- |
-| `BETTER_AUTH_SECRET`  | Secret de signature des sessions (32 caractères minimum)     |
-| `SITE_URL`            | Origine par défaut pour les redirections OAuth               |
-| `TRUSTED_ORIGINS`     | Origines web autorisées, séparées par des virgules           |
-| `DEV_SIGNIN_ENABLED`  | `true` en développement : autorise les origines `localhost`  |
+| Variable             | Rôle                                                        |
+| -------------------- | ----------------------------------------------------------- |
+| `BETTER_AUTH_SECRET` | Secret de signature des sessions (32 caractères minimum)    |
+| `SITE_URL`           | Origine par défaut pour les redirections OAuth              |
+| `TRUSTED_ORIGINS`    | Origines web autorisées, séparées par des virgules          |
+| `DEV_SIGNIN_ENABLED` | `true` en développement : autorise les origines `localhost` |
 
 **Applications** — voir les fichiers `.env.example` de chaque application.
 

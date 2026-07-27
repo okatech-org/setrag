@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/fonts/fonts.css">
+  <link rel="stylesheet" href="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/_ds_bundle.css">
+  <link rel="stylesheet" href="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/styles.css">
+  <script src="_ds/setrag-05dbdc0c-c466-4b3a-9744-18c6b29e2c76/_ds_bundle.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { background: var(--c-canvas); font-family: var(--font-ui); }
+    a { color: var(--c-accent-ink); text-decoration: none; }
+    a:hover { color: var(--c-accent); }
+    input, select, textarea, button { font-family: inherit; }
+    @keyframes setrag-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  </style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="min-height:100vh;max-width:{{ frameMax }};margin:0 auto;box-shadow:{{ frameShadow }};background:var(--c-canvas);color:var(--c-ink);font:var(--t-body);font-family:var(--font-ui);display:flex;flex-direction:column">
+
+  <div style="position:sticky;top:0;z-index:40" onClick="{{ onNavClick }}">
+    <x-import component-from-global-scope="SetragUI.AppHeader" brand="{{ headerBrand }}" links="{{ navLinks }}" actions="{{ headerActions }}" hint-size="100%,62px"></x-import>
+  </div>
+
+  <main style="flex:1;display:flex;flex-direction:column">
+
+    <!-- ================= BW-01 · Accueil ================= -->
+    <sc-if value="{{ isAccueil }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="BW-01 Accueil" style="display:flex;flex-direction:column">
+
+        <section data-theme="dark" style="background:oklch(0.24 0.058 257);color:#fff;padding:{{ heroPad }}">
+          <div style="max-width:1160px;margin:0 auto;display:grid;gap:var(--s-4)">
+            <span class="text-mono-label" style="color:var(--c-accent-on-ink)">Owendo ↔ Franceville · 648 km · 22 gares</span>
+            <h1 class="{{ heroTitleCls }}" style="margin:0;max-width:14ch;text-wrap:balance">Traversez le Gabon en un seul billet.</h1>
+            <p class="text-body-lg" style="margin:0;max-width:52ch;color:oklch(0.985 0.004 257 / 0.72);text-wrap:pretty">Réservez votre place à bord du Transgabonais et payez par Airtel Money, Moov Money ou carte bancaire — en moins de cinq minutes, sans passer par un guichet.</p>
+          </div>
+        </section>
+
+        <section style="max-width:1160px;width:100%;margin:{{ searchPull }} auto 0;padding:0 var(--s-6);display:grid;gap:var(--s-6)">
+
+          <div class="rounded-lg bg-surface shadow-lg" style="border:1px solid var(--c-line);display:grid;gap:var(--s-5);padding:var(--s-6)">
+            <div style="display:flex;flex-wrap:wrap;align-items:end;gap:var(--s-2)">
+              <x-import component-from-global-scope="SetragUI.SearchSlot" label="Gare de départ" hint-size="180px,74px" style="flex:1 1 180px">
+                <x-import component-from-global-scope="SetragUI.SelectNative" value="{{ origin }}" onChange="{{ setOrigin }}" hint-size="100%,52px">
+                  <option value="Owendo">Owendo · PK 0</option>
+                  <option value="Ndjolé">Ndjolé · PK 187</option>
+                  <option value="Lopé">Lopé · PK 276</option>
+                  <option value="Booué">Booué · PK 335</option>
+                  <option value="Lastoursville">Lastoursville · PK 464</option>
+                  <option value="Moanda">Moanda · PK 583</option>
+                  <option value="Franceville">Franceville · PK 648</option>
+                </x-import>
+              </x-import>
+              <button type="button" onClick="{{ swap }}" aria-label="Inverser le départ et l'arrivée" class="rounded-pill border border-line bg-surface" style="height:56px;width:44px;display:grid;place-items:center;color:var(--c-ink-muted);cursor:pointer;flex:0 0 auto" style-hover="background:var(--c-surface-sunk)">⇄</button>
+              <x-import component-from-global-scope="SetragUI.SearchSlot" label="Gare d'arrivée" hint-size="180px,74px" style="flex:1 1 180px">
+                <x-import component-from-global-scope="SetragUI.SelectNative" value="{{ destination }}" onChange="{{ setDestination }}" hint-size="100%,52px">
+                  <option value="Owendo">Owendo · PK 0</option>
+                  <option value="Ndjolé">Ndjolé · PK 187</option>
+                  <option value="Lopé">Lopé · PK 276</option>
+                  <option value="Booué">Booué · PK 335</option>
+                  <option value="Lastoursville">Lastoursville · PK 464</option>
+                  <option value="Moanda">Moanda · PK 583</option>
+                  <option value="Franceville">Franceville · PK 648</option>
+                </x-import>
+              </x-import>
+              <x-import component-from-global-scope="SetragUI.SearchSlot" label="Aller" hint-size="150px,74px" style="flex:1 1 150px">
+                <x-import component-from-global-scope="SetragUI.Input" defaultValue="ven. 14 août 2026" hint-size="100%,52px"></x-import>
+              </x-import>
+              <x-import component-from-global-scope="SetragUI.SearchSlot" label="Retour (facultatif)" hint-size="150px,74px" style="flex:1 1 150px">
+                <x-import component-from-global-scope="SetragUI.Input" placeholder="ajouter un retour" hint-size="100%,52px"></x-import>
+              </x-import>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;align-items:end;gap:var(--s-4)">
+              <x-import component-from-global-scope="SetragUI.SearchSlot" label="Adultes" hint-size="160px,74px" style="flex:0 1 170px">
+                <div style="display:flex;align-items:center;gap:var(--s-2)">
+                  <button type="button" onClick="{{ lessAdults }}" aria-label="Un adulte de moins" class="rounded-pill border border-line-strong bg-surface min-h-target" style="width:44px;color:var(--c-ink);cursor:pointer;font-size:18px">−</button>
+                  <span class="tabular text-h4" style="min-width:24px;text-align:center">{{ adults }}</span>
+                  <button type="button" onClick="{{ moreAdults }}" aria-label="Un adulte de plus" class="rounded-pill border border-line-strong bg-surface min-h-target" style="width:44px;color:var(--c-ink);cursor:pointer;font-size:18px">+</button>
+                </div>
+              </x-import>
+              <x-import component-from-global-scope="SetragUI.SearchSlot" label="Enfants 4-11 ans · −50 %" hint-size="180px,74px" style="flex:0 1 190px">
+                <div style="display:flex;align-items:center;gap:var(--s-2)">
+                  <button type="button" onClick="{{ lessKids }}" aria-label="Un enfant de moins" class="rounded-pill border border-line-strong bg-surface min-h-target" style="width:44px;color:var(--c-ink);cursor:pointer;font-size:18px">−</button>
+                  <span class="tabular text-h4" style="min-width:24px;text-align:center">{{ kids }}</span>
+                  <button type="button" onClick="{{ moreKids }}" aria-label="Un enfant de plus" class="rounded-pill border border-line-strong bg-surface min-h-target" style="width:44px;color:var(--c-ink);cursor:pointer;font-size:18px">+</button>
+                </div>
+              </x-import>
+              <div style="flex:1 1 240px">
+                <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ search }}" hint-size="100%,56px">Rechercher un train</x-import>
+              </div>
+            </div>
+            <sc-if value="{{ sameStations }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="La gare d'arrivée doit être différente de la gare de départ." hint-size="100%,60px">Choisissez une autre destination pour lancer la recherche.</x-import>
+            </sc-if>
+          </div>
+
+          <x-import component-from-global-scope="SetragUI.TrafficBanner" tone="warning" title="TR-201 partira avec 25 min de retard aujourd'hui" description="Croisement prolongé à Ndjolé. Votre place est conservée et les correspondances à Franceville sont maintenues." action="{{ trafficAction }}" hint-size="100%,92px"></x-import>
+
+          <div style="display:flex;flex-wrap:wrap;gap:var(--s-6);padding:var(--s-2) 0">
+            <div style="flex:1 1 160px;display:grid;gap:2px;border-left:2px solid var(--c-accent);padding-left:var(--s-4)">
+              <span class="tabular text-h2">648 km</span>
+              <span class="text-small text-ink-muted">de ligne, d'Owendo à Franceville</span>
+            </div>
+            <div style="flex:1 1 160px;display:grid;gap:2px;border-left:2px solid var(--c-accent);padding-left:var(--s-4)">
+              <span class="tabular text-h2">22 gares</span>
+              <span class="text-small text-ink-muted">desservies par les trains voyageurs</span>
+            </div>
+            <div style="flex:1 1 160px;display:grid;gap:2px;border-left:2px solid var(--c-accent);padding-left:var(--s-4)">
+              <span class="tabular text-h2">5 min</span>
+              <span class="text-small text-ink-muted">suffisent pour acheter son billet en ligne</span>
+            </div>
+            <div style="flex:1 1 160px;display:grid;gap:2px;border-left:2px solid var(--c-accent);padding-left:var(--s-4)">
+              <span class="tabular text-h2">15 min</span>
+              <span class="text-small text-ink-muted">de prix garanti dès la réservation</span>
+            </div>
+          </div>
+        </section>
+
+        <section style="max-width:1160px;width:100%;margin:0 auto;padding:var(--s-8) var(--s-6);display:grid;gap:var(--s-4)">
+          <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s-3)">
+            <h2 class="text-h3" style="margin:0;flex:1 1 260px">Prochains départs depuis {{ origin }}</h2>
+            <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ goSuivi }}" hint-size="180px,40px">Tous les horaires</x-import>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--s-4)">
+            <sc-for list="{{ nextDepartures }}" as="dep" hint-placeholder-count="3">
+              <div class="rounded-md border border-line bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-3)">
+                <div style="display:flex;align-items:center;gap:var(--s-3)">
+                  <span class="tabular text-time" style="flex:1">{{ dep.heures }}</span>
+                  <x-import component-from-global-scope="SetragUI.Tag" tone="{{ dep.tone }}" hint-size="90px,26px">{{ dep.statut }}</x-import>
+                </div>
+                <span class="text-small text-ink-muted">{{ dep.detail }}</span>
+                <div style="display:flex;gap:var(--s-2);border-top:1px solid var(--c-line);padding-top:var(--s-3)">
+                  <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ dep.onTrack }}" hint-size="110px,40px">Suivre</x-import>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="secondary" size="sm" onClick="{{ goResultats }}" hint-size="110px,40px">Réserver</x-import>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section class="bg-surface" style="border-top:1px solid var(--c-line)">
+          <div style="max-width:1160px;margin:0 auto;padding:var(--s-8) var(--s-6);display:grid;gap:var(--s-4)">
+            <h2 class="text-h4" style="margin:0">Préparer son voyage</h2>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--s-4)">
+              <a href="#tarifs" class="rounded-md border border-line" style="padding:var(--s-4);display:grid;gap:4px" style-hover="border-color:var(--c-accent-line);background:var(--c-accent-soft)">
+                <span class="text-body" style="font-weight:600;color:var(--c-ink)">Tarifs officiels →</span>
+                <span class="text-small text-ink-muted">Barème par classe et par gare, réductions enfant, groupe et militaire.</span>
+              </a>
+              <a href="#bagages" class="rounded-md border border-line" style="padding:var(--s-4);display:grid;gap:4px" style-hover="border-color:var(--c-accent-line);background:var(--c-accent-soft)">
+                <span class="text-body" style="font-weight:600;color:var(--c-ink)">Bagages →</span>
+                <span class="text-small text-ink-muted">Franchise incluse et barème des bagages volumineux, affiché en gare.</span>
+              </a>
+              <a href="#gares" class="rounded-md border border-line" style="padding:var(--s-4);display:grid;gap:4px" style-hover="border-color:var(--c-accent-line);background:var(--c-accent-soft)">
+                <span class="text-body" style="font-weight:600;color:var(--c-ink)">Gares desservies →</span>
+                <span class="text-small text-ink-muted">Les 22 gares de la ligne, du PK 0 au PK 648, avec leurs horaires d'ouverture.</span>
+              </a>
+              <a href="#aide" class="rounded-md border border-line" style="padding:var(--s-4);display:grid;gap:4px" style-hover="border-color:var(--c-accent-line);background:var(--c-accent-soft)">
+                <span class="text-body" style="font-weight:600;color:var(--c-ink)">Aide →</span>
+                <span class="text-small text-ink-muted">Questions fréquentes, remboursements et contact des guichets.</span>
+              </a>
+            </div>
+          </div>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ================= BW-02 · Résultats ================= -->
+    <sc-if value="{{ isResultats }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="BW-02 Résultats" style="display:flex;flex-direction:column;flex:1">
+
+        <div class="bg-surface-sunk" style="border-bottom:1px solid var(--c-line)">
+          <div style="max-width:1160px;margin:0 auto;padding:var(--s-4) var(--s-6) var(--s-5);display:grid;gap:var(--s-4)">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-3)">
+              <div style="flex:1 1 280px;display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s-3)">
+                <h1 class="text-h4" style="margin:0">{{ origin }} → {{ destination }}</h1>
+                <span class="tabular text-small text-ink-muted">vendredi 14 août · {{ groupLabel }}</span>
+              </div>
+              <x-import component-from-global-scope="SetragUI.Button" variant="secondary" size="sm" onClick="{{ goAccueil }}" hint-size="180px,40px">Modifier la recherche</x-import>
+            </div>
+            <div style="display:flex;gap:var(--s-2);overflow-x:auto;padding-bottom:2px">
+              <sc-for list="{{ dayChips }}" as="day" hint-placeholder-count="5">
+                <button type="button" onClick="{{ day.onPick }}" disabled="{{ day.off }}" class="rounded-md {{ day.cls }}" style="flex:1 0 108px;padding:var(--s-2) var(--s-3);display:grid;gap:2px;cursor:pointer;text-align:center;min-height:44px">
+                  <span class="text-small" style="font-weight:600">{{ day.label }}</span>
+                  <span class="tabular text-caption">{{ day.prix }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="max-width:1160px;width:100%;margin:0 auto;padding:var(--s-6);display:flex;flex-wrap:wrap;gap:var(--s-6);align-items:start;flex:1">
+
+          <aside style="flex:1 1 230px;max-width:300px;display:grid;gap:var(--s-5);align-content:start;position:sticky;top:96px;max-height:calc(100vh - 120px);overflow:auto">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-3)">
+              <h2 class="text-h4" style="margin:0">Filtres</h2>
+              <button type="button" onClick="{{ clearFilters }}" class="text-small" style="border:0;background:transparent;padding:0;font-weight:600;color:var(--c-accent-ink);cursor:pointer">Effacer</button>
+            </div>
+            <x-import component-from-global-scope="SetragUI.SegmentedControl" label="Trier les dessertes" value="{{ sort }}" onValueChange="{{ setSort }}" options="{{ sortOptions }}" hint-size="100%,44px"></x-import>
+            <x-import component-from-global-scope="SetragUI.FilterGroup" label="Type de train" hint-size="100%,100px">
+              <div style="display:grid;gap:var(--s-2)">
+                <x-import component-from-global-scope="SetragUI.Checkbox" label="Express · 6 arrêts" checked="{{ fExpress }}" onCheckedChange="{{ setExpress }}" hint-size="100%,32px"></x-import>
+                <x-import component-from-global-scope="SetragUI.Checkbox" label="Omnibus · 18 arrêts" checked="{{ fOmnibus }}" onCheckedChange="{{ setOmnibus }}" hint-size="100%,32px"></x-import>
+              </div>
+            </x-import>
+            <x-import component-from-global-scope="SetragUI.FilterGroup" label="Classe" hint-size="100%,130px">
+              <div style="display:grid;gap:var(--s-2)">
+                <x-import component-from-global-scope="SetragUI.Checkbox" label="2e classe" checked="{{ fCl2 }}" onCheckedChange="{{ setCl2 }}" hint-size="100%,32px"></x-import>
+                <x-import component-from-global-scope="SetragUI.Checkbox" label="1re classe" checked="{{ fCl1 }}" onCheckedChange="{{ setCl1 }}" hint-size="100%,32px"></x-import>
+                <x-import component-from-global-scope="SetragUI.Checkbox" label="VIP" checked="{{ fClVip }}" onCheckedChange="{{ setClVip }}" hint-size="100%,32px"></x-import>
+              </div>
+            </x-import>
+            <x-import component-from-global-scope="SetragUI.FilterGroup" label="Prix maximum par adulte" hint-size="100%,80px">
+              <x-import component-from-global-scope="SetragUI.RangeFilter" value="{{ prixMaxValue }}" onValueChange="{{ setPrixMax }}" min="{{ 18000 }}" max="{{ 68900 }}" step="{{ 1000 }}" valueLabel="{{ prixMaxLabel }}" hint-size="100%,48px"></x-import>
+            </x-import>
+            <p class="text-caption text-ink-muted" style="margin:0;text-wrap:pretty">Les places affichées valent pour votre portion de trajet. Un train complet sur une autre portion peut rester disponible sur la vôtre.</p>
+          </aside>
+
+          <div style="flex:3 1 420px;display:grid;gap:var(--s-4);align-content:start">
+            <sc-if value="{{ resultsLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;gap:var(--s-3)">
+                <div class="rounded-md border border-line bg-surface" style="padding:var(--s-5)">
+                  <x-import component-from-global-scope="SetragUI.SkeletonLines" lines="{{ 3 }}" hint-size="100%,64px"></x-import>
+                </div>
+                <div class="rounded-md border border-line bg-surface" style="padding:var(--s-5)">
+                  <x-import component-from-global-scope="SetragUI.SkeletonLines" lines="{{ 3 }}" hint-size="100%,64px"></x-import>
+                </div>
+                <p class="text-small text-ink-muted" style="margin:0">Recherche des dessertes… la réponse arrive en moins de deux secondes.</p>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ resultsEmpty }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="SetragUI.EmptyState" title="Aucun train ce jour-là" description="TR-201 ne circule pas le vendredi sur cette relation. Deux jours voisins sont desservis." action="{{ emptyAction }}" hint-size="100%,180px"></x-import>
+            </sc-if>
+
+            <sc-if value="{{ resultsReady }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;gap:var(--s-4)">
+                <x-import component-from-global-scope="SetragUI.ResultsToolbar" summary="{{ toolbarSummary }}" sortLabel="{{ sortLabel }}" hint-size="100%,52px"></x-import>
+                <sc-if value="{{ noMatch }}" hint-placeholder-val="{{ false }}">
+                  <x-import component-from-global-scope="SetragUI.EmptyState" title="Aucune desserte ne passe vos filtres" description="Élargissez le prix maximum, ou rouvrez un type de train ou une classe." action="{{ clearAction }}" hint-size="100%,180px"></x-import>
+                </sc-if>
+                <sc-for list="{{ trips }}" as="trip" hint-placeholder-count="3">
+                  <div style="display:grid;gap:var(--s-1)">
+                    <x-import component-from-global-scope="SetragUI.TripResultCard" departureAt="{{ trip.departureAt }}" arrivalAt="{{ trip.arrivalAt }}" durationMinutes="{{ trip.durationMinutes }}" originLabel="{{ trip.originLabel }}" destinationLabel="{{ trip.destinationLabel }}" connectionLabel="{{ trip.connectionLabel }}" priceXaf="{{ trip.priceXaf }}" priceNote="{{ trip.priceNote }}" tags="{{ trip.tags }}" state="{{ trip.state }}" cancelledNotice="{{ trip.cancelledNotice }}" actionLabel="{{ trip.actionLabel }}" onSelect="{{ trip.onSelect }}" hint-size="100%,150px"></x-import>
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-3);padding:0 var(--s-2)">
+                      <span class="text-small text-ink-muted" style="flex:1 1 220px">{{ trip.places }}</span>
+                      <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ trip.onTrack }}" hint-size="190px,40px">{{ trip.trackLabel }}</x-import>
+                    </div>
+                  </div>
+                </sc-for>
+                <footer style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s-4);border-top:1px solid var(--c-line);padding-top:var(--s-4)">
+                  <span class="tabular text-small text-ink-muted">{{ footerCount }}</span>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="secondary" onClick="{{ dayAfter }}" hint-size="180px,44px">Voir le lendemain</x-import>
+                </footer>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= BW-03 · Détail & voyageurs ================= -->
+    <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="BW-03 Détail et voyageurs" style="display:flex;flex-direction:column;flex:1">
+
+        <div class="bg-surface" style="border-bottom:1px solid var(--c-line)">
+          <div style="max-width:1160px;margin:0 auto;padding:var(--s-5) var(--s-6);display:grid;gap:var(--s-4)">
+            <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ parcours }}" current="{{ 1 }}" hint-size="100%,60px"></x-import>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-3)">
+              <div style="flex:1 1 300px;display:grid;gap:2px">
+                <h1 class="text-h3" style="margin:0">TR-201 · Express · vendredi 14 août</h1>
+                <span class="tabular text-small text-ink-muted">{{ origin }} 08:00 → {{ destination }} 19:45 · 11 h 45 · 6 arrêts</span>
+              </div>
+              <x-import component-from-global-scope="SetragUI.Tag" tone="{{ holdTone }}" hint-size="230px,26px">Prix figé encore {{ holdLabel }}</x-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="max-width:1160px;width:100%;margin:0 auto;padding:var(--s-6);display:flex;flex-wrap:wrap;gap:var(--s-6);align-items:start;flex:1">
+
+          <div style="flex:2 1 420px;display:grid;gap:var(--s-6)">
+
+            <section style="display:grid;gap:var(--s-3)">
+              <h2 class="text-h4" style="margin:0">Votre classe</h2>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--s-3)">
+                <sc-for list="{{ classes }}" as="cl" hint-placeholder-count="4">
+                  <button type="button" onClick="{{ cl.onSelect }}" disabled="{{ cl.disabled }}" class="rounded-md {{ cl.cls }}" style="text-align:left;padding:var(--s-4);display:grid;gap:6px;cursor:pointer;color:var(--c-ink);min-height:110px;align-content:start">
+                    <span style="display:flex;align-items:center;gap:8px">
+                      <span class="text-body" style="font-weight:600;flex:1">{{ cl.nom }}</span>
+                      <span class="rounded-pill {{ cl.dotCls }}" style="width:16px;height:16px;display:grid;place-items:center">
+                        <span style="width:8px;height:8px;border-radius:999px;background:{{ cl.dotFill }}"></span>
+                      </span>
+                    </span>
+                    <span class="tabular text-h4">{{ cl.prixLabel }}</span>
+                    <span class="text-caption text-ink-muted">{{ cl.note }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </section>
+
+            <section style="display:grid;gap:var(--s-3)">
+              <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s-3)">
+                <h2 class="text-h4" style="margin:0;flex:1 1 200px">Vos voyageurs</h2>
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ toggleStops }}" hint-size="170px,40px">{{ stopsToggleLabel }}</x-import>
+              </div>
+              <sc-if value="{{ stopsOpen }}" hint-placeholder-val="{{ false }}">
+                <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-4);display:flex;flex-wrap:wrap;gap:var(--s-3)">
+                  <sc-for list="{{ stops }}" as="stop" hint-placeholder-count="7">
+                    <span class="tabular text-small" style="color:var(--c-ink)">{{ stop.gare }} <span class="text-ink-muted">{{ stop.theorique }}</span></span>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-for list="{{ passengers }}" as="p" hint-placeholder-count="3">
+                <div class="rounded-md border border-line bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-4)">
+                  <div style="display:flex;align-items:center;gap:var(--s-3)">
+                    <span class="rounded-pill bg-accent-soft text-accent-ink tabular" style="width:34px;height:34px;display:grid;place-items:center;font-weight:600;font-size:14px">{{ p.num }}</span>
+                    <span class="text-body" style="font-weight:600;flex:1">{{ p.titre }}</span>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:var(--s-4)">
+                    <x-import component-from-global-scope="SetragUI.Field" label="Nom" hint-size="160px,80px" style="flex:1 1 160px">
+                      <x-import component-from-global-scope="SetragUI.Input" defaultValue="{{ p.nom }}" hint-size="100%,52px"></x-import>
+                    </x-import>
+                    <x-import component-from-global-scope="SetragUI.Field" label="Prénom" hint-size="160px,80px" style="flex:1 1 160px">
+                      <x-import component-from-global-scope="SetragUI.Input" defaultValue="{{ p.prenom }}" hint-size="100%,52px"></x-import>
+                    </x-import>
+                    <x-import component-from-global-scope="SetragUI.Field" label="Sexe" hint-size="120px,80px" style="flex:1 1 120px">
+                      <x-import component-from-global-scope="SetragUI.SelectNative" defaultValue="{{ p.sexe }}" hint-size="100%,52px">
+                        <option value="F">Féminin</option>
+                        <option value="M">Masculin</option>
+                      </x-import>
+                    </x-import>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:var(--s-4)">
+                    <x-import component-from-global-scope="SetragUI.Field" label="Téléphone" hint="Format gabonais, indicatif +241" hint-size="180px,86px" style="flex:1 1 180px">
+                      <x-import component-from-global-scope="SetragUI.Input" defaultValue="{{ p.tel }}" hint-size="100%,52px"></x-import>
+                    </x-import>
+                    <x-import component-from-global-scope="SetragUI.Field" label="Téléphone d'urgence" hint="Différent du téléphone du voyageur" hint-size="180px,86px" style="flex:1 1 180px">
+                      <x-import component-from-global-scope="SetragUI.Input" defaultValue="{{ p.urgence }}" hint-size="100%,52px"></x-import>
+                    </x-import>
+                    <x-import component-from-global-scope="SetragUI.Field" label="Réduction" hint-size="180px,86px" style="flex:1 1 180px">
+                      <x-import component-from-global-scope="SetragUI.SelectNative" defaultValue="{{ p.reduction }}" hint-size="100%,52px">
+                        <option value="aucune">Aucune</option>
+                        <option value="enfant">Enfant 4-11 ans · −50 %</option>
+                        <option value="militaire">Militaire · −10 %</option>
+                        <option value="groupe">Groupe 10-49 · −30 %</option>
+                      </x-import>
+                    </x-import>
+                  </div>
+                  <sc-if value="{{ p.enfant }}" hint-placeholder-val="{{ false }}">
+                    <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Réduction enfant de 50 % appliquée." hint-size="100%,64px">Un justificatif d'âge peut être demandé à l'embarquement.</x-import>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </section>
+          </div>
+
+          <aside class="rounded-lg border border-line bg-surface shadow-md" style="flex:1 1 300px;padding:var(--s-5);display:grid;gap:var(--s-4);position:sticky;top:78px">
+            <span class="text-mono-label" style="color:var(--c-ink-muted)">Récapitulatif</span>
+            <div style="display:grid;gap:var(--s-2)">
+              <sc-for list="{{ recap }}" as="line" hint-placeholder-count="5">
+                <div style="display:flex;justify-content:space-between;gap:var(--s-3)">
+                  <span class="text-small text-ink-muted">{{ line.label }}</span>
+                  <span class="tabular text-small" style="white-space:nowrap;color:var(--c-ink)">{{ line.montant }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="border-top:1px solid var(--c-line);padding-top:var(--s-3);display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-3)">
+              <span class="text-body" style="font-weight:600">Total TTC</span>
+              <span class="tabular text-h3">{{ totalLabel }}</span>
+            </div>
+            <p class="text-caption text-ink-muted" style="margin:0;text-wrap:pretty">Prix figé pendant la tenue de vos places. Il ne bougera plus jusqu'à l'échéance, même si les tarifs évoluent.</p>
+            <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}">
+              <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ goPaiement }}" hint-size="100%,56px">Continuer vers le paiement</x-import>
+            </sc-if>
+            <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" block="{{ true }}" onClick="{{ goResultats }}" hint-size="100%,40px">Changer de desserte</x-import>
+          </aside>
+        </div>
+
+        <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+          <div class="bg-surface shadow-lg" style="position:sticky;bottom:0;z-index:35;border-top:1px solid var(--c-line);padding:var(--s-3) var(--s-4);display:flex;align-items:center;gap:var(--s-4)">
+            <span style="display:grid;gap:1px">
+              <span class="text-caption text-ink-muted">Total TTC · {{ paxLabel }}</span>
+              <span class="tabular text-h4">{{ totalLabel }}</span>
+            </span>
+            <span style="flex:1">
+              <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ goPaiement }}" hint-size="100%,56px">Payer</x-import>
+            </span>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ================= BW-04 · Paiement ================= -->
+    <sc-if value="{{ isPaiement }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="BW-04 Paiement" style="display:flex;flex-direction:column;flex:1">
+
+        <div class="bg-surface" style="border-bottom:1px solid var(--c-line)">
+          <div style="max-width:1160px;margin:0 auto;padding:var(--s-5) var(--s-6);display:grid;gap:var(--s-4)">
+            <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ parcours }}" current="{{ 2 }}" hint-size="100%,60px"></x-import>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-3)">
+              <div style="flex:1 1 300px;display:grid;gap:2px">
+                <h1 class="text-h3" style="margin:0">Paiement</h1>
+                <span class="tabular text-small text-ink-muted">Réservation RS-2026-084517 · {{ paxLabel }}</span>
+              </div>
+              <x-import component-from-global-scope="SetragUI.Tag" tone="{{ holdTone }}" hint-size="230px,26px">Places tenues encore {{ holdLabel }}</x-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="max-width:1160px;width:100%;margin:0 auto;padding:var(--s-6);display:flex;flex-wrap:wrap;gap:var(--s-6);align-items:start;flex:1">
+
+          <div style="flex:1 1 340px;display:grid;gap:var(--s-4)">
+            <div class="rounded-md border border-line bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-3)">
+              <span class="text-mono-label" style="color:var(--c-ink-muted)">Trajet figé</span>
+              <span class="tabular text-body" style="font-weight:600">{{ origin }} 08:00 → {{ destination }} 19:45</span>
+              <span class="text-small text-ink-muted">TR-201 · Express · ven. 14 août · {{ classeLabel }}</span>
+              <div style="display:grid;gap:var(--s-2);border-top:1px solid var(--c-line);padding-top:var(--s-3)">
+                <sc-for list="{{ ventilation }}" as="line" hint-placeholder-count="4">
+                  <div style="display:flex;justify-content:space-between;gap:var(--s-3)">
+                    <span class="text-small text-ink-muted">{{ line.label }}</span>
+                    <span class="tabular text-small" style="white-space:nowrap;color:var(--c-ink)">{{ line.montant }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ goDetail }}" hint-size="100%,40px">Modifier les voyageurs</x-import>
+            </div>
+
+            <x-import component-from-global-scope="SetragUI.Field" label="Numéro du portefeuille mobile à débiter" hint="Un message de validation sera envoyé à ce numéro." hint-size="100%,86px">
+              <x-import component-from-global-scope="SetragUI.Input" defaultValue="+241 06 12 34 56" hint-size="100%,52px"></x-import>
+            </x-import>
+
+            <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-4)">
+              <x-import component-from-global-scope="SetragUI.Checkbox" label="J'accepte les conditions générales de vente et de transport, version 2026-03" checked="{{ cgv }}" onCheckedChange="{{ setCgv }}" hint-size="100%,44px"></x-import>
+            </div>
+
+            <sc-if value="{{ cgvError }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Vous devez accepter les conditions générales avant de payer." hint-size="100%,60px">La version acceptée est enregistrée avec votre dossier.</x-import>
+            </sc-if>
+
+            <p class="text-caption text-ink-muted" style="margin:0">Aucune donnée de carte n'est conservée par la SETRAG.</p>
+          </div>
+
+          <div style="flex:1 1 340px;display:grid;gap:var(--s-3)">
+            <x-import component-from-global-scope="SetragUI.CheckoutSummary" lines="{{ checkoutLines }}" options="{{ payOptions }}" selectedOption="{{ payMethod }}" onSelectOption="{{ setPayMethod }}" onSubmit="{{ pay }}" footnote="Vos titres de transport sont émis dès le paiement validé et envoyés par SMS. Annulation possible selon les CGV." hint-size="100%,420px"></x-import>
+            <sc-if value="{{ guichetChosen }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="À régler avant le mer. 12 août à 18:00 dans n'importe quelle gare." hint-size="100%,72px">Passé cette échéance, la réservation est annulée et les places remises en vente.</x-import>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= BW-05 · Attente de paiement ================= -->
+    <sc-if value="{{ isAttente }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="BW-05 Attente de paiement" style="flex:1;padding:var(--s-8) var(--s-6);display:grid;justify-items:center;align-content:start;gap:var(--s-5)">
+        <div style="width:100%;max-width:640px;display:grid;gap:var(--s-5)">
+          <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ parcours }}" current="{{ 2 }}" hint-size="100%,60px"></x-import>
+
+          <div class="rounded-lg border border-line bg-surface shadow-md" style="padding:var(--s-6);display:grid;gap:var(--s-4)">
+            <div style="display:flex;align-items:center;gap:var(--s-3)">
+              <span style="width:12px;height:12px;border-radius:999px;background:var(--c-accent);animation:setrag-pulse 1.6s infinite"></span>
+              <h1 class="text-h3" style="margin:0">Validez le paiement sur votre téléphone</h1>
+            </div>
+            <p class="text-body text-ink-muted" style="margin:0;text-wrap:pretty">Un message Airtel Money a été envoyé au +241 06 12 34 56. Saisissez votre code secret pour confirmer {{ totalLabel }}.</p>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-3)">
+              <span class="tabular text-time">{{ payClockLabel }}</span>
+              <span class="text-small text-ink-muted" style="flex:1 1 220px">Ne fermez pas cette page. Le statut se met à jour automatiquement.</span>
+            </div>
+            <div class="rounded-pill bg-surface-sunk" style="height:6px;overflow:hidden">
+              <span style="display:block;height:100%;width:{{ payProgress }};background:var(--c-accent);transition:width 1s linear"></span>
+            </div>
+          </div>
+
+          <div class="rounded-md border border-line bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-3)">
+            <span class="text-mono-label" style="color:var(--c-ink-muted)">Étapes de la transaction</span>
+            <sc-for list="{{ payTimeline }}" as="step" hint-placeholder-count="4">
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-3);border-top:1px solid var(--c-line);padding-top:var(--s-3)">
+                <span class="text-small" style="flex:1 1 220px;color:var(--c-ink)">{{ step.label }}</span>
+                <span class="tabular text-small text-ink-muted">{{ step.heure }}</span>
+                <x-import component-from-global-scope="SetragUI.Tag" tone="{{ step.tone }}" hint-size="80px,26px">{{ step.etat }}</x-import>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ payWaiting }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;gap:var(--s-3)">
+              <x-import component-from-global-scope="SetragUI.InlineMessage" tone="info" title="Vos places restent tenues pendant la validation." hint-size="100%,72px">En cas d'échec, elles sont conservées jusqu'à la fin des 15 minutes initiales. Ne lancez pas un second paiement.</x-import>
+              <div style="display:flex;flex-wrap:wrap;gap:var(--s-3)">
+                <x-import component-from-global-scope="SetragUI.Button" variant="secondary" onClick="{{ resendPush }}" hint-size="180px,48px">Je n'ai rien reçu</x-import>
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" onClick="{{ goPaiement }}" hint-size="240px,48px">Changer de mode de paiement</x-import>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ payConfirmed }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="SetragUI.InlineMessage" tone="success" title="Paiement reçu · {{ totalLabel }}" hint-size="100%,64px">Émission des titres de transport en cours, la page s'ouvre toute seule.</x-import>
+          </sc-if>
+
+          <sc-if value="{{ payRefused }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;gap:var(--s-3)">
+              <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Paiement refusé par Airtel Money — solde insuffisant." hint-size="100%,64px">Aucun montant n'a été débité. Vos places sont encore tenues.</x-import>
+              <div style="display:flex;flex-wrap:wrap;gap:var(--s-3)">
+                <x-import component-from-global-scope="SetragUI.Button" onClick="{{ retryPay }}" hint-size="150px,48px">Réessayer</x-import>
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" onClick="{{ payAtCounter }}" hint-size="180px,48px">Payer au guichet</x-import>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ payTimedOut }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;gap:var(--s-3)">
+              <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Aucune réponse de l'opérateur après 3 minutes." hint-size="100%,64px">Aucun montant n'a été débité. Vous pouvez reprendre le paiement ou vérifier l'état du dossier.</x-import>
+              <div style="display:flex;flex-wrap:wrap;gap:var(--s-3)">
+                <x-import component-from-global-scope="SetragUI.Button" onClick="{{ retryPay }}" hint-size="210px,48px">Reprendre le paiement</x-import>
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" onClick="{{ goReservations }}" hint-size="210px,48px">Voir mes réservations</x-import>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= BW-06 · Confirmation ================= -->
+    <sc-if value="{{ isConfirmation }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="BW-06 Confirmation" style="display:flex;flex-direction:column;flex:1">
+
+        <sc-if value="{{ guichetChosen }}" hint-placeholder-val="{{ false }}">
+          <div style="max-width:760px;width:100%;margin:0 auto;padding:var(--s-8) var(--s-6);display:grid;gap:var(--s-4)">
+            <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ parcours }}" current="{{ 3 }}" hint-size="100%,60px"></x-import>
+            <x-import component-from-global-scope="SetragUI.InlineMessage" tone="warning" title="Réservation enregistrée, non payée." hint-size="100%,64px">Aucun titre de transport n'est encore émis.</x-import>
+            <div class="rounded-lg border border-line bg-surface shadow-md" style="padding:var(--s-6);display:grid;gap:var(--s-3)">
+              <span class="text-mono-label" style="color:var(--c-ink-muted)">Référence de réservation</span>
+              <span class="tabular text-h1">RS-2026-084518</span>
+              <p class="text-body text-ink-muted" style="margin:0;text-wrap:pretty">À régler avant le mercredi 12 août à 18:00 dans n'importe quelle gare SETRAG. Présentez cette référence et une pièce d'identité au guichet.</p>
+              <div style="display:flex;flex-wrap:wrap;gap:var(--s-3)">
+                <x-import component-from-global-scope="SetragUI.Button" size="lg" onClick="{{ smsReference }}" hint-size="280px,56px">Recevoir la référence par SMS</x-import>
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" onClick="{{ goReservations }}" hint-size="180px,48px">Mes réservations</x-import>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ ticketsIssued }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column">
+            <div class="bg-success-soft" style="border-bottom:1px solid var(--c-line)">
+              <div style="max-width:1160px;margin:0 auto;padding:var(--s-8) var(--s-6);display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-5)">
+                <span class="rounded-pill bg-surface shadow-md" style="width:56px;height:56px;display:grid;place-items:center;font-size:26px;color:var(--c-success-ink)">✓</span>
+                <div style="flex:1 1 300px;display:grid;gap:4px">
+                  <h1 class="text-h2" style="margin:0;color:var(--c-success-ink)">Bon voyage, vos billets sont émis.</h1>
+                  <span class="text-body text-success-ink">Envoyés par SMS au +241 06 12 34 56 · réf. <span class="tabular" style="font-weight:600">RS-2026-084517</span></span>
+                </div>
+                <div style="display:grid;gap:2px;text-align:right">
+                  <span class="tabular text-time">08:00 → 19:45</span>
+                  <span class="text-small text-success-ink">TR-201 · Express · ven. 14 août · {{ classeLabel }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="max-width:1160px;width:100%;margin:0 auto;padding:var(--s-6);display:grid;gap:var(--s-5)">
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--s-4)">
+                <sc-for list="{{ tickets }}" as="t" hint-placeholder-count="3">
+                  <x-import component-from-global-scope="SetragUI.Ticket" legLabel="{{ t.legLabel }}" routeLabel="{{ t.routeLabel }}" departureAt="{{ t.departureAt }}" arrivalAt="{{ t.arrivalAt }}" departurePlace="{{ t.departurePlace }}" arrivalPlace="{{ t.arrivalPlace }}" seatLabel="{{ t.seatLabel }}" seatNote="{{ t.seatNote }}" passengerLabel="{{ t.passengerLabel }}" reference="{{ t.reference }}" conditionsNote="{{ t.conditionsNote }}" qrCode="{{ t.qrCode }}" hint-size="100%,300px"></x-import>
+                </sc-for>
+              </div>
+
+              <div style="display:flex;flex-wrap:wrap;gap:var(--s-3)">
+                <x-import component-from-global-scope="SetragUI.Button" size="lg" onClick="{{ downloadPdf }}" hint-size="270px,56px">{{ pdfLabel }}</x-import>
+                <x-import component-from-global-scope="SetragUI.Button" variant="secondary" onClick="{{ smsTickets }}" hint-size="180px,48px">Renvoyer par SMS</x-import>
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" onClick="{{ addToCalendar }}" hint-size="200px,48px">Ajouter au calendrier</x-import>
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" onClick="{{ goSuivi }}" hint-size="180px,48px">Suivre la desserte</x-import>
+              </div>
+
+              <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-5);display:grid;gap:var(--s-2)">
+                <span class="text-mono-label" style="color:var(--c-ink-muted)">À savoir avant le départ</span>
+                <p class="text-small text-ink-muted" style="margin:0;text-wrap:pretty">Présentez-vous en gare 45 minutes avant le départ. Une pièce d'identité peut être demandée. Les codes déjà chargés restent affichables sans réseau. Bagages selon le barème affiché en gare.</p>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ================= BW-07 · Mes réservations ================= -->
+    <sc-if value="{{ isReservations }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="BW-07 Mes réservations" style="display:flex;flex-direction:column;flex:1">
+        <div class="bg-surface" style="border-bottom:1px solid var(--c-line)">
+          <div style="max-width:1160px;margin:0 auto;padding:var(--s-6);display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-3)">
+            <div style="flex:1 1 260px;display:grid;gap:2px">
+              <h1 class="text-h2" style="margin:0">Mes réservations</h1>
+              <span class="text-small text-ink-muted">Serge Ngoma · +241 06 12 34 56</span>
+            </div>
+            <x-import component-from-global-scope="SetragUI.Button" variant="secondary" onClick="{{ goAccueil }}" hint-size="190px,48px">Nouvelle recherche</x-import>
+          </div>
+        </div>
+
+        <div style="max-width:1160px;width:100%;margin:0 auto;padding:var(--s-6);display:flex;flex-wrap:wrap;gap:var(--s-6);align-items:start;flex:1">
+          <div style="flex:3 1 400px;display:grid;gap:var(--s-4)">
+            <x-import component-from-global-scope="SetragUI.Tabs" defaultValue="avenir" hint-size="100%,320px">
+              <x-import component-from-global-scope="SetragUI.TabsList" hint-size="100%,44px">
+                <x-import component-from-global-scope="SetragUI.TabsTrigger" value="avenir" hint-size="120px,40px">À venir (2)</x-import>
+                <x-import component-from-global-scope="SetragUI.TabsTrigger" value="passees" hint-size="120px,40px">Passées (14)</x-import>
+                <x-import component-from-global-scope="SetragUI.TabsTrigger" value="annulees" hint-size="120px,40px">Annulées (1)</x-import>
+              </x-import>
+              <x-import component-from-global-scope="SetragUI.TabsContent" value="avenir" hint-size="100%,240px">
+                <div style="display:grid;gap:var(--s-3);padding-top:var(--s-4)">
+                  <sc-for list="{{ bookings }}" as="b" hint-placeholder-count="2">
+                    <div class="rounded-md border border-line bg-surface" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-4);padding:var(--s-4)">
+                      <div style="flex:2 1 240px;display:grid;gap:2px">
+                        <span class="tabular text-body" style="font-weight:600">{{ b.ref }} · {{ b.date }}</span>
+                        <span class="text-small text-ink-muted">{{ b.trajet }}</span>
+                      </div>
+                      <div style="flex:1 1 160px;display:grid;gap:4px;justify-items:start">
+                        <x-import component-from-global-scope="SetragUI.Tag" tone="{{ b.tone }}" hint-size="100px,26px">{{ b.statut }}</x-import>
+                        <span class="tabular text-small text-ink-muted">{{ b.montant }}</span>
+                      </div>
+                      <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ b.onOpen }}" hint-size="90px,40px">Détail</x-import>
+                    </div>
+                  </sc-for>
+                </div>
+              </x-import>
+              <x-import component-from-global-scope="SetragUI.TabsContent" value="passees" hint-size="100%,180px">
+                <div style="padding-top:var(--s-4)">
+                  <x-import component-from-global-scope="SetragUI.EmptyState" title="14 voyages effectués" description="Vos dossiers passés restent consultables cinq ans, avec leurs titres de transport et leurs justificatifs de paiement." hint-size="100%,160px"></x-import>
+                </div>
+              </x-import>
+              <x-import component-from-global-scope="SetragUI.TabsContent" value="annulees" hint-size="100%,180px">
+                <div style="padding-top:var(--s-4)">
+                  <div class="rounded-md border border-line bg-surface" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-4);padding:var(--s-4)">
+                    <div style="flex:2 1 240px;display:grid;gap:2px">
+                      <span class="tabular text-body" style="font-weight:600">RS-2026-081204 · dim. 12 juil.</span>
+                      <span class="text-small text-ink-muted">Owendo 21:00 → Booué 04:20 · TR-204 · 2 voyageurs</span>
+                    </div>
+                    <div style="flex:1 1 160px;display:grid;gap:4px;justify-items:start">
+                      <x-import component-from-global-scope="SetragUI.Tag" tone="neutral" hint-size="90px,26px">annulée</x-import>
+                      <span class="tabular text-small text-ink-muted">remboursé 27 600 FCFA</span>
+                    </div>
+                  </div>
+                </div>
+              </x-import>
+            </x-import>
+          </div>
+
+          <aside class="rounded-lg border border-line bg-surface shadow-md" style="flex:2 1 340px;padding:var(--s-5);display:grid;gap:var(--s-4)">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-3)">
+              <span class="tabular text-h4" style="flex:1 1 200px">RS-2026-084517</span>
+              <x-import component-from-global-scope="SetragUI.Tag" tone="success" hint-size="80px,26px">payée</x-import>
+            </div>
+            <span class="text-small text-ink-muted">Owendo 08:00 → Franceville 19:45 · TR-201 · ven. 14 août · {{ classeLabel }}</span>
+            <div style="display:grid;gap:var(--s-2)">
+              <div style="display:flex;gap:var(--s-3);border-bottom:1px solid var(--c-line);padding-bottom:var(--s-2)">
+                <span class="text-caption text-ink-muted" style="flex:2">Voyageur</span>
+                <span class="text-caption text-ink-muted" style="flex:1">Billet</span>
+                <span class="text-caption text-ink-muted" style="flex:1">Place</span>
+                <span class="text-caption text-ink-muted" style="flex:1">Statut</span>
+              </div>
+              <sc-for list="{{ tickets }}" as="t" hint-placeholder-count="3">
+                <div style="display:flex;gap:var(--s-3);align-items:center">
+                  <span class="text-small" style="flex:2;color:var(--c-ink)">{{ t.who }}</span>
+                  <span class="tabular text-small" style="flex:1;color:var(--c-ink-muted)">{{ t.id }}</span>
+                  <span class="tabular text-small" style="flex:1;color:var(--c-ink-muted)">{{ t.seatLabel }}</span>
+                  <span class="text-small" style="flex:1;color:var(--c-success-ink)">valide</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:var(--s-2)">
+              <x-import component-from-global-scope="SetragUI.Button" variant="secondary" size="sm" onClick="{{ goConfirmation }}" hint-size="140px,40px">Voir les codes</x-import>
+              <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ downloadPdf }}" hint-size="160px,40px">Télécharger le PDF</x-import>
+              <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ goSuivi }}" hint-size="140px,40px">Suivre le train</x-import>
+              <x-import component-from-global-scope="SetragUI.Button" variant="danger" size="sm" onClick="{{ openCancel }}" hint-size="110px,40px">Annuler</x-import>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= BW-08 · Suivi de desserte ================= -->
+    <sc-if value="{{ isSuivi }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="BW-08 Suivi de desserte" style="display:flex;flex-direction:column;flex:1">
+
+        <section data-theme="dark" style="background:oklch(0.24 0.058 257);color:#fff;padding:var(--s-8) var(--s-6)">
+          <div style="max-width:1160px;margin:0 auto;display:grid;gap:var(--s-4)">
+            <div style="display:flex;flex-wrap:wrap;align-items:end;gap:var(--s-3)">
+              <x-import component-from-global-scope="SetragUI.SearchSlot" label="Numéro de train" hint-size="150px,74px" style="flex:1 1 150px">
+                <x-import component-from-global-scope="SetragUI.Input" defaultValue="TR-201" hint-size="100%,52px"></x-import>
+              </x-import>
+              <x-import component-from-global-scope="SetragUI.SearchSlot" label="Date" hint-size="170px,74px" style="flex:1 1 170px">
+                <x-import component-from-global-scope="SetragUI.Input" defaultValue="ven. 14 août 2026" hint-size="100%,52px"></x-import>
+              </x-import>
+              <x-import component-from-global-scope="SetragUI.Button" variant="secondary" size="lg" hint-size="130px,56px">Chercher</x-import>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-5);padding-top:var(--s-3)">
+              <div style="flex:1 1 280px;display:grid;gap:4px">
+                <span class="text-mono-label" style="color:var(--c-accent-on-ink)">Express · Owendo → Franceville · 648 km</span>
+                <h1 class="text-h1" style="margin:0">TR-201</h1>
+                <span class="text-small" style="color:oklch(0.985 0.004 257 / 0.72)">Croisement prolongé à Ndjolé · dernière mise à jour il y a 2 min</span>
+              </div>
+              <div style="display:grid;gap:6px;justify-items:start">
+                <x-import component-from-global-scope="SetragUI.Tag" tone="warning" hint-size="200px,26px">Votre train a 25 min de retard</x-import>
+                <span class="tabular text-h3" style="color:#fff">Arrivée estimée 20:10</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div style="max-width:1160px;width:100%;margin:0 auto;padding:var(--s-6);display:flex;flex-wrap:wrap;gap:var(--s-6);align-items:start;flex:1">
+
+          <div class="rounded-md border border-line bg-surface" style="flex:2 1 400px;padding:var(--s-5) var(--s-5) var(--s-5) var(--s-4)">
+            <sc-for list="{{ stops }}" as="stop" hint-placeholder-count="7">
+              <div style="display:grid;grid-template-columns:56px 22px 1fr auto;gap:var(--s-3);align-items:start;min-height:56px">
+                <span class="tabular text-small" style="color:var(--c-ink-muted);padding-top:2px">{{ stop.theorique }}</span>
+                <span style="position:relative;height:100%;min-height:52px">
+                  <span style="position:absolute;left:9px;top:0;bottom:0;width:2px;background:{{ stop.barColor }}"></span>
+                  <span style="position:absolute;left:4px;top:4px;width:12px;height:12px;border-radius:999px;border:2px solid {{ stop.dotColor }};background:{{ stop.dotFill }}"></span>
+                </span>
+                <span style="display:grid;gap:1px;padding-bottom:var(--s-3)">
+                  <span class="text-body" style="font-weight:600;color:{{ stop.gareColor }}">{{ stop.gare }}</span>
+                  <span class="text-caption text-ink-muted">{{ stop.etat }}</span>
+                </span>
+                <span class="tabular text-small" style="color:var(--c-ink);padding-top:2px">{{ stop.estime }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <aside style="flex:1 1 300px;display:grid;gap:var(--s-4)">
+            <div class="rounded-md border border-line bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-3)">
+              <span class="text-mono-label" style="color:var(--c-ink-muted)">Rester informé</span>
+              <p class="text-small text-ink-muted" style="margin:0;text-wrap:pretty">Recevez un SMS à chaque évolution de cette desserte : retard, reprise, arrivée.</p>
+              <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ subscribeSms }}" hint-size="100%,56px">M'alerter par SMS</x-import>
+              <x-import component-from-global-scope="SetragUI.Button" variant="ghost" block="{{ true }}" onClick="{{ goDetail }}" hint-size="100%,48px">Réserver sur cette desserte</x-import>
+            </div>
+            <x-import component-from-global-scope="SetragUI.InlineMessage" tone="info" title="Le statut est poussé en temps réel." hint-size="100%,72px">Sur un réseau instable, l'horodatage de la dernière mise à jour permet de juger de la fraîcheur de l'information.</x-import>
+          </aside>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= BW-09 · Compte ================= -->
+    <sc-if value="{{ isCompte }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="BW-09 Compte" style="display:flex;flex-direction:column;flex:1">
+        <div class="bg-surface" style="border-bottom:1px solid var(--c-line)">
+          <div style="max-width:960px;margin:0 auto;padding:var(--s-6);display:flex;align-items:center;gap:var(--s-4)">
+            <x-import component-from-global-scope="SetragUI.Avatar" name="Serge Ngoma" size="lg" hint-size="44px,44px"></x-import>
+            <div style="display:grid;gap:2px">
+              <h1 class="text-h2" style="margin:0">Serge Ngoma</h1>
+              <span class="tabular text-small text-ink-muted">+241 06 12 34 56 · membre depuis juillet 2026</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="max-width:960px;width:100%;margin:0 auto;padding:var(--s-6);flex:1">
+          <x-import component-from-global-scope="SetragUI.Tabs" defaultValue="profil" hint-size="100%,420px">
+            <x-import component-from-global-scope="SetragUI.TabsList" hint-size="100%,44px">
+              <x-import component-from-global-scope="SetragUI.TabsTrigger" value="profil" hint-size="100px,40px">Profil</x-import>
+              <x-import component-from-global-scope="SetragUI.TabsTrigger" value="consentements" hint-size="150px,40px">Consentements</x-import>
+              <x-import component-from-global-scope="SetragUI.TabsTrigger" value="donnees" hint-size="120px,40px">Mes données</x-import>
+            </x-import>
+
+            <x-import component-from-global-scope="SetragUI.TabsContent" value="profil" hint-size="100%,320px">
+              <div class="rounded-md border border-line bg-surface" style="margin-top:var(--s-4);padding:var(--s-5);display:grid;gap:var(--s-4)">
+                <div style="display:flex;flex-wrap:wrap;gap:var(--s-4)">
+                  <x-import component-from-global-scope="SetragUI.Field" label="Nom" hint-size="180px,80px" style="flex:1 1 180px">
+                    <x-import component-from-global-scope="SetragUI.Input" defaultValue="NGOMA" hint-size="100%,52px"></x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Prénom" hint-size="180px,80px" style="flex:1 1 180px">
+                    <x-import component-from-global-scope="SetragUI.Input" defaultValue="Serge" hint-size="100%,52px"></x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Sexe" hint-size="140px,80px" style="flex:1 1 140px">
+                    <x-import component-from-global-scope="SetragUI.SelectNative" defaultValue="M" hint-size="100%,52px">
+                      <option value="F">Féminin</option>
+                      <option value="M">Masculin</option>
+                    </x-import>
+                  </x-import>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:var(--s-4)">
+                  <x-import component-from-global-scope="SetragUI.Field" label="Téléphone principal" hint="Toute modification exige une nouvelle vérification par code." hint-size="200px,86px" style="flex:1 1 200px">
+                    <x-import component-from-global-scope="SetragUI.Input" defaultValue="+241 06 12 34 56" hint-size="100%,52px"></x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="SetragUI.Field" label="Adresse e-mail (facultative)" hint-size="200px,86px" style="flex:1 1 200px">
+                    <x-import component-from-global-scope="SetragUI.Input" placeholder="serge.ngoma@exemple.ga" hint-size="100%,52px"></x-import>
+                  </x-import>
+                </div>
+                <div style="display:flex;justify-content:flex-end">
+                  <x-import component-from-global-scope="SetragUI.Button" onClick="{{ saveProfile }}" hint-size="150px,48px">Enregistrer</x-import>
+                </div>
+              </div>
+            </x-import>
+
+            <x-import component-from-global-scope="SetragUI.TabsContent" value="consentements" hint-size="100%,320px">
+              <div class="rounded-md border border-line bg-surface" style="margin-top:var(--s-4);padding:var(--s-5);display:grid;gap:var(--s-4)">
+                <sc-for list="{{ consents }}" as="c" hint-placeholder-count="3">
+                  <div style="display:grid;gap:4px;border-bottom:1px solid var(--c-line);padding-bottom:var(--s-3)">
+                    <x-import component-from-global-scope="SetragUI.Switch" label="{{ c.objet }}" defaultChecked="{{ c.actif }}" hint-size="100%,44px"></x-import>
+                    <span class="tabular text-caption text-ink-muted" style="padding-left:52px">version {{ c.version }} · {{ c.date }}</span>
+                  </div>
+                </sc-for>
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" hint-size="250px,40px">Historique des versions acceptées</x-import>
+              </div>
+            </x-import>
+
+            <x-import component-from-global-scope="SetragUI.TabsContent" value="donnees" hint-size="100%,300px">
+              <div style="margin-top:var(--s-4);display:grid;gap:var(--s-4)">
+                <div class="rounded-md bg-surface-sunk" style="border:1px dashed var(--c-line-strong);padding:var(--s-5);display:grid;gap:var(--s-3)">
+                  <span class="text-h4">Exporter mes données</span>
+                  <p class="text-small text-ink-muted" style="margin:0;text-wrap:pretty">Réservations, titres de transport et paiements dans un fichier lisible. Vous recevez un SMS dès que l'export est prêt ; le lien reste valable 48 heures.</p>
+                  <x-import component-from-global-scope="SetragUI.Button" variant="secondary" onClick="{{ exportData }}" hint-size="210px,48px">Préparer mon export</x-import>
+                </div>
+                <div class="rounded-md border border-line bg-surface" style="padding:var(--s-5);display:grid;gap:var(--s-3)">
+                  <span class="text-h4">Supprimer mon compte</span>
+                  <p class="text-small text-ink-muted" style="margin:0;text-wrap:pretty">Vos réservations passées sont conservées à des fins comptables et légales, mais ne seront plus rattachées à votre profil. Votre voyage à venir restera valable avec sa référence.</p>
+                  <div style="display:flex;flex-wrap:wrap;gap:var(--s-3)">
+                    <x-import component-from-global-scope="SetragUI.Button" variant="danger" size="sm" hint-size="210px,40px">Supprimer mon compte</x-import>
+                    <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ logout }}" hint-size="160px,40px">Se déconnecter</x-import>
+                  </div>
+                </div>
+              </div>
+            </x-import>
+          </x-import>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= BW-10 · Connexion OTP ================= -->
+    <sc-if value="{{ isConnexion }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="BW-10 Connexion OTP" style="flex:1;display:grid;place-items:start center;padding:var(--s-10) var(--s-6)">
+        <div style="width:100%;max-width:480px;display:grid;gap:var(--s-5)">
+          <x-import component-from-global-scope="SetragUI.Stepper" steps="{{ otpSteps }}" current="{{ otpCurrent }}" hint-size="100%,60px"></x-import>
+
+          <sc-if value="{{ otpAskIdentity }}" hint-placeholder-val="{{ true }}">
+            <div class="rounded-lg border border-line bg-surface shadow-md" style="padding:var(--s-6);display:grid;gap:var(--s-4)">
+              <h1 class="text-h3" style="margin:0">Se connecter</h1>
+              <p class="text-body text-ink-muted" style="margin:0;text-wrap:pretty">Aucun mot de passe : nous vous envoyons un code à six chiffres.</p>
+              <x-import component-from-global-scope="SetragUI.SegmentedControl" label="Identifiant" value="{{ otpChannel }}" onValueChange="{{ setOtpChannel }}" options="{{ otpChannels }}" hint-size="100%,44px"></x-import>
+              <div style="display:flex;gap:var(--s-3);align-items:end">
+                <x-import component-from-global-scope="SetragUI.Field" label="Indicatif" hint-size="90px,80px" style="flex:0 1 90px">
+                  <x-import component-from-global-scope="SetragUI.Input" defaultValue="+241" hint-size="100%,52px"></x-import>
+                </x-import>
+                <x-import component-from-global-scope="SetragUI.Field" label="Numéro de téléphone" hint-size="200px,80px" style="flex:2 1 200px">
+                  <x-import component-from-global-scope="SetragUI.Input" defaultValue="06 12 34 56" hint-size="100%,52px"></x-import>
+                </x-import>
+              </div>
+              <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ sendOtp }}" hint-size="100%,56px">Recevoir mon code</x-import>
+              <p class="text-caption text-ink-muted" style="margin:0">En continuant, vous acceptez les conditions générales, version 2026-03.</p>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ otpAskCode }}" hint-placeholder-val="{{ false }}">
+            <div class="rounded-lg border border-line bg-surface shadow-md" style="padding:var(--s-6);display:grid;gap:var(--s-4)">
+              <h1 class="text-h3" style="margin:0">Votre code</h1>
+              <p class="text-body text-ink-muted" style="margin:0">Code envoyé au +241 06 12 34 56. Il expire dans 4 min 12 s.</p>
+              <div style="display:flex;gap:var(--s-2)">
+                <sc-for list="{{ otpBoxes }}" as="box" hint-placeholder-count="6">
+                  <input type="text" inputMode="numeric" maxLength="1" size="1" aria-label="{{ box.aria }}" value="{{ box.value }}" onChange="{{ box.onInput }}" class="rounded-md border border-line-strong bg-surface tabular" style="flex:1 1 0;width:0;min-width:0;height:60px;text-align:center;font-size:24px;color:var(--c-ink);padding:0" />
+                </sc-for>
+              </div>
+              <sc-if value="{{ otpError }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="SetragUI.InlineMessage" tone="danger" title="Code incorrect. Il vous reste 2 tentatives avant blocage temporaire." hint-size="100%,60px">Vous pouvez aussi vous rendre au guichet avec votre pièce d'identité.</x-import>
+              </sc-if>
+              <x-import component-from-global-scope="SetragUI.Button" size="lg" block="{{ true }}" onClick="{{ validateOtp }}" hint-size="100%,56px">Valider</x-import>
+              <div style="display:flex;flex-wrap:wrap;gap:var(--s-3)">
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" hint-size="210px,40px">{{ resendLabel }}</x-import>
+                <x-import component-from-global-scope="SetragUI.Button" variant="ghost" size="sm" onClick="{{ backToIdentity }}" hint-size="170px,40px">Changer de numéro</x-import>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+  </main>
+
+  <sc-if value="{{ footerVisible }}" hint-placeholder-val="{{ true }}">
+    <footer class="bg-surface" style="border-top:1px solid var(--c-line);margin-top:auto">
+      <div style="max-width:1160px;margin:0 auto;padding:var(--s-8) var(--s-6);display:flex;flex-wrap:wrap;gap:var(--s-8)">
+        <div style="flex:2 1 260px;display:grid;gap:var(--s-3);align-content:start">
+          <img src="uploads/Setrag_logo.png" alt="SETRAG — Société d'Exploitation du Transgabonais" style="height:40px;width:auto;justify-self:start;background:#fff;border-radius:8px;padding:4px 8px">
+          <p class="text-small text-ink-muted" style="margin:0;max-width:40ch;text-wrap:pretty">Société d'Exploitation du Transgabonais. Billetterie officielle de la ligne Owendo – Franceville.</p>
+        </div>
+        <div style="flex:1 1 160px;display:grid;gap:var(--s-2);align-content:start">
+          <span class="text-mono-label" style="color:var(--c-ink-muted)">Voyager</span>
+          <a href="#horaires" class="text-small">Horaires et gares</a>
+          <a href="#tarifs" class="text-small">Tarifs officiels</a>
+          <a href="#bagages" class="text-small">Bagages</a>
+        </div>
+        <div style="flex:1 1 160px;display:grid;gap:var(--s-2);align-content:start">
+          <span class="text-mono-label" style="color:var(--c-ink-muted)">Assistance</span>
+          <a href="#aide" class="text-small">Aide et contact</a>
+          <a href="#remboursements" class="text-small">Remboursements</a>
+          <a href="#cgv" class="text-small">Conditions générales · 2026-03</a>
+        </div>
+        <div style="flex:1 1 160px;display:grid;gap:var(--s-2);align-content:start">
+          <span class="text-mono-label" style="color:var(--c-ink-muted)">Guichets</span>
+          <span class="text-small text-ink-muted">Ouverts tous les jours de 06:00 à 20:00 dans les 22 gares de la ligne.</span>
+        </div>
+      </div>
+    </footer>
+  </sc-if>
+
+  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+    <nav aria-label="Navigation" class="bg-surface" style="display:flex;border-top:1px solid var(--c-line);position:sticky;bottom:0;z-index:30">
+      <sc-for list="{{ mobileNav }}" as="item" hint-placeholder-count="4">
+        <button type="button" onClick="{{ item.onClick }}" class="min-h-target" style="flex:1;background:none;border:none;padding:10px 4px;display:grid;gap:2px;justify-items:center;cursor:pointer;color:{{ item.color }}">
+          <span style="font-size:16px" aria-hidden="true">{{ item.icon }}</span>
+          <span class="text-caption">{{ item.label }}</span>
+        </button>
+      </sc-for>
+    </nav>
+  </sc-if>
+
+  <sc-if value="{{ holdExpired }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:60;background:oklch(0.22 0.025 257 / 0.55);display:grid;place-items:center;padding:var(--s-6)">
+      <div class="rounded-lg bg-surface shadow-lg" style="max-width:440px;padding:var(--s-6);display:grid;gap:var(--s-4)">
+        <h2 class="text-h3" style="margin:0">Le délai de 15 minutes est écoulé</h2>
+        <p class="text-body text-ink-muted" style="margin:0;text-wrap:pretty">Vos places ont été remises en vente et le prix garanti n'est plus valable. Aucun paiement n'a été lancé.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--s-3)">
+          <x-import component-from-global-scope="SetragUI.Button" onClick="{{ restartSearch }}" hint-size="200px,48px">Refaire la recherche</x-import>
+          <x-import component-from-global-scope="SetragUI.Button" variant="ghost" onClick="{{ goAccueil }}" hint-size="140px,48px">Abandonner</x-import>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ cancelOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:60;background:oklch(0.22 0.025 257 / 0.55);display:grid;place-items:center;padding:var(--s-6)">
+      <div class="rounded-lg bg-surface shadow-lg" style="max-width:480px;width:100%;padding:var(--s-6);display:grid;gap:var(--s-4)">
+        <h2 class="text-h4" style="margin:0">Annuler la réservation RS-2026-084517</h2>
+        <x-import component-from-global-scope="SetragUI.Field" label="Motif de l'annulation" hint-size="100%,80px">
+          <x-import component-from-global-scope="SetragUI.SelectNative" value="{{ motif }}" onChange="{{ setMotif }}" hint-size="100%,52px">
+            <option value="convenance">Convenance personnelle · pénalité 25 %</option>
+            <option value="sante">Raison de santé avec justificatif · pénalité 10 %</option>
+            <option value="setrag">Desserte supprimée par la SETRAG · sans pénalité</option>
+          </x-import>
+        </x-import>
+        <div style="display:grid;gap:var(--s-2)">
+          <sc-for list="{{ refund }}" as="line" hint-placeholder-count="3">
+            <div style="display:flex;justify-content:space-between;gap:var(--s-3)">
+              <span class="text-small text-ink-muted">{{ line.label }}</span>
+              <span class="tabular text-small" style="color:var(--c-ink)">{{ line.montant }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <x-import component-from-global-scope="SetragUI.InlineMessage" tone="info" title="Remboursement versé sur le compte Airtel Money ayant servi au paiement." hint-size="100%,64px">Sous 7 jours ouvrés. Une écriture d'annulation est conservée dans votre historique.</x-import>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--s-3);justify-content:flex-end">
+          <x-import component-from-global-scope="SetragUI.Button" variant="ghost" onClick="{{ closeCancel }}" hint-size="120px,48px">Renoncer</x-import>
+          <x-import component-from-global-scope="SetragUI.Button" variant="danger" onClick="{{ confirmCancel }}" hint-size="210px,48px">Confirmer l'annulation</x-import>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;left:var(--s-5);right:var(--s-5);bottom:var(--s-5);z-index:70;display:grid;justify-items:center">
+      <x-import component-from-global-scope="SetragUI.ToastBar" action="{{ toastAction }}" hint-size="auto,52px">{{ toast }}</x-import>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;BW-01 Accueil et recherche&quot;,&quot;BW-02 Résultats de recherche&quot;,&quot;BW-03 Détail et voyageurs&quot;,&quot;BW-04 Paiement&quot;,&quot;BW-05 Attente de paiement&quot;,&quot;BW-06 Confirmation et titres&quot;,&quot;BW-07 Mes réservations&quot;,&quot;BW-08 Suivi de desserte&quot;,&quot;BW-09 Mon compte&quot;,&quot;BW-10 Connexion par code&quot;],&quot;default&quot;:&quot;BW-01 Accueil et recherche&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Écran&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Clair&quot;,&quot;Sombre&quot;],&quot;default&quot;:&quot;Clair&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Écran&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Bureau&quot;,&quot;Tablette&quot;,&quot;Mobile&quot;],&quot;default&quot;:&quot;Bureau&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Écran&quot;},&quot;resultsState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Résultats&quot;,&quot;Chargement&quot;,&quot;Aucune desserte&quot;],&quot;default&quot;:&quot;Résultats&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;États simulés&quot;},&quot;holdState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Tenue en cours&quot;,&quot;Bientôt expirée&quot;,&quot;Expirée&quot;],&quot;default&quot;:&quot;Tenue en cours&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;États simulés&quot;},&quot;paymentOutcome&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Paiement confirmé&quot;,&quot;Paiement refusé&quot;,&quot;Sans réponse de l'opérateur&quot;],&quot;default&quot;:&quot;Paiement confirmé&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;États simulés&quot;},&quot;connected&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;États simulés&quot;}}">
+const CLASSES = [
+  { id: "deuxieme", nom: "2e classe", note: "84 places assises sur votre portion", prix: 28100 },
+  { id: "premiere", nom: "1re classe", note: "31 places · sièges inclinables", prix: 42300 },
+  { id: "vip", nom: "VIP", note: "6 places · voiture dédiée", prix: 68900 },
+  { id: "debout", nom: "Debout", note: "non vendu sur Express", prix: 0, indispo: true }
+];
+
+const STOPS = [
+  ["Owendo", "08:00", "08:00", "Parti à l'heure", "past"],
+  ["Ndjolé", "10:12", "10:37", "Parti · +25 min", "past"],
+  ["Lopé", "12:40", "13:05", "En approche", "now"],
+  ["Booué", "14:05", "14:30", "À venir", "next"],
+  ["Lastoursville", "16:50", "17:15", "À venir", "next"],
+  ["Moanda", "18:30", "18:55", "À venir", "next"],
+  ["Franceville", "19:45", "20:10", "Terminus · à venir", "next"]
+];
+
+const ADULT_POOL = [
+  ["NGOMA", "Serge", "M", "+241 06 12 34 56", "+241 07 88 21 04"],
+  ["NGOMA", "Aline", "F", "+241 07 88 21 04", "+241 06 12 34 56"],
+  ["MBOUMBA", "Clarisse", "F", "+241 06 45 09 12", "+241 06 12 34 56"],
+  ["ONDO", "Patrick", "M", "+241 07 33 18 27", "+241 06 12 34 56"],
+  ["MOUSSAVOU", "Édith", "F", "+241 06 71 55 08", "+241 06 12 34 56"],
+  ["KOUMBA", "Jean", "M", "+241 07 20 41 66", "+241 06 12 34 56"],
+  ["ELLA", "Nadine", "F", "+241 06 09 87 31", "+241 06 12 34 56"],
+  ["BOUKANDOU", "Marc", "M", "+241 07 64 02 19", "+241 06 12 34 56"],
+  ["NZAMBA", "Léa", "F", "+241 06 58 44 90", "+241 06 12 34 56"]
+];
+const KID_POOL = [
+  ["NGOMA", "Ivan", "M"], ["NGOMA", "Awa", "F"], ["NGOMA", "Dina", "F"],
+  ["MBOUMBA", "Noé", "M"], ["ONDO", "Maya", "F"], ["KOUMBA", "Eli", "M"],
+  ["ELLA", "Sara", "F"], ["NZAMBA", "Tom", "M"]
+];
+
+class Component extends DCLogic {
+  state = {
+    screen: null, holdLeft: null, classe: "premiere", sort: "prix",
+    payMethod: "", cgv: false, cgvError: false, payPhase: "attente", payElapsed: 0, payClock: 180,
+    origin: "Owendo", destination: "Franceville", adults: 2, kids: 1,
+    prixMax: 68900, fExpress: true, fOmnibus: true, fCl2: true, fCl1: true, fClVip: true,
+    stopsOpen: false, cancelOpen: false, motif: "convenance", toast: "",
+    otpStep: 1, otpChannel: "tel", otp: ["4", "1", "8", "", "", ""], otpResend: 38, otpError: false,
+    loggedIn: null
+  };
+
+  componentDidMount() {
+    this.timer = setInterval(() => this.tick(), 1000);
+    if (!window.SetragUI) {
+      this.poll = setInterval(() => {
+        if (window.SetragUI) { clearInterval(this.poll); this.forceUpdate(); }
+      }, 120);
+    }
+  }
+
+  componentWillUnmount() { clearInterval(this.timer); clearInterval(this.poll); }
+
+  componentDidUpdate(prev) {
+    if (prev.screen !== this.props.screen) this.setState({ screen: null, cancelOpen: false, toast: "" });
+    if (prev.holdState !== this.props.holdState) this.setState({ holdLeft: null });
+    if (prev.paymentOutcome !== this.props.paymentOutcome) this.setState({ payPhase: "attente", payElapsed: 0, payClock: 180 });
+  }
+
+  cur() { return this.state.screen || String(this.props.screen || "BW-01").slice(0, 5); }
+
+  hold() {
+    if (this.state.holdLeft !== null) return this.state.holdLeft;
+    const h = this.props.holdState || "";
+    if (h.indexOf("Expirée") === 0) return 0;
+    if (h.indexOf("Bientôt") === 0) return 90;
+    return 878;
+  }
+
+  outcome() {
+    const o = this.props.paymentOutcome || "";
+    if (o.indexOf("refusé") > -1) return "refuse";
+    if (o.indexOf("Sans") === 0) return "expire";
+    return "confirme";
+  }
+
+  tick() {
+    const sc = this.cur();
+    const s = this.state;
+    const patch = {};
+    if ((sc === "BW-03" || sc === "BW-04") && this.hold() > 0) patch.holdLeft = this.hold() - 1;
+    if (sc === "BW-05") {
+      const e = s.payElapsed + 1;
+      patch.payElapsed = e;
+      if (s.payClock > 0) patch.payClock = s.payClock - 1;
+      if (s.payPhase === "attente" && e >= 5) patch.payPhase = this.outcome();
+      if (s.payPhase === "confirme" && e >= 9) { patch.screen = "BW-06"; patch.payElapsed = 0; }
+    }
+    if (sc === "BW-10" && s.otpResend > 0) patch.otpResend = s.otpResend - 1;
+    if (Object.keys(patch).length) this.setState(patch);
+  }
+
+  nav(id) {
+    const patch = { screen: id, toast: "", cancelOpen: false };
+    if (id === "BW-03") patch.holdLeft = null;
+    if (id === "BW-05") { patch.payPhase = "attente"; patch.payElapsed = 0; patch.payClock = 180; }
+    if (id === "BW-04") patch.cgvError = false;
+    this.setState(patch);
+    try { (document.scrollingElement || document.documentElement).scrollTop = 0; } catch (err) {}
+  }
+
+  money(n) {
+    return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " FCFA";
+  }
+
+  mmss(total) {
+    const m = Math.max(0, Math.floor(total / 60));
+    const s = Math.max(0, total % 60);
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  at(h, m, day) { return Date.UTC(2026, 7, day || 14, h - 1, m); }
+
+  flash(message) {
+    this.setState({ toast: message });
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.setState({ toast: "" }), 4200);
+  }
+
+  renderVals() {
+    const DS = window.SetragUI;
+    const R = React;
+    const sc = this.cur();
+    const s = this.state;
+    const vpProp = this.props.viewport || "Bureau";
+    const isMobile = vpProp.indexOf("Mobile") === 0;
+    const isTablet = vpProp.indexOf("Tablette") === 0;
+    const loggedIn = s.loggedIn === null ? !!this.props.connected : s.loggedIn;
+
+    const classe = CLASSES.find((c) => c.id === s.classe) || CLASSES[1];
+    const prixUnit = classe.prix || CLASSES[1].prix;
+    const totalTtc = prixUnit * s.adults + prixUnit * 0.5 * s.kids;
+    const ht = Math.round(totalTtc / 1.19);
+    const tva = Math.round(ht * 0.18);
+    const css = Math.round(totalTtc - ht - tva);
+    const pax = s.adults + s.kids;
+    const paxLabel = pax + (pax > 1 ? " voyageurs" : " voyageur");
+
+    const go = (id) => () => this.nav(id);
+    const holdLeft = this.hold();
+    const expired = holdLeft <= 0;
+    const guichet = s.payMethod === "guichet";
+
+    const btn = (label, opts) => (DS ? R.createElement(DS.Button, Object.assign({ variant: "secondary", size: "sm" }, opts), label) : null);
+
+    const qr = R.createElement("span", {
+      "aria-hidden": true,
+      style: { width: "100%", height: "100%", borderRadius: 4, background: "repeating-linear-gradient(90deg, var(--c-canvas) 0 3px, var(--c-ink) 3px 6px)" }
+    });
+
+    // Voyageurs dérivés des steppers adultes / enfants
+    const passengers = [];
+    for (let i = 0; i < s.adults; i++) {
+      const a = ADULT_POOL[i % ADULT_POOL.length];
+      passengers.push({ num: passengers.length + 1, titre: "Voyageur " + (passengers.length + 1) + " · adulte", nom: a[0], prenom: a[1], sexe: a[2], tel: a[3], urgence: a[4], reduction: "aucune", enfant: false });
+    }
+    for (let j = 0; j < s.kids; j++) {
+      const k = KID_POOL[j % KID_POOL.length];
+      passengers.push({ num: passengers.length + 1, titre: "Voyageur " + (passengers.length + 1) + " · enfant 4-11 ans", nom: k[0], prenom: k[1], sexe: k[2], tel: "+241 06 12 34 56", urgence: "+241 07 88 21 04", reduction: "enfant", enfant: true });
+    }
+
+    const tickets = passengers.map((p, i) => ({
+      id: "BT-" + String(i + 1).padStart(3, "0"),
+      who: p.nom + " " + p.prenom + (p.enfant ? " · enfant" : " · adulte"),
+      legLabel: "Aller · vendredi 14 août",
+      routeLabel: s.origin + " → " + s.destination,
+      departureAt: this.at(8, 0),
+      arrivalAt: this.at(19, 45),
+      departurePlace: "Gare d'Owendo · hall 1",
+      arrivalPlace: "Gare de Franceville",
+      seatLabel: "3 · " + (24 + i),
+      seatNote: p.enfant ? "Réduction enfant −50 %" : "Voiture · place",
+      passengerLabel: p.nom + " " + p.prenom + (p.enfant ? " · enfant −50 %" : ""),
+      reference: "RS-2026-084517 · BT-" + String(i + 1).padStart(3, "0"),
+      conditionsNote: "Code Aztec signé — à présenter à l'embarquement",
+      qrCode: qr
+    }));
+
+    const trips = [
+      {
+        departureAt: this.at(8, 0), arrivalAt: this.at(19, 45), durationMinutes: 705,
+        originLabel: s.origin, destinationLabel: s.destination,
+        type: "express", classes: ["cl2", "cl1", "vip"],
+        connectionLabel: "TR-201 · Express · 6 arrêts",
+        priceXaf: 28100, priceNote: "dès, par adulte, 2e classe",
+        tags: [{ label: "À l'heure", tone: "success" }],
+        state: "default", actionLabel: "Choisir",
+        places: "2e classe : 84 places · 1re : 31 · VIP : 6",
+        trackLabel: "Suivre TR-201 en direct"
+      },
+      {
+        departureAt: this.at(17, 30), arrivalAt: this.at(7, 10, 15), durationMinutes: 820,
+        originLabel: s.origin, destinationLabel: s.destination,
+        type: "omnibus", classes: ["cl1", "vip"],
+        connectionLabel: "TR-202 · Omnibus · 18 arrêts",
+        priceXaf: 31500, priceNote: "1re classe, par adulte",
+        tags: [{ label: "2e classe complète", tone: "warning" }],
+        state: "default", actionLabel: "Choisir",
+        places: "2e classe : complet · 1re : 12 · VIP : 4",
+        trackLabel: "Suivre TR-202 en direct"
+      },
+      {
+        departureAt: this.at(21, 0), arrivalAt: this.at(10, 30, 15), durationMinutes: 810,
+        originLabel: s.origin, destinationLabel: s.destination,
+        type: "omnibus", classes: ["cl2", "cl1", "vip"],
+        connectionLabel: "TR-204 · Omnibus",
+        tags: [], state: "cancelled",
+        cancelledNotice: "Circulation supprimée — travaux de voie entre Lopé et Booué. Les détenteurs d'un titre sont remboursés sans pénalité.",
+        actionLabel: "Indisponible",
+        places: "Aucune place vendue sur cette circulation",
+        trackLabel: "Voir les dessertes de report"
+      }
+    ].map((t) => Object.assign(t, {
+      onSelect: t.state === "cancelled" ? undefined : () => this.nav("BW-03"),
+      onTrack: () => this.nav("BW-08")
+    }));
+
+    const classOn = { cl2: s.fCl2, cl1: s.fCl1, vip: s.fClVip };
+    const typeOn = { express: s.fExpress, omnibus: s.fOmnibus };
+    const shown = trips.filter((t) =>
+      typeOn[t.type] &&
+      t.classes.some((c) => classOn[c]) &&
+      (t.priceXaf == null || t.priceXaf <= s.prixMax)
+    );
+    const cheapest = shown.reduce((min, t) => (t.priceXaf != null && (min == null || t.priceXaf < min) ? t.priceXaf : min), null);
+
+    const resultsProp = this.props.resultsState || "Résultats";
+
+    return {
+      theme: (this.props.theme || "").indexOf("Sombre") === 0 ? "dark" : "light",
+      frameMax: isMobile ? "402px" : isTablet ? "860px" : "none",
+      frameShadow: isMobile || isTablet ? "0 0 0 1px var(--c-line-strong)" : "none",
+      isMobile: isMobile,
+      notMobile: !isMobile,
+      heroPad: isMobile ? "var(--s-6) var(--s-5) 116px" : "var(--s-12) var(--s-6) 132px",
+      heroTitleCls: isMobile ? "text-h1" : "text-display",
+      searchPull: isMobile ? "-100px" : "-96px",
+      footerVisible: ["BW-01", "BW-02", "BW-06", "BW-07", "BW-08", "BW-09"].indexOf(sc) > -1,
+
+      headerBrand: R.createElement("img", {
+        src: "uploads/Setrag_logo.png",
+        alt: "SETRAG",
+        style: { height: 36, width: "auto", display: "block", background: "#fff", borderRadius: 8, padding: "3px 7px" }
+      }),
+      navLinks: isMobile ? [] : [
+        { label: "Rechercher", href: "#BW-01", active: sc === "BW-01" || sc === "BW-02" },
+        { label: "Mes réservations", href: "#BW-07", active: sc === "BW-07" },
+        { label: "Suivre un train", href: "#BW-08", active: sc === "BW-08" },
+        { label: "Mon compte", href: "#BW-09", active: sc === "BW-09" }
+      ],
+      headerActions: DS
+        ? R.createElement(R.Fragment, null,
+            isMobile ? null : R.createElement("label", {
+              style: {
+                display: "flex", alignItems: "center", gap: 8, height: 38, minWidth: 232,
+                padding: "0 14px", borderRadius: "var(--r-pill)",
+                background: "var(--c-surface-sunk)", border: "1px solid var(--c-line)"
+              }
+            },
+              R.createElement("svg", { width: 15, height: 15, viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: 1.6, style: { color: "var(--c-ink-faint)", flex: "none" } },
+                R.createElement("circle", { cx: 7, cy: 7, r: 4.5 }),
+                R.createElement("path", { d: "M10.5 10.5 14 14" })),
+              R.createElement("input", {
+                type: "text", placeholder: "Gare, dossier, N° de train",
+                "aria-label": "Rechercher une gare, un dossier ou un train",
+                onKeyDown: (ev) => { if (ev.key === "Enter") this.nav("BW-08"); },
+                style: { border: 0, background: "transparent", outline: "none", font: "var(--t-small)", color: "var(--c-ink)", width: "100%" }
+              })),
+            loggedIn
+              ? R.createElement(R.Fragment, null,
+                  btn("Mon compte", { variant: "ghost", onClick: () => this.nav("BW-09") }),
+                  R.createElement(DS.Avatar, { name: "Serge Ngoma", size: "sm" }))
+              : btn("Se connecter", { variant: "secondary", onClick: () => this.nav("BW-10") }))
+        : null,
+      onNavClick: (e) => {
+        const a = e.target.closest ? e.target.closest("a[href^='#BW-']") : null;
+        if (!a) return;
+        e.preventDefault();
+        this.nav(a.getAttribute("href").slice(1));
+      },
+
+      mobileNav: [
+        { icon: "⌕", label: "Rechercher", target: "BW-01" },
+        { icon: "▤", label: "Réservations", target: "BW-07" },
+        { icon: "◷", label: "Trains", target: "BW-08" },
+        { icon: "◍", label: "Compte", target: "BW-09" }
+      ].map((i) => ({
+        icon: i.icon, label: i.label,
+        color: sc === i.target ? "var(--c-accent-ink)" : "var(--c-ink-muted)",
+        onClick: () => this.nav(i.target)
+      })),
+
+      isAccueil: sc === "BW-01",
+      isResultats: sc === "BW-02",
+      isDetail: sc === "BW-03",
+      isPaiement: sc === "BW-04",
+      isAttente: sc === "BW-05",
+      isConfirmation: sc === "BW-06",
+      isReservations: sc === "BW-07",
+      isSuivi: sc === "BW-08",
+      isCompte: sc === "BW-09",
+      isConnexion: sc === "BW-10",
+
+      origin: s.origin,
+      destination: s.destination,
+      adults: s.adults,
+      kids: s.kids,
+      paxLabel: paxLabel,
+      groupLabel: s.adults + (s.adults > 1 ? " adultes" : " adulte") + (s.kids ? " · " + s.kids + (s.kids > 1 ? " enfants" : " enfant") : ""),
+      sameStations: s.origin === s.destination,
+      setOrigin: (e) => this.setState({ origin: e.target.value }),
+      setDestination: (e) => this.setState({ destination: e.target.value }),
+      swap: () => this.setState({ origin: s.destination, destination: s.origin }),
+      moreAdults: () => this.setState({ adults: Math.min(9 - s.kids, s.adults + 1) }),
+      lessAdults: () => this.setState({ adults: Math.max(1, s.adults - 1) }),
+      moreKids: () => this.setState({ kids: Math.min(9 - s.adults, s.kids + 1) }),
+      lessKids: () => this.setState({ kids: Math.max(0, s.kids - 1) }),
+      search: () => { if (s.origin !== s.destination) this.nav("BW-02"); },
+      trafficAction: DS ? btn("Suivre TR-201", { variant: "ghost", onClick: () => this.nav("BW-08") }) : null,
+      nextDepartures: [
+        { heures: "18:00 → 07:10", detail: "Aujourd'hui · TR-202 · Omnibus · Franceville", statut: "à l'heure", tone: "success", onTrack: () => this.nav("BW-08") },
+        { heures: "08:00 → 19:45", detail: "Demain · TR-201 · Express · Franceville", statut: "retard 25 min", tone: "warning", onTrack: () => this.nav("BW-08") },
+        { heures: "17:30 → 07:10", detail: "Demain · TR-202 · Omnibus · Franceville", statut: "à l'heure", tone: "success", onTrack: () => this.nav("BW-08") }
+      ],
+
+      goAccueil: go("BW-01"),
+      goResultats: go("BW-02"),
+      goDetail: go("BW-03"),
+      goPaiement: go("BW-04"),
+      goConfirmation: go("BW-06"),
+      goReservations: go("BW-07"),
+      goSuivi: go("BW-08"),
+
+      sort: s.sort,
+      setSort: (v) => this.setState({ sort: v }),
+      sortOptions: [
+        { value: "prix", label: "Prix" },
+        { value: "duree", label: "Durée" },
+        { value: "horaire", label: "Horaire" }
+      ],
+      prixMaxValue: [s.prixMax == null ? 68900 : s.prixMax],
+      prixMaxLabel: "jusqu'à " + this.money(s.prixMax == null ? 68900 : s.prixMax),
+      setPrixMax: (v) => this.setState({ prixMax: Array.isArray(v) ? v[0] : v }),
+      clearFilters: () => {
+        this.setState({ prixMax: 68900, sort: "prix", fExpress: true, fOmnibus: true, fCl2: true, fCl1: true, fClVip: true });
+        this.flash("Filtres effacés.");
+      },
+      dayAfter: () => this.flash("Samedi 15 août · 3 dessertes disponibles."),
+      sortLabel: s.sort === "prix" ? "Trié par prix croissant" : s.sort === "duree" ? "Trié par durée" : "Trié par heure de départ",
+      dayChips: [
+        { label: "mer. 12", prix: "sans train", off: true },
+        { label: "jeu. 13", prix: "28 100 F" },
+        { label: "ven. 14", prix: "28 100 F", on: true },
+        { label: "sam. 15", prix: "31 500 F" },
+        { label: "dim. 16", prix: "28 100 F" }
+      ].map((d) => ({
+        label: d.label, prix: d.prix, off: !!d.off,
+        cls: d.off ? "border border-line bg-surface-sunk text-ink-faint"
+          : d.on ? "border-[1.5px] border-accent-base bg-accent-soft text-accent-ink"
+          : "border border-line bg-surface text-ink",
+        onPick: d.off ? undefined : () => this.flash(d.label.charAt(0).toUpperCase() + d.label.slice(1) + " août · dessertes mises à jour.")
+      })),
+      resultsLoading: resultsProp.indexOf("Chargement") === 0,
+      resultsEmpty: resultsProp.indexOf("Aucune") === 0,
+      resultsReady: resultsProp.indexOf("Résultats") === 0,
+      trips: shown,
+      noMatch: shown.length === 0,
+      toolbarSummary: shown.length === 0
+        ? "Aucune desserte ne passe vos filtres"
+        : shown.length + (shown.length > 1 ? " dessertes" : " desserte") + (cheapest != null ? " · la moins chère à " + this.money(cheapest) : ""),
+      footerCount: shown.length + " sur " + trips.length + (trips.length > 1 ? " dessertes" : " desserte"),
+      fExpress: s.fExpress,
+      fOmnibus: s.fOmnibus,
+      fCl2: s.fCl2,
+      fCl1: s.fCl1,
+      fClVip: s.fClVip,
+      setExpress: (v) => this.setState({ fExpress: !!v }),
+      setOmnibus: (v) => this.setState({ fOmnibus: !!v }),
+      setCl2: (v) => this.setState({ fCl2: !!v }),
+      setCl1: (v) => this.setState({ fCl1: !!v }),
+      setClVip: (v) => this.setState({ fClVip: !!v }),
+      clearAction: DS ? btn("Effacer les filtres", { onClick: () => this.setState({ prixMax: 68900, fExpress: true, fOmnibus: true, fCl2: true, fCl1: true, fClVip: true }) }) : null,
+      emptyAction: DS ? btn("Voir le samedi 15 août · 3 trains", { onClick: () => this.flash("Samedi 15 août · 3 dessertes disponibles.") }) : null,
+
+      parcours: [{ label: "Recherche" }, { label: "Voyageurs" }, { label: "Paiement" }, { label: "Billets" }],
+      holdLabel: this.mmss(holdLeft),
+      holdTone: holdLeft < 180 ? "danger" : "warning",
+      holdExpired: expired && (sc === "BW-03" || sc === "BW-04"),
+      restartSearch: () => this.setState({ screen: "BW-02", holdLeft: 878 }),
+      stopsOpen: s.stopsOpen,
+      stopsToggleLabel: s.stopsOpen ? "Replier les arrêts" : "Voir les 7 arrêts desservis",
+      toggleStops: () => this.setState({ stopsOpen: !s.stopsOpen }),
+      stops: STOPS.map((r) => ({
+        gare: r[0], theorique: r[1], estime: r[2], etat: r[3],
+        gareColor: r[4] === "next" ? "var(--c-ink-muted)" : "var(--c-ink)",
+        dotColor: r[4] === "now" ? "var(--c-accent)" : r[4] === "past" ? "var(--c-accent)" : "var(--c-line-strong)",
+        dotFill: r[4] === "past" ? "var(--c-accent)" : "var(--c-surface)",
+        barColor: r[4] === "past" ? "var(--c-accent)" : "var(--c-line)"
+      })),
+
+      classes: CLASSES.map((c) => ({
+        nom: c.nom,
+        note: c.note,
+        prixLabel: c.indispo ? "—" : this.money(c.prix),
+        disabled: !!c.indispo,
+        cls: c.indispo
+          ? "border border-line bg-surface-sunk"
+          : c.id === s.classe ? "border-[1.5px] border-accent-base bg-accent-soft" : "border border-line bg-surface",
+        dotCls: c.id === s.classe ? "border-[1.5px] border-accent-base" : "border border-line-strong",
+        dotFill: c.id === s.classe ? "var(--c-accent)" : "transparent",
+        onSelect: c.indispo ? undefined : () => this.setState({ classe: c.id })
+      })),
+      classeLabel: classe.nom,
+      passengers: passengers,
+      recap: [
+        { label: s.adults + " × adulte · " + classe.nom, montant: this.money(prixUnit * s.adults) },
+        s.kids ? { label: s.kids + " × enfant · −50 %", montant: this.money(prixUnit * 0.5 * s.kids) } : null,
+        { label: "Total hors taxes", montant: this.money(ht) },
+        { label: "TVA 18 %", montant: this.money(tva) },
+        { label: "Contribution spéciale 1 %", montant: this.money(css) }
+      ].filter(Boolean),
+      ventilation: [
+        { label: "Total hors taxes", montant: this.money(ht) },
+        { label: "TVA 18 %", montant: this.money(tva) },
+        { label: "Contribution spéciale 1 %", montant: this.money(css) },
+        { label: "Total TTC", montant: this.money(totalTtc) }
+      ],
+      totalLabel: this.money(totalTtc),
+
+      cgv: s.cgv,
+      setCgv: (v) => this.setState({ cgv: !!v, cgvError: false }),
+      cgvError: s.cgvError,
+      payMethod: s.payMethod,
+      guichetChosen: guichet,
+      setPayMethod: (id) => this.setState({ payMethod: id }),
+      checkoutLines: [
+        { label: s.adults + (s.adults > 1 ? " adultes · " : " adulte · ") + classe.nom, amountXaf: prixUnit * s.adults },
+        s.kids ? { label: s.kids + (s.kids > 1 ? " enfants" : " enfant") + " · réduction 50 %", amountXaf: prixUnit * 0.5 * s.kids } : null
+      ].filter(Boolean),
+      payOptions: [
+        { id: "airtel", label: "Airtel Money", note: "validation sur le téléphone" },
+        { id: "moov", label: "Moov Money", note: "validation sur le téléphone" },
+        { id: "carte", label: "Carte bancaire", note: "Visa · Mastercard" },
+        { id: "guichet", label: "Réserver et payer au guichet", note: "avant le 12 août 18:00" }
+      ],
+      pay: () => {
+        if (!s.cgv) { this.setState({ cgvError: true }); return; }
+        if (!s.payMethod) { this.flash("Choisissez d'abord un moyen de paiement."); return; }
+        this.nav(s.payMethod === "guichet" ? "BW-06" : "BW-05");
+      },
+
+      payClockLabel: this.mmss(s.payClock),
+      payProgress: Math.min(100, Math.round((s.payElapsed / 9) * 100)) + "%",
+      payWaiting: s.payPhase === "attente",
+      payConfirmed: s.payPhase === "confirme",
+      payRefused: s.payPhase === "refuse",
+      payTimedOut: s.payPhase === "expire",
+      payTimeline: [
+        { label: "Demande envoyée à l'opérateur", heure: "14:51:02", etat: "fait", tone: "success" },
+        { label: "Message reçu sur votre téléphone", heure: "14:51:06", etat: "fait", tone: "success" },
+        { label: "Validation par le payeur", heure: s.payPhase === "attente" ? "—" : "14:51:11", etat: s.payPhase === "attente" ? "en cours" : s.payPhase === "confirme" ? "fait" : "échec", tone: s.payPhase === "attente" ? "info" : s.payPhase === "confirme" ? "success" : "danger" },
+        { label: "Émission des titres de transport", heure: s.payPhase === "confirme" ? "14:51:14" : "—", etat: s.payPhase === "confirme" ? "en cours" : "à venir", tone: "neutral" }
+      ],
+      resendPush: () => this.flash("Nouvelle demande envoyée au +241 06 12 34 56."),
+      retryPay: () => this.nav("BW-04"),
+      payAtCounter: () => this.setState({ screen: "BW-06", payMethod: "guichet" }),
+
+      ticketsIssued: !guichet,
+      tickets: tickets,
+      pdfLabel: "Télécharger " + (pax > 1 ? "les " + pax + " billets (PDF)" : "le billet (PDF)"),
+      downloadPdf: () => this.flash(pax + (pax > 1 ? " titres de transport téléchargés en PDF." : " titre de transport téléchargé en PDF.")),
+      smsTickets: () => this.flash("Titres renvoyés par SMS au +241 06 12 34 56."),
+      addToCalendar: () => this.flash("Trajet ajouté au calendrier, rappel la veille à 18:00."),
+      smsReference: () => this.flash("Référence RS-2026-084518 envoyée par SMS."),
+
+      bookings: [
+        { ref: "RS-2026-084517", date: "ven. 14 août", trajet: "Owendo 08:00 → Franceville 19:45 · TR-201 · " + paxLabel + " · " + classe.nom, statut: "payée", tone: "success", montant: this.money(totalTtc), onOpen: () => this.nav("BW-06") },
+        { ref: "RS-2026-084518", date: "dim. 23 août", trajet: "Booué 09:30 → Owendo 15:10 · TR-203 · 1 voyageur · 2e classe", statut: "à payer avant le 21/08", tone: "warning", montant: this.money(18400), onOpen: () => this.flash("Dossier à régler au guichet avant le 21 août 18:00.") }
+      ],
+      cancelOpen: s.cancelOpen,
+      openCancel: () => this.setState({ cancelOpen: true }),
+      closeCancel: () => this.setState({ cancelOpen: false }),
+      motif: s.motif,
+      setMotif: (e) => this.setState({ motif: e.target.value }),
+      refund: (() => {
+        const taux = s.motif === "convenance" ? 0.25 : s.motif === "sante" ? 0.1 : 0;
+        const pen = Math.round(totalTtc * taux);
+        return [
+          { label: "Montant payé", montant: this.money(totalTtc) },
+          { label: "Pénalité " + Math.round(taux * 100) + " %", montant: "− " + this.money(pen) },
+          { label: "Remboursement", montant: this.money(totalTtc - pen) }
+        ];
+      })(),
+      confirmCancel: () => {
+        this.setState({ cancelOpen: false });
+        this.flash("Réservation annulée. Remboursement en cours sur votre compte Airtel Money.");
+      },
+
+      subscribeSms: () => this.flash("Alerte SMS activée sur TR-201 du 14 août."),
+
+      consents: [
+        { objet: "Conditions générales de vente", version: "2026-03", date: "accepté le 14/07/26", actif: true, switchLabel: "Conditions générales de vente" },
+        { objet: "Alertes SMS sur mes trajets", version: "2026-01", date: "activé le 14/07/26", actif: true, switchLabel: "Alertes SMS sur mes trajets" },
+        { objet: "Informations commerciales", version: "2026-01", date: "jamais accepté", actif: false, switchLabel: "Informations commerciales" }
+      ],
+      saveProfile: () => this.flash("Profil enregistré. Un code de vérification a été envoyé au nouveau numéro."),
+      exportData: () => this.flash("Export en préparation. Vous recevrez un SMS dès qu'il est prêt."),
+      logout: () => { this.setState({ loggedIn: false }); this.nav("BW-01"); },
+
+      otpSteps: [{ label: "Identifiant" }, { label: "Vérification" }],
+      otpCurrent: s.otpStep - 1,
+      otpAskIdentity: s.otpStep === 1,
+      otpAskCode: s.otpStep === 2,
+      otpChannel: s.otpChannel,
+      otpChannels: [{ value: "tel", label: "Téléphone" }, { value: "mail", label: "Adresse e-mail" }],
+      setOtpChannel: (v) => this.setState({ otpChannel: v }),
+      sendOtp: () => this.setState({ otpStep: 2, otpResend: 38 }),
+      backToIdentity: () => this.setState({ otpStep: 1, otpError: false }),
+      otpBoxes: s.otp.map((v, i) => ({
+        value: v,
+        aria: "Chiffre " + (i + 1) + " sur 6",
+        onInput: (e) => {
+          const next = s.otp.slice();
+          next[i] = (e.target.value || "").replace(/\D/g, "").slice(-1);
+          this.setState({ otp: next, otpError: false });
+        }
+      })),
+      otpError: s.otpError,
+      resendLabel: s.otpResend > 0 ? "Renvoyer le code dans " + this.mmss(s.otpResend) : "Renvoyer le code",
+      validateOtp: () => {
+        if (s.otp.some((d) => !d)) { this.setState({ otpError: true }); return; }
+        this.setState({ loggedIn: true, otpStep: 1 });
+        this.nav("BW-07");
+      },
+
+      toast: s.toast,
+      toastAction: DS ? R.createElement(DS.Button, { variant: "ghost", size: "sm", onClick: () => this.setState({ toast: "" }) }, "Fermer") : null
+    };
+  }
+}
+
+</script>
+</body>
+</html>

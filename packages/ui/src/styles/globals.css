@@ -274,6 +274,34 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
+
+  /* — Mobile —
+     Encoches et barre d'accueil. `env()` ne renvoie une valeur non nulle que
+     si le document déclare `viewport-fit=cover` ; ailleurs le repli à 0px
+     s'applique et les utilitaires restent sans effet. */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .inset-x-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Bandeaux de pastilles défilables : la barre de défilement mangerait la
+     hauteur de la ligne et trahirait la nature tactile du geste. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes setrag-slide {

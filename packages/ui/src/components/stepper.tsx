@@ -18,9 +18,13 @@ export interface StepperProps extends React.ComponentProps<"div"> {
  */
 function Stepper({ steps, current, className, ...props }: StepperProps) {
   return (
-    <div data-slot="stepper" className={cn("grid gap-3", className)} {...props}>
+    <div
+      data-slot="stepper"
+      className={cn("grid min-w-0 gap-3", className)}
+      {...props}
+    >
       <ol
-        className="flex items-center gap-2.5"
+        className="flex w-full min-w-0 items-center gap-2 sm:gap-2.5"
         aria-label={`Étape ${current + 1} sur ${steps.length}`}
       >
         {steps.map((step, index) => {
@@ -33,7 +37,7 @@ function Stepper({ steps, current, className, ...props }: StepperProps) {
                 <li
                   aria-hidden
                   className={cn(
-                    "h-0.5 flex-1",
+                    "h-0.5 min-w-0 flex-1",
                     index <= current ? "bg-accent-base" : "bg-line"
                   )}
                 />
@@ -44,7 +48,9 @@ function Stepper({ steps, current, className, ...props }: StepperProps) {
                   "grid size-[26px] shrink-0 place-items-center rounded-pill border-2 text-[13px] leading-none font-semibold",
                   done && "border-accent-base bg-accent-base text-ink-inverse",
                   active && "border-accent-base bg-transparent text-accent-ink",
-                  !done && !active && "border-line bg-transparent text-ink-muted"
+                  !done &&
+                    !active &&
+                    "border-line bg-transparent text-ink-muted"
                 )}
               >
                 {done ? "✓" : index + 1}
@@ -55,9 +61,11 @@ function Stepper({ steps, current, className, ...props }: StepperProps) {
         })}
       </ol>
 
-      <div className="flex justify-between text-[12px] leading-none font-medium text-ink-muted">
+      <div className="flex min-w-0 justify-between gap-1 text-[11px] leading-tight font-medium text-ink-muted sm:text-[12px] sm:leading-none">
         {steps.map((step) => (
-          <span key={step.label}>{step.label}</span>
+          <span key={step.label} className="min-w-0">
+            {step.label}
+          </span>
         ))}
       </div>
     </div>

@@ -18,6 +18,7 @@
     "./lib/*": "./src/lib/*.ts",
     "./components/*": "./src/components/*.tsx",
     "./voyage/*": "./src/components/voyage/*.tsx",
+    "./mobile/*": "./src/components/mobile/*.tsx",
     "./hooks/*": "./src/hooks/*.ts"
   },
   "dependencies": {

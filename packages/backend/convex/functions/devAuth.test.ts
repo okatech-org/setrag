@@ -23,7 +23,7 @@ describe("interrupteur fermé — comportement par défaut", () => {
   it("refuse de rendre un code", async () => {
     const t = convexTest(schema, modules)
     await expect(
-      t.mutation(api.functions.devAuth.consumeCode, { identifier: "a@b.ga" }),
+      t.mutation(api.functions.devAuth.consumeCode, { identifier: "a@b.ga" })
     ).rejects.toThrow(/DEV_SIGNIN_ENABLED/)
   })
 
@@ -35,7 +35,9 @@ describe("interrupteur fermé — comportement par défaut", () => {
       channel: "email",
     })
     expect(r.stored).toBe(false)
-    const stockés = await t.run(async (c) => c.db.query("devOtpCodes").collect())
+    const stockés = await t.run(async (c) =>
+      c.db.query("devOtpCodes").collect()
+    )
     expect(stockés).toHaveLength(0)
   })
 
@@ -43,6 +45,9 @@ describe("interrupteur fermé — comportement par défaut", () => {
     const t = convexTest(schema, modules)
     expect(await t.query(api.functions.devAuth.status, {})).toEqual({
       enabled: false,
+      developmentEnabled: false,
+      emailDeliveryEnabled: false,
+      smsDeliveryEnabled: false,
     })
   })
 
@@ -53,6 +58,9 @@ describe("interrupteur fermé — comportement par défaut", () => {
       const t = convexTest(schema, modules)
       expect(await t.query(api.functions.devAuth.status, {})).toEqual({
         enabled: false,
+        developmentEnabled: false,
+        emailDeliveryEnabled: false,
+        smsDeliveryEnabled: false,
       })
     }
   })
@@ -103,7 +111,9 @@ describe("interrupteur armé", () => {
         channel: "email",
       })
     }
-    const stockés = await t.run(async (c) => c.db.query("devOtpCodes").collect())
+    const stockés = await t.run(async (c) =>
+      c.db.query("devOtpCodes").collect()
+    )
     expect(stockés).toHaveLength(1)
 
     const r = await t.mutation(api.functions.devAuth.consumeCode, {
@@ -123,7 +133,7 @@ describe("interrupteur armé", () => {
     expect(
       await t.mutation(api.functions.devAuth.consumeCode, {
         identifier: "marie@example.ga",
-      }),
+      })
     ).toBeNull()
   })
 
@@ -137,17 +147,17 @@ describe("interrupteur armé", () => {
         channel: "email",
         createdAt: Date.now() - 3_600_000,
         expiresAt: Date.now() - 1_000,
-      }),
+      })
     )
 
     expect(
       await t.mutation(api.functions.devAuth.consumeCode, {
         identifier: "paul@example.ga",
-      }),
+      })
     ).toBeNull()
     // Sans purge, les codes morts s'accumuleraient sans que rien ne les ramasse.
     const restants = await t.run(async (c) =>
-      c.db.query("devOtpCodes").collect(),
+      c.db.query("devOtpCodes").collect()
     )
     expect(restants).toHaveLength(0)
   })
@@ -163,7 +173,7 @@ describe("visibilité en supervision", () => {
         role: "responsable_kpi",
         identitySource: "annuaire",
         isActive: true,
-      }),
+      })
     )
     const ctx = t.withIdentity({ subject: "kpi-dev" })
 
@@ -181,13 +191,13 @@ describe("visibilité en supervision", () => {
         role: "responsable_kpi",
         identitySource: "annuaire",
         isActive: true,
-      }),
+      })
     )
     const ctx = t.withIdentity({ subject: "kpi-prod" })
 
     const bilan = await ctx.query(api.functions.monitoring.health, {})
     expect(bilan.findings.map((f) => f.code)).not.toContain(
-      "connexion_developpement_ouverte",
+      "connexion_developpement_ouverte"
     )
   })
 })

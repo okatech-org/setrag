@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETRAG — Plan agent-web</title>
+<link rel="stylesheet" href="plan.css">
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <div class="brand">SETRAG · Billettique</div>
+  <div class="sub"><a href="index.html" style="color:var(--accent)">← Vue d'ensemble</a><br>Plan application — agent-web<br>25 juillet 2026</div>
+  <a href="#mission">1 · Mission &amp; utilisateurs</a>
+  <a href="#auth">2 · Authentification</a>
+  <a href="#vente">3 · Portail de vente</a>
+  <a href="#gestion">4 · Portail de gestion</a>
+  <a href="#nonfonctionnel">5 · Exigences non fonctionnelles</a>
+  <a href="#phases">6 · Rattachement aux phases</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <h1>agent-web — portail de vente &amp; portail de gestion</h1>
+  <p>L'application interne du système billettique : le remplaçant de MOBIPASS. Une seule
+  application Next.js, deux espaces conformes au CDC billettique — le <b>portail de vente</b>
+  (guichets des 22 gares et agences accréditées) et le <b>portail de gestion</b> (administration
+  fonctionnelle, comptabilité, pilotage). Next.js 16, design Cadence, port 3001.</p>
+  <div class="hero-meta">
+    <span class="chip">Next.js 16</span>
+    <span class="chip">SSO Active Directory</span>
+    <span class="chip">Rôles internes uniquement</span>
+    <a class="chip" href="backend.html">→ plan backend</a>
+  </div>
+</header>
+
+<section id="mission">
+  <h2><span class="num">1</span>Mission &amp; utilisateurs</h2>
+  <p class="lede">Tout le personnel passe par cette application ; ce que chacun voit dépend de sa
+  matrice de droits (consultation / modification / suppression / validation).</p>
+  <div class="table-scroll"><table>
+    <tr><th style="width:220px">Profil</th><th>Espaces accessibles</th></tr>
+    <tr><td>Gestionnaire clientèle / vendeur guichet</td><td>Portail de vente : billets, bagages, colis, TAA, funéraire ; sa caisse ; ses annulations (selon droits)</td></tr>
+    <tr><td>Vendeur d'agence accréditée</td><td>Portail de vente restreint au quota de son agence</td></tr>
+    <tr><td>Agent taxateur</td><td>Ressaisie des ventes manuelles, taxation des opérations</td></tr>
+    <tr><td>Contrôleur de recettes / comptable</td><td>États de contrôle, clôtures, journal comptable, export SAGE</td></tr>
+    <tr><td>Chef de gare / superviseur</td><td>Dessertes, blocage de places, incidents, PV, supervision des caisses</td></tr>
+    <tr><td>Responsable KPI</td><td>Rapports, statistiques, extractions</td></tr>
+    <tr><td>Administrateur fonctionnel</td><td>Livrets horaires, tarifs, yield, points de vente, agences, paramétrage</td></tr>
+    <tr><td>Administrateur IT</td><td>Utilisateurs, rôles, intégrations, monitoring</td></tr>
+  </table></div>
+</section>
+
+<section id="auth">
+  <h2><span class="num">2</span>Authentification</h2>
+  <ul>
+    <li><b>SSO OIDC sur l'annuaire ERAMET</b> (Entra ID / AD) — connexion &lt; 2 s exigée par le
+    CDC ; rôles dérivés des groupes AD ; déprovisionnement automatique (compte AD désactivé =
+    accès coupé à la prochaine validation de session, sessions courtes de 8-12 h).</li>
+    <li><b>Repli provisionné</b> en phases 0-1, avant l'app registration ERAMET : comptes internes
+    créés par l'admin, MFA TOTP — bascule SSO sans toucher au modèle de rôles.</li>
+    <li>Chaque session est rattachée à un <b>point de vente</b> et à un <b>appareil émetteur</b> —
+    champs obligatoires de chaque vente.</li>
+  </ul>
+</section>
+
+<section id="vente">
+  <h2><span class="num">3</span>Portail de vente</h2>
+  <p class="lede">Objectif chiffré : émettre un billet en moins de 4 secondes. L'écran de vente est
+  conçu clavier d'abord, champs minimaux, impression immédiate.</p>
+
+  <pre class="mermaid">
+flowchart LR
+  O["Ouverture de caisse<br/>(fond de caisse)"] --> V["Vente au comptoir"]
+  V --> B["Billet(s)"] & G["Bagages"] & C["Colis express"] & T["TAA / Funéraire"]
+  B & G & C & T --> P["Encaissement<br/>espèces · mobile money · en compte"]
+  P --> I["Impression<br/>billet + étiquettes (code-barres signé)"]
+  I --> V
+  V -.-> A["Annulation / Remboursement<br/>(motif + pénalité, selon droits)"]
+  O --> F["Clôture de caisse<br/>comptage par mode · écart"]
+  </pre>
+
+  <div class="card">
+    <div class="screen"><span class="sname">Vente billet</span> — desserte, gares départ/arrivée (distance et prix calculés), classe, voyageurs (nom, prénom, sexe, téléphone, contact d'urgence), réductions applicables, place attribuée automatiquement ou choisie sur plan de voiture
+      <span class="sfn">inventory.availability · fares.quote · sales.createTicketSale</span></div>
+    <div class="screen"><span class="sname">Vente bagage</span> — rattachement au billet, poids, frais d'enregistrement + excédents, étiquette imprimée
+      <span class="sfn">baggages.create</span></div>
+    <div class="screen"><span class="sname">Vente colis express</span> — expéditeur/destinataire + téléphones, articles avec vignettes, grille zones × poids
+      <span class="sfn">parcels.create</span></div>
+    <div class="screen"><span class="sname">Vente TAA / transport funéraire</span> — formulaires dédiés, codes tarifaires propres
+      <span class="sfn">vehicles.create · funeral.create</span></div>
+    <div class="screen"><span class="sname">Encaissement</span> — espèces (rendu monnaie), mobile money (push USSD), client en compte ; proforma imprimable avant encaissement
+      <span class="sfn">payments.initiate · sales.issueProforma</span></div>
+    <div class="screen"><span class="sname">Annulation / remboursement</span> — recherche du titre, motif paramétré, pénalité calculée, écriture liée jamais destructive
+      <span class="sfn">sales.cancel · sales.refund</span></div>
+    <div class="screen"><span class="sname">Duplicata</span> — réimpression tracée, mention DUPLICATA portée sur le titre
+      <span class="sfn">tickets.reprint</span></div>
+    <div class="screen"><span class="sname">Ma caisse</span> — ouverture (fond de caisse), état en cours par mode de paiement, clôture avec comptage et écart
+      <span class="sfn">cash.openSession · cash.closeSession</span></div>
+    <div class="screen"><span class="sname">Ressaisie des ventes manuelles</span> — saisie des billets pré-imprimés du mode dégradé, numéro pré-imprimé + numéro système, continuité de séquence
+      <span class="sfn">sales.recordManualSale</span></div>
+  </div>
+
+  <div class="callout warn">
+    <b>Résilience aux coupures (électricité, réseau)</b>
+    L'état de la vente en cours vit en local (brouillon persistant) : une coupure ne perd jamais
+    une saisie. Si le backend est injoignable, l'écran bascule explicitement en consigne « mode
+    dégradé papier » — les billets pré-imprimés prennent le relais, ressaisis ensuite. Aucune
+    vente électronique n'est émise sans transaction confirmée.
+  </div>
+</section>
+
+<section id="gestion">
+  <h2><span class="num">4</span>Portail de gestion</h2>
+  <div class="card">
+    <div class="screen"><span class="sname">Tableau de bord</span> — ventes du jour par canal et produit, remplissage des prochains départs, alertes (écarts de caisse, expirations à venir, outbox en échec)
+      <span class="sfn">admin.dashboard (aggregate)</span></div>
+    <div class="screen"><span class="sname">Livrets horaires</span> — création, itinéraires sommaire/détaillé, import en masse des trains, cycle brouillon → validé → actif → expiré, génération des dessertes
+      <span class="sfn">booklets.* </span></div>
+    <div class="screen"><span class="sname">Tarifs</span> — barème kilométrique, codes tarifaires, réductions, cycle de validation, import/export en masse, notification d'expiration
+      <span class="sfn">fares.*</span></div>
+    <div class="screen"><span class="sname">Yield management</span> — contingents de classes tarifaires par desserte, règles de modulation, planchers/plafonds, <b>simulateur de prix</b> avant activation, KPI (remplissage, recette/siège)
+      <span class="sfn">yield.* · pricing.simulate</span></div>
+    <div class="screen"><span class="sname">Trains &amp; voitures</span> — composition, import des plans de sièges (rangées × colonnes), places debout
+      <span class="sfn">referential.*</span></div>
+    <div class="screen"><span class="sname">Places</span> — blocage/déblocage avec motif, rapport de traçabilité (qui, quand, quelle place, quelle action)
+      <span class="sfn">inventory.blockSeat · inventory.traceReport</span></div>
+    <div class="screen"><span class="sname">Points de vente &amp; agences</span> — création, quotas d'agences par desserte, affectation et annulation d'affectation tracées
+      <span class="sfn">referential.pointsOfSale · inventory.agencyQuotas</span></div>
+    <div class="screen"><span class="sname">Voyageurs</span> — recherche multi-critères, liste des passagers d'un train, extractions
+      <span class="sfn">reports.searchPassengers · reports.manifest</span></div>
+    <div class="screen"><span class="sname">Contrôle des recettes</span> — états de caisse, liste des remboursements, rapprochement ventes/règlements, clôture de la journée comptable
+      <span class="sfn">cash.controlStates · accounting.closeDay</span></div>
+    <div class="screen"><span class="sname">Comptabilité</span> — journal V65, statut des déversements SAGE, rejeu manuel d'un export en échec
+      <span class="sfn">accounting.journal · accounting.retryExport</span></div>
+    <div class="screen"><span class="sname">Rapports &amp; KPI</span> — états réglementaires du CDC, rapports personnalisables, téléchargements paginés (CSV)
+      <span class="sfn">reports.*</span></div>
+    <div class="screen"><span class="sname">PV &amp; incidents</span> — suivi des procès-verbaux (contestations), incidents remontés du terrain, résolution
+      <span class="sfn">pv.list · incidents.*</span></div>
+    <div class="screen"><span class="sname">Utilisateurs &amp; habilitations</span> — mapping groupes AD → rôles, droits fins, rattachement aux points de vente
+      <span class="sfn">users.*</span></div>
+    <div class="screen"><span class="sname">Paramétrage</span> — taxes (TVA, CSS), délais de réservation, motifs de remboursement, taux de pénalité, gabarits e-mail et impression, politiques de mot de passe (comptes de repli)
+      <span class="sfn">admin.settings</span></div>
+    <div class="screen"><span class="sname">Intégrations &amp; monitoring</span> — santé de l'API front-office, outbox (SAGE, COLIRAIL, notifications), alertes e-mail sur seuils
+      <span class="sfn">admin.integrations · admin.monitoring</span></div>
+  </div>
+</section>
+
+<section id="nonfonctionnel">
+  <h2><span class="num">5</span>Exigences non fonctionnelles</h2>
+  <ul>
+    <li><b>Full web multi-périphériques</b> (desktop, laptop, tablette) — navigateurs récents ;
+    l'écran de vente est optimisé pour le clavier et les lecteurs de code-barres USB.</li>
+    <li><b>Émission billet &lt; 4 s</b> : quote tarifaire et disponibilité pré-chargées de manière
+    réactive, impression asynchrone, une seule mutation de vente.</li>
+    <li><b>Traçabilité</b> : toute action porte l'utilisateur, le point de vente et l'appareil
+    émetteur ; les consultations de données voyageurs sont elles-mêmes auditées.</li>
+    <li><b>Anonymisation en environnement de test</b> (exigence RGPD du CDC) : les jeux de données
+    de recette sont générés, jamais copiés de la production.</li>
+  </ul>
+</section>
+
+<section id="phases">
+  <h2><span class="num">6</span>Rattachement aux phases</h2>
+  <div class="table-scroll"><table>
+    <tr><th style="width:120px">Phase</th><th>Livré dans agent-web</th></tr>
+    <tr><td>Phase 1</td><td>Portail de vente billets + caisse + annulations/remboursements + ventes manuelles ; gestion livrets/tarifs/trains ; blocage de places</td></tr>
+    <tr><td>Phase 2</td><td>Bagages, colis, TAA, funéraire ; agences et quotas ; comptabilité + SAGE ; rapports/KPI ; SSO AD — <b>jalon « MOBIPASS remplacé »</b></td></tr>
+    <tr><td>Phase 4</td><td>PV &amp; incidents (remontées du terrain)</td></tr>
+    <tr><td>Phase 5</td><td>Écrans yield complets + simulateur</td></tr>
+  </table></div>
+  <footer>Plan agent-web · 25 juillet 2026 · voir le <a href="backend.html">plan backend</a> pour
+  le modèle de données et les fonctions.</footer>
+</section>
+
+</main>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", themeVariables: { fontSize: "13px" } });
+</script>
+</body>
+</html>

@@ -11,7 +11,7 @@ import { cn } from "@workspace/ui/lib/utils"
  */
 
 const controlBase =
-  "w-full rounded-md border bg-surface px-4 text-[16px] text-ink transition-[border-color,box-shadow] duration-200 ease-setrag outline-none placeholder:text-ink-muted focus-visible:border-accent-base disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunk disabled:text-ink-muted"
+  "min-w-0 w-full rounded-md border bg-surface px-4 text-[16px] text-ink transition-[border-color,box-shadow] duration-200 ease-setrag outline-none placeholder:text-ink-muted focus-visible:border-accent-base disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunk disabled:text-ink-muted"
 
 const controlTone = {
   default: "border-line-strong",
@@ -57,12 +57,15 @@ function Field({
       </label>
 
       {React.isValidElement(children)
-        ? React.cloneElement(children as React.ReactElement<FieldControlProps>, {
-            id,
-            "aria-describedby": describedBy,
-            "aria-invalid": error ? true : undefined,
-            disabled,
-          })
+        ? React.cloneElement(
+            children as React.ReactElement<FieldControlProps>,
+            {
+              id,
+              "aria-describedby": describedBy,
+              "aria-invalid": error ? true : undefined,
+              disabled,
+            }
+          )
         : children}
 
       {error ? (
@@ -73,7 +76,10 @@ function Field({
           {error}
         </span>
       ) : hint ? (
-        <span id={`${id}-hint`} className="text-[12px] leading-normal text-ink-muted">
+        <span
+          id={`${id}-hint`}
+          className="text-[12px] leading-normal text-ink-muted"
+        >
           {hint}
         </span>
       ) : null}
