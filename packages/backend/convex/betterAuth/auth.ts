@@ -7,33 +7,10 @@ import authConfig from "../auth.config"
 import { components, internal } from "../_generated/api"
 import { query } from "../_generated/server"
 import type { DataModel } from "../_generated/dataModel"
+import { trustedAuthOrigins } from "./origins"
 
 /** Client du composant Better Auth. */
 export const authComponent = createClient<DataModel>(components.betterAuth)
-
-/**
- * Origines de confiance : applications web (billetterie, portail agent) et
- * application mobile Expo.
- *
- * Le `**` est requis pour le scheme natif : Better Auth utilise `wildcard-match`
- * avec `/` comme séparateur, donc un simple `*` s'arrête au premier slash.
- */
-function parseTrustedOrigins(): string[] {
-  const origins = (process.env.TRUSTED_ORIGINS ?? "")
-    .split(",")
-    .map((o: string) => o.trim())
-    .filter(Boolean)
-
-  if (process.env.DEV_SIGNIN_ENABLED === "true") {
-    for (const port of [3000, 3001]) {
-      origins.push(`http://localhost:${port}`, `https://localhost:${port}`)
-    }
-  }
-
-  origins.push("setrag://**", "setrag://", "exp://**")
-
-  return origins
-}
 
 /** Valide la présence et la robustesse du secret Better Auth. */
 function validateAuthSecret(): string {
@@ -167,7 +144,7 @@ export const createAuth = (
       expiresIn: 60 * 60 * 24 * 7, // 7 jours
       updateAge: 60 * 60 * 24, // rafraîchissement quotidien
     },
-    trustedOrigins: parseTrustedOrigins(),
+    trustedOrigins: trustedAuthOrigins(),
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
