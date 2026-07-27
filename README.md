@@ -105,8 +105,11 @@ cd packages/backend && bunx convex env list
 | -------------------- | ----------------------------------------------------------- |
 | `BETTER_AUTH_SECRET` | Secret de signature des sessions (32 caractères minimum)    |
 | `SITE_URL`           | Origine par défaut pour les redirections OAuth              |
-| `TRUSTED_ORIGINS`    | Origines web autorisées, séparées par des virgules          |
+| `TRUSTED_ORIGINS`    | Origines web supplémentaires, séparées par des virgules     |
 | `DEV_SIGNIN_ENABLED` | `true` en développement : autorise les origines `localhost` |
+
+La billetterie et le portail agent Vercel officiels sont toujours autorisés par
+le code. `TRUSTED_ORIGINS` complète cette liste sans la remplacer.
 
 **Applications** — voir les fichiers `.env.example` de chaque application.
 

@@ -1,19 +1,17 @@
 import { httpRouter } from "convex/server"
 import { httpAction } from "./_generated/server"
 import { authComponent, createAuth } from "./betterAuth/auth"
+import { trustedWebOrigins } from "./betterAuth/origins"
 import { webhook as telegramWebhook } from "./messaging/telegram"
 import { transactionalEmail } from "./lib/resend"
 
 const http = httpRouter()
 
-// Routes Better Auth (/api/auth/**) + en-têtes CORS pour les origines de
-// confiance déclarées dans TRUSTED_ORIGINS.
+// Routes Better Auth (/api/auth/**) + en-têtes CORS pour les applications
+// SETRAG officielles et les origines supplémentaires de TRUSTED_ORIGINS.
 authComponent.registerRoutes(http, createAuth, {
   cors: {
-    allowedOrigins: (process.env.TRUSTED_ORIGINS ?? "")
-      .split(",")
-      .map((o: string) => o.trim())
-      .filter(Boolean),
+    allowedOrigins: trustedWebOrigins(),
   },
 })
 
