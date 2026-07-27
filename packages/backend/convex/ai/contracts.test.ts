@@ -26,6 +26,10 @@ describe("contrats des assistants voyageurs", () => {
 
   it("limite chaque spécialiste à son domaine", () => {
     expect(ASSISTANT_PROFILES.booking.toolNames).toContain("search_trips")
+    expect(ASSISTANT_PROFILES.booking.toolNames).toContain("get_my_profile")
+    expect(ASSISTANT_PROFILES.booking.toolNames).toContain(
+      "list_saved_passengers"
+    )
     expect(ASSISTANT_PROFILES.booking.toolNames).not.toContain(
       "update_my_profile"
     )

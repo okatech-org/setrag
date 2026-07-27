@@ -44,6 +44,7 @@ import { formatPrice } from "@workspace/ui/lib/format"
 
 import { AccountDataSection } from "@/components/account/account-data-section"
 import { AccountMobile } from "@/components/account/account-mobile"
+import { AccountNavigation } from "@/components/account/account-navigation"
 import { PaymentWaitingMobile } from "@/components/payment/payment-waiting-mobile"
 import { ReservationsMobile } from "@/components/reservations/reservations-mobile"
 import { TrackingMobile } from "@/components/tracking/tracking-mobile"
@@ -752,6 +753,14 @@ export function AccountScreen() {
         <AccountDataSection />
       </AccountMobile>
       <div className="hidden min-w-0 gap-6 md:grid lg:grid-cols-2">
+        <Card className="min-w-0 lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Réglages du compte</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AccountNavigation layout="grid" />
+          </CardContent>
+        </Card>
         <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Informations personnelles</CardTitle>

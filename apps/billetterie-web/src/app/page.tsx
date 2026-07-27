@@ -2,21 +2,17 @@
 
 import { HomeDesktop } from "@/components/home/home-desktop"
 import { HomeMobile } from "@/components/home/home-mobile"
-import { useTravelerAuth } from "@/hooks/use-traveler-auth"
 
 /**
- * Les deux vues sont rendues côte à côte.
- *
- * Au-delà de 768 px, la vitrine web reste toujours visible. Sous ce seuil,
- * l'interface applicative ne remplace la vitrine qu'après authentification.
+ * Les deux vues sont rendues côte à côte et choisies uniquement par le
+ * breakpoint. Le mobile conserve ainsi sa recherche compacte, avec ou sans
+ * session ; l'authentification ne doit pas modifier la densité de la page.
  */
 export default function AccueilPage() {
-  const { isAuthenticated } = useTravelerAuth()
-
   return (
     <>
-      <HomeMobile className={isAuthenticated ? undefined : "hidden"} />
-      <HomeDesktop className={isAuthenticated ? undefined : "block"} />
+      <HomeMobile />
+      <HomeDesktop />
     </>
   )
 }

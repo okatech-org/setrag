@@ -180,7 +180,7 @@ describe("composants de structure", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("l'accueil mobile public garde la vitrine web", () => {
+  it("l'accueil public conserve la recherche compacte sur mobile", () => {
     authState.value = {
       isAuthenticated: false,
       isLoading: false,
@@ -191,10 +191,17 @@ describe("composants de structure", () => {
 
     expect(
       container.querySelector('[data-experience="mobile-app"]')
-    ).toHaveClass("hidden")
+    ).not.toHaveClass("hidden")
     expect(
       container.querySelector('[data-experience="public-web"]')
-    ).toHaveClass("block")
+    ).not.toHaveClass("block")
+
+    const mobile = container.querySelector(
+      '[data-experience="mobile-app"]'
+    ) as HTMLElement
+    expect(
+      within(mobile).getByRole("button", { name: "1 voyageur" })
+    ).toHaveAttribute("data-slot", "chip")
   })
 
   it("l'accueil mobile connecté active l'expérience applicative", () => {
@@ -518,7 +525,56 @@ describe("composants d'après-vente et de compte", () => {
     expect(screen.queryByDisplayValue("Ariane")).not.toBeInTheDocument()
   })
 
+  it("AccountScreen propose les mêmes réglages sur desktop que sur mobile", () => {
+    authState.value = {
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "voyageur-1",
+        name: "Berny Itoutou",
+        email: "berny@example.ga",
+      },
+    }
+    queryState.value = {
+      user: {
+        firstName: "Berny",
+        lastName: "Itoutou",
+        phone: "+24106000000",
+        email: "berny@example.ga",
+      },
+      consents: [],
+    }
+
+    const { container } = render(<AccountScreen />)
+    const desktopNavigation = container.querySelector(
+      'nav[data-layout="grid"]'
+    ) as HTMLElement
+
+    expect(desktopNavigation).toBeInTheDocument()
+    expect(
+      within(desktopNavigation).getByRole("link", { name: /Profil/ })
+    ).toHaveAttribute("href", "/compte/profil")
+    expect(
+      within(desktopNavigation).getByRole("link", {
+        name: /Voyageurs enregistrés/,
+      })
+    ).toHaveAttribute("href", "/compte/voyageurs")
+    expect(
+      within(desktopNavigation).getByRole("link", {
+        name: /Affichage et langue/,
+      })
+    ).toHaveAttribute("href", "/compte/affichage")
+    expect(
+      within(desktopNavigation).getByRole("button", { name: /Notifications/ })
+    ).toBeInTheDocument()
+  })
+
   it("OtpScreen passe de l'identifiant au code", async () => {
+    authState.value = {
+      isAuthenticated: false,
+      isLoading: false,
+      user: null,
+    }
     render(<OtpScreen />)
     expect(
       screen.getByRole("heading", { name: "Se connecter" })

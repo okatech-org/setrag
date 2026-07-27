@@ -284,14 +284,65 @@ describe("répartition des outils IA vers le domaine", () => {
       }
     )
 
-    const profile = fakeActionContext({ queryResult: { firstName: "Ariane" } })
+    const profile = fakeActionContext({
+      queryResult: {
+        user: {
+          _id: "user-1",
+          authId: "secret-auth-id",
+          firstName: "Berny",
+          lastName: "Itoutou",
+          phone: "+24106000000",
+          email: "berny@example.ga",
+        },
+        consents: [
+          {
+            _id: "consent-1",
+            type: "marketing",
+            channel: "web",
+          },
+        ],
+      },
+    })
     await expect(
       dispatchAssistantTool(profile.ctx, "get_my_profile", {})
-    ).resolves.toEqual({ firstName: "Ariane" })
+    ).resolves.toEqual({
+      firstName: "Berny",
+      lastName: "Itoutou",
+      phone: "+24106000000",
+      email: "berny@example.ga",
+      consents: [{ type: "marketing", channel: "web" }],
+    })
     expect(profile.runQuery).toHaveBeenCalledWith(
       api.functions.customers.me,
       {}
     )
+
+    const saved = fakeActionContext({
+      queryResult: [
+        {
+          _id: "passenger-1",
+          userId: "user-1",
+          firstName: "Berny",
+          lastName: "Itoutou",
+          gender: "M",
+          phone: "+24106000000",
+          emergencyPhone: "+24107000000",
+          birthDate: "1990-01-01",
+          discountCode: undefined,
+        },
+      ],
+    })
+    await expect(
+      dispatchAssistantTool(saved.ctx, "list_saved_passengers", {})
+    ).resolves.toEqual([
+      {
+        firstName: "Berny",
+        lastName: "Itoutou",
+        gender: "M",
+        phone: "+24106000000",
+        discountCode: null,
+      },
+    ])
 
     const updated = fakeActionContext({ mutationResult: { updated: true } })
     await dispatchAssistantTool(updated.ctx, "update_my_profile", {
