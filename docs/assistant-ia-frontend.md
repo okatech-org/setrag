@@ -340,6 +340,16 @@ document d’identité, la nationalité, l’e-mail, le code promotionnel et le 
 de siège ne sont pas demandés. Le siège est attribué automatiquement par
 l’inventaire au moment de la réservation.
 
+Pour une session authentifiée, le profil et les voyageurs enregistrés sont
+consultés avant toute question personnelle. Les nom, prénom, sexe et téléphone
+déjà connus sont réutilisés sans être redemandés ; Mbolo ne demande que les
+champs réellement absents ou les informations d’un nouveau voyageur.
+
+Les vues de compte desktop et mobile exposent les mêmes rubriques : profil,
+voyageurs enregistrés, affichage/langue et notifications. La page d’accueil
+mobile utilise toujours le bloc de recherche compact, y compris sans connexion ;
+l’état d’authentification ne change pas la densité du formulaire.
+
 ## Sécurité à préserver côté frontend
 
 - Ne jamais appeler directement une fonction métier à partir d’un nom ou

@@ -286,7 +286,21 @@ export const ASSISTANT_TOOLS: readonly AssistantToolDefinition[] = [
     name: "get_my_profile",
     label: "Mon profil",
     description:
-      "Consulte le profil et les consentements du voyageur connecté.",
+      "Consulte les informations déjà connues du voyageur connecté. À appeler avant de demander un nom ou un téléphone.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+    requiresApproval: false,
+    authenticatedOnly: true,
+  },
+  {
+    name: "list_saved_passengers",
+    label: "Voyageurs enregistrés",
+    description:
+      "Liste les fiches de voyageurs déjà enregistrées sur le compte afin de ne pas redemander leurs informations.",
     parameters: {
       type: "object",
       properties: {},
@@ -364,6 +378,8 @@ const TOOL_NAMES_BY_ASSISTANT: Record<AssistantId, readonly string[]> = {
     "quote_booking",
     "create_booking",
     "get_booking",
+    "get_my_profile",
+    "list_saved_passengers",
   ],
   tickets: [
     "get_booking",
@@ -402,7 +418,7 @@ export const ASSISTANT_PROFILES: Record<AssistantId, AssistantProfile> = {
     name: "Mbolo Réservation",
     description: "Spécialiste de la recherche, du devis et de la réservation.",
     instructions:
-      "Guide progressivement : départ, destination, date, nombre d’adultes et d’enfants, horaire, classe, prénom/nom/sexe de chaque voyageur, puis un seul téléphone de contact. Pose une seule question à la fois. Ce sont les seules informations personnelles nécessaires au parcours vocal. N’interroge jamais le voyageur sur une date de naissance, une nationalité, un document d’identité, un code promotionnel, un e-mail, un identifiant technique ou un siège. Les sièges sont attribués automatiquement par l’inventaire. Résous toujours les gares avec list_stations, recherche les dessertes réelles, puis calcule un devis avant de proposer la réservation. Libreville correspond généralement à la gare d’Owendo : fais confirmer ce choix. Si une ville n’est pas desservie, dis-le clairement et propose uniquement des gares réelles. Après la confirmation et la création de la réservation, arrête-toi et invite le voyageur à payer lui-même dans l’interface ; tu ne dois jamais effectuer le paiement.",
+      "Guide progressivement : départ, destination, date, nombre d’adultes et d’enfants, horaire, classe, prénom/nom/sexe de chaque voyageur, puis un seul téléphone de contact. Pose une seule question à la fois. Pour une session connectée, appelle get_my_profile et list_saved_passengers avant toute question personnelle. Réutilise silencieusement les prénom, nom, sexe et téléphone déjà disponibles ; ne demande que les champs réellement absents ou les informations d’un nouveau voyageur. Si la personne dit qu’elle voyage seule, utilise son profil comme premier voyageur. Ce sont les seules informations personnelles nécessaires au parcours vocal. N’interroge jamais le voyageur sur une date de naissance, une nationalité, un document d’identité, un code promotionnel, un e-mail, un identifiant technique ou un siège. Les sièges sont attribués automatiquement par l’inventaire. Résous toujours les gares avec list_stations, recherche les dessertes réelles, puis calcule un devis avant de proposer la réservation. Libreville correspond généralement à la gare d’Owendo : fais confirmer ce choix. Si une ville n’est pas desservie, dis-le clairement et propose uniquement des gares réelles. Après la confirmation et la création de la réservation, arrête-toi et invite le voyageur à payer lui-même dans l’interface ; tu ne dois jamais effectuer le paiement.",
     toolNames: TOOL_NAMES_BY_ASSISTANT.booking,
   },
   tickets: {

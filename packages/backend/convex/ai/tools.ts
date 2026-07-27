@@ -423,8 +423,33 @@ export async function dispatchAssistantTool(
         ticketId: requiredString(input, "ticketId") as Id<"tickets">,
         contactPhone: optionalString(input, "contactPhone"),
       })
-    case "get_my_profile":
-      return await ctx.runQuery(api.functions.customers.me, {})
+    case "get_my_profile": {
+      const profile = await ctx.runQuery(api.functions.customers.me, {})
+      if (!profile) return null
+      return {
+        firstName: profile.user.firstName ?? null,
+        lastName: profile.user.lastName ?? null,
+        phone: profile.user.phone ?? null,
+        email: profile.user.email ?? null,
+        consents: profile.consents.map((consent) => ({
+          type: consent.type,
+          channel: consent.channel,
+        })),
+      }
+    }
+    case "list_saved_passengers": {
+      const passengers = await ctx.runQuery(
+        api.functions.customers.listSavedPassengers,
+        {}
+      )
+      return passengers.map((passenger) => ({
+        firstName: passenger.firstName,
+        lastName: passenger.lastName,
+        gender: passenger.gender,
+        phone: passenger.phone ?? null,
+        discountCode: passenger.discountCode ?? null,
+      }))
+    }
     case "update_my_profile":
       return await ctx.runMutation(api.functions.customers.updateProfile, {
         firstName: optionalString(input, "firstName"),
