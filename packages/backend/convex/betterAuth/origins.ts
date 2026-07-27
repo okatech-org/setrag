@@ -1,6 +1,5 @@
 type AuthEnvironment = {
-  TRUSTED_ORIGINS?: string
-  DEV_SIGNIN_ENABLED?: string
+  readonly [name: string]: string | undefined
 }
 
 /**
