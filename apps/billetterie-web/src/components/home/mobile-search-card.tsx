@@ -17,6 +17,7 @@ import {
   SheetTitle,
 } from "@workspace/ui/mobile/sheet"
 
+import { VoiceTravelAssistant } from "@/components/assistant/voice-travel-assistant"
 import { useSearchDraft } from "@/features/recherche/use-search-draft"
 import { gabonDate } from "@/lib/ticketing"
 
@@ -112,9 +113,16 @@ export function MobileSearchCard() {
         </InlineMessage>
       )}
 
-      <Button size="lg" block onClick={() => search.submit()}>
-        Rechercher une desserte
-      </Button>
+      <div className="flex items-center gap-s-2">
+        <Button
+          size="lg"
+          className="min-w-0 flex-1"
+          onClick={() => search.submit()}
+        >
+          Rechercher une desserte
+        </Button>
+        <VoiceTravelAssistant onSearchChange={search.update} />
+      </div>
 
       <Sheet
         open={openSheet === "stations"}

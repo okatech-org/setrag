@@ -11,7 +11,7 @@ Quatre profils utilisent le même registre métier :
 | Assistant   | Usage              | Outils principaux                                 |
 | ----------- | ------------------ | ------------------------------------------------- |
 | `concierge` | Parcours complet   | Tous les outils autorisés                         |
-| `booking`   | Recherche et achat | Gares, trains, devis, réservation, paiement       |
+| `booking`   | Recherche et achat | Gares, trains, devis et réservation               |
 | `tickets`   | Après-vente        | Réservations, billets, téléchargement, annulation |
 | `account`   | Compte             | Profil et consentements                           |
 
@@ -20,10 +20,13 @@ et le modèle sont des paramètres de déploiement ; aucun composant frontend ne
 doit contenir de logique propre à l’un d’eux. La voix utilise OpenAI Realtime
 via WebRTC.
 
-Le même registre de 15 outils est utilisé par le texte et la voix. Les outils
-authentifiés sont retirés pour un visiteur. Une réservation, un paiement, une
-annulation, une modification de profil ou un changement de consentement
-nécessite une confirmation explicite côté serveur.
+Le texte et la voix utilisent le même registre métier, filtré selon le profil et
+l’identité de la personne. Les outils authentifiés sont retirés pour un
+visiteur. Une réservation, un paiement, une annulation, une modification de
+profil ou un changement de consentement nécessite une confirmation explicite
+côté serveur. Le profil `booking` peut créer une réservation, mais ne peut
+jamais déclencher le paiement : après la réservation, le frontend prend le
+relais sur l’écran de paiement.
 
 ## Fonctions Convex publiques
 
@@ -44,10 +47,11 @@ nécessite une confirmation explicite côté serveur.
 
 ## Session invitée
 
-Une personne peut chercher, réserver et payer sans compte, comme dans le
-parcours de billetterie existant. Le frontend crée un secret aléatoire, le
-conserve dans `sessionStorage` et l’envoie à chaque appel de cette conversation.
-Ne jamais le placer dans une URL, un log analytics ou un rapport d’erreur.
+Une personne peut chercher et réserver sans compte, comme dans le parcours de
+billetterie existant, puis payer elle-même dans l’interface. Le frontend crée un
+secret aléatoire, le conserve dans `sessionStorage` et l’envoie à chaque appel
+de cette conversation. Ne jamais le placer dans une URL, un log analytics ou un
+rapport d’erreur.
 
 ```ts
 const STORAGE_KEY = "setrag.ai.guest-key"
@@ -280,9 +284,11 @@ vous confirmer ? ». Si la personne répond clairement oui, le modèle appelle
 `confirm_pending_action` avec le `callId` original. Le backend recharge et
 exécute exactement les arguments mémorisés.
 
-L’interface doit aussi montrer une carte tactile pendant cette attente. Un tap
-sur « Confirmer » peut appeler `executeVoiceTool` sur l’appel original avec
-`approved: true`. Les deux chemins convergent sur la même clé d’idempotence.
+L’interface montre aussi une carte tactile pendant cette attente. Un tap sur
+« Confirmer » injecte un message utilisateur explicite dans la conversation
+Realtime ; le modèle doit ensuite appeler `confirm_pending_action`. Le frontend
+ne renvoie jamais lui-même l’appel original avec un drapeau `approved`, car
+l’autorisation reste portée par l’appel de confirmation mémorisé côté serveur.
 
 ### Transcriptions et état visuel
 
@@ -297,6 +303,42 @@ Afficher au minimum ces états : `connecting`, `listening`, `thinking`,
 
 À la fermeture, arrêter toutes les pistes locales, fermer le DataChannel puis
 le peer connection, et appeler `updateVoiceSession(..., status: "ended")`.
+
+## Implémentation dans la billetterie web
+
+Le composant prêt à l’emploi se trouve dans
+`apps/billetterie-web/src/components/assistant/voice-travel-assistant.tsx`. Il
+est intégré aux deux blocs de recherche :
+
+- `components/trip-search-form.tsx` pour le parcours principal ;
+- `components/home/mobile-search-card.tsx` pour la carte mobile.
+
+Le bouton rond avec l’icône micro est placé à droite de l’action de recherche.
+Il ouvre la conversation sans modale : un indicateur flottant non bloquant
+affiche l’état d’écoute, la dernière réponse utile et le bouton d’arrêt. La
+conversation synchronise les gares, la date et le nombre de voyageurs avec le
+formulaire existant, puis annonce les horaires retournés par le backend. Après
+le devis et la confirmation explicite, une réservation est créée, les données
+sont placées dans `ticketingStorage` et l’utilisateur est redirigé vers
+`/paiement`.
+
+Les parseurs Realtime et l’adaptation vers le parcours existant sont isolés
+dans
+`apps/billetterie-web/src/features/assistant/voice-assistant-runtime.ts`.
+Ils sont testés indépendamment du composant WebRTC.
+
+L’assistant ne transforme pas une ville arbitraire en gare fictive. Par exemple,
+« Libreville » est rapproché d’Owendo uniquement après confirmation, tandis
+qu’une destination absente de `list_stations` donne lieu à une explication et à
+la proposition des gares réellement desservies.
+
+Pour finaliser une réservation vocale, Mbolo ne recueille que les informations
+du parcours client : trajet, date, nombre d’adultes et d’enfants, horaire,
+classe, prénom/nom/sexe des voyageurs et un téléphone de contact. Les
+identifiants techniques ne sont jamais prononcés. La date de naissance, le
+document d’identité, la nationalité, l’e-mail, le code promotionnel et le numéro
+de siège ne sont pas demandés. Le siège est attribué automatiquement par
+l’inventaire au moment de la réservation.
 
 ## Sécurité à préserver côté frontend
 
@@ -347,12 +389,14 @@ Des surcharges par assistant sont possibles avec
 
 ## Critères d’acceptation frontend
 
-- « Je veux aller à Ndendé » déclenche d’abord la résolution des gares, puis
+- « Je veux aller à Booué » déclenche d’abord la résolution des gares, puis
   demande la date manquante.
 - Une date complète déclenche la recherche réelle et propose uniquement des
   horaires/disponibilités du backend.
 - Le choix d’un horaire puis d’une classe produit un devis réel.
 - La réservation n’est créée qu’après confirmation explicite.
+- Après réservation, l’assistant s’arrête et l’utilisateur effectue lui-même le
+  paiement.
 - Le rejeu réseau d’un même `requestId`/`callId` ne duplique rien.
 - Le vocal sait exécuter les mêmes outils et accepte une confirmation orale.
 - Un invité ne voit jamais les outils « Mes réservations », « Mes billets » ou

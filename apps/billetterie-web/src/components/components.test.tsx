@@ -318,6 +318,31 @@ describe("composants du parcours d'achat", () => {
     expect(push).not.toHaveBeenCalled()
   })
 
+  it("TripSearchForm affiche l'assistant vocal flottant sans ouvrir de modale", async () => {
+    render(<TripSearchForm />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Réserver avec l’assistant vocal",
+      })
+    )
+
+    expect(
+      screen.getByRole("complementary", { name: "Assistant vocal Mbolo" })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "Parlez naturellement. Le paiement reste entre vos mains."
+      )
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        "Ce navigateur ne permet pas encore la conversation vocale."
+      )
+    ).toBeInTheDocument()
+  })
+
   it("TripResults affiche les dessertes et permet le tri", () => {
     render(<TripResults />)
     expect(screen.getByText("2 dessertes disponibles")).toBeInTheDocument()

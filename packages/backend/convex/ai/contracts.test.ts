@@ -29,6 +29,7 @@ describe("contrats des assistants voyageurs", () => {
     expect(ASSISTANT_PROFILES.booking.toolNames).not.toContain(
       "update_my_profile"
     )
+    expect(ASSISTANT_PROFILES.booking.toolNames).not.toContain("pay_booking")
     expect(ASSISTANT_PROFILES.account.toolNames).toContain("grant_consent")
     expect(ASSISTANT_PROFILES.account.toolNames).not.toContain("pay_booking")
   })
@@ -65,6 +66,28 @@ describe("contrats des assistants voyageurs", () => {
     }
   })
 
+  it("n'expose au modèle que les informations réellement demandées au voyageur", () => {
+    const booking = ASSISTANT_TOOLS.find(
+      (tool) => tool.name === "create_booking"
+    )!
+    const passenger = (
+      booking.parameters.properties.passengers as {
+        items: { properties: Record<string, unknown> }
+      }
+    ).items
+
+    expect(Object.keys(passenger.properties)).toEqual([
+      "lastName",
+      "firstName",
+      "gender",
+      "discountCode",
+    ])
+    expect(passenger.properties).not.toHaveProperty("birthDate")
+    expect(passenger.properties).not.toHaveProperty("seatId")
+    expect(booking.parameters.properties).not.toHaveProperty("contactEmail")
+    expect(booking.parameters.properties).not.toHaveProperty("promoCode")
+  })
+
   it("encode les frontières de confirmation dans le prompt", () => {
     const prompt = buildAssistantInstructions(
       "concierge",
@@ -74,5 +97,7 @@ describe("contrats des assistants voyageurs", () => {
     expect(prompt).toContain("Ndendé")
     expect(prompt).toContain("Africa/Libreville")
     expect(prompt).toContain("code OTP")
+    expect(prompt).toContain("ne les prononce jamais")
+    expect(prompt).toContain("attribuées automatiquement")
   })
 })

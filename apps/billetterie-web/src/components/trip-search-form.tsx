@@ -6,6 +6,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Field, Input, SelectNative } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
 
+import { VoiceTravelAssistant } from "@/components/assistant/voice-travel-assistant"
 import { useSearchDraft } from "@/features/recherche/use-search-draft"
 import { DEFAULT_SEARCH } from "@/lib/ticketing"
 
@@ -113,9 +114,12 @@ export function TripSearchForm({ compact = false }: { compact?: boolean }) {
           value={draft.children}
           onChange={(children) => search.update({ children })}
         />
-        <Button type="submit" size="lg" block>
-          Rechercher un train
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button type="submit" size="lg" className="min-w-0 flex-1">
+            Rechercher un train
+          </Button>
+          <VoiceTravelAssistant onSearchChange={search.update} />
+        </div>
       </div>
 
       {search.submitted && search.invalidPassengers && (

@@ -105,7 +105,7 @@ export const setVoiceSessionStatus = internalMutation({
     status: v.union(
       v.literal("connected"),
       v.literal("ended"),
-      v.literal("failed"),
+      v.literal("failed")
     ),
   },
   handler: async (ctx, args) => {
@@ -148,20 +148,25 @@ export const mintVoiceToken = action({
     })
     if (!rate.ok) {
       throw new Error(
-        `Trop de démarrages vocaux. Réessayez dans ${Math.ceil((rate.retryAfter ?? 0) / 1_000)} seconde(s).`,
+        `Trop de démarrages vocaux. Réessayez dans ${Math.ceil((rate.retryAfter ?? 0) / 1_000)} seconde(s).`
       )
     }
 
     const tools = getAssistantTools(
       access.conversation.assistantId,
-      access.isAuthenticated,
+      access.isAuthenticated
     )
     const instructions = `${buildAssistantInstructions(
       access.conversation.assistantId,
-      new Date().toISOString(),
+      new Date().toISOString()
     )}
 
-Règle vocale : lorsqu'un outil renvoie approval_required, demande oralement confirmation. Si l'utilisateur confirme clairement, appelle confirm_pending_action avec le callId indiqué par ce résultat. Ne réappelle pas l'outil métier avec de nouveaux arguments.`
+Règles vocales :
+- lorsqu'un outil renvoie approval_required, demande oralement confirmation ;
+- si l'utilisateur confirme clairement, appelle confirm_pending_action avec le callId indiqué par ce résultat ;
+- ne réappelle pas l'outil métier avec de nouveaux arguments ;
+- pour une réservation, recueille les informations manquantes une par une, calcule le devis, puis arrête-toi après create_booking ;
+- le voyageur effectue toujours lui-même le paiement dans l'interface.`
     const confirmTool = {
       name: "confirm_pending_action",
       label: "Confirmer l'action en attente",
@@ -223,12 +228,12 @@ Règle vocale : lorsqu'un outil renvoie approval_required, demande oralement con
             },
           },
         }),
-      },
+      }
     )
     const body = await response.text()
     if (!response.ok) {
       throw new Error(
-        `OpenAI Realtime (${response.status}) : ${body.slice(0, 1_000)}`,
+        `OpenAI Realtime (${response.status}) : ${body.slice(0, 1_000)}`
       )
     }
     const data = JSON.parse(body) as {
@@ -248,7 +253,7 @@ Règle vocale : lorsqu'un outil renvoie approval_required, demande oralement con
         model: activeModel,
         providerSessionId: data.session?.id,
         expiresAt,
-      },
+      }
     )
     return {
       available: true,
@@ -309,7 +314,7 @@ export const executeVoiceTool = action({
       {
         conversationId: args.conversationId,
         callId: pendingCallId,
-      },
+      }
     )
     if (!execution) {
       return { status: "error", message: "Action en attente introuvable." }
@@ -333,7 +338,7 @@ export const updateVoiceSession = action({
     status: v.union(
       v.literal("connected"),
       v.literal("ended"),
-      v.literal("failed"),
+      v.literal("failed")
     ),
   },
   handler: async (ctx: ActionCtx, args) => {

@@ -360,14 +360,15 @@ export async function dispatchAssistantTool(
           lastName: requiredString(passenger, "lastName"),
           firstName: requiredString(passenger, "firstName"),
           gender: oneOf(passenger, "gender", ["M", "F"] as const),
-          phone: optionalString(passenger, "phone"),
-          emergencyPhone: optionalString(passenger, "emergencyPhone"),
-          birthDate: optionalString(passenger, "birthDate"),
-          nationality: optionalString(passenger, "nationality"),
-          documentNumber: optionalString(passenger, "documentNumber"),
+          phone: undefined,
+          emergencyPhone: undefined,
+          birthDate: undefined,
+          nationality: undefined,
+          documentNumber: undefined,
           discountCode: optionalString(passenger, "discountCode"),
-          seatId: optionalString(passenger, "seatId") as
-            Id<"seats"> | undefined,
+          // Le parcours client ne propose pas le choix du siège. Même si un
+          // fournisseur envoie une valeur hors schéma, l'inventaire choisit.
+          seatId: undefined,
         }
       })
       return await ctx.runMutation(api.functions.bookings.create, {
@@ -387,8 +388,8 @@ export async function dispatchAssistantTool(
         ] as const),
         passengers,
         contactPhone: requiredString(input, "contactPhone"),
-        contactEmail: optionalString(input, "contactEmail"),
-        promoCode: optionalString(input, "promoCode"),
+        contactEmail: undefined,
+        promoCode: undefined,
       })
     }
     case "get_booking":

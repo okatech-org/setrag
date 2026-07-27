@@ -29,7 +29,13 @@ export type AssistantToolDefinition = {
 const nullableString = { type: ["string", "null"] }
 const stationId = {
   type: "string",
-  description: "Identifiant Convex exact de la gare obtenu via list_stations.",
+  description:
+    "Valeur technique opaque obtenue via list_stations. Ne jamais la demander, l'épeler ou la prononcer au voyageur.",
+}
+const tripId = {
+  type: "string",
+  description:
+    "Valeur technique opaque copiée depuis search_trips. Ne jamais la demander, l'épeler ou la prononcer au voyageur.",
 }
 const serviceClass = {
   type: "string",
@@ -43,29 +49,16 @@ const paymentMethod = {
 const passengerSchema = {
   type: "object",
   properties: {
-    lastName: { type: "string" },
-    firstName: { type: "string" },
+    lastName: { type: "string", description: "Nom du voyageur." },
+    firstName: { type: "string", description: "Prénom du voyageur." },
     gender: { type: "string", enum: ["M", "F"] },
-    phone: nullableString,
-    emergencyPhone: nullableString,
-    birthDate: nullableString,
-    nationality: nullableString,
-    documentNumber: nullableString,
-    discountCode: nullableString,
-    seatId: nullableString,
+    discountCode: {
+      type: ["string", "null"],
+      description:
+        "Utiliser ENFANT pour un enfant déclaré, sinon null. Ne pas demander de code au voyageur.",
+    },
   },
-  required: [
-    "lastName",
-    "firstName",
-    "gender",
-    "phone",
-    "emergencyPhone",
-    "birthDate",
-    "nationality",
-    "documentNumber",
-    "discountCode",
-    "seatId",
-  ],
+  required: ["lastName", "firstName", "gender", "discountCode"],
   additionalProperties: false,
 }
 
@@ -113,10 +106,10 @@ export const ASSISTANT_TOOLS: readonly AssistantToolDefinition[] = [
     name: "get_trip",
     label: "Détails du train",
     description:
-      "Retourne les horaires, arrêts et disponibilités détaillées d'un train.",
+      "Retourne les horaires, arrêts et disponibilités détaillées du train choisi. L'identifiant est une donnée interne provenant de search_trips, jamais une information à demander au voyageur.",
     parameters: {
       type: "object",
-      properties: { tripId: { type: "string" } },
+      properties: { tripId },
       required: ["tripId"],
       additionalProperties: false,
     },
@@ -131,7 +124,7 @@ export const ASSISTANT_TOOLS: readonly AssistantToolDefinition[] = [
     parameters: {
       type: "object",
       properties: {
-        tripId: { type: "string" },
+        tripId,
         originStationId: stationId,
         destinationStationId: stationId,
         serviceClass,
@@ -140,7 +133,6 @@ export const ASSISTANT_TOOLS: readonly AssistantToolDefinition[] = [
           type: ["array", "null"],
           items: { type: "string" },
         },
-        promoCode: nullableString,
       },
       required: [
         "tripId",
@@ -149,7 +141,6 @@ export const ASSISTANT_TOOLS: readonly AssistantToolDefinition[] = [
         "serviceClass",
         "passengerCount",
         "discountCodes",
-        "promoCode",
       ],
       additionalProperties: false,
     },
@@ -161,11 +152,11 @@ export const ASSISTANT_TOOLS: readonly AssistantToolDefinition[] = [
     name: "create_booking",
     label: "Réserver les places",
     description:
-      "Bloque les places pendant quinze minutes. Action engageante : toujours demander une confirmation explicite.",
+      "Bloque les places pendant quinze minutes après confirmation. Les sièges sont attribués automatiquement : ne jamais demander de siège ou d'identifiant technique.",
     parameters: {
       type: "object",
       properties: {
-        tripId: { type: "string" },
+        tripId,
         originStationId: stationId,
         destinationStationId: stationId,
         serviceClass,
@@ -176,8 +167,6 @@ export const ASSISTANT_TOOLS: readonly AssistantToolDefinition[] = [
           items: passengerSchema,
         },
         contactPhone: { type: "string" },
-        contactEmail: nullableString,
-        promoCode: nullableString,
       },
       required: [
         "tripId",
@@ -186,8 +175,6 @@ export const ASSISTANT_TOOLS: readonly AssistantToolDefinition[] = [
         "serviceClass",
         "passengers",
         "contactPhone",
-        "contactEmail",
-        "promoCode",
       ],
       additionalProperties: false,
     },
@@ -377,7 +364,6 @@ const TOOL_NAMES_BY_ASSISTANT: Record<AssistantId, readonly string[]> = {
     "quote_booking",
     "create_booking",
     "get_booking",
-    "pay_booking",
   ],
   tickets: [
     "get_booking",
@@ -416,7 +402,7 @@ export const ASSISTANT_PROFILES: Record<AssistantId, AssistantProfile> = {
     name: "Mbolo Réservation",
     description: "Spécialiste de la recherche, du devis et de la réservation.",
     instructions:
-      "Guide progressivement : destination, date, voyageurs, horaire, classe, identité, puis confirmation.",
+      "Guide progressivement : départ, destination, date, nombre d’adultes et d’enfants, horaire, classe, prénom/nom/sexe de chaque voyageur, puis un seul téléphone de contact. Pose une seule question à la fois. Ce sont les seules informations personnelles nécessaires au parcours vocal. N’interroge jamais le voyageur sur une date de naissance, une nationalité, un document d’identité, un code promotionnel, un e-mail, un identifiant technique ou un siège. Les sièges sont attribués automatiquement par l’inventaire. Résous toujours les gares avec list_stations, recherche les dessertes réelles, puis calcule un devis avant de proposer la réservation. Libreville correspond généralement à la gare d’Owendo : fais confirmer ce choix. Si une ville n’est pas desservie, dis-le clairement et propose uniquement des gares réelles. Après la confirmation et la création de la réservation, arrête-toi et invite le voyageur à payer lui-même dans l’interface ; tu ne dois jamais effectuer le paiement.",
     toolNames: TOOL_NAMES_BY_ASSISTANT.booking,
   },
   tickets: {
@@ -439,25 +425,25 @@ export const ASSISTANT_PROFILES: Record<AssistantId, AssistantProfile> = {
 
 export function getAssistantTools(
   assistantId: AssistantId,
-  isAuthenticated: boolean,
+  isAuthenticated: boolean
 ): AssistantToolDefinition[] {
   const allowed = new Set(ASSISTANT_PROFILES[assistantId].toolNames)
   return ASSISTANT_TOOLS.filter(
     (tool) =>
       allowed.has(tool.name) &&
-      (isAuthenticated || tool.authenticatedOnly === false),
+      (isAuthenticated || tool.authenticatedOnly === false)
   )
 }
 
 export function getToolDefinition(
-  name: string,
+  name: string
 ): AssistantToolDefinition | undefined {
   return ASSISTANT_TOOLS.find((tool) => tool.name === name)
 }
 
 export function buildAssistantInstructions(
   assistantId: AssistantId,
-  nowIso: string,
+  nowIso: string
 ): string {
   const profile = ASSISTANT_PROFILES[assistantId]
   return `Tu es ${profile.name}, ${profile.description}
@@ -469,6 +455,8 @@ ${profile.instructions}
 Règles obligatoires :
 - Réponds en français naturel, chaleureux et concis.
 - N'invente jamais une gare, un horaire, une disponibilité, un prix, une réservation ou un billet : utilise les outils.
+- Tous les identifiants de gare, de train, de trajet, de siège, de billet et les callId sont des détails techniques invisibles : ne les prononce jamais, ne les affiche jamais et ne les demande jamais. Parle uniquement avec les noms de gares, le numéro commercial du train, la date et les heures.
+- Ne demande jamais de numéro ou de préférence de siège. Les places sont attribuées automatiquement lors de la réservation.
 - Si l'utilisateur dit « Ndendé » ou une variante phonétique, vérifie le nom dans list_stations avant de conclure.
 - Pose une seule question utile à la fois lorsqu'une information manque.
 - Ne déclenche jamais une réservation, un paiement, une annulation, une modification de profil ou de consentement sans confirmation explicite. Le backend imposera aussi cette confirmation.
