@@ -81,6 +81,7 @@ const TABLES = [
   "coaches",
   "trains",
   "pointsOfSale",
+  "systemSettings",
   "stations",
   "corporateAccounts",
   "consents",
