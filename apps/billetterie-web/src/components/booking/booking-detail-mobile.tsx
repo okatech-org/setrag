@@ -8,6 +8,9 @@ import QRCode from "react-qr-code"
 import { Button } from "@workspace/ui/components/button"
 import { Tag } from "@workspace/ui/components/tag"
 
+import { TicketWalletButtons } from "./ticket-wallet-buttons"
+import type { WalletProvider } from "@/lib/wallet-platform"
+
 const hourFormatter = new Intl.DateTimeFormat("fr-FR", {
   timeZone: "Africa/Libreville",
   hour: "2-digit",
@@ -54,6 +57,7 @@ export function BookingDetailMobile({
   tickets,
   busy,
   onDownloadTicket,
+  onAddToWallet,
   onAddToCalendar,
 }: {
   reference: string
@@ -67,6 +71,11 @@ export function BookingDetailMobile({
   tickets: BookingDetailTicket[]
   busy: string | undefined
   onDownloadTicket: (ticketId: string, number: string) => void
+  onAddToWallet: (
+    provider: WalletProvider,
+    ticketId: string,
+    number: string
+  ) => void
   onAddToCalendar: () => void
 }) {
   const [shareState, setShareState] = React.useState<"idle" | "copied">("idle")
@@ -158,16 +167,31 @@ export function BookingDetailMobile({
           </div>
 
           {isPaid && (
-            <Button
-              variant="secondary"
-              size="sm"
-              block
-              disabled={Boolean(busy)}
-              onClick={() => onDownloadTicket(ticket._id, ticket.number)}
-            >
-              <Download />
-              {busy === ticket._id ? "Préparation…" : "Télécharger le PDF"}
-            </Button>
+            <div className="grid gap-s-2">
+              {ticket.status === "valide" && (
+                <TicketWalletButtons
+                  compact
+                  ticketNumber={ticket.number}
+                  disabled={Boolean(busy)}
+                  loading={
+                    busy?.startsWith(`wallet-${ticket._id}-`) ?? false
+                  }
+                  onAdd={(provider) =>
+                    onAddToWallet(provider, ticket._id, ticket.number)
+                  }
+                />
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                block
+                disabled={Boolean(busy)}
+                onClick={() => onDownloadTicket(ticket._id, ticket.number)}
+              >
+                <Download />
+                {busy === ticket._id ? "Préparation…" : "Télécharger le PDF"}
+              </Button>
+            </div>
           )}
         </article>
       ))}

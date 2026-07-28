@@ -31,8 +31,10 @@ import {
 } from "@workspace/ui/components/voyage/ticket"
 
 import { BookingDetailMobile } from "@/components/booking/booking-detail-mobile"
+import { TicketWalletButtons } from "@/components/booking/ticket-wallet-buttons"
 import { ticketingStorage } from "@/lib/ticketing"
 import { useTravelerAuth } from "@/hooks/use-traveler-auth"
+import type { WalletProvider } from "@/lib/wallet-platform"
 
 async function saveRemoteFile(url: string, filename: string) {
   try {
@@ -118,6 +120,7 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
   )
   const ticketPdf = useAction(api.functions.documents.ticketPdf)
   const bookingPdf = useAction(api.functions.documents.bookingPdf)
+  const createWalletPass = useAction(api.functions.wallet.createPass)
   const emailTickets = useAction(api.functions.notifications.emailTickets)
   const [busy, setBusy] = useState<string>()
   const [email, setEmail] = useState(storedBooking?.contactEmail ?? "")
@@ -223,6 +226,47 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
     }
   }
 
+  async function addToWallet(
+    provider: WalletProvider,
+    ticketId: string,
+    number: string
+  ) {
+    setBusy(`wallet-${ticketId}-${provider}`)
+    setMessage(undefined)
+    try {
+      const result = await createWalletPass({
+        ticketId: ticketId as never,
+        provider,
+        contactPhone: accessPhone || undefined,
+      })
+      if (result.provider === "google") {
+        window.location.assign(result.url)
+        return
+      }
+
+      const url = URL.createObjectURL(
+        new Blob([result.bytes], {
+          type: "application/vnd.apple.pkpass",
+        })
+      )
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = result.filename
+      document.body.append(anchor)
+      anchor.click()
+      anchor.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (cause) {
+      setMessage({
+        tone: "danger",
+        title: `Le billet ${number} n’a pas pu être ajouté au Wallet.`,
+        body: cause instanceof Error ? cause.message : undefined,
+      })
+    } finally {
+      setBusy(undefined)
+    }
+  }
+
   async function sendEmail() {
     setBusy("email")
     setMessage(undefined)
@@ -287,6 +331,12 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
 
   return (
     <div className="grid gap-6 md:gap-8">
+      {message && (
+        <InlineMessage tone={message.tone} title={message.title}>
+          {message.body}
+        </InlineMessage>
+      )}
+
       <BookingDetailMobile
         reference={reference}
         origin={origin}
@@ -309,6 +359,9 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
         onDownloadTicket={(ticketId, number) =>
           void downloadTicket(ticketId, number)
         }
+        onAddToWallet={(provider, ticketId, number) =>
+          void addToWallet(provider, ticketId, number)
+        }
         onAddToCalendar={addToCalendar}
       />
 
@@ -326,12 +379,6 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
             ? `${detail.tickets.length} billet(s) émis pour ce dossier.`
             : "Aucun titre valable ne sera émis avant le règlement au guichet."}
         </InlineMessage>
-
-        {message && (
-          <InlineMessage tone={message.tone} title={message.title}>
-            {message.body}
-          </InlineMessage>
-        )}
 
         <div className="flex min-w-0 flex-wrap items-end justify-between gap-4">
           <div className="grid gap-1">
@@ -387,17 +434,30 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
                 }
               />
               {isPaid && (
-                <Button
-                  variant="secondary"
-                  className="justify-self-start"
-                  disabled={Boolean(busy)}
-                  onClick={() => downloadTicket(ticket._id, ticket.number)}
-                >
-                  <Download />
-                  {busy === ticket._id
-                    ? "Préparation…"
-                    : `PDF ${ticket.number}`}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {ticket.status === "valide" && (
+                    <TicketWalletButtons
+                      ticketNumber={ticket.number}
+                      disabled={Boolean(busy)}
+                      loading={
+                        busy?.startsWith(`wallet-${ticket._id}-`) ?? false
+                      }
+                      onAdd={(provider) =>
+                        void addToWallet(provider, ticket._id, ticket.number)
+                      }
+                    />
+                  )}
+                  <Button
+                    variant="secondary"
+                    disabled={Boolean(busy)}
+                    onClick={() => downloadTicket(ticket._id, ticket.number)}
+                  >
+                    <Download />
+                    {busy === ticket._id
+                      ? "Préparation…"
+                      : `PDF ${ticket.number}`}
+                  </Button>
+                </div>
               )}
             </div>
           ))}

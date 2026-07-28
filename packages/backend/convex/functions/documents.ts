@@ -60,6 +60,8 @@ export const printData = internalQuery({
   ): Promise<
     TicketPrintData & {
       pdfStorageId?: Id<"_storage">
+      departureAt: number
+      arrivalAt: number
     }
   > => {
     const ticket = await ctx.db.get(args.ticketId)
@@ -110,6 +112,8 @@ export const printData = internalQuery({
       serviceDate: trip.serviceDate,
       departureLabel: heureLocale(trip.departureAt),
       arrivalLabel: heureLocale(trip.arrivalAt),
+      departureAt: trip.departureAt,
+      arrivalAt: trip.arrivalAt,
       trainNumber: trip.trainNumber,
       serviceClass: ticket.serviceClass,
       coachLabel: ticket.coachLabel,
