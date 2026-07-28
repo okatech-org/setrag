@@ -103,6 +103,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@workspace/api/hooks", () => ({
   useQuery: () => undefined,
   useMutation: () => vi.fn().mockResolvedValue({}),
+  useAction: () => vi.fn().mockResolvedValue({}),
   useAuth: () => ({
     isAuthenticated: false,
     isLoading: false,
@@ -249,6 +250,29 @@ describe("AW-V-01 · accueil vendeur", () => {
     expect(
       screen.getByRole("button", { name: /Billet voyageur/ })
     ).toBeDisabled()
+  })
+
+  it("génère un duplicata depuis les dernières opérations", async () => {
+    const reprint = vi.fn().mockResolvedValue(undefined)
+    render(
+      <SellerDashboardScreen
+        data={DEMO_DASHBOARD}
+        online
+        onOpenCash={vi.fn()}
+        onNavigate={vi.fn()}
+        onReprint={reprint}
+      />
+    )
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Réimprimer" })[0]!
+    )
+    await waitFor(() =>
+      expect(reprint).toHaveBeenCalledWith(DEMO_DASHBOARD.lastOperations[0]!.id)
+    )
+    expect(
+      await screen.findByText(/Duplicata de .* généré et tracé/)
+    ).toBeInTheDocument()
   })
 })
 

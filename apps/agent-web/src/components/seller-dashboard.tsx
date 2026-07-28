@@ -14,9 +14,15 @@ import {
 import { useRouter } from "next/navigation"
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
+import { useConvex } from "convex/react"
 
 import { authClient } from "@workspace/api/auth-client"
-import { useAuth, useMutation, useQuery } from "@workspace/api/hooks"
+import {
+  useAction,
+  useAuth,
+  useMutation,
+  useQuery,
+} from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -180,6 +186,7 @@ interface SellerDashboardScreenProps {
   online: boolean
   onOpenCash: (openingFloatXaf: number) => Promise<void>
   onNavigate: (href: string) => void
+  onReprint?: (saleId: string) => Promise<void>
   onSignOut?: () => void
 }
 
@@ -188,9 +195,15 @@ export function SellerDashboardScreen({
   online,
   onOpenCash,
   onNavigate,
+  onReprint,
   onSignOut,
 }: SellerDashboardScreenProps) {
   const saleReady = online && data.session !== null
+  const [reprinting, setReprinting] = useState("")
+  const [reprintMessage, setReprintMessage] = useState<{
+    tone: "success" | "danger"
+    text: string
+  } | null>(null)
 
   const shortcuts = useMemo(
     () => [
@@ -359,8 +372,8 @@ export function SellerDashboardScreen({
             ))}
           </div>
           <p className="text-caption text-ink-muted">
-            Bagages, colis et prestations spéciales arrivent dans le prochain
-            lot fonctionnel.
+            Chaque prestation est enregistrée dans la caisse et le journal
+            d’audit du point de vente.
           </p>
         </section>
 
@@ -373,6 +386,12 @@ export function SellerDashboardScreen({
               {data.lastOperations.length} affichée(s)
             </span>
           </div>
+          {reprintMessage ? (
+            <InlineMessage
+              tone={reprintMessage.tone}
+              title={reprintMessage.text}
+            />
+          ) : null}
 
           <div className="overflow-x-auto rounded-md border border-line bg-surface">
             <table className="text-small w-full min-w-[720px] border-collapse">
@@ -411,8 +430,40 @@ export function SellerDashboardScreen({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        disabled
-                        title="La réimpression sera livrée avec AW-V-09"
+                        loading={reprinting === operation.id}
+                        loadingLabel="Préparation…"
+                        disabled={
+                          !online ||
+                          operation.product !== "billet" ||
+                          !onReprint
+                        }
+                        title={
+                          operation.product !== "billet"
+                            ? "Seuls les billets disposent d’un duplicata imprimable."
+                            : undefined
+                        }
+                        onClick={async () => {
+                          if (!onReprint) return
+                          setReprinting(operation.id)
+                          setReprintMessage(null)
+                          try {
+                            await onReprint(operation.id)
+                            setReprintMessage({
+                              tone: "success",
+                              text: `Duplicata de ${operation.number} généré et tracé.`,
+                            })
+                          } catch (cause) {
+                            setReprintMessage({
+                              tone: "danger",
+                              text:
+                                cause instanceof Error
+                                  ? cause.message
+                                  : "La réimpression a échoué.",
+                            })
+                          } finally {
+                            setReprinting("")
+                          }
+                        }}
                       >
                         Réimprimer
                         <ChevronRight />
@@ -441,6 +492,7 @@ export function SellerDashboardScreen({
 
 export function SellerDashboardPageClient() {
   const router = useRouter()
+  const convex = useConvex()
   const online = useOnlineStatus()
   const { isAuthenticated, isLoading } = useAuth()
   const liveDashboard = useQuery(
@@ -448,6 +500,8 @@ export function SellerDashboardPageClient() {
     E2E_MODE || !isAuthenticated ? "skip" : {}
   )
   const openSession = useMutation(api.functions.cash.openSession)
+  const reprintTicket = useMutation(api.functions.sales.reprintTicket)
+  const ticketPdf = useAction(api.functions.documents.ticketPdf)
   const [demoDashboard, setDemoDashboard] =
     useState<SellerDashboardData>(DEMO_DASHBOARD)
   const dashboard = E2E_MODE
@@ -475,6 +529,25 @@ export function SellerDashboardPageClient() {
       data={dashboard}
       online={online}
       onNavigate={(href) => router.push(href)}
+      onReprint={async (saleId) => {
+        if (E2E_MODE) {
+          window.print()
+          return
+        }
+        const detail = await convex.query(api.functions.sales.get, {
+          saleId: saleId as never,
+        })
+        const ticket = detail.tickets.find(
+          (candidate) => candidate.status === "valide"
+        )
+        if (!ticket) throw new Error("Aucun billet valide à réimprimer.")
+        await reprintTicket({ ticketId: ticket._id })
+        const { url } = await ticketPdf({
+          ticketId: ticket._id,
+          force: true,
+        })
+        window.open(url, "_blank", "noopener,noreferrer")
+      }}
       onOpenCash={async (openingFloatXaf) => {
         if (E2E_MODE) {
           setDemoDashboard((current) => ({
