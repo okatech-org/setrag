@@ -93,15 +93,31 @@ export const provision = internalMutation({
       .query("sales")
       .withIndex("by_cash_session", (q) => q.eq("cashSessionId", session!._id))
       .collect()
-    const alreadyProvisioned = existing.filter(
-      (sale) => sale.deviceId === "demo-production-bootstrap"
+    const alreadyProvisioned = existing.filter((sale) =>
+      sale.deviceId?.startsWith("demo-production-bootstrap")
     )
-    if (alreadyProvisioned.length > 0) {
+    const provisionedTickets = (
+      await Promise.all(
+        alreadyProvisioned.map((sale) =>
+          ctx.db
+            .query("tickets")
+            .withIndex("by_sale", (q) => q.eq("saleId", sale._id))
+            .collect()
+        )
+      )
+    ).flat()
+    const ticketedSaleIds = new Set(
+      provisionedTickets.map((ticket) => ticket.saleId)
+    )
+    const provisionedSaleCount = ticketedSaleIds.size
+
+    if (provisionedSaleCount >= PASSENGERS.length) {
       return {
         email,
         sessionId: session._id,
         createdSales: 0,
         existingSales: existing.length,
+        existingTickets: provisionedTickets.length,
         totalReceived: existing.reduce(
           (sum, sale) => sum + sale.amounts.received,
           0
@@ -129,7 +145,11 @@ export const provision = internalMutation({
     ]
     const methods = ["especes", "airtel_money", "moov_money", "visa"] as const
 
-    for (let index = 0; index < PASSENGERS.length; index += 1) {
+    for (
+      let index = provisionedSaleCount;
+      index < PASSENGERS.length;
+      index += 1
+    ) {
       const trip = trips[index % trips.length]!
       const stops = (
         await ctx.db
@@ -164,7 +184,7 @@ export const provision = internalMutation({
           },
         ],
         method: methods[index % methods.length]!,
-        deviceId: "demo-production-bootstrap",
+        deviceId: "demo-production-bootstrap-v2",
       })
       createdSales += 1
       totalReceived += result.amounts.received
@@ -175,6 +195,7 @@ export const provision = internalMutation({
       sessionId: session._id,
       createdSales,
       existingSales: existing.length + createdSales,
+      existingTickets: provisionedTickets.length + createdSales,
       totalReceived,
       fixtures: await provisionManagementFixtures(ctx, agent, trips),
     }
