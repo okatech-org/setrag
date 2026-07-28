@@ -392,14 +392,13 @@ test("AW-G-11 programme un rapport avec ses destinataires", async ({
   await expect(page.getByText(/envoi récurrent a été programmé/i)).toBeVisible()
 })
 
-test("AW-G-10 télécharge réellement le journal comptable", async ({ page }) => {
+test("AW-G-10 masque l'export comptable sans droit de création", async ({
+  page,
+}) => {
   await page.goto("/gestion/comptabilite")
-  await page.getByRole("button", { name: "Exporter le journal" }).click()
-  const downloadPromise = page.waitForEvent("download")
-  await page.getByRole("button", { name: "Télécharger le fichier" }).click()
-  const download = await downloadPromise
-  expect(download.suggestedFilename()).toBe("setrag-journal-v65-2026-07-26.csv")
-  await expect(page.getByText("Téléchargement terminé")).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Exporter le journal" })
+  ).toHaveCount(0)
 })
 
 test("AW-G-09 contrôle puis clôture une journée rapprochée", async ({

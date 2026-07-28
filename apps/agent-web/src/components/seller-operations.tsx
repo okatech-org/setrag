@@ -44,6 +44,8 @@ import {
   type StationSummary,
 } from "@/lib/agent-data"
 import { formatTime, formatXaf } from "@/lib/format"
+import { asAppRole, canRole } from "@/lib/portal-access"
+import { usePortalSession } from "./portal-guard"
 import { SellerShell } from "./seller-shell"
 
 const E2E_MODE = process.env.NEXT_PUBLIC_E2E_MODE === "1"
@@ -125,6 +127,9 @@ export function OperationsScreen({
   onCancel,
   onRefund,
   onReprint,
+  canCancel = true,
+  canRefund = true,
+  canReprint = true,
   onSignOut,
 }: {
   dashboard: SellerDashboardData
@@ -134,6 +139,9 @@ export function OperationsScreen({
   onCancel: (saleId: string, reason: string) => Promise<void>
   onRefund: (saleId: string, reason: string) => Promise<void>
   onReprint: (saleId: string) => Promise<void>
+  canCancel?: boolean
+  canRefund?: boolean
+  canReprint?: boolean
   onSignOut?: () => void
 }) {
   const [number, setNumber] = useState("")
@@ -292,44 +300,50 @@ export function OperationsScreen({
               />
             ) : null}
             <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
-              <Button
-                type="button"
-                variant="danger"
-                disabled={!selected || !online}
-                loading={pending === "annulation"}
-                onClick={() =>
-                  selected &&
-                  run("annulation", () => onCancel(selected.id, reason))
-                }
-              >
-                <RotateCcw />
-                Annuler la vente
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={!selected || !online}
-                loading={pending === "remboursement"}
-                onClick={() =>
-                  selected &&
-                  run("remboursement", () => onRefund(selected.id, reason))
-                }
-              >
-                <RefreshCcw />
-                Rembourser
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={!selected || !online}
-                loading={pending === "duplicata"}
-                onClick={() =>
-                  selected && run("duplicata", () => onReprint(selected.id))
-                }
-              >
-                <Printer />
-                Imprimer un duplicata
-              </Button>
+              {canCancel ? (
+                <Button
+                  type="button"
+                  variant="danger"
+                  disabled={!selected || !online}
+                  loading={pending === "annulation"}
+                  onClick={() =>
+                    selected &&
+                    run("annulation", () => onCancel(selected.id, reason))
+                  }
+                >
+                  <RotateCcw />
+                  Annuler la vente
+                </Button>
+              ) : null}
+              {canRefund ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!selected || !online}
+                  loading={pending === "remboursement"}
+                  onClick={() =>
+                    selected &&
+                    run("remboursement", () => onRefund(selected.id, reason))
+                  }
+                >
+                  <RefreshCcw />
+                  Rembourser
+                </Button>
+              ) : null}
+              {canReprint ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={!selected || !online}
+                  loading={pending === "duplicata"}
+                  onClick={() =>
+                    selected && run("duplicata", () => onReprint(selected.id))
+                  }
+                >
+                  <Printer />
+                  Imprimer un duplicata
+                </Button>
+              ) : null}
             </div>
           </Card>
         </div>
@@ -766,6 +780,10 @@ export function ManualSalesScreen({
 export function OperationsPageClient() {
   const online = useOnlineStatus()
   const convex = useConvex()
+  const portalSession = usePortalSession()
+  const role = E2E_MODE
+    ? ("vendeur_guichet" as const)
+    : asAppRole(portalSession?.profile.user.role)
   const { isAuthenticated } = useSellerAuthentication()
   const [number, setNumber] = useState("")
   const dashboardQuery = useQuery(
@@ -806,6 +824,9 @@ export function OperationsPageClient() {
       dashboard={dashboard}
       operations={operations}
       online={online}
+      canCancel={canRole(role, "annulations", "creer")}
+      canRefund={canRole(role, "remboursements", "creer")}
+      canReprint={canRole(role, "duplicatas", "creer")}
       onSearch={setNumber}
       onCancel={async (saleId, reason) => {
         if (!E2E_MODE) await cancelSale({ saleId: saleId as never, reason })

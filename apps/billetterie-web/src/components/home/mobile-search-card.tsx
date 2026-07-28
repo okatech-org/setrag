@@ -61,7 +61,7 @@ export function MobileSearchCard() {
   return (
     <section
       aria-labelledby="recherche-mobile"
-      className="grid gap-s-3 rounded-lg border border-line bg-surface p-s-4 shadow-md"
+      className="grid min-w-0 grid-cols-1 gap-s-3 rounded-lg border border-line bg-surface p-s-4 shadow-md"
     >
       <h2 id="recherche-mobile" className="text-mono-label text-ink-muted">
         Où allez-vous ?
@@ -71,7 +71,7 @@ export function MobileSearchCard() {
         <button
           type="button"
           onClick={() => setOpenSheet("stations")}
-          className="text-body flex min-h-13 flex-1 items-center rounded-md border border-line-strong bg-surface px-s-4 text-left font-medium hover:bg-surface-sunk"
+          className="text-body flex min-h-13 min-w-0 flex-1 items-center rounded-md border border-line-strong bg-surface px-s-4 text-left font-medium hover:bg-surface-sunk"
         >
           <span className="min-w-0 truncate">
             {search.stationName(draft.originId)} →{" "}
@@ -88,7 +88,7 @@ export function MobileSearchCard() {
         </Button>
       </div>
 
-      <div className="flex gap-s-2">
+      <div className="flex flex-wrap gap-s-2">
         <Chip onClick={() => setOpenSheet("date")}>
           <CalendarDays aria-hidden />
           {dateLabel(draft.serviceDate)}

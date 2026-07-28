@@ -1,12 +1,10 @@
 "use client"
 
 import { BarChart3, Download, Filter, Plus, Search } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useConvex } from "convex/react"
 
-import { authClient } from "@workspace/api/auth-client"
-import { useAction, useAuth, useMutation, useQuery } from "@workspace/api/hooks"
+import { useAction, useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -24,6 +22,7 @@ import {
 } from "@workspace/ui/components/table"
 
 import { useOnlineStatus } from "@/hooks/use-online-status"
+import { asAppRole, canRole } from "@/lib/portal-access"
 import {
   MANAGEMENT_SECTIONS,
   type ManagementSection,
@@ -31,6 +30,7 @@ import {
 import type { SellerIdentity } from "@/lib/agent-data"
 import { formatXaf } from "@/lib/format"
 import { SellerShell } from "./seller-shell"
+import { usePortalSession } from "./portal-guard"
 import {
   DataSelectionDialog,
   FareScheduleDialog,
@@ -63,7 +63,7 @@ const MANAGEMENT_IDENTITY = {
   firstName: "Mireille",
   lastName: "NZENG",
   matricule: "G-044",
-  role: "gestionnaire",
+  role: "admin_fonctionnel",
 }
 
 const MANAGEMENT_SCOPE = {
@@ -189,7 +189,6 @@ export function ManagementScreen({
   online,
   identity = MANAGEMENT_IDENTITY,
   onPrimaryAction,
-  actionUnavailableReason,
   onSignOut,
 }: {
   section: ManagementSection
@@ -198,7 +197,6 @@ export function ManagementScreen({
   online: boolean
   identity?: SellerIdentity
   onPrimaryAction?: () => void | Promise<string | void>
-  actionUnavailableReason?: string
   onSignOut?: () => void
 }) {
   const config = MANAGEMENT_SECTIONS[section]
@@ -269,18 +267,19 @@ export function ManagementScreen({
               onCheckedChange={setYieldEnabled}
             />
           ) : null}
-          <Button
-            type="button"
-            variant={section === "tableau-de-bord" ? "secondary" : "primary"}
-            loading={pending}
-            loadingLabel="Traitement…"
-            disabled={!online || !onPrimaryAction}
-            title={!onPrimaryAction ? actionUnavailableReason : undefined}
-            onClick={runPrimary}
-          >
-            {section === "tableau-de-bord" ? <Download /> : <Plus />}
-            {config.action}
-          </Button>
+          {onPrimaryAction ? (
+            <Button
+              type="button"
+              variant={section === "tableau-de-bord" ? "secondary" : "primary"}
+              loading={pending}
+              loadingLabel="Traitement…"
+              disabled={!online}
+              onClick={runPrimary}
+            >
+              {section === "tableau-de-bord" ? <Download /> : <Plus />}
+              {config.action}
+            </Button>
+          ) : null}
         </header>
 
         {!online ? (
@@ -290,11 +289,6 @@ export function ManagementScreen({
           </InlineMessage>
         ) : null}
         {message ? <InlineMessage tone={messageTone} title={message} /> : null}
-        {!onPrimaryAction && actionUnavailableReason ? (
-          <InlineMessage tone="info" title="Action non disponible">
-            {actionUnavailableReason}
-          </InlineMessage>
-        ) : null}
 
         {section === "tableau-de-bord" ? <Overview live={live} /> : null}
 
@@ -437,10 +431,17 @@ export function ManagementPageClient({
 }: {
   section: ManagementSection
 }) {
-  const router = useRouter()
   const online = useOnlineStatus()
   const convex = useConvex()
-  const { isAuthenticated, isLoading } = useAuth()
+  const portalSession = usePortalSession()
+  const profile = portalSession?.profile
+  const role = E2E_MODE
+    ? ("admin_fonctionnel" as const)
+    : asAppRole(profile?.user?.role)
+  const may = (
+    resource: Parameters<typeof canRole>[1],
+    permission: Parameters<typeof canRole>[2] = "consulter"
+  ) => canRole(role, resource, permission)
   const today = new Date().toISOString().slice(0, 10)
   const monthStart = `${today.slice(0, 8)}01`
   const [dialog, setDialog] = useState<
@@ -457,24 +458,20 @@ export function ManagementPageClient({
     | "settings"
     | null
   >(null)
-  const profile = useQuery(
-    api.functions.customers.me,
-    E2E_MODE || !isAuthenticated ? "skip" : {}
-  )
   const reporting = useQuery(
     api.functions.reporting.dashboard,
-    E2E_MODE || !isAuthenticated || section !== "tableau-de-bord"
+    E2E_MODE || !may("rapports") || section !== "tableau-de-bord"
       ? "skip"
       : { from: monthStart, to: today }
   )
   const booklets = useQuery(
     api.functions.booklets.list,
-    E2E_MODE || !isAuthenticated || section !== "livrets" ? "skip" : {}
+    E2E_MODE || !may("livrets_horaires") || section !== "livrets" ? "skip" : {}
   )
   const trains = useQuery(
     api.functions.referential.listTrains,
     E2E_MODE ||
-      !isAuthenticated ||
+      !may("referentiel") ||
       (section !== "trains" && section !== "places")
       ? "skip"
       : {}
@@ -482,7 +479,7 @@ export function ManagementPageClient({
   const stations = useQuery(
     api.functions.referential.listStations,
     E2E_MODE ||
-      !isAuthenticated ||
+      !may("referentiel") ||
       (section !== "points-de-vente" &&
         section !== "trains" &&
         section !== "tarifs")
@@ -492,7 +489,7 @@ export function ManagementPageClient({
   const exportsList = useQuery(
     api.functions.accounting.listExports,
     E2E_MODE ||
-      !isAuthenticated ||
+      !may("journal_comptable") ||
       (section !== "comptabilite" && section !== "integrations")
       ? "skip"
       : {}
@@ -500,7 +497,7 @@ export function ManagementPageClient({
   const accountingDays = useQuery(
     api.functions.cash.listAccountingDays,
     E2E_MODE ||
-      !isAuthenticated ||
+      !may("journee_comptable") ||
       (section !== "recettes" && section !== "comptabilite")
       ? "skip"
       : { limit: 31 }
@@ -508,75 +505,71 @@ export function ManagementPageClient({
   const health = useQuery(
     api.functions.monitoring.health,
     E2E_MODE ||
-      !isAuthenticated ||
+      !may("rapports") ||
       (section !== "tableau-de-bord" && section !== "integrations")
       ? "skip"
       : {}
   )
   const incidents = useQuery(
     api.functions.control.listIncidents,
-    E2E_MODE || !isAuthenticated || section !== "incidents" ? "skip" : {}
+    E2E_MODE || !may("incidents") || section !== "incidents" ? "skip" : {}
   )
   const penalties = useQuery(
     api.functions.control.listPenalties,
-    E2E_MODE || !isAuthenticated || section !== "incidents" ? "skip" : {}
+    E2E_MODE || !may("proces_verbaux") || section !== "incidents" ? "skip" : {}
   )
   const penaltyTrips = useQuery(
     api.functions.control.penaltyTripOptions,
     E2E_MODE ||
-      !isAuthenticated ||
+      !may("controles") ||
       (section !== "incidents" && section !== "voyageurs")
       ? "skip"
       : { limit: 30 }
   )
   const reportSchedules = useQuery(
     api.functions.reportSchedules.list,
-    E2E_MODE || !isAuthenticated || section !== "rapports" ? "skip" : {}
+    E2E_MODE || !may("rapports") || section !== "rapports" ? "skip" : {}
   )
   const fareSchedules = useQuery(
     api.functions.management.listFareSchedules,
-    E2E_MODE || !isAuthenticated || section !== "tarifs" ? "skip" : {}
+    E2E_MODE || !may("tarifs") || section !== "tarifs" ? "skip" : {}
   )
   const pricingRules = useQuery(
     api.functions.management.listPricingRules,
-    E2E_MODE || !isAuthenticated || section !== "yield" ? "skip" : {}
+    E2E_MODE || !may("yield") || section !== "yield" ? "skip" : {}
   )
   const trainCompositions = useQuery(
     api.functions.management.listTrainCompositions,
     E2E_MODE ||
-      !isAuthenticated ||
+      !may("referentiel") ||
       (section !== "trains" && section !== "places")
       ? "skip"
       : {}
   )
   const seatBlocks = useQuery(
     api.functions.management.listSeatBlocks,
-    E2E_MODE || !isAuthenticated || section !== "places" ? "skip" : {}
+    E2E_MODE || !may("places") || section !== "places" ? "skip" : {}
   )
   const pointsOfSale = useQuery(
     api.functions.management.listPointsOfSale,
-    E2E_MODE || !isAuthenticated || section !== "points-de-vente" ? "skip" : {}
+    E2E_MODE || !may("referentiel") || section !== "points-de-vente"
+      ? "skip"
+      : {}
   )
   const travelers = useQuery(
     api.functions.management.listTravelers,
-    E2E_MODE || !isAuthenticated || section !== "voyageurs"
+    E2E_MODE || !may("donnees_voyageurs") || section !== "voyageurs"
       ? "skip"
       : { limit: 100 }
   )
   const users = useQuery(
     api.functions.management.listUsers,
-    E2E_MODE || !isAuthenticated || section !== "utilisateurs" ? "skip" : {}
+    E2E_MODE || !may("utilisateurs") || section !== "utilisateurs" ? "skip" : {}
   )
   const settings = useQuery(
     api.functions.management.getSettings,
-    E2E_MODE || !isAuthenticated || section !== "parametrage" ? "skip" : {}
+    E2E_MODE || !may("parametrage") || section !== "parametrage" ? "skip" : {}
   )
-
-  useEffect(() => {
-    if (!E2E_MODE && !isLoading && !isAuthenticated) {
-      router.replace("/connexion")
-    }
-  }, [isAuthenticated, isLoading, router])
 
   const createBooklet = useMutation(api.functions.booklets.create)
   const syncPenalties = useMutation(api.functions.control.syncPenalties)
@@ -785,15 +778,17 @@ export function ManagementPageClient({
                               : undefined
 
   const primaryAction: (() => void | Promise<string | void>) | undefined =
-    section === "incidents"
+    section === "incidents" && may("proces_verbaux", "creer")
       ? () => setDialog("penalty")
-      : section === "rapports"
+      : section === "rapports" && may("rapports", "creer")
         ? () => setDialog("schedule")
-        : section === "comptabilite"
+        : section === "comptabilite" &&
+            may("journal_comptable", "creer") &&
+            may("journee_comptable")
           ? () => setDialog("journal")
-          : section === "recettes"
+          : section === "recettes" && may("journee_comptable")
             ? () => setDialog("revenue")
-            : section === "livrets"
+            : section === "livrets" && may("livrets_horaires", "creer")
               ? async () => {
                   if (!E2E_MODE) {
                     await createBooklet({
@@ -806,7 +801,7 @@ export function ManagementPageClient({
                   }
                   return "Le brouillon du livret a été créé."
                 }
-              : section === "tableau-de-bord"
+              : section === "tableau-de-bord" && may("rapports", "creer")
                 ? async () => {
                     const exported = E2E_MODE
                       ? {
@@ -822,19 +817,23 @@ export function ManagementPageClient({
                     downloadTextFile(exported.filename, exported.content)
                     return `${exported.filename} téléchargé · ${exported.rowCount} ligne(s).`
                   }
-                : section === "tarifs"
+                : section === "tarifs" && may("tarifs", "creer")
                   ? () => setDialog("fare")
-                  : section === "yield"
+                  : section === "yield" && may("yield", "creer")
                     ? () => setDialog("yield")
-                    : section === "trains"
+                    : section === "trains" && may("referentiel", "creer")
                       ? () => setDialog("composition")
-                      : section === "places"
+                      : section === "places" &&
+                          may("places") &&
+                          may("referentiel")
                         ? () => setDialog("seat-plan")
-                        : section === "points-de-vente"
+                        : section === "points-de-vente" &&
+                            may("referentiel", "creer")
                           ? () => setDialog("point-of-sale")
-                          : section === "voyageurs"
+                          : section === "voyageurs" && may("controles")
                             ? () => setDialog("manifest")
-                            : section === "utilisateurs"
+                            : section === "utilisateurs" &&
+                                may("utilisateurs", "modifier")
                               ? async () => {
                                   const result = await synchronizeDirectory({})
                                   if (!result.synchronized) {
@@ -842,9 +841,11 @@ export function ManagementPageClient({
                                   }
                                   return result.message
                                 }
-                              : section === "parametrage"
+                              : section === "parametrage" &&
+                                  may("parametrage", "modifier")
                                 ? () => setDialog("settings")
-                                : section === "integrations"
+                                : section === "integrations" &&
+                                    may("integrations")
                                   ? async () => {
                                       const result =
                                         await retryIntegrationFailures({})
@@ -1018,7 +1019,7 @@ export function ManagementPageClient({
     return `${filename} téléchargé · ${manifest.tickets.length} voyageur(s).`
   }
 
-  if (!E2E_MODE && (isLoading || !isAuthenticated)) {
+  if (!E2E_MODE && !portalSession) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-canvas">
         <p role="status" className="text-small text-ink-muted">
@@ -1047,7 +1048,6 @@ export function ManagementPageClient({
             : MANAGEMENT_IDENTITY
         }
         onPrimaryAction={primaryAction}
-        onSignOut={() => authClient.signOut()}
       />
       {dialog === "penalty" ? (
         <PenaltyDialog
@@ -1076,6 +1076,7 @@ export function ManagementPageClient({
         <RevenueControlDialog
           open
           days={dayOptions}
+          canClose={may("journee_comptable", "valider")}
           onOpenChange={(open) => setDialog(open ? "revenue" : null)}
           onInspect={inspectRevenue}
           onCloseDay={closeRevenue}

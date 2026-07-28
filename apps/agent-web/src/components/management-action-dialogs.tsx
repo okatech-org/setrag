@@ -484,12 +484,14 @@ export interface RevenueControlSnapshot {
 export function RevenueControlDialog({
   open,
   days,
+  canClose = true,
   onOpenChange,
   onInspect,
   onCloseDay,
 }: {
   open: boolean
   days: readonly AccountingDayOption[]
+  canClose?: boolean
   onOpenChange: (open: boolean) => void
   onInspect: (accountingDayId: string) => Promise<RevenueControlSnapshot>
   onCloseDay: (accountingDayId: string) => Promise<void>
@@ -606,17 +608,21 @@ export function RevenueControlDialog({
               Convex a confirmé la clôture et lancé le calcul des indicateurs.
             </InlineMessage>
           ) : null}
-          <DialogFooter>
-            <Button
-              type="button"
-              loading={pending}
-              loadingLabel="Clôture…"
-              disabled={!snapshot || blocking || snapshot.status === "cloturee"}
-              onClick={closeDay}
-            >
-              Clôturer la journée contrôlée
-            </Button>
-          </DialogFooter>
+          {canClose ? (
+            <DialogFooter>
+              <Button
+                type="button"
+                loading={pending}
+                loadingLabel="Clôture…"
+                disabled={
+                  !snapshot || blocking || snapshot.status === "cloturee"
+                }
+                onClick={closeDay}
+              >
+                Clôturer la journée contrôlée
+              </Button>
+            </DialogFooter>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

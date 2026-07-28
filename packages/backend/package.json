@@ -19,6 +19,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./generated": "./convex/_generated/api.js",
+    "./permissions": "./convex/model/permissions.ts",
     "./schema": "./convex/schema.ts"
   },
   "dependencies": {
