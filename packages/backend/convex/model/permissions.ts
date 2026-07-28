@@ -105,6 +105,7 @@ const MATRIX: Readonly<Record<AppRole, ResourceGrants>> = {
     annulations: READ_CREATE,
     remboursements: READ,
     duplicatas: READ_CREATE,
+    ventes_manuelles: READ_CREATE,
     caisse: READ_WRITE,
     referentiel: READ,
     livrets_horaires: READ,

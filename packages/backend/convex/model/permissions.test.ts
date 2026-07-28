@@ -166,6 +166,13 @@ describe("Droits opérationnels par métier", () => {
     expect(can("taxateur", "caisse", "consulter")).toBe(false)
   })
 
+  it("le vendeur guichet ressaisit ses billets papier sans pouvoir les modifier", () => {
+    expect(can("vendeur_guichet", "ventes_manuelles", "consulter")).toBe(true)
+    expect(can("vendeur_guichet", "ventes_manuelles", "creer")).toBe(true)
+    expect(can("vendeur_guichet", "ventes_manuelles", "modifier")).toBe(false)
+    expect(can("vendeur_guichet", "ventes_manuelles", "valider")).toBe(false)
+  })
+
   it("le contrôleur de train contrôle, verbalise et vend à bord", () => {
     expect(can("controleur_train", "controles", "creer")).toBe(true)
     expect(can("controleur_train", "proces_verbaux", "creer")).toBe(true)
