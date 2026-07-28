@@ -6,12 +6,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useConvex } from "convex/react"
 
 import { authClient } from "@workspace/api/auth-client"
-import {
-  useAction,
-  useAuth,
-  useMutation,
-  useQuery,
-} from "@workspace/api/hooks"
+import { useAction, useAuth, useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -560,9 +555,7 @@ export function ManagementPageClient({
   )
   const pointsOfSale = useQuery(
     api.functions.management.listPointsOfSale,
-    E2E_MODE || !isAuthenticated || section !== "points-de-vente"
-      ? "skip"
-      : {}
+    E2E_MODE || !isAuthenticated || section !== "points-de-vente" ? "skip" : {}
   )
   const travelers = useQuery(
     api.functions.management.listTravelers,
@@ -843,8 +836,11 @@ export function ManagementPageClient({
                             ? () => setDialog("manifest")
                             : section === "utilisateurs"
                               ? async () => {
-                                  await synchronizeDirectory({})
-                                  return "L’annuaire a été synchronisé."
+                                  const result = await synchronizeDirectory({})
+                                  if (!result.synchronized) {
+                                    throw new Error(result.message)
+                                  }
+                                  return result.message
                                 }
                               : section === "parametrage"
                                 ? () => setDialog("settings")

@@ -306,19 +306,20 @@ export const directoryStatus = query({
  */
 export const synchronizeDirectory = action({
   args: {},
-  handler: async (ctx) => {
-    const status = await ctx.runQuery(
-      api.functions.management.directoryStatus,
-      {}
-    )
+  handler: async (ctx): Promise<{ synchronized: boolean; message: string }> => {
+    const status: { configured: boolean; missing: string[] } =
+      await ctx.runQuery(api.functions.management.directoryStatus, {})
     if (!status.configured) {
-      throw new Error(
-        `Annuaire ERAMET non configuré : ${status.missing.join(", ")}.`
-      )
+      return {
+        synchronized: false,
+        message: `Synchronisation impossible : ${status.missing.join(", ")} manquante(s). Le contrat de données de l’annuaire ERAMET doit également être fourni par la DSI.`,
+      }
     }
-    throw new Error(
-      "Le contrat de données de l’annuaire ERAMET n’a pas encore été fourni par la DSI."
-    )
+    return {
+      synchronized: false,
+      message:
+        "Synchronisation impossible : le contrat de données de l’annuaire ERAMET n’a pas encore été fourni par la DSI.",
+    }
   },
 })
 

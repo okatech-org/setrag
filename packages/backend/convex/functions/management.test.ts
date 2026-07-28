@@ -117,6 +117,11 @@ describe("Actions de gestion", () => {
 
     await expect(
       client.action(api.functions.management.synchronizeDirectory, {})
-    ).rejects.toThrow("ERAMET_DIRECTORY_SYNC_URL, ERAMET_DIRECTORY_SYNC_TOKEN")
+    ).resolves.toEqual({
+      synchronized: false,
+      message: expect.stringContaining(
+        "ERAMET_DIRECTORY_SYNC_URL, ERAMET_DIRECTORY_SYNC_TOKEN"
+      ),
+    })
   })
 })
