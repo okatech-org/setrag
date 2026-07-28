@@ -674,5 +674,18 @@ describe("Actions de gestion", () => {
       origin: { code: "OWE" },
       destination: { code: "FCV" },
     })
+
+    const travelers = await client.query(
+      api.functions.management.listTravelers,
+      { limit: 1 }
+    )
+    expect(travelers).toHaveLength(1)
+    expect(travelers[0]).toMatchObject({
+      ticket: {
+        _id: ticketId,
+        passenger: { firstName: "Ariane", lastName: "Moussavou" },
+      },
+      trip: { trainNumber: "TR-BLOCK" },
+    })
   })
 })

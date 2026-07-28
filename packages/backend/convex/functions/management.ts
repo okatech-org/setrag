@@ -576,9 +576,7 @@ export const listTravelers = query({
   handler: async (ctx, args) => {
     await requirePermission(ctx, "donnees_voyageurs", "consulter")
     const limit = Math.min(Math.max(args.limit ?? 100, 1), 500)
-    const tickets = (await ctx.db.query("tickets").collect())
-      .sort((left, right) => right._creationTime - left._creationTime)
-      .slice(0, limit)
+    const tickets = await ctx.db.query("tickets").order("desc").take(limit)
     return await Promise.all(
       tickets.map(async (ticket) => {
         const [trip, origin, destination] = await Promise.all([
