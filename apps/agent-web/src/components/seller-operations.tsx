@@ -151,7 +151,8 @@ export function OperationsScreen({
   const [reason, setReason] = useState("")
   const [pending, setPending] = useState("")
   const [message, setMessage] = useState("")
-  const selected = operations.find((row) => row.id === selectedId)
+  const selected =
+    operations.find((row) => row.id === selectedId) ?? operations[0]
 
   async function run(
     key: "annulation" | "remboursement" | "duplicata",
@@ -245,7 +246,9 @@ export function OperationsScreen({
                 {operations.map((row) => (
                   <TableRow
                     key={row.id}
-                    data-state={selectedId === row.id ? "selected" : undefined}
+                    data-state={
+                      selected?.id === row.id ? "selected" : undefined
+                    }
                     className="cursor-pointer"
                     onClick={() => setSelectedId(row.id)}
                   >
@@ -808,16 +811,27 @@ export function OperationsPageClient() {
           )
         : DEMO_OPERATIONS
     }
-    return (saleQuery ?? []).map((sale) => ({
-      id: sale._id,
+    if (number) {
+      return (saleQuery ?? []).map((sale) => ({
+        id: sale._id,
+        number: sale.number,
+        product: sale.product,
+        kind: sale.kind,
+        status: sale.status,
+        amountXaf: sale.amounts.ttc,
+        soldAt: sale.soldAt,
+      }))
+    }
+    return (dashboard?.lastOperations ?? []).map((sale) => ({
+      id: sale.id,
       number: sale.number,
       product: sale.product,
       kind: sale.kind,
       status: sale.status,
-      amountXaf: sale.amounts.ttc,
-      soldAt: sale.soldAt,
+      amountXaf: sale.amountXaf,
+      soldAt: sale.createdAt,
     }))
-  }, [number, saleQuery])
+  }, [dashboard?.lastOperations, number, saleQuery])
 
   if (!dashboard) return <p className="p-8">Chargement des opérations…</p>
 

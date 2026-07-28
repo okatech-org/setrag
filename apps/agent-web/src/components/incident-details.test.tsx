@@ -63,6 +63,11 @@ describe("fiches incidents et procès-verbaux", () => {
       screen.getByRole("heading", { name: "Incident INC-2026-001" })
     ).toBeInTheDocument()
     expect(screen.getByText("Porte bloquée")).toBeInTheDocument()
+    expect(
+      [...screen.getByLabelText("Nouvel état").querySelectorAll("option")].map(
+        (option) => option.value
+      )
+    ).toEqual(["", "en_cours", "resolu"])
 
     fireEvent.change(screen.getByLabelText("Nouvel état"), {
       target: { value: "en_cours" },
@@ -116,6 +121,11 @@ describe("fiches incidents et procès-verbaux", () => {
       screen.getByRole("heading", { name: "PV-000142" })
     ).toBeInTheDocument()
     expect(screen.getByText("Absence de titre")).toBeInTheDocument()
+    expect(
+      [...screen.getByLabelText("Nouvel état").querySelectorAll("option")].map(
+        (option) => option.value
+      )
+    ).toEqual(["", "paye", "conteste", "annule"])
 
     fireEvent.change(screen.getByLabelText("Nouvel état"), {
       target: { value: "conteste" },

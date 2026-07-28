@@ -775,6 +775,13 @@ describe("Procès-verbaux", () => {
     expect(detail?.penalty.number).toBe("PV-000001")
     expect(detail?.trip?.trainNumber).toBe("TR-201")
     expect(detail?.resolver?._id).toBeDefined()
+    await expect(
+      chef.ctx.mutation(api.functions.control.setPenaltyStatus, {
+        penaltyId: pvId,
+        status: "emis",
+        resolutionNote: "Tentative de retour en arrière",
+      })
+    ).rejects.toThrow(/annule → emis/)
   })
 
   it("refuse un montant d'amende négatif", async () => {
@@ -941,5 +948,30 @@ describe("Signalements d'incident", () => {
     const apres = await t.run(async (c) => c.db.get(id))
     expect(apres?.status).toBe("resolu")
     expect(apres?.resolvedAt).toBeGreaterThan(0)
+
+    await expect(
+      chef.ctx.mutation(api.functions.control.setIncidentStatus, {
+        incidentId: id,
+        status: "en_cours",
+      })
+    ).rejects.toThrow(/note est obligatoire/)
+    await chef.ctx.mutation(api.functions.control.setIncidentStatus, {
+      incidentId: id,
+      status: "en_cours",
+      resolutionNote: "Le défaut est réapparu lors du contrôle de sortie",
+    })
+    const rouvert = await t.run(async (c) => c.db.get(id))
+    expect(rouvert).toMatchObject({ status: "en_cours" })
+    expect(rouvert?.resolvedAt).toBeUndefined()
+    expect(rouvert?.resolvedBy).toBeUndefined()
+    expect(rouvert?.resolutionNote).toBeUndefined()
+
+    await expect(
+      chef.ctx.mutation(api.functions.control.setIncidentStatus, {
+        incidentId: id,
+        status: "ouvert",
+        resolutionNote: "Retour arrière interdit",
+      })
+    ).rejects.toThrow(/en_cours → ouvert/)
   })
 })
