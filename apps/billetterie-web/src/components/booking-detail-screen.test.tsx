@@ -88,4 +88,25 @@ describe("BookingDetailScreen", () => {
       })
     )
   })
+
+  it("propose les deux Wallets sur ordinateur et génère le pass Apple", async () => {
+    actionMock.mockResolvedValueOnce({
+      provider: "apple",
+      filename: "billet-BT-001.pkpass",
+      bytes: new ArrayBuffer(8),
+    })
+    render(<BookingDetailScreen reference="V-LIGNE-20260727-000001" />)
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Ajouter à Apple Wallet" })[0]!
+    )
+
+    await waitFor(() =>
+      expect(actionMock).toHaveBeenCalledWith({
+        ticketId: "ticket-1",
+        provider: "apple",
+        contactPhone: undefined,
+      })
+    )
+  })
 })
