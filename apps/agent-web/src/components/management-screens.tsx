@@ -5,7 +5,7 @@ import { useMemo, useState } from "react"
 import { useConvex } from "convex/react"
 
 import { authClient } from "@workspace/api/auth-client"
-import { useMutation, useQuery } from "@workspace/api/hooks"
+import { useAction, useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -30,6 +30,19 @@ import {
 import type { SellerIdentity } from "@/lib/agent-data"
 import { formatXaf } from "@/lib/format"
 import { SellerShell } from "./seller-shell"
+import {
+  DataSelectionDialog,
+  FareScheduleDialog,
+  PointOfSaleDialog,
+  PricingRuleDialog,
+  SettingsDialog,
+  TrainCompositionDialog,
+  type CoachDraft,
+  type FareScheduleDraft,
+  type PointOfSaleDraft,
+  type PricingRuleDraft,
+  type SettingsDraft,
+} from "./management-admin-dialogs"
 import {
   JournalExportDialog,
   PenaltyDialog,
@@ -284,33 +297,6 @@ export function ManagementScreen({
 
         {section === "tableau-de-bord" ? <Overview live={live} /> : null}
 
-        {section === "parametrage" ? (
-          <Card className="p-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Taux de TVA sur les billets" htmlFor="vat-rate">
-                <Input id="vat-rate" type="number" defaultValue="18" />
-              </Field>
-              <Field
-                label="Contribution spéciale de solidarité"
-                htmlFor="css-rate"
-              >
-                <Input id="css-rate" type="number" defaultValue="0" />
-              </Field>
-              <Field label="Durée de tenue des places" htmlFor="hold-duration">
-                <Input id="hold-duration" type="number" defaultValue="15" />
-              </Field>
-              <Field
-                label="Tentatives de paiement mobile"
-                htmlFor="payment-attempts"
-              >
-                <Input id="payment-attempts" type="number" defaultValue="3" />
-              </Field>
-            </div>
-            <Switch label="Autoriser la vente en mode dégradé" defaultChecked />
-            <Switch label="Notifier les écarts de caisse" defaultChecked />
-          </Card>
-        ) : null}
-
         {section !== "tableau-de-bord" ? (
           <>
             <Card className="gap-4 p-5">
@@ -455,7 +441,18 @@ export function ManagementPageClient({
   const today = new Date().toISOString().slice(0, 10)
   const monthStart = `${today.slice(0, 8)}01`
   const [dialog, setDialog] = useState<
-    "penalty" | "schedule" | "journal" | "revenue" | null
+    | "penalty"
+    | "schedule"
+    | "journal"
+    | "revenue"
+    | "fare"
+    | "yield"
+    | "composition"
+    | "seat-plan"
+    | "point-of-sale"
+    | "manifest"
+    | "settings"
+    | null
   >(null)
   const profile = useQuery(api.functions.customers.me, E2E_MODE ? "skip" : {})
   const reporting = useQuery(
@@ -509,17 +506,68 @@ export function ManagementPageClient({
   )
   const penaltyTrips = useQuery(
     api.functions.control.penaltyTripOptions,
-    E2E_MODE || section !== "incidents" ? "skip" : { limit: 30 }
+    E2E_MODE || (section !== "incidents" && section !== "voyageurs")
+      ? "skip"
+      : { limit: 30 }
   )
   const reportSchedules = useQuery(
     api.functions.reportSchedules.list,
     E2E_MODE || section !== "rapports" ? "skip" : {}
+  )
+  const fareSchedules = useQuery(
+    api.functions.management.listFareSchedules,
+    E2E_MODE || section !== "tarifs" ? "skip" : {}
+  )
+  const pricingRules = useQuery(
+    api.functions.management.listPricingRules,
+    E2E_MODE || section !== "yield" ? "skip" : {}
+  )
+  const trainCompositions = useQuery(
+    api.functions.management.listTrainCompositions,
+    E2E_MODE || (section !== "trains" && section !== "places") ? "skip" : {}
+  )
+  const seatBlocks = useQuery(
+    api.functions.management.listSeatBlocks,
+    E2E_MODE || section !== "places" ? "skip" : {}
+  )
+  const pointsOfSale = useQuery(
+    api.functions.management.listPointsOfSale,
+    E2E_MODE || section !== "points-de-vente" ? "skip" : {}
+  )
+  const travelers = useQuery(
+    api.functions.management.listTravelers,
+    E2E_MODE || section !== "voyageurs" ? "skip" : { limit: 100 }
+  )
+  const users = useQuery(
+    api.functions.management.listUsers,
+    E2E_MODE || section !== "utilisateurs" ? "skip" : {}
+  )
+  const settings = useQuery(
+    api.functions.management.getSettings,
+    E2E_MODE || section !== "parametrage" ? "skip" : {}
   )
 
   const createBooklet = useMutation(api.functions.booklets.create)
   const syncPenalties = useMutation(api.functions.control.syncPenalties)
   const createReportSchedule = useMutation(api.functions.reportSchedules.create)
   const closeAccountingDay = useMutation(api.functions.cash.closeAccountingDay)
+  const createFareSchedule = useMutation(
+    api.functions.management.createFareSchedule
+  )
+  const createPricingRule = useMutation(
+    api.functions.management.createPricingRule
+  )
+  const addCoach = useMutation(api.functions.referential.addCoach)
+  const createPointOfSale = useMutation(
+    api.functions.management.createPointOfSale
+  )
+  const saveSettings = useMutation(api.functions.management.saveSettings)
+  const retryIntegrationFailures = useMutation(
+    api.functions.management.retryIntegrationFailures
+  )
+  const synchronizeDirectory = useAction(
+    api.functions.management.synchronizeDirectory
+  )
 
   const dayOptions: AccountingDayOption[] = E2E_MODE
     ? DEMO_ACCOUNTING_DAYS
@@ -537,6 +585,18 @@ export function ManagementPageClient({
         origin: trip.origin,
         destination: trip.destination,
       }))
+  const trainOptions = (trains ?? []).map((train) => ({
+    id: train._id,
+    label: `${train.number} · ${train.name}`,
+  }))
+  const stationOptions = (stations ?? []).map((station) => ({
+    id: station._id,
+    label: `${station.code} · ${station.name}`,
+  }))
+  const dataTripOptions = tripOptions.map((trip) => ({
+    id: trip.id,
+    label: `${trip.trainNumber} · ${trip.serviceDate} · ${trip.origin} → ${trip.destination}`,
+  }))
 
   const live: LiveSummary = E2E_MODE
     ? {}
@@ -562,53 +622,136 @@ export function ManagementPageClient({
           booklet.status,
         ])
       : section === "trains" && trains
-        ? trains.map((train) => [
+        ? (trainCompositions ?? []).map(({ train, coachCount, capacity }) => [
             train.number,
             train.type,
-            train.name,
-            train.isActive ? "Actif" : "Inactif",
+            `${coachCount} voiture(s)`,
+            `${capacity} place(s)`,
           ])
-        : section === "incidents" && (incidents || penalties)
-          ? [
-              ...(penalties ?? []).map(({ penalty, trip }) => [
-                penalty.number,
-                penalty.reason,
-                trip?.trainNumber ?? "Réseau",
-                penalty.status,
-              ]),
-              ...(incidents ?? []).map(({ incident, trip }) => [
-                incident.clientId,
-                incident.category,
-                trip?.trainNumber ?? "Réseau",
-                incident.status,
-              ]),
-            ]
-          : section === "comptabilite" && exportsList
-            ? exportsList.map(({ event, day }) => [
-                day && "date" in day
-                  ? new Date(`${day.date}T00:00:00`).toLocaleDateString("fr-FR")
-                  : new Date(event.createdAt).toLocaleDateString("fr-FR"),
-                `${event.attempts} tentative(s)`,
-                "Journal V65",
-                event.status,
+        : section === "tarifs" && fareSchedules
+          ? fareSchedules.flatMap(({ schedule, bases }) =>
+              bases.map((base) => [
+                base.trainType,
+                base.serviceClass,
+                `${base.shortDistanceRate.toLocaleString("fr-FR")} F/km`,
+                `${base.longDistanceRate.toLocaleString("fr-FR")} F/km · ${schedule.status}`,
               ])
-            : section === "rapports" && reportSchedules
-              ? reportSchedules.map((schedule) => [
-                  schedule.label,
-                  schedule.frequency,
-                  schedule.format.toUpperCase(),
-                  schedule.lastRunAt
-                    ? new Date(schedule.lastRunAt).toLocaleString("fr-FR")
-                    : `Prévu ${new Date(schedule.nextRunAt).toLocaleString("fr-FR")}`,
+            )
+          : section === "yield" && pricingRules
+            ? pricingRules.map((rule) => [
+                rule.code ?? rule.type,
+                `${rule.type}${rule.threshold !== undefined ? ` · ${rule.threshold}` : ""}`,
+                `${rule.modifierPct >= 0 ? "+" : ""}${rule.modifierPct} %`,
+                rule.isActive ? "Actif" : "Suspendu",
+              ])
+            : section === "places" && seatBlocks
+              ? seatBlocks.map(({ block, trip, seat, coach }) => [
+                  trip
+                    ? `${trip.trainNumber} · ${trip.serviceDate}`
+                    : "Desserte inconnue",
+                  `${coach?.label ?? "?"} · ${seat?.label ?? "?"}`,
+                  block.reason,
+                  block.isActive ? "Bloquée" : "Libérée",
                 ])
-              : section === "integrations" && health
-                ? health.findings.map((finding) => [
-                    finding.label,
-                    finding.action,
-                    String(finding.count),
-                    finding.severity,
+              : section === "points-de-vente" && pointsOfSale
+                ? pointsOfSale.map(({ pointOfSale, station }) => [
+                    pointOfSale.name,
+                    pointOfSale.type,
+                    station
+                      ? `${station.name} · ${pointOfSale.counters.passengers} guichet(s)`
+                      : `${pointOfSale.counters.passengers} guichet(s)`,
+                    pointOfSale.isActive ? "Actif" : "Suspendu",
                   ])
-                : undefined
+                : section === "voyageurs" && travelers
+                  ? travelers.map(({ ticket, trip, origin, destination }) => [
+                      `${ticket.passenger.firstName} ${ticket.passenger.lastName}`,
+                      ticket.number,
+                      `${origin?.name ?? "?"} → ${destination?.name ?? "?"}`,
+                      `${ticket.coachLabel ?? "—"} · ${ticket.seatLabel ?? "Debout"}${trip ? ` · ${trip.serviceDate}` : ""}`,
+                    ])
+                  : section === "utilisateurs" && users
+                    ? users.map((user) => [
+                        `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+                          user.email ||
+                          user.authId,
+                        user.matricule ?? "—",
+                        user.role,
+                        user.isActive ? "Actif" : "Suspendu",
+                      ])
+                    : section === "parametrage" && settings
+                      ? [
+                          [
+                            "TVA billets",
+                            `${settings.vatPct} %`,
+                            "Réseau",
+                            "Actif",
+                          ],
+                          [
+                            "Contribution CSS",
+                            `${settings.cssPct} %`,
+                            "Billetterie",
+                            "Actif",
+                          ],
+                          [
+                            "Tenue des places",
+                            `${settings.seatHoldMinutes} min`,
+                            "Vente en ligne",
+                            "Actif",
+                          ],
+                          [
+                            "Tentatives mobile",
+                            String(settings.mobilePaymentAttempts),
+                            "Tous canaux",
+                            "Actif",
+                          ],
+                        ]
+                      : section === "incidents" && (incidents || penalties)
+                        ? [
+                            ...(penalties ?? []).map(({ penalty, trip }) => [
+                              penalty.number,
+                              penalty.reason,
+                              trip?.trainNumber ?? "Réseau",
+                              penalty.status,
+                            ]),
+                            ...(incidents ?? []).map(({ incident, trip }) => [
+                              incident.clientId,
+                              incident.category,
+                              trip?.trainNumber ?? "Réseau",
+                              incident.status,
+                            ]),
+                          ]
+                        : section === "comptabilite" && exportsList
+                          ? exportsList.map(({ event, day }) => [
+                              day && "date" in day
+                                ? new Date(
+                                    `${day.date}T00:00:00`
+                                  ).toLocaleDateString("fr-FR")
+                                : new Date(event.createdAt).toLocaleDateString(
+                                    "fr-FR"
+                                  ),
+                              `${event.attempts} tentative(s)`,
+                              "Journal V65",
+                              event.status,
+                            ])
+                          : section === "rapports" && reportSchedules
+                            ? reportSchedules.map((schedule) => [
+                                schedule.label,
+                                schedule.frequency,
+                                schedule.format.toUpperCase(),
+                                schedule.lastRunAt
+                                  ? new Date(schedule.lastRunAt).toLocaleString(
+                                      "fr-FR"
+                                    )
+                                  : `Prévu ${new Date(schedule.nextRunAt).toLocaleString("fr-FR")}`,
+                              ])
+                            : section === "integrations" && health
+                              ? health.findings.map((finding) => [
+                                  finding.label,
+                                  finding.action,
+                                  String(finding.count),
+                                  finding.severity,
+                                ])
+                              : undefined
 
   const primaryAction: (() => void | Promise<string | void>) | undefined =
     section === "incidents"
@@ -648,7 +791,36 @@ export function ManagementPageClient({
                     downloadTextFile(exported.filename, exported.content)
                     return `${exported.filename} téléchargé · ${exported.rowCount} ligne(s).`
                   }
-                : undefined
+                : section === "tarifs"
+                  ? () => setDialog("fare")
+                  : section === "yield"
+                    ? () => setDialog("yield")
+                    : section === "trains"
+                      ? () => setDialog("composition")
+                      : section === "places"
+                        ? () => setDialog("seat-plan")
+                        : section === "points-de-vente"
+                          ? () => setDialog("point-of-sale")
+                          : section === "voyageurs"
+                            ? () => setDialog("manifest")
+                            : section === "utilisateurs"
+                              ? async () => {
+                                  await synchronizeDirectory({})
+                                  return "L’annuaire a été synchronisé."
+                                }
+                              : section === "parametrage"
+                                ? () => setDialog("settings")
+                                : section === "integrations"
+                                  ? async () => {
+                                      const result =
+                                        await retryIntegrationFailures({})
+                                      return result.count === 0
+                                        ? "Aucun échec à relancer."
+                                        : result.requested
+                                          ? `${result.count} échec(s) transmis à l’administration IT pour reprise.`
+                                          : `${result.count} traitement(s) remis en file.`
+                                    }
+                                  : undefined
 
   async function submitPenalty(draft: PenaltyDraft) {
     if (E2E_MODE) return "PV-DEMO-0143"
@@ -744,6 +916,74 @@ export function ManagementPageClient({
     }
   }
 
+  async function submitFareSchedule(draft: FareScheduleDraft) {
+    if (!E2E_MODE) await createFareSchedule(draft)
+  }
+
+  async function submitPricingRule(draft: PricingRuleDraft) {
+    if (!E2E_MODE) await createPricingRule(draft)
+  }
+
+  async function submitCoach(draft: CoachDraft) {
+    if (E2E_MODE) return
+    await addCoach({
+      ...draft,
+      trainId: draft.trainId as never,
+    })
+  }
+
+  async function submitPointOfSale(draft: PointOfSaleDraft) {
+    if (E2E_MODE) return
+    await createPointOfSale({
+      ...draft,
+      stationId: draft.stationId as never,
+    })
+  }
+
+  async function submitSettings(draft: SettingsDraft) {
+    if (!E2E_MODE) await saveSettings(draft)
+  }
+
+  async function inspectSeatPlan(trainId: string) {
+    const composition = await convex.query(
+      api.functions.referential.getTrainComposition,
+      { trainId: trainId as never }
+    )
+    const coaches = composition.coaches
+      .map(
+        (coach) =>
+          `${coach.label}: ${coach.seatCount} places ${coach.serviceClass.toLowerCase()}`
+      )
+      .join(" · ")
+    return `${composition.train.number} · ${composition.coaches.length} voiture(s) · ${coaches}`
+  }
+
+  async function exportManifest(tripId: string) {
+    const manifest = await convex.query(api.functions.control.manifest, {
+      tripId: tripId as never,
+    })
+    const rows = [
+      ["Billet", "Nom", "Prénom", "Classe", "Voiture", "Place", "État"],
+      ...manifest.tickets.map((ticket) => [
+        ticket.number,
+        ticket.passenger.lastName,
+        ticket.passenger.firstName,
+        ticket.serviceClass,
+        ticket.coachLabel ?? "",
+        ticket.seatLabel ?? "Debout",
+        ticket.status,
+      ]),
+    ]
+    const content = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(";")
+      )
+      .join("\n")
+    const filename = `manifeste-${manifest.trip.trainNumber}-${manifest.trip.serviceDate}.csv`
+    downloadTextFile(filename, content)
+    return `${filename} téléchargé · ${manifest.tickets.length} voyageur(s).`
+  }
+
   return (
     <>
       <ManagementScreen
@@ -763,11 +1003,6 @@ export function ManagementPageClient({
             : MANAGEMENT_IDENTITY
         }
         onPrimaryAction={primaryAction}
-        actionUnavailableReason={
-          primaryAction
-            ? undefined
-            : "Cette action n’est pas encore raccordée au back-end. Aucun succès ne sera affiché tant qu’elle n’exécute pas réellement une mutation."
-        }
         onSignOut={() => authClient.signOut()}
       />
       {dialog === "penalty" ? (
@@ -800,6 +1035,76 @@ export function ManagementPageClient({
           onOpenChange={(open) => setDialog(open ? "revenue" : null)}
           onInspect={inspectRevenue}
           onCloseDay={closeRevenue}
+        />
+      ) : null}
+      {dialog === "fare" ? (
+        <FareScheduleDialog
+          open
+          onOpenChange={(open) => setDialog(open ? "fare" : null)}
+          onSubmit={submitFareSchedule}
+        />
+      ) : null}
+      {dialog === "yield" ? (
+        <PricingRuleDialog
+          open
+          onOpenChange={(open) => setDialog(open ? "yield" : null)}
+          onSubmit={submitPricingRule}
+        />
+      ) : null}
+      {dialog === "composition" ? (
+        <TrainCompositionDialog
+          open
+          trains={trainOptions}
+          onOpenChange={(open) => setDialog(open ? "composition" : null)}
+          onSubmit={submitCoach}
+        />
+      ) : null}
+      {dialog === "point-of-sale" ? (
+        <PointOfSaleDialog
+          open
+          stations={stationOptions}
+          onOpenChange={(open) => setDialog(open ? "point-of-sale" : null)}
+          onSubmit={submitPointOfSale}
+        />
+      ) : null}
+      {dialog === "settings" ? (
+        <SettingsDialog
+          open
+          initial={{
+            vatPct: settings?.vatPct ?? 18,
+            cssPct: settings?.cssPct ?? 0,
+            seatHoldMinutes: settings?.seatHoldMinutes ?? 15,
+            mobilePaymentAttempts: settings?.mobilePaymentAttempts ?? 3,
+            degradedSalesEnabled: settings?.degradedSalesEnabled ?? true,
+            cashVarianceNotificationsEnabled:
+              settings?.cashVarianceNotificationsEnabled ?? true,
+          }}
+          onOpenChange={(open) => setDialog(open ? "settings" : null)}
+          onSubmit={submitSettings}
+        />
+      ) : null}
+      {dialog === "seat-plan" ? (
+        <DataSelectionDialog
+          open
+          title="Plan de composition"
+          description="Consultez la capacité réelle enregistrée dans Convex."
+          label="Train"
+          options={trainOptions}
+          actionLabel="Charger le plan"
+          onOpenChange={(open) => setDialog(open ? "seat-plan" : null)}
+          onRun={inspectSeatPlan}
+        />
+      ) : null}
+      {dialog === "manifest" ? (
+        <DataSelectionDialog
+          open
+          title="Exporter le manifeste voyageurs"
+          description="Le fichier CSV est produit à partir des titres réels de la desserte."
+          label="Desserte"
+          options={dataTripOptions}
+          actionLabel="Télécharger le manifeste"
+          onOpenChange={(open) => setDialog(open ? "manifest" : null)}
+          onRun={exportManifest}
         />
       ) : null}
     </>

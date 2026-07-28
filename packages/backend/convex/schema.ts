@@ -585,6 +585,19 @@ export default defineSchema({
     .index("by_station", ["stationId"])
     .index("by_type", ["type"]),
 
+  systemSettings: defineTable({
+    /** Document unique de paramétrage métier, identifié par cette clé. */
+    key: v.string(),
+    vatPct: v.number(),
+    cssPct: v.number(),
+    seatHoldMinutes: v.number(),
+    mobilePaymentAttempts: v.number(),
+    degradedSalesEnabled: v.boolean(),
+    cashVarianceNotificationsEnabled: v.boolean(),
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   corporateAccounts: defineTable({
     code: v.string(),
     name: v.string(),

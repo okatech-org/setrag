@@ -191,7 +191,7 @@ export const MANAGEMENT_SECTIONS = {
     title: "Intégrations & supervision",
     description:
       "Santé de Convex, SAGE X3, paiements, messagerie et files de reprise.",
-    action: "Relancer les échecs",
+    action: "Demander une relance",
     columns: ["Service", "Dernier échange", "File", "État"],
     rows: [
       ["Convex temps réel", "À l’instant", "0", "Opérationnel"],
