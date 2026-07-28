@@ -10,11 +10,12 @@ import {
   Search,
   ShieldAlert,
 } from "lucide-react"
-import { FormEvent, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { FormEvent, useEffect, useMemo, useState } from "react"
 import { useConvex } from "convex/react"
 
 import { authClient } from "@workspace/api/auth-client"
-import { useMutation, useQuery } from "@workspace/api/hooks"
+import { useAuth, useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -46,6 +47,17 @@ import { formatTime, formatXaf } from "@/lib/format"
 import { SellerShell } from "./seller-shell"
 
 const E2E_MODE = process.env.NEXT_PUBLIC_E2E_MODE === "1"
+
+function useSellerAuthentication() {
+  const router = useRouter()
+  const { isAuthenticated, isLoading } = useAuth()
+  useEffect(() => {
+    if (!E2E_MODE && !isLoading && !isAuthenticated) {
+      router.replace("/connexion")
+    }
+  }, [isAuthenticated, isLoading, router])
+  return { isAuthenticated, isLoading }
+}
 
 export interface OperationRow {
   id: string
@@ -754,14 +766,15 @@ export function ManualSalesScreen({
 export function OperationsPageClient() {
   const online = useOnlineStatus()
   const convex = useConvex()
+  const { isAuthenticated } = useSellerAuthentication()
   const [number, setNumber] = useState("")
   const dashboardQuery = useQuery(
     api.functions.cash.sellerDashboard,
-    E2E_MODE ? "skip" : {}
+    E2E_MODE || !isAuthenticated ? "skip" : {}
   )
   const saleQuery = useQuery(
     api.functions.sales.search,
-    E2E_MODE || !number ? "skip" : { number }
+    E2E_MODE || !isAuthenticated || !number ? "skip" : { number }
   )
   const cancelSale = useMutation(api.functions.sales.cancel)
   const refundSale = useMutation(api.functions.sales.refund)
@@ -822,13 +835,14 @@ export function OperationsPageClient() {
 
 export function CashPageClient() {
   const online = useOnlineStatus()
+  const { isAuthenticated } = useSellerAuthentication()
   const dashboardQuery = useQuery(
     api.functions.cash.sellerDashboard,
-    E2E_MODE ? "skip" : {}
+    E2E_MODE || !isAuthenticated ? "skip" : {}
   )
   const sessionQuery = useQuery(
     api.functions.cash.mySession,
-    E2E_MODE ? "skip" : {}
+    E2E_MODE || !isAuthenticated ? "skip" : {}
   )
   const closeSession = useMutation(api.functions.cash.closeSession)
   const dashboard = E2E_MODE ? DEMO_DASHBOARD : dashboardQuery
@@ -872,9 +886,10 @@ export function CashPageClient() {
 
 export function ManualSalesPageClient() {
   const online = useOnlineStatus()
+  const { isAuthenticated } = useSellerAuthentication()
   const dashboardQuery = useQuery(
     api.functions.cash.sellerDashboard,
-    E2E_MODE ? "skip" : {}
+    E2E_MODE || !isAuthenticated ? "skip" : {}
   )
   const stationsQuery = useQuery(
     api.functions.referential.listStations,
@@ -882,7 +897,7 @@ export function ManualSalesPageClient() {
   )
   const rowsQuery = useQuery(
     api.functions.manualSales.list,
-    E2E_MODE ? "skip" : { limit: 20 }
+    E2E_MODE || !isAuthenticated ? "skip" : { limit: 20 }
   )
   const record = useMutation(api.functions.manualSales.recordManualSale)
   const dashboard = E2E_MODE ? DEMO_DASHBOARD : dashboardQuery

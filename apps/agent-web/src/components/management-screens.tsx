@@ -1,11 +1,17 @@
 "use client"
 
 import { BarChart3, Download, Filter, Plus, Search } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
 import { useConvex } from "convex/react"
 
 import { authClient } from "@workspace/api/auth-client"
-import { useAction, useMutation, useQuery } from "@workspace/api/hooks"
+import {
+  useAction,
+  useAuth,
+  useMutation,
+  useQuery,
+} from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -436,8 +442,10 @@ export function ManagementPageClient({
 }: {
   section: ManagementSection
 }) {
+  const router = useRouter()
   const online = useOnlineStatus()
   const convex = useConvex()
+  const { isAuthenticated, isLoading } = useAuth()
   const today = new Date().toISOString().slice(0, 10)
   const monthStart = `${today.slice(0, 8)}01`
   const [dialog, setDialog] = useState<
@@ -454,24 +462,32 @@ export function ManagementPageClient({
     | "settings"
     | null
   >(null)
-  const profile = useQuery(api.functions.customers.me, E2E_MODE ? "skip" : {})
+  const profile = useQuery(
+    api.functions.customers.me,
+    E2E_MODE || !isAuthenticated ? "skip" : {}
+  )
   const reporting = useQuery(
     api.functions.reporting.dashboard,
-    E2E_MODE || section !== "tableau-de-bord"
+    E2E_MODE || !isAuthenticated || section !== "tableau-de-bord"
       ? "skip"
       : { from: monthStart, to: today }
   )
   const booklets = useQuery(
     api.functions.booklets.list,
-    E2E_MODE || section !== "livrets" ? "skip" : {}
+    E2E_MODE || !isAuthenticated || section !== "livrets" ? "skip" : {}
   )
   const trains = useQuery(
     api.functions.referential.listTrains,
-    E2E_MODE || (section !== "trains" && section !== "places") ? "skip" : {}
+    E2E_MODE ||
+      !isAuthenticated ||
+      (section !== "trains" && section !== "places")
+      ? "skip"
+      : {}
   )
   const stations = useQuery(
     api.functions.referential.listStations,
     E2E_MODE ||
+      !isAuthenticated ||
       (section !== "points-de-vente" &&
         section !== "trains" &&
         section !== "tarifs")
@@ -480,72 +496,94 @@ export function ManagementPageClient({
   )
   const exportsList = useQuery(
     api.functions.accounting.listExports,
-    E2E_MODE || (section !== "comptabilite" && section !== "integrations")
+    E2E_MODE ||
+      !isAuthenticated ||
+      (section !== "comptabilite" && section !== "integrations")
       ? "skip"
       : {}
   )
   const accountingDays = useQuery(
     api.functions.cash.listAccountingDays,
-    E2E_MODE || (section !== "recettes" && section !== "comptabilite")
+    E2E_MODE ||
+      !isAuthenticated ||
+      (section !== "recettes" && section !== "comptabilite")
       ? "skip"
       : { limit: 31 }
   )
   const health = useQuery(
     api.functions.monitoring.health,
-    E2E_MODE || (section !== "tableau-de-bord" && section !== "integrations")
+    E2E_MODE ||
+      !isAuthenticated ||
+      (section !== "tableau-de-bord" && section !== "integrations")
       ? "skip"
       : {}
   )
   const incidents = useQuery(
     api.functions.control.listIncidents,
-    E2E_MODE || section !== "incidents" ? "skip" : {}
+    E2E_MODE || !isAuthenticated || section !== "incidents" ? "skip" : {}
   )
   const penalties = useQuery(
     api.functions.control.listPenalties,
-    E2E_MODE || section !== "incidents" ? "skip" : {}
+    E2E_MODE || !isAuthenticated || section !== "incidents" ? "skip" : {}
   )
   const penaltyTrips = useQuery(
     api.functions.control.penaltyTripOptions,
-    E2E_MODE || (section !== "incidents" && section !== "voyageurs")
+    E2E_MODE ||
+      !isAuthenticated ||
+      (section !== "incidents" && section !== "voyageurs")
       ? "skip"
       : { limit: 30 }
   )
   const reportSchedules = useQuery(
     api.functions.reportSchedules.list,
-    E2E_MODE || section !== "rapports" ? "skip" : {}
+    E2E_MODE || !isAuthenticated || section !== "rapports" ? "skip" : {}
   )
   const fareSchedules = useQuery(
     api.functions.management.listFareSchedules,
-    E2E_MODE || section !== "tarifs" ? "skip" : {}
+    E2E_MODE || !isAuthenticated || section !== "tarifs" ? "skip" : {}
   )
   const pricingRules = useQuery(
     api.functions.management.listPricingRules,
-    E2E_MODE || section !== "yield" ? "skip" : {}
+    E2E_MODE || !isAuthenticated || section !== "yield" ? "skip" : {}
   )
   const trainCompositions = useQuery(
     api.functions.management.listTrainCompositions,
-    E2E_MODE || (section !== "trains" && section !== "places") ? "skip" : {}
+    E2E_MODE ||
+      !isAuthenticated ||
+      (section !== "trains" && section !== "places")
+      ? "skip"
+      : {}
   )
   const seatBlocks = useQuery(
     api.functions.management.listSeatBlocks,
-    E2E_MODE || section !== "places" ? "skip" : {}
+    E2E_MODE || !isAuthenticated || section !== "places" ? "skip" : {}
   )
   const pointsOfSale = useQuery(
     api.functions.management.listPointsOfSale,
-    E2E_MODE || section !== "points-de-vente" ? "skip" : {}
+    E2E_MODE || !isAuthenticated || section !== "points-de-vente"
+      ? "skip"
+      : {}
   )
   const travelers = useQuery(
     api.functions.management.listTravelers,
-    E2E_MODE || section !== "voyageurs" ? "skip" : { limit: 100 }
+    E2E_MODE || !isAuthenticated || section !== "voyageurs"
+      ? "skip"
+      : { limit: 100 }
   )
   const users = useQuery(
     api.functions.management.listUsers,
-    E2E_MODE || section !== "utilisateurs" ? "skip" : {}
+    E2E_MODE || !isAuthenticated || section !== "utilisateurs" ? "skip" : {}
   )
   const settings = useQuery(
     api.functions.management.getSettings,
-    E2E_MODE || section !== "parametrage" ? "skip" : {}
+    E2E_MODE || !isAuthenticated || section !== "parametrage" ? "skip" : {}
   )
+
+  useEffect(() => {
+    if (!E2E_MODE && !isLoading && !isAuthenticated) {
+      router.replace("/connexion")
+    }
+  }, [isAuthenticated, isLoading, router])
 
   const createBooklet = useMutation(api.functions.booklets.create)
   const syncPenalties = useMutation(api.functions.control.syncPenalties)
@@ -982,6 +1020,16 @@ export function ManagementPageClient({
     const filename = `manifeste-${manifest.trip.trainNumber}-${manifest.trip.serviceDate}.csv`
     downloadTextFile(filename, content)
     return `${filename} téléchargé · ${manifest.tickets.length} voyageur(s).`
+  }
+
+  if (!E2E_MODE && (isLoading || !isAuthenticated)) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-canvas">
+        <p role="status" className="text-small text-ink-muted">
+          Vérification de la session…
+        </p>
+      </main>
+    )
   }
 
   return (
