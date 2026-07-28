@@ -344,7 +344,8 @@ export default defineSchema({
     ])
     .index("by_status", ["status"])
     .index("by_train_date", ["trainId", "serviceDate"])
-    .index("by_booklet", ["bookletId"]),
+    .index("by_booklet", ["bookletId"])
+    .index("by_schedule", ["scheduleId"]),
 
   tripStops: defineTable({
     tripId: v.id("trips"),
@@ -548,7 +549,8 @@ export default defineSchema({
     isActive: v.boolean(),
   })
     .index("by_trip", ["tripId"])
-    .index("by_trip_active", ["tripId", "isActive"]),
+    .index("by_trip_active", ["tripId", "isActive"])
+    .index("by_seat", ["seatId"]),
 
   agencyQuotas: defineTable({
     pointOfSaleId: v.id("pointsOfSale"),
@@ -659,6 +661,7 @@ export default defineSchema({
     .index("by_number", ["number"])
     .index("by_status", ["status"])
     .index("by_customer", ["customerId"])
+    .index("by_seller", ["sellerId"])
     .index("by_pos_day", ["pointOfSaleId", "accountingDayId"])
     .index("by_accounting_day", ["accountingDayId"])
     .index("by_cash_session", ["cashSessionId"])
@@ -697,7 +700,8 @@ export default defineSchema({
     .index("by_number", ["number"])
     .index("by_trip", ["tripId"])
     .index("by_trip_status", ["tripId", "status"])
-    .index("by_barcode", ["barcodePayload"]),
+    .index("by_barcode", ["barcodePayload"])
+    .index("by_seat", ["seatId"]),
 
   /* ══════════════════ Ventes — produits fret voyageur ═══════════════════ */
 

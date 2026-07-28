@@ -53,10 +53,16 @@ export function FareScheduleDialog({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
   const [result, setResult] = useState("")
-  const today = new Date().toISOString().slice(0, 10)
-  const nextYear = new Date(Date.now() + 365 * 86_400_000)
-    .toISOString()
-    .slice(0, 10)
+  const [dateDefaults] = useState(() => {
+    const now = new Date()
+    return {
+      today: now.toISOString().slice(0, 10),
+      nextYear: new Date(now.getTime() + 365 * 86_400_000)
+        .toISOString()
+        .slice(0, 10),
+    }
+  })
+  const { today, nextYear } = dateDefaults
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -80,7 +86,9 @@ export function FareScheduleDialog({
         shortDistanceRate: Number(data.get("shortDistanceRate")),
         longDistanceRate: Number(data.get("longDistanceRate")),
       })
-      setResult("La grille a été créée et soumise à validation.")
+      setResult(
+        "La grille a été créée en brouillon. Ouvrez sa fiche pour la compléter puis la soumettre."
+      )
       event.currentTarget.reset()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Création échouée.")
@@ -95,8 +103,8 @@ export function FareScheduleDialog({
         <DialogHeader>
           <DialogTitle>Nouvelle grille tarifaire</DialogTitle>
           <DialogDescription>
-            La grille est persistée avec l’état « à valider » et une trace
-            d’audit.
+            La grille est enregistrée en brouillon avec une première base. Vous
+            pourrez la compléter avant de la soumettre à validation.
           </DialogDescription>
         </DialogHeader>
         <form className="grid gap-4" onSubmit={submit}>

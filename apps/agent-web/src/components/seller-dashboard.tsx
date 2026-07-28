@@ -17,12 +17,7 @@ import { toast } from "sonner"
 import { useConvex } from "convex/react"
 
 import { authClient } from "@workspace/api/auth-client"
-import {
-  useAction,
-  useAuth,
-  useMutation,
-  useQuery,
-} from "@workspace/api/hooks"
+import { useAction, useAuth, useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -41,7 +36,9 @@ import {
 } from "@/lib/format"
 import { SellerShell } from "./seller-shell"
 
-const E2E_MODE = process.env.NEXT_PUBLIC_E2E_MODE === "1"
+const E2E_MODE =
+  process.env.NODE_ENV !== "production" &&
+  process.env.NEXT_PUBLIC_E2E_MODE === "1"
 
 interface ProductShortcutProps {
   icon: ReactNode

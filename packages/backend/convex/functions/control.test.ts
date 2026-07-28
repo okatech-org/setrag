@@ -134,7 +134,7 @@ async function seedTrip(t: ReturnType<typeof convexTest>) {
         { stationId: net.boo, sequence: 1, arrivalOffsetMinutes: 380 },
         { stationId: net.fcv, sequence: 2, arrivalOffsetMinutes: 700 },
       ],
-    },
+    }
   )
   await adminCtx.mutation(api.functions.booklets.submit, { bookletId })
   await adminCtx.mutation(api.functions.booklets.approve, { bookletId })
@@ -154,7 +154,7 @@ async function asAgent(
   t: ReturnType<typeof convexTest>,
   role: AppRole,
   posId: Id<"pointsOfSale">,
-  suffix = "",
+  suffix = ""
 ) {
   const authId = `${role}${suffix}-${Math.floor(Math.random() * 1e9)}`
   const userId = await t.run(async (ctx) =>
@@ -166,7 +166,7 @@ async function asAgent(
       pointOfSaleId: posId,
       identitySource: "annuaire",
       isActive: true,
-    }),
+    })
   )
   return { ctx: t.withIdentity({ subject: authId }), userId }
 }
@@ -174,7 +174,7 @@ async function asAgent(
 /** Vend un billet en ligne et le règle, pour avoir un titre à contrôler. */
 async function issueTicket(
   t: ReturnType<typeof convexTest>,
-  fx: Awaited<ReturnType<typeof seedTrip>>,
+  fx: Awaited<ReturnType<typeof seedTrip>>
 ) {
   const r = await t.mutation(api.functions.bookings.create, {
     tripId: fx.tripId,
@@ -234,7 +234,7 @@ describe("Manifeste embarqué", () => {
     const fx = await seedTrip(t)
     const { ctx } = await asAgent(t, "comptable", fx.pos)
     await expect(
-      ctx.query(api.functions.control.manifest, { tripId: fx.tripId }),
+      ctx.query(api.functions.control.manifest, { tripId: fx.tripId })
     ).rejects.toThrow(/Accès refusé/)
   })
 })
@@ -294,7 +294,9 @@ describe("Vérification du code-barres", () => {
     const { ctx } = await asAgent(t, "controleur_train", fx.pos)
 
     // Le fraudeur relit un code légitime et s'attribue la première classe.
-    const brut = decodeBase45(billet.barcodePayload!.slice(BARCODE_PREFIX.length))
+    const brut = decodeBase45(
+      billet.barcodePayload!.slice(BARCODE_PREFIX.length)
+    )
     const { payload } = parseBarcode(billet.barcodePayload!)
     const falsifie = serializePayload({ ...payload, cls: "PREMIERE" })
     const joint = new Uint8Array(falsifie.length + 64)
@@ -375,7 +377,7 @@ describe("Vérification du code-barres", () => {
     const fx = await seedTrip(t)
     const billet = await issueTicket(t, fx)
     await t.run(async (c) =>
-      c.db.patch(billet._id, { status: "utilise", usedAt: Date.now() }),
+      c.db.patch(billet._id, { status: "utilise", usedAt: Date.now() })
     )
     const { ctx } = await asAgent(t, "controleur_train", fx.pos)
 
@@ -425,7 +427,7 @@ describe("Vérification du code-barres", () => {
         barcode: billet.barcodePayload!,
         tripId: fx.tripId,
         currentStopIndex: 1,
-      }),
+      })
     ).rejects.toThrow(/Accès refusé/)
   })
 })
@@ -556,7 +558,7 @@ describe("Synchronisation des contrôles", () => {
 
     const conflits = await chef.ctx.query(
       api.functions.control.listConflicts,
-      {},
+      {}
     )
     await chef.ctx.mutation(api.functions.control.resolveConflict, {
       scanId: conflits[0]!.scan._id,
@@ -565,7 +567,7 @@ describe("Synchronisation des contrôles", () => {
     })
     const restants = await chef.ctx.query(
       api.functions.control.listConflicts,
-      {},
+      {}
     )
     expect(restants).toHaveLength(0)
   })
@@ -653,7 +655,7 @@ describe("Vente à bord", () => {
         destinationStationId: fx.fcv,
         serviceClass: "DEUXIEME",
         passengers: [{ lastName: "Y", firstName: "Z", gender: "M" }],
-      }),
+      })
     ).rejects.toThrow(/Places insuffisantes/)
   })
 })
@@ -750,12 +752,13 @@ describe("Procès-verbaux", () => {
     await chef.ctx.mutation(api.functions.control.setPenaltyStatus, {
       penaltyId: pvId,
       status: "conteste",
+      resolutionNote: "Le voyageur conteste les faits.",
     })
     await expect(
       chef.ctx.mutation(api.functions.control.setPenaltyStatus, {
         penaltyId: pvId,
         status: "annule",
-      }),
+      })
     ).rejects.toThrow(/motif est obligatoire/)
 
     await chef.ctx.mutation(api.functions.control.setPenaltyStatus, {
@@ -766,6 +769,12 @@ describe("Procès-verbaux", () => {
     const apres = await t.run(async (c) => c.db.get(pvId))
     expect(apres?.status).toBe("annule")
     expect(apres?.resolutionNote).toContain("fondée")
+    const detail = await chef.ctx.query(api.functions.control.getPenalty, {
+      penaltyId: pvId,
+    })
+    expect(detail?.penalty.number).toBe("PV-000001")
+    expect(detail?.trip?.trainNumber).toBe("TR-201")
+    expect(detail?.resolver?._id).toBeDefined()
   })
 
   it("refuse un montant d'amende négatif", async () => {
@@ -786,7 +795,7 @@ describe("Procès-verbaux", () => {
             offline: false,
           },
         ],
-      }),
+      })
     ).rejects.toThrow(/Montant d'amende invalide/)
   })
 })
@@ -840,7 +849,7 @@ describe("Signalements d'incident", () => {
     expect(r.critical).toBe(1)
 
     const notifs = await t.run(async (c) =>
-      c.db.query("notifications").collect(),
+      c.db.query("notifications").collect()
     )
     expect(notifs).toHaveLength(1)
     expect(notifs[0]?.title).toContain("critique")
@@ -886,7 +895,7 @@ describe("Signalements d'incident", () => {
             offline: false,
           },
         ],
-      }),
+      })
     ).rejects.toThrow(/description d'un incident est obligatoire/)
   })
 
@@ -910,12 +919,18 @@ describe("Signalements d'incident", () => {
     })
     const liste = await chef.ctx.query(api.functions.control.listIncidents, {})
     const id = liste[0]!.incident._id
+    const detail = await chef.ctx.query(api.functions.control.getIncident, {
+      incidentId: id,
+    })
+    expect(detail?.incident.description).toBe("Porte bloquée")
+    expect(detail?.trip?.trainNumber).toBe("TR-201")
+    expect(detail?.reporter?._id).toBeDefined()
 
     await expect(
       chef.ctx.mutation(api.functions.control.setIncidentStatus, {
         incidentId: id,
         status: "resolu",
-      }),
+      })
     ).rejects.toThrow(/note de résolution est obligatoire/)
 
     await chef.ctx.mutation(api.functions.control.setIncidentStatus, {

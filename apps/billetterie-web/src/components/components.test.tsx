@@ -18,7 +18,13 @@ import {
 } from "./after-sale-screens"
 import { BookingForm } from "./booking-form"
 import { applyTravelerDefaults } from "../features/reservation/use-booking-draft"
-import type { BookingDraft } from "../lib/ticketing"
+import {
+  DEFAULT_BOOKING,
+  DEFAULT_SEARCH,
+  demoTrips,
+  ticketingStorage,
+  type BookingDraft,
+} from "../lib/ticketing"
 import { HomeMobile } from "./home/home-mobile"
 import { JourneyStepper } from "./journey-stepper"
 import { PaymentForm } from "./payment-form"
@@ -28,8 +34,8 @@ import { TripResults } from "./trip-results"
 import { TripSearchForm } from "./trip-search-form"
 import { UpcomingDepartures } from "./upcoming-departures"
 
-const { authState, push, queryState, replace, signOutMock } = vi.hoisted(
-  () => ({
+const { authState, push, queryState, replace, searchParamsState, signOutMock } =
+  vi.hoisted(() => ({
     authState: {
       value: {
         isAuthenticated: false,
@@ -40,14 +46,14 @@ const { authState, push, queryState, replace, signOutMock } = vi.hoisted(
     push: vi.fn(),
     queryState: { value: undefined as unknown },
     replace: vi.fn(),
+    searchParamsState: { value: "" },
     signOutMock: vi.fn().mockResolvedValue({}),
-  })
-)
+  }))
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
   useRouter: () => ({ push, replace }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(searchParamsState.value),
 }))
 
 vi.mock("@workspace/api/hooks", () => ({
@@ -263,6 +269,7 @@ describe("composants du parcours d'achat", () => {
     push.mockReset()
     replace.mockReset()
     queryState.value = undefined
+    searchParamsState.value = ""
     authState.value = {
       isAuthenticated: false,
       isLoading: false,
@@ -413,6 +420,38 @@ describe("composants du parcours d'achat", () => {
     expect(result.contactEmail).toBe("berny@example.ga")
   })
 
+  it("ne préremplit les autres places qu'avec les voyageurs du compte", () => {
+    const booking: BookingDraft = {
+      serviceClass: "DEUXIEME",
+      contactPhone: "",
+      passengers: [
+        { firstName: "", lastName: "", gender: "F" },
+        { firstName: "", lastName: "", gender: "F" },
+      ],
+    }
+
+    const result = applyTravelerDefaults(booking, {
+      ownerId: "compte-berny",
+      firstName: "Berny",
+      lastName: "Itoutou",
+      phone: "+24106123456",
+      email: "berny@example.ga",
+      savedPassengers: [
+        {
+          firstName: "Mireille",
+          lastName: "Obame",
+          gender: "F",
+          emergencyPhone: "+24107123456",
+        },
+      ],
+    })
+
+    expect(result.passengers).toEqual([
+      expect.objectContaining({ firstName: "Berny", lastName: "Itoutou" }),
+      expect.objectContaining({ firstName: "Mireille", lastName: "Obame" }),
+    ])
+  })
+
   it("PaymentForm place la checkbox CGV juste avant le paiement", async () => {
     render(<PaymentForm />)
     const cgvCheckboxes = screen.getAllByRole("checkbox", {
@@ -483,12 +522,23 @@ describe("composants du parcours d'achat", () => {
 
 describe("composants d'après-vente et de compte", () => {
   it("PaymentWaiting explique la validation mobile", () => {
+    ticketingStorage.setTrip(demoTrips(DEFAULT_SEARCH)[0]!)
+    ticketingStorage.setBooking({
+      ...DEFAULT_BOOKING,
+      reference: "RS-TEST-001",
+    })
     render(<PaymentWaiting />)
     expect(
       screen.getByRole("heading", {
         name: "Validez le paiement sur votre téléphone",
       })
     ).toBeInTheDocument()
+  })
+
+  it("PaymentWaiting n’invente aucun montant sans dossier", () => {
+    render(<PaymentWaiting />)
+    expect(screen.getByText("Aucun paiement en attente")).toBeInTheDocument()
+    expect(screen.queryByText("28 500 FCFA")).not.toBeInTheDocument()
   })
 
   it("ConfirmationScreen affiche la référence et le billet", () => {
@@ -586,6 +636,22 @@ describe("composants d'après-vente et de compte", () => {
     expect(
       await screen.findByLabelText("Code à 6 chiffres")
     ).toBeInTheDocument()
+  })
+
+  it("demande l'identité complète lors de la création d'un compte", () => {
+    searchParamsState.value = "intention=inscription"
+    render(<OtpScreen />)
+
+    expect(
+      screen.getByRole("heading", { name: "S’inscrire" })
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText("Prénom")).toBeRequired()
+    expect(screen.getByLabelText("Nom")).toBeRequired()
+    expect(screen.getByLabelText("Numéro de téléphone")).toBeRequired()
+    expect(screen.getByLabelText("Adresse e-mail")).toBeRequired()
+    expect(
+      screen.getByRole("button", { name: "Recevoir mon code" })
+    ).toBeDisabled()
   })
 
   it("OtpScreen renvoie immédiatement une session active vers l'accueil", async () => {

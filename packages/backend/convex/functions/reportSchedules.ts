@@ -63,6 +63,14 @@ export const list = query({
   },
 })
 
+export const get = query({
+  args: { scheduleId: v.id("reportSchedules") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "rapports", "consulter")
+    return await ctx.db.get(args.scheduleId)
+  },
+})
+
 /**
  * Crée une programmation et inscrit atomiquement sa première exécution dans
  * le planificateur Convex. Si la mutation échoue, aucun envoi n'est planifié.
@@ -120,6 +128,125 @@ export const create = mutation({
       },
     })
     return { scheduleId, nextRunAt: args.nextRunAt }
+  },
+})
+
+export const update = mutation({
+  args: {
+    scheduleId: v.id("reportSchedules"),
+    label: v.string(),
+    reportType,
+    frequency,
+    format: reportFormat,
+    recipients: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "rapports", "modifier")
+    const schedule = await ctx.db.get(args.scheduleId)
+    if (!schedule) throw new Error("Cette programmation n’existe plus.")
+    const label = args.label.trim()
+    if (!label) throw new Error("Le nom du rapport est obligatoire")
+    const recipients = normalizeRecipients(args.recipients)
+    /*
+     * La prochaine occurrence a déjà été inscrite dans le planificateur.
+     * On la conserve donc lors d'un changement de fréquence : la nouvelle
+     * cadence sera calculée par `run` après cette occurrence. Replanifier ici
+     * sans identifiant de tâche créerait deux exécutions concurrentes.
+     */
+    const patch = {
+      label,
+      reportType: args.reportType,
+      frequency: args.frequency,
+      format: args.format,
+      recipients,
+      updatedAt: Date.now(),
+    }
+    await ctx.db.patch(args.scheduleId, patch)
+    await audit(ctx, {
+      actorId: actor._id,
+      action: "rapport.modifier",
+      entityTable: "reportSchedules",
+      entityId: args.scheduleId,
+      before: schedule,
+      after: patch,
+    })
+    return args.scheduleId
+  },
+})
+
+export const setActive = mutation({
+  args: {
+    scheduleId: v.id("reportSchedules"),
+    isActive: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "rapports", "modifier")
+    const schedule = await ctx.db.get(args.scheduleId)
+    if (!schedule) throw new Error("Cette programmation n’existe plus.")
+    if (schedule.isActive === args.isActive) {
+      return args.scheduleId
+    }
+    const now = Date.now()
+    const nextRunAt =
+      args.isActive && schedule.nextRunAt <= now
+        ? nextOccurrence(now, schedule.frequency)
+        : schedule.nextRunAt
+    await ctx.db.patch(args.scheduleId, {
+      isActive: args.isActive,
+      nextRunAt,
+      updatedAt: now,
+    })
+    if (args.isActive) {
+      await ctx.scheduler.runAt(
+        nextRunAt,
+        internal.functions.reportSchedules.run,
+        { scheduleId: args.scheduleId }
+      )
+    }
+    await audit(ctx, {
+      actorId: actor._id,
+      action: args.isActive ? "rapport.reactiver" : "rapport.suspendre",
+      entityTable: "reportSchedules",
+      entityId: args.scheduleId,
+      before: { isActive: schedule.isActive },
+      after: { isActive: args.isActive, nextRunAt },
+    })
+    return args.scheduleId
+  },
+})
+
+export const runNow = mutation({
+  args: { scheduleId: v.id("reportSchedules") },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "rapports", "creer")
+    const schedule = await ctx.db.get(args.scheduleId)
+    if (!schedule) throw new Error("Cette programmation n’existe plus.")
+    const now = Date.now()
+    await ctx.db.insert("outboxEvents", {
+      type: "notification",
+      entityId: args.scheduleId,
+      payload: JSON.stringify({
+        kind: "scheduled_report",
+        reportType: schedule.reportType,
+        format: schedule.format,
+        recipients: schedule.recipients,
+      }),
+      status: "en_attente",
+      attempts: 0,
+      createdAt: now,
+    })
+    await ctx.db.patch(args.scheduleId, {
+      lastRunAt: now,
+      updatedAt: now,
+    })
+    await audit(ctx, {
+      actorId: actor._id,
+      action: "rapport.executer_maintenant",
+      entityTable: "reportSchedules",
+      entityId: args.scheduleId,
+      after: { queuedAt: now },
+    })
+    return { queued: true }
   },
 })
 

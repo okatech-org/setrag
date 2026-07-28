@@ -13,6 +13,7 @@ import { Field, Input } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
 
 import { useTravelerAuth } from "@/hooks/use-traveler-auth"
+import { ticketingStorage } from "@/lib/ticketing"
 
 /**
  * Consentements et droits sur les données, en mobile.
@@ -82,6 +83,7 @@ export function AccountDataSection() {
     try {
       await deleteAccount({ confirmation })
       await authClient.signOut()
+      ticketingStorage.clearBooking()
       setConfirmation("")
       router.replace("/")
       router.refresh()
