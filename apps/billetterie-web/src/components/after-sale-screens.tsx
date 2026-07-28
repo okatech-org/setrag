@@ -58,6 +58,7 @@ import {
   ticketingStorage,
   type BookingDraft,
 } from "@/lib/ticketing"
+import { savePendingTravelerOnboarding } from "@/lib/traveler-onboarding"
 import { useTravelerAuth } from "@/hooks/use-traveler-auth"
 
 const E2E_TRACKING_BASE = Date.UTC(2026, 7, 14, 8)
@@ -98,8 +99,10 @@ const CLASS_FACTORS = { DEUXIEME: 1, PREMIERE: 1.45, VIP: 1.9 } as const
  * Recalculé depuis la desserte retenue : l'écran d'attente n'a pas de devis
  * serveur sous la main, la vente étant déjà engagée.
  */
-function paymentTotal(booking: BookingDraft | null) {
-  const trip = ticketingStorage.getTrip() ?? demoTrips(DEFAULT_SEARCH)[0]!
+function paymentTotal(
+  booking: BookingDraft | null,
+  trip: NonNullable<ReturnType<typeof ticketingStorage.getTrip>>
+) {
   const passengers = booking?.passengers.length ?? 1
   const factor = CLASS_FACTORS[booking?.serviceClass ?? "DEUXIEME"]
   return Math.round(trip.priceXaf * passengers * factor)
@@ -108,9 +111,12 @@ function paymentTotal(booking: BookingDraft | null) {
 export function PaymentWaiting() {
   const router = useRouter()
   const booking = ticketingStorage.getBooking()
+  const storedTrip = ticketingStorage.getTrip()
+  const trip = storedTrip ?? (IS_E2E ? demoTrips(DEFAULT_SEARCH)[0]! : null)
+  const hasPaymentContext = Boolean(booking && trip)
   const [seconds, setSeconds] = useState(42)
   useEffect(() => {
-    if (IS_E2E) return
+    if (IS_E2E || !hasPaymentContext) return
     const interval = window.setInterval(
       () => setSeconds((value) => Math.max(0, value - 1)),
       1_000
@@ -127,11 +133,26 @@ export function PaymentWaiting() {
       window.clearInterval(interval)
       window.clearTimeout(redirect)
     }
-  }, [router])
+  }, [hasPaymentContext, router])
+
+  if (!booking || !trip) {
+    return (
+      <EmptyState
+        title="Aucun paiement en attente"
+        description="Lancez le paiement depuis une réservation en cours. Aucun montant de démonstration n’est affiché."
+        action={
+          <Button asChild>
+            <Link href="/">Rechercher un train</Link>
+          </Button>
+        }
+      />
+    )
+  }
+
   return (
     <>
       <PaymentWaitingMobile
-        amountXaf={paymentTotal(booking)}
+        amountXaf={paymentTotal(booking, trip)}
         methodLabel="Airtel Money"
         payerPhone={booking?.contactPhone || "votre téléphone"}
         countdown={`02:${String(seconds).padStart(2, "0")}`}
@@ -278,7 +299,10 @@ export function ConfirmationScreen({
         routeLabel={`${trip.originName} → ${trip.destinationName}`}
         departureAt={trip.departureAt}
         arrivalAt={trip.arrivalAt}
-        passengerLabel={`${booking.passengers[0]?.firstName ?? "Ariane"} ${booking.passengers[0]?.lastName ?? "Moussavou"}`}
+        passengerLabel={
+          `${booking.passengers[0]?.firstName ?? ""} ${booking.passengers[0]?.lastName ?? ""}`.trim() ||
+          "Voyageur"
+        }
         reference={booking.reference ?? "RS-2026-084517"}
         seatLabel={
           counterPayment ? "Attribuée au paiement" : "Voiture 4 · Place 18"
@@ -716,6 +740,7 @@ export function AccountScreen() {
     try {
       await deleteAccount({ confirmation: deleteConfirmation })
       await authClient.signOut()
+      ticketingStorage.clearBooking()
       setAccountMessage(
         "Votre compte a été anonymisé. Les écritures légalement obligatoires sont conservées."
       )
@@ -831,6 +856,7 @@ export function AccountScreen() {
               variant="ghost"
               onClick={async () => {
                 await authClient.signOut()
+                ticketingStorage.clearBooking()
                 router.replace("/")
                 router.refresh()
               }}
@@ -909,6 +935,9 @@ export function OtpScreen() {
   const [mode, setMode] = useState<"phone" | "email">("email")
   const [identifier, setIdentifier] = useState("")
   const [code, setCode] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [signupPhone, setSignupPhone] = useState("")
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string>()
   const [pending, setPending] = useState(false)
@@ -926,6 +955,11 @@ export function OtpScreen() {
   function normalizedIdentifier() {
     if (mode === "email") return identifier.trim().toLowerCase()
     return identifier.replace(/[\s().-]/g, "")
+  }
+
+  function normalizedSignupPhone() {
+    const value = mode === "phone" ? identifier : signupPhone
+    return value.replace(/[\s().-]/g, "")
   }
 
   function selectMode(nextMode: "phone" | "email") {
@@ -949,6 +983,16 @@ export function OtpScreen() {
       }
       const target = normalizedIdentifier()
       if (!target) throw new Error("Renseignez votre identifiant.")
+      if (intention === "inscription") {
+        if (!firstName.trim() || !lastName.trim()) {
+          throw new Error("Renseignez votre prénom et votre nom.")
+        }
+        if (!/^\+241\d{8}$/.test(normalizedSignupPhone())) {
+          throw new Error(
+            "Renseignez un numéro gabonais au format +241 suivi de 8 chiffres."
+          )
+        }
+      }
       if (!IS_E2E) {
         const result =
           mode === "phone"
@@ -1014,6 +1058,17 @@ export function OtpScreen() {
           throw new Error(result.error.message ?? "Le code saisi est invalide.")
         }
       }
+      if (intention === "inscription") {
+        savePendingTravelerOnboarding({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phone: normalizedSignupPhone(),
+          identifier: normalizedIdentifier(),
+        })
+      }
+      // Un brouillon de réservation appartient à la session précédente. Le
+      // conserver lors d'une connexion exposerait ses noms au nouveau compte.
+      ticketingStorage.clearBooking()
       if (IS_E2E) {
         router.replace(returnTo)
       } else {
@@ -1081,6 +1136,28 @@ export function OtpScreen() {
             développement sur le déploiement local.
           </InlineMessage>
         )}
+        {intention === "inscription" && (
+          <>
+            <Field label="Prénom" htmlFor="signup-first-name">
+              <Input
+                id="signup-first-name"
+                autoComplete="given-name"
+                required
+                value={firstName}
+                onChange={(event) => setFirstName(event.target.value)}
+              />
+            </Field>
+            <Field label="Nom" htmlFor="signup-last-name">
+              <Input
+                id="signup-last-name"
+                autoComplete="family-name"
+                required
+                value={lastName}
+                onChange={(event) => setLastName(event.target.value)}
+              />
+            </Field>
+          </>
+        )}
         <Field
           label={mode === "phone" ? "Numéro de téléphone" : "Adresse e-mail"}
           htmlFor="otp-identifier"
@@ -1093,15 +1170,36 @@ export function OtpScreen() {
               mode === "phone" ? "+241 06 12 34 56" : "vous@exemple.ga"
             }
             value={identifier}
+            required
             onChange={(event) => setIdentifier(event.target.value)}
           />
         </Field>
+        {intention === "inscription" && mode === "email" && (
+          <Field label="Numéro de téléphone" htmlFor="signup-phone">
+            <Input
+              id="signup-phone"
+              type="tel"
+              autoComplete="tel"
+              required
+              placeholder="+241 06 12 34 56"
+              value={signupPhone}
+              onChange={(event) => setSignupPhone(event.target.value)}
+            />
+          </Field>
+        )}
         {!sent ? (
           <Button
             size="lg"
             onClick={send}
             loading={pending}
-            disabled={!channelEnabled || !identifier.trim()}
+            disabled={
+              !channelEnabled ||
+              !identifier.trim() ||
+              (intention === "inscription" &&
+                (!firstName.trim() ||
+                  !lastName.trim() ||
+                  (mode === "email" && !signupPhone.trim())))
+            }
           >
             Recevoir mon code
           </Button>

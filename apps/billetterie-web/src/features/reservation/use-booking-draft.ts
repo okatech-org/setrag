@@ -39,10 +39,18 @@ export const SERVICE_CLASSES = [
 export type ServiceClassId = (typeof SERVICE_CLASSES)[number]["id"]
 
 export type TravelerDefaults = {
+  ownerId?: string
   firstName: string
   lastName: string
   phone: string
   email: string
+  savedPassengers?: Array<{
+    firstName: string
+    lastName: string
+    gender: "M" | "F"
+    emergencyPhone?: string
+    discountCode?: string
+  }>
 }
 
 /**
@@ -57,20 +65,29 @@ export function applyTravelerDefaults(
     ...booking,
     contactPhone: booking.contactPhone.trim() || traveler?.phone || "",
     contactEmail: booking.contactEmail?.trim() || traveler?.email || "",
-    passengers: booking.passengers.map((passenger, index) => ({
-      ...passenger,
-      firstName:
-        index === 0
-          ? passenger.firstName.trim() || traveler?.firstName || ""
-          : passenger.firstName,
-      lastName:
-        index === 0
-          ? passenger.lastName.trim() || traveler?.lastName || ""
-          : passenger.lastName,
-      // Le front voyageur ne vend pas le choix d'un numéro de siège :
-      // l'inventaire attribue automatiquement une place disponible.
-      seatId: undefined,
-    })),
+    passengers: booking.passengers.map((passenger, index) => {
+      const knownTraveler =
+        index === 0 ? undefined : traveler?.savedPassengers?.[index - 1]
+      const defaultFirstName =
+        index === 0 ? traveler?.firstName : knownTraveler?.firstName
+      const defaultLastName =
+        index === 0 ? traveler?.lastName : knownTraveler?.lastName
+      return {
+        ...passenger,
+        firstName: passenger.firstName.trim() || defaultFirstName || "",
+        lastName: passenger.lastName.trim() || defaultLastName || "",
+        gender: knownTraveler?.gender ?? passenger.gender,
+        emergencyPhone:
+          passenger.emergencyPhone?.trim() ||
+          knownTraveler?.emergencyPhone ||
+          "",
+        discountCode:
+          passenger.discountCode ?? knownTraveler?.discountCode ?? undefined,
+        // Le front voyageur ne vend pas le choix d'un numéro de siège :
+        // l'inventaire attribue automatiquement une place disponible.
+        seatId: undefined,
+      }
+    }),
   }
 }
 
@@ -92,7 +109,7 @@ export function useBookingDraft(traveler?: TravelerDefaults) {
   const passengerCount = trip.passengers || 1
 
   const [booking, setBooking] = useState<BookingDraft>(() => {
-    const stored = ticketingStorage.getBooking()
+    const stored = ticketingStorage.getBooking(traveler?.ownerId ?? "guest")
     if (stored) return applyTravelerDefaults(stored, traveler)
 
     return applyTravelerDefaults(
@@ -209,7 +226,10 @@ export function useBookingDraft(traveler?: TravelerDefaults) {
         reference = result.reference
         holdExpiresAt = result.holdExpiresAt
       }
-      ticketingStorage.setBooking({ ...booking, reference, holdExpiresAt })
+      ticketingStorage.setBooking(
+        { ...booking, reference, holdExpiresAt },
+        traveler?.ownerId ?? "guest"
+      )
       router.push("/paiement")
       return true
     } catch (cause) {

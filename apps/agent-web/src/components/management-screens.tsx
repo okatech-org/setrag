@@ -1,6 +1,8 @@
 "use client"
 
-import { BarChart3, Download, Filter, Plus, Search } from "lucide-react"
+import { ArrowRight, BarChart3, Download, Plus, Search } from "lucide-react"
+import Link from "next/link"
+import type { Route } from "next"
 import { useMemo, useState } from "react"
 import { useConvex } from "convex/react"
 
@@ -11,7 +13,6 @@ import { Button } from "@workspace/ui/components/button"
 import { Card } from "@workspace/ui/components/card"
 import { Field, Input, SelectNative } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
-import { Switch } from "@workspace/ui/components/choice"
 import {
   Table,
   TableBody,
@@ -56,7 +57,9 @@ import {
   type RevenueControlSnapshot,
 } from "./management-action-dialogs"
 
-const E2E_MODE = process.env.NEXT_PUBLIC_E2E_MODE === "1"
+const E2E_MODE =
+  process.env.NODE_ENV !== "production" &&
+  process.env.NEXT_PUBLIC_E2E_MODE === "1"
 
 const MANAGEMENT_IDENTITY = {
   id: "management-demo",
@@ -83,6 +86,15 @@ interface LiveSummary {
   incidents?: number
   severity?: string
 }
+
+export interface ManagementRowData {
+  id: string
+  cells: readonly string[]
+  href?: string
+  detailLabel?: string
+}
+
+type ManagementRowInput = ManagementRowData | readonly string[]
 
 function KpiCard({
   label,
@@ -189,14 +201,16 @@ export function ManagementScreen({
   online,
   identity = MANAGEMENT_IDENTITY,
   onPrimaryAction,
+  primaryHref,
   onSignOut,
 }: {
   section: ManagementSection
   live?: LiveSummary
-  rows?: readonly (readonly string[])[]
+  rows?: readonly ManagementRowInput[]
   online: boolean
   identity?: SellerIdentity
   onPrimaryAction?: () => void | Promise<string | void>
+  primaryHref?: string
   onSignOut?: () => void
 }) {
   const config = MANAGEMENT_SECTIONS[section]
@@ -207,20 +221,31 @@ export function ManagementScreen({
   const [messageTone, setMessageTone] = useState<"success" | "danger">(
     "success"
   )
-  const [yieldEnabled, setYieldEnabled] = useState(true)
-  const sourceRows = rowsOverride ?? config.rows
+  const sourceRows: readonly ManagementRowInput[] = rowsOverride ?? config.rows
+  const normalizedRows = useMemo<ManagementRowData[]>(
+    () =>
+      sourceRows.map((row, index) => {
+        if ("cells" in row) return row
+        return {
+          id: `${section}-${index}-${row.join("-")}`,
+          cells: row,
+        }
+      }),
+    [section, sourceRows]
+  )
   const rows = useMemo(
     () =>
-      sourceRows.filter(
+      normalizedRows.filter(
         (row) =>
-          row.some((cell) =>
+          row.cells.some((cell) =>
             cell.toLowerCase().includes(search.trim().toLowerCase())
           ) &&
           (status === "tous" ||
-            row.at(-1)?.toLowerCase() === status.toLowerCase())
+            row.cells.at(-1)?.toLowerCase() === status.toLowerCase())
       ),
-    [search, sourceRows, status]
+    [normalizedRows, search, status]
   )
+  const hasDetails = rows.some((row) => Boolean(row.href))
 
   async function runPrimary() {
     if (!onPrimaryAction) return
@@ -260,14 +285,14 @@ export function ManagementScreen({
               {config.description}
             </p>
           </div>
-          {section === "yield" ? (
-            <Switch
-              label="Yield actif sur les Express"
-              checked={yieldEnabled}
-              onCheckedChange={setYieldEnabled}
-            />
-          ) : null}
-          {onPrimaryAction ? (
+          {primaryHref ? (
+            <Button asChild disabled={!online}>
+              <Link href={primaryHref as Route}>
+                <Plus />
+                {config.action}
+              </Link>
+            </Button>
+          ) : onPrimaryAction ? (
             <Button
               type="button"
               variant={section === "tableau-de-bord" ? "secondary" : "primary"}
@@ -295,7 +320,7 @@ export function ManagementScreen({
         {section !== "tableau-de-bord" ? (
           <>
             <Card className="gap-4 p-5">
-              <div className="grid items-end gap-3 md:grid-cols-[minmax(220px,1fr)_220px_auto]">
+              <div className="grid items-end gap-3 md:grid-cols-[minmax(220px,1fr)_220px]">
                 <Field label="Rechercher" htmlFor={`search-${section}`}>
                   <Input
                     id={`search-${section}`}
@@ -317,10 +342,6 @@ export function ManagementScreen({
                     <option value="Suspendu">Suspendu</option>
                   </SelectNative>
                 </Field>
-                <Button type="button" variant="secondary">
-                  <Filter />
-                  Filtrer
-                </Button>
               </div>
             </Card>
             <Card className="min-w-0 overflow-hidden p-0">
@@ -330,17 +351,20 @@ export function ManagementScreen({
                     {config.columns.map((column) => (
                       <TableHead key={column}>{column}</TableHead>
                     ))}
+                    {hasDetails ? (
+                      <TableHead className="text-right">Actions</TableHead>
+                    ) : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((row) => (
-                    <TableRow key={row.join("-")}>
-                      {row.map((cell, index) => (
+                    <TableRow key={row.id}>
+                      {row.cells.map((cell, index) => (
                         <TableCell
                           key={`${cell}-${index}`}
                           className={index === 0 ? "font-semibold" : undefined}
                         >
-                          {index === row.length - 1 ? (
+                          {index === row.cells.length - 1 ? (
                             <Badge
                               variant={
                                 /suspendu|dégradé|rejouer|bloquée|suivre/i.test(
@@ -357,6 +381,18 @@ export function ManagementScreen({
                           )}
                         </TableCell>
                       ))}
+                      {hasDetails ? (
+                        <TableCell className="text-right">
+                          {row.href ? (
+                            <Button asChild size="sm" variant="secondary">
+                              <Link href={row.href as Route}>
+                                {row.detailLabel ?? "Voir le détail"}
+                                <ArrowRight />
+                              </Link>
+                            </Button>
+                          ) : null}
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -636,72 +672,121 @@ export function ManagementPageClient({
         incidents: (incidents?.length ?? 0) + (penalties?.length ?? 0),
         severity: health?.severity,
       }
-  const liveRows: readonly (readonly string[])[] | undefined = E2E_MODE
+  const liveRows: readonly ManagementRowInput[] | undefined = E2E_MODE
     ? undefined
     : section === "livrets" && booklets
-      ? booklets.map((booklet) => [
-          booklet.label,
-          `${new Date(booklet.validFrom).toLocaleDateString("fr-FR")} → ${new Date(booklet.validUntil).toLocaleDateString("fr-FR")}`,
-          "Synchronisé",
-          booklet.status,
-        ])
+      ? booklets.map((booklet) => ({
+          id: booklet._id,
+          href: `/gestion/livrets/${booklet._id}`,
+          cells: [
+            booklet.label,
+            `${new Date(booklet.validFrom).toLocaleDateString("fr-FR")} → ${new Date(booklet.validUntil).toLocaleDateString("fr-FR")}`,
+            "Synchronisé",
+            booklet.status,
+          ],
+        }))
       : section === "trains" && trains
-        ? (trainCompositions ?? []).map(({ train, coachCount, capacity }) => [
-            train.number,
-            train.type,
-            `${coachCount} voiture(s)`,
-            `${capacity} place(s)`,
-          ])
+        ? (trainCompositions ?? []).map(({ train, coachCount, capacity }) => ({
+            id: train._id,
+            href: `/gestion/trains/${train._id}`,
+            cells: [
+              train.number,
+              train.type,
+              `${coachCount} voiture(s)`,
+              `${capacity} place(s)`,
+            ],
+          }))
         : section === "tarifs" && fareSchedules
           ? fareSchedules.flatMap(({ schedule, bases }) =>
-              bases.map((base) => [
-                base.trainType,
-                base.serviceClass,
-                `${base.shortDistanceRate.toLocaleString("fr-FR")} F/km`,
-                `${base.longDistanceRate.toLocaleString("fr-FR")} F/km · ${schedule.status}`,
-              ])
+              bases.length > 0
+                ? bases.map((base) => ({
+                    id: String(base._id),
+                    href: `/gestion/tarifs/${schedule._id}`,
+                    detailLabel: "Gérer la grille",
+                    cells: [
+                      base.trainType,
+                      base.serviceClass,
+                      `${base.shortDistanceRate.toLocaleString("fr-FR")} F/km`,
+                      `${base.longDistanceRate.toLocaleString("fr-FR")} F/km · ${schedule.status}`,
+                    ],
+                  }))
+                : [
+                    {
+                      id: String(schedule._id),
+                      href: `/gestion/tarifs/${schedule._id}`,
+                      detailLabel: "Compléter la grille",
+                      cells: [
+                        schedule.label,
+                        "Aucune base",
+                        "—",
+                        schedule.status,
+                      ],
+                    },
+                  ]
             )
           : section === "yield" && pricingRules
-            ? pricingRules.map((rule) => [
-                rule.code ?? rule.type,
-                `${rule.type}${rule.threshold !== undefined ? ` · ${rule.threshold}` : ""}`,
-                `${rule.modifierPct >= 0 ? "+" : ""}${rule.modifierPct} %`,
-                rule.isActive ? "Actif" : "Suspendu",
-              ])
+            ? pricingRules.map((rule) => ({
+                id: rule._id,
+                href: `/gestion/yield/${rule._id}`,
+                cells: [
+                  rule.code ?? rule.type,
+                  `${rule.type}${rule.threshold !== undefined ? ` · ${rule.threshold}` : ""}`,
+                  `${rule.modifierPct >= 0 ? "+" : ""}${rule.modifierPct} %`,
+                  rule.isActive ? "Actif" : "Suspendu",
+                ],
+              }))
             : section === "places" && seatBlocks
-              ? seatBlocks.map(({ block, trip, seat, coach }) => [
-                  trip
-                    ? `${trip.trainNumber} · ${trip.serviceDate}`
-                    : "Desserte inconnue",
-                  `${coach?.label ?? "?"} · ${seat?.label ?? "?"}`,
-                  block.reason,
-                  block.isActive ? "Bloquée" : "Libérée",
-                ])
+              ? seatBlocks.map(({ block, trip, seat, coach }) => ({
+                  id: block._id,
+                  href: `/gestion/places/${block._id}`,
+                  detailLabel: "Gérer le blocage",
+                  cells: [
+                    trip
+                      ? `${trip.trainNumber} · ${trip.serviceDate}`
+                      : "Desserte inconnue",
+                    `${coach?.label ?? "?"} · ${seat?.label ?? "?"}`,
+                    block.reason,
+                    block.isActive ? "Bloquée" : "Libérée",
+                  ],
+                }))
               : section === "points-de-vente" && pointsOfSale
-                ? pointsOfSale.map(({ pointOfSale, station }) => [
-                    pointOfSale.name,
-                    pointOfSale.type,
-                    station
-                      ? `${station.name} · ${pointOfSale.counters.passengers} guichet(s)`
-                      : `${pointOfSale.counters.passengers} guichet(s)`,
-                    pointOfSale.isActive ? "Actif" : "Suspendu",
-                  ])
+                ? pointsOfSale.map(({ pointOfSale, station }) => ({
+                    id: pointOfSale._id,
+                    href: `/gestion/points-de-vente/${pointOfSale._id}`,
+                    cells: [
+                      pointOfSale.name,
+                      pointOfSale.type,
+                      station
+                        ? `${station.name} · ${pointOfSale.counters.passengers} guichet(s)`
+                        : `${pointOfSale.counters.passengers} guichet(s)`,
+                      pointOfSale.isActive ? "Actif" : "Suspendu",
+                    ],
+                  }))
                 : section === "voyageurs" && travelers
-                  ? travelers.map(({ ticket, trip, origin, destination }) => [
-                      `${ticket.passenger.firstName} ${ticket.passenger.lastName}`,
-                      ticket.number,
-                      `${origin?.name ?? "?"} → ${destination?.name ?? "?"}`,
-                      `${ticket.coachLabel ?? "—"} · ${ticket.seatLabel ?? "Debout"}${trip ? ` · ${trip.serviceDate}` : ""}`,
-                    ])
+                  ? travelers.map(({ ticket, trip, origin, destination }) => ({
+                      id: ticket._id,
+                      href: `/gestion/voyageurs/${ticket._id}`,
+                      detailLabel: "Voir le billet",
+                      cells: [
+                        `${ticket.passenger.firstName} ${ticket.passenger.lastName}`,
+                        ticket.number,
+                        `${origin?.name ?? "?"} → ${destination?.name ?? "?"}`,
+                        `${ticket.coachLabel ?? "—"} · ${ticket.seatLabel ?? "Debout"}${trip ? ` · ${trip.serviceDate}` : ""}`,
+                      ],
+                    }))
                   : section === "utilisateurs" && users
-                    ? users.map((user) => [
-                        `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
-                          user.email ||
-                          user.authId,
-                        user.matricule ?? "—",
-                        user.role,
-                        user.isActive ? "Actif" : "Suspendu",
-                      ])
+                    ? users.map((user) => ({
+                        id: user._id,
+                        href: `/gestion/utilisateurs/${user._id}`,
+                        cells: [
+                          `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+                            user.email ||
+                            user.authId,
+                          user.matricule ?? "—",
+                          user.role,
+                          user.isActive ? "Actif" : "Suspendu",
+                        ],
+                      }))
                     : section === "parametrage" && settings
                       ? [
                           [
@@ -731,18 +816,28 @@ export function ManagementPageClient({
                         ]
                       : section === "incidents" && (incidents || penalties)
                         ? [
-                            ...(penalties ?? []).map(({ penalty, trip }) => [
-                              penalty.number,
-                              penalty.reason,
-                              trip?.trainNumber ?? "Réseau",
-                              penalty.status,
-                            ]),
-                            ...(incidents ?? []).map(({ incident, trip }) => [
-                              incident.clientId,
-                              incident.category,
-                              trip?.trainNumber ?? "Réseau",
-                              incident.status,
-                            ]),
+                            ...(penalties ?? []).map(({ penalty, trip }) => ({
+                              id: penalty._id,
+                              href: `/gestion/incidents/proces-verbaux/${penalty._id}`,
+                              detailLabel: "Traiter le PV",
+                              cells: [
+                                penalty.number,
+                                penalty.reason,
+                                trip?.trainNumber ?? "Réseau",
+                                penalty.status,
+                              ],
+                            })),
+                            ...(incidents ?? []).map(({ incident, trip }) => ({
+                              id: incident._id,
+                              href: `/gestion/incidents/${incident._id}`,
+                              detailLabel: "Traiter l’incident",
+                              cells: [
+                                incident.clientId,
+                                incident.category,
+                                trip?.trainNumber ?? "Réseau",
+                                incident.status,
+                              ],
+                            })),
                           ]
                         : section === "comptabilite" && exportsList
                           ? exportsList.map(({ event, day }) => [
@@ -758,16 +853,20 @@ export function ManagementPageClient({
                               event.status,
                             ])
                           : section === "rapports" && reportSchedules
-                            ? reportSchedules.map((schedule) => [
-                                schedule.label,
-                                schedule.frequency,
-                                schedule.format.toUpperCase(),
-                                schedule.lastRunAt
-                                  ? new Date(schedule.lastRunAt).toLocaleString(
-                                      "fr-FR"
-                                    )
-                                  : `Prévu ${new Date(schedule.nextRunAt).toLocaleString("fr-FR")}`,
-                              ])
+                            ? reportSchedules.map((schedule) => ({
+                                id: schedule._id,
+                                href: `/gestion/rapports/${schedule._id}`,
+                                cells: [
+                                  schedule.label,
+                                  schedule.frequency,
+                                  schedule.format.toUpperCase(),
+                                  schedule.lastRunAt
+                                    ? new Date(
+                                        schedule.lastRunAt
+                                      ).toLocaleString("fr-FR")
+                                    : `Prévu ${new Date(schedule.nextRunAt).toLocaleString("fr-FR")}`,
+                                ],
+                              }))
                             : section === "integrations" && health
                               ? health.findings.map((finding) => [
                                   finding.label,
@@ -776,6 +875,13 @@ export function ManagementPageClient({
                                   finding.severity,
                                 ])
                               : undefined
+
+  const primaryHref =
+    section === "trains" && may("referentiel", "creer")
+      ? "/gestion/trains/nouveau"
+      : section === "places" && may("places", "creer")
+        ? "/gestion/places/nouveau"
+        : undefined
 
   const primaryAction: (() => void | Promise<string | void>) | undefined =
     section === "incidents" && may("proces_verbaux", "creer")
@@ -821,41 +927,35 @@ export function ManagementPageClient({
                   ? () => setDialog("fare")
                   : section === "yield" && may("yield", "creer")
                     ? () => setDialog("yield")
-                    : section === "trains" && may("referentiel", "creer")
-                      ? () => setDialog("composition")
-                      : section === "places" &&
-                          may("places") &&
-                          may("referentiel")
-                        ? () => setDialog("seat-plan")
-                        : section === "points-de-vente" &&
-                            may("referentiel", "creer")
-                          ? () => setDialog("point-of-sale")
-                          : section === "voyageurs" && may("controles")
-                            ? () => setDialog("manifest")
-                            : section === "utilisateurs" &&
-                                may("utilisateurs", "modifier")
+                    : section === "points-de-vente" &&
+                        may("referentiel", "creer")
+                      ? () => setDialog("point-of-sale")
+                      : section === "voyageurs" && may("controles")
+                        ? () => setDialog("manifest")
+                        : section === "utilisateurs" &&
+                            may("utilisateurs", "modifier")
+                          ? async () => {
+                              const result = await synchronizeDirectory({})
+                              if (!result.synchronized) {
+                                throw new Error(result.message)
+                              }
+                              return result.message
+                            }
+                          : section === "parametrage" &&
+                              may("parametrage", "modifier")
+                            ? () => setDialog("settings")
+                            : section === "integrations" && may("integrations")
                               ? async () => {
-                                  const result = await synchronizeDirectory({})
-                                  if (!result.synchronized) {
-                                    throw new Error(result.message)
-                                  }
-                                  return result.message
+                                  const result = await retryIntegrationFailures(
+                                    {}
+                                  )
+                                  return result.count === 0
+                                    ? "Aucun échec à relancer."
+                                    : result.requested
+                                      ? `${result.count} échec(s) transmis à l’administration IT pour reprise.`
+                                      : `${result.count} traitement(s) remis en file.`
                                 }
-                              : section === "parametrage" &&
-                                  may("parametrage", "modifier")
-                                ? () => setDialog("settings")
-                                : section === "integrations" &&
-                                    may("integrations")
-                                  ? async () => {
-                                      const result =
-                                        await retryIntegrationFailures({})
-                                      return result.count === 0
-                                        ? "Aucun échec à relancer."
-                                        : result.requested
-                                          ? `${result.count} échec(s) transmis à l’administration IT pour reprise.`
-                                          : `${result.count} traitement(s) remis en file.`
-                                    }
-                                  : undefined
+                              : undefined
 
   async function submitPenalty(draft: PenaltyDraft) {
     if (E2E_MODE) return "PV-DEMO-0143"
@@ -1034,8 +1134,9 @@ export function ManagementPageClient({
       <ManagementScreen
         section={section}
         live={live}
-        rows={liveRows}
+        rows={E2E_MODE ? undefined : (liveRows ?? [])}
         online={online}
+        primaryHref={primaryHref}
         identity={
           profile?.user
             ? {

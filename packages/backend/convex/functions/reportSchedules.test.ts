@@ -123,4 +123,120 @@ describe("Programmation des rapports", () => {
     })
     expect(result.nextRunAt).toBe(Date.parse("2026-08-03T08:00:00Z"))
   })
+
+  it("permet de modifier, suspendre et réactiver une programmation", async () => {
+    const t = convexTest(schema, modules)
+    const manager = await asReportManager(t)
+    const created = await manager.mutation(
+      api.functions.reportSchedules.create,
+      {
+        label: "Rapport initial",
+        reportType: "recettes",
+        frequency: "mensuel",
+        format: "pdf",
+        recipients: ["direction@setrag.ga"],
+        nextRunAt: Date.parse("2026-08-01T06:00:00Z"),
+      }
+    )
+
+    await manager.mutation(api.functions.reportSchedules.update, {
+      scheduleId: created.scheduleId,
+      label: "Rapport hebdomadaire",
+      reportType: "remplissage",
+      frequency: "hebdomadaire",
+      format: "xlsx",
+      recipients: ["KPI@SETRAG.GA", "kpi@setrag.ga"],
+    })
+    expect(
+      await t.run(async (ctx) => ctx.db.get(created.scheduleId))
+    ).toMatchObject({
+      frequency: "hebdomadaire",
+      nextRunAt: Date.parse("2026-08-01T06:00:00Z"),
+    })
+    await manager.mutation(api.functions.reportSchedules.setActive, {
+      scheduleId: created.scheduleId,
+      isActive: false,
+    })
+    expect(
+      await manager.query(api.functions.reportSchedules.get, {
+        scheduleId: created.scheduleId,
+      })
+    ).toMatchObject({
+      label: "Rapport hebdomadaire",
+      reportType: "remplissage",
+      frequency: "hebdomadaire",
+      format: "xlsx",
+      recipients: ["kpi@setrag.ga"],
+      isActive: false,
+    })
+
+    await manager.mutation(api.functions.reportSchedules.setActive, {
+      scheduleId: created.scheduleId,
+      isActive: true,
+    })
+    expect(
+      await t.run(async (ctx) => ctx.db.get(created.scheduleId))
+    ).toMatchObject({ isActive: true })
+  })
+
+  it("ne replanifie pas une programmation dont l’état ne change pas", async () => {
+    const t = convexTest(schema, modules)
+    const manager = await asReportManager(t)
+    const created = await manager.mutation(
+      api.functions.reportSchedules.create,
+      {
+        label: "Rapport idempotent",
+        reportType: "recettes",
+        frequency: "quotidien",
+        format: "csv",
+        recipients: ["direction@setrag.ga"],
+        nextRunAt: Date.parse("2026-07-28T06:00:00Z"),
+      }
+    )
+    const before = await t.run((ctx) =>
+      ctx.db.system.query("_scheduled_functions").collect()
+    )
+
+    await manager.mutation(api.functions.reportSchedules.setActive, {
+      scheduleId: created.scheduleId,
+      isActive: true,
+    })
+
+    const after = await t.run((ctx) =>
+      ctx.db.system.query("_scheduled_functions").collect()
+    )
+    expect(after).toHaveLength(before.length)
+  })
+
+  it("peut lancer immédiatement un rapport sans modifier sa cadence", async () => {
+    const t = convexTest(schema, modules)
+    const manager = await asReportManager(t)
+    const nextRunAt = Date.parse("2026-08-01T06:00:00Z")
+    const created = await manager.mutation(
+      api.functions.reportSchedules.create,
+      {
+        label: "Rapport à la demande",
+        reportType: "ventes_canaux",
+        frequency: "mensuel",
+        format: "csv",
+        recipients: ["direction@setrag.ga"],
+        nextRunAt,
+      }
+    )
+
+    await manager.mutation(api.functions.reportSchedules.runNow, {
+      scheduleId: created.scheduleId,
+    })
+    const [schedule, events] = await t.run(async (ctx) => [
+      await ctx.db.get(created.scheduleId),
+      await ctx.db.query("outboxEvents").collect(),
+    ])
+    expect(schedule?.nextRunAt).toBe(nextRunAt)
+    expect(schedule?.lastRunAt).toBe(Date.now())
+    expect(events).toHaveLength(1)
+    expect(JSON.parse(events[0]!.payload)).toMatchObject({
+      kind: "scheduled_report",
+      reportType: "ventes_canaux",
+    })
+  })
 })

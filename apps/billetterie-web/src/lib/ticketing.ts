@@ -47,7 +47,18 @@ export type BookingDraft = {
   }>
 }
 
-export const IS_E2E = process.env.NEXT_PUBLIC_E2E_MODE === "1"
+/**
+ * Les données fictives ne doivent jamais pouvoir atteindre un build de
+ * production, même si la variable E2E a été laissée par erreur dans Vercel.
+ */
+export function resolveE2EMode(nodeEnv?: string, enabled?: string) {
+  return nodeEnv !== "production" && enabled === "1"
+}
+
+export const IS_E2E = resolveE2EMode(
+  process.env.NODE_ENV,
+  process.env.NEXT_PUBLIC_E2E_MODE
+)
 
 export const DEMO_STATIONS: Station[] = [
   {
@@ -159,6 +170,7 @@ export function demoTrips(search: SearchDraft): SelectedTrip[] {
 const SEARCH_KEY = "setrag:search"
 const TRIP_KEY = "setrag:trip"
 const BOOKING_KEY = "setrag:booking"
+const BOOKING_OWNER_KEY = "setrag:booking-owner"
 
 function read<T>(key: string): T | null {
   if (typeof window === "undefined") return null
@@ -182,8 +194,31 @@ export const ticketingStorage = {
   setSearch: (value: SearchDraft) => write(SEARCH_KEY, value),
   getTrip: () => read<SelectedTrip>(TRIP_KEY),
   setTrip: (value: SelectedTrip) => write(TRIP_KEY, value),
-  getBooking: () => read<BookingDraft>(BOOKING_KEY),
-  setBooking: (value: BookingDraft) => write(BOOKING_KEY, value),
+  getBooking: (ownerId?: string) => {
+    const booking = read<BookingDraft>(BOOKING_KEY)
+    if (!booking || !ownerId || typeof window === "undefined") return booking
+
+    const storedOwner = window.sessionStorage.getItem(BOOKING_OWNER_KEY)
+    if (storedOwner === ownerId) return booking
+
+    // Les anciens brouillons n'étaient pas rattachés à un compte. Ils peuvent
+    // contenir les noms du compte précédemment connecté et ne sont donc jamais
+    // repris dans une nouvelle session authentifiée.
+    window.sessionStorage.removeItem(BOOKING_KEY)
+    window.sessionStorage.removeItem(BOOKING_OWNER_KEY)
+    return null
+  },
+  setBooking: (value: BookingDraft, ownerId?: string) => {
+    write(BOOKING_KEY, value)
+    if (typeof window === "undefined") return
+    if (ownerId) window.sessionStorage.setItem(BOOKING_OWNER_KEY, ownerId)
+    else window.sessionStorage.removeItem(BOOKING_OWNER_KEY)
+  },
+  clearBooking: () => {
+    if (typeof window === "undefined") return
+    window.sessionStorage.removeItem(BOOKING_KEY)
+    window.sessionStorage.removeItem(BOOKING_OWNER_KEY)
+  },
 }
 
 export const DEFAULT_SEARCH: SearchDraft = {

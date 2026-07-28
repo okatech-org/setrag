@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation"
 
+import { useQuery } from "@workspace/api/hooks"
+import { api } from "@workspace/backend/generated"
 import { Button } from "@workspace/ui/components/button"
 import { EmptyState, SkeletonLines } from "@workspace/ui/components/empty-state"
 
@@ -23,14 +25,23 @@ import { useTravelerAuth } from "@/hooks/use-traveler-auth"
 export function BookingForm() {
   const { isAuthenticated, isLoading, isProfileReady, profile, user } =
     useTravelerAuth()
+  const savedPassengers = useQuery(
+    api.functions.customers.listSavedPassengers,
+    isAuthenticated && isProfileReady ? {} : "skip"
+  )
 
-  if (isLoading || (isAuthenticated && (!isProfileReady || !profile))) {
+  if (
+    isLoading ||
+    (isAuthenticated &&
+      (!isProfileReady || !profile || savedPassengers === undefined))
+  ) {
     return <SkeletonLines lines={7} />
   }
 
   const nameParts = (user?.name ?? "").trim().split(/\s+/).filter(Boolean)
   const traveler: TravelerDefaults | undefined = isAuthenticated
     ? {
+        ownerId: user!.id,
         firstName: profile?.user.firstName ?? nameParts[0] ?? "",
         lastName: profile?.user.lastName ?? nameParts.slice(1).join(" ") ?? "",
         phone: profile?.user.phone ?? "",
@@ -39,6 +50,13 @@ export function BookingForm() {
           (user?.email?.endsWith("@auth.setrag.local")
             ? ""
             : (user?.email ?? "")),
+        savedPassengers: savedPassengers?.map((passenger) => ({
+          firstName: passenger.firstName,
+          lastName: passenger.lastName,
+          gender: passenger.gender,
+          emergencyPhone: passenger.emergencyPhone,
+          discountCode: passenger.discountCode,
+        })),
       }
     : undefined
 

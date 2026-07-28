@@ -648,6 +648,32 @@ export const listPenalties = query({
   },
 })
 
+/** Fiche complète d'un procès-verbal, bornée aux habilitations de gestion. */
+export const getPenalty = query({
+  args: { penaltyId: v.id("procesVerbaux") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "proces_verbaux", "consulter")
+    const penalty = await ctx.db.get(args.penaltyId)
+    if (!penalty) return null
+
+    const [agent, trip, ticket, payment, resolver] = await Promise.all([
+      ctx.db.get(penalty.agentId),
+      ctx.db.get(penalty.tripId),
+      penalty.ticketId ? ctx.db.get(penalty.ticketId) : null,
+      penalty.paymentId ? ctx.db.get(penalty.paymentId) : null,
+      penalty.resolvedBy ? ctx.db.get(penalty.resolvedBy) : null,
+    ])
+    return { penalty, agent, trip, ticket, payment, resolver }
+  },
+})
+
+const PENALTY_TRANSITIONS = {
+  emis: ["paye", "conteste", "annule"],
+  conteste: ["emis", "paye", "annule"],
+  paye: [],
+  annule: [],
+} as const
+
 /** Conteste, annule ou solde un procès-verbal. */
 export const setPenaltyStatus = mutation({
   args: {
@@ -664,14 +690,23 @@ export const setPenaltyStatus = mutation({
     const actor = await requirePermission(ctx, "proces_verbaux", "modifier")
     const pv = await ctx.db.get(args.penaltyId)
     if (!pv) throw new Error("Procès-verbal introuvable")
-    if (args.status === "annule" && !args.resolutionNote?.trim()) {
-      throw new Error("Un motif est obligatoire pour annuler un procès-verbal")
+    const allowed = PENALTY_TRANSITIONS[pv.status] as readonly string[]
+    if (!allowed.includes(args.status)) {
+      throw new Error(
+        `Transition de procès-verbal interdite : ${pv.status} → ${args.status}`
+      )
+    }
+    const note = args.resolutionNote?.trim()
+    if (!note) {
+      throw new Error(
+        "Un motif est obligatoire pour modifier le statut d'un procès-verbal"
+      )
     }
 
     await ctx.db.patch(args.penaltyId, {
       status: args.status,
       resolvedBy: actor._id,
-      resolutionNote: args.resolutionNote,
+      resolutionNote: note || pv.resolutionNote,
     })
     await audit(ctx, {
       actorId: actor._id,
@@ -679,7 +714,7 @@ export const setPenaltyStatus = mutation({
       entityTable: "procesVerbaux",
       entityId: args.penaltyId,
       before: { status: pv.status },
-      after: { status: args.status, note: args.resolutionNote },
+      after: { status: args.status, note },
     })
   },
 })
@@ -807,6 +842,43 @@ export const listIncidents = query({
   },
 })
 
+/** Fiche complète d'un incident et de son contexte d'exploitation. */
+export const getIncident = query({
+  args: { incidentId: v.id("incidents") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "incidents", "consulter")
+    const incident = await ctx.db.get(args.incidentId)
+    if (!incident) return null
+
+    const [reporter, trip, station, resolver, photoUrls] = await Promise.all([
+      ctx.db.get(incident.reporterId),
+      incident.tripId ? ctx.db.get(incident.tripId) : null,
+      incident.stationId ? ctx.db.get(incident.stationId) : null,
+      incident.resolvedBy ? ctx.db.get(incident.resolvedBy) : null,
+      Promise.all(
+        incident.photoStorageIds.map((storageId) =>
+          ctx.storage.getUrl(storageId)
+        )
+      ),
+    ])
+    return {
+      incident,
+      reporter,
+      trip,
+      station,
+      resolver,
+      photoUrls: photoUrls.filter((url): url is string => Boolean(url)),
+    }
+  },
+})
+
+const INCIDENT_TRANSITIONS = {
+  ouvert: ["en_cours", "resolu"],
+  en_cours: ["resolu"],
+  // Une résolution peut être réouverte si de nouveaux éléments apparaissent.
+  resolu: ["en_cours"],
+} as const
+
 /** Fait progresser un incident jusqu'à sa résolution. */
 export const setIncidentStatus = mutation({
   args: {
@@ -822,15 +894,40 @@ export const setIncidentStatus = mutation({
     const actor = await requirePermission(ctx, "incidents", "modifier")
     const incident = await ctx.db.get(args.incidentId)
     if (!incident) throw new Error("Incident introuvable")
-    if (args.status === "resolu" && !args.resolutionNote?.trim()) {
+    const allowed = INCIDENT_TRANSITIONS[incident.status] as readonly string[]
+    if (!allowed.includes(args.status)) {
+      throw new Error(
+        `Transition d'incident interdite : ${incident.status} → ${args.status}`
+      )
+    }
+    const note = args.resolutionNote?.trim()
+    if (args.status === "resolu" && !note) {
       throw new Error("Une note de résolution est obligatoire")
     }
+    if (!note) {
+      throw new Error(
+        "Une note est obligatoire pour modifier le statut d'un incident"
+      )
+    }
 
+    const reopening = incident.status === "resolu" && args.status === "en_cours"
     await ctx.db.patch(args.incidentId, {
       status: args.status,
-      resolvedBy: args.status === "resolu" ? actor._id : incident.resolvedBy,
-      resolvedAt: args.status === "resolu" ? Date.now() : incident.resolvedAt,
-      resolutionNote: args.resolutionNote,
+      resolvedBy:
+        args.status === "resolu"
+          ? actor._id
+          : reopening
+            ? undefined
+            : incident.resolvedBy,
+      resolvedAt:
+        args.status === "resolu"
+          ? Date.now()
+          : reopening
+            ? undefined
+            : incident.resolvedAt,
+      // La raison de réouverture reste dans l'audit ; la fiche ne doit plus
+      // afficher l'ancienne note comme si l'incident était encore résolu.
+      resolutionNote: reopening ? undefined : note,
     })
     await audit(ctx, {
       actorId: actor._id,
@@ -838,7 +935,7 @@ export const setIncidentStatus = mutation({
       entityTable: "incidents",
       entityId: args.incidentId,
       before: { status: incident.status },
-      after: { status: args.status, note: args.resolutionNote },
+      after: { status: args.status, note },
     })
   },
 })

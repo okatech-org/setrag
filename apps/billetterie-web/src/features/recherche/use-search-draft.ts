@@ -33,7 +33,9 @@ export function useSearchDraft() {
   )
   const stations = useMemo(
     () =>
-      convexStations?.length ? (convexStations as Station[]) : DEMO_STATIONS,
+      IS_E2E
+        ? DEMO_STATIONS
+        : ((convexStations as Station[] | undefined) ?? []),
     [convexStations]
   )
 

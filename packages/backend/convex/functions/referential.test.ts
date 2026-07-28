@@ -15,7 +15,7 @@ import type { AppRole } from "../model/permissions"
 async function asRole(
   t: ReturnType<typeof convexTest>,
   role: AppRole,
-  options: { isActive?: boolean } = {},
+  options: { isActive?: boolean } = {}
 ) {
   const authId = `auth-${role}-${Math.floor(Math.random() * 1e9)}`
   const userId = await t.run(async (ctx) =>
@@ -26,7 +26,7 @@ async function asRole(
       role,
       identitySource: "annuaire",
       isActive: options.isActive ?? true,
-    }),
+    })
   )
   return { ctx: t.withIdentity({ subject: authId }), userId }
 }
@@ -98,7 +98,9 @@ describe("listStations — accès public", () => {
 
   it("retourne une liste vide sur un réseau non initialisé", async () => {
     const t = convexTest(schema, modules)
-    expect(await t.query(api.functions.referential.listStations, {})).toEqual([])
+    expect(await t.query(api.functions.referential.listStations, {})).toEqual(
+      []
+    )
   })
 })
 
@@ -130,7 +132,7 @@ describe("distanceBetweenStations", () => {
     })
     const distance = await t.query(
       api.functions.referential.distanceBetweenStations,
-      { originCode: "OWE", destinationCode: "FCV" },
+      { originCode: "OWE", destinationCode: "FCV" }
     )
     expect(distance).toBe(648)
   })
@@ -143,11 +145,11 @@ describe("distanceBetweenStations", () => {
     })
     const aller = await t.query(
       api.functions.referential.distanceBetweenStations,
-      { originCode: "OWE", destinationCode: "FCV" },
+      { originCode: "OWE", destinationCode: "FCV" }
     )
     const retour = await t.query(
       api.functions.referential.distanceBetweenStations,
-      { originCode: "FCV", destinationCode: "OWE" },
+      { originCode: "FCV", destinationCode: "OWE" }
     )
     expect(aller).toBe(retour)
   })
@@ -159,7 +161,7 @@ describe("distanceBetweenStations", () => {
       t.query(api.functions.referential.distanceBetweenStations, {
         originCode: "OWE",
         destinationCode: "XXX",
-      }),
+      })
     ).rejects.toThrow(/Gare inconnue/)
   })
 })
@@ -168,7 +170,7 @@ describe("upsertStation — contrôle d'accès", () => {
   it("refuse un appel non authentifié", async () => {
     const t = convexTest(schema, modules)
     await expect(
-      t.mutation(api.functions.referential.upsertStation, OWENDO),
+      t.mutation(api.functions.referential.upsertStation, OWENDO)
     ).rejects.toThrow(/Non authentifié/)
   })
 
@@ -176,7 +178,7 @@ describe("upsertStation — contrôle d'accès", () => {
     const t = convexTest(schema, modules)
     const { ctx } = await asRole(t, "vendeur_guichet")
     await expect(
-      ctx.mutation(api.functions.referential.upsertStation, OWENDO),
+      ctx.mutation(api.functions.referential.upsertStation, OWENDO)
     ).rejects.toThrow(/Accès refusé/)
   })
 
@@ -184,7 +186,7 @@ describe("upsertStation — contrôle d'accès", () => {
     const t = convexTest(schema, modules)
     const { ctx } = await asRole(t, "controleur_train")
     await expect(
-      ctx.mutation(api.functions.referential.upsertStation, OWENDO),
+      ctx.mutation(api.functions.referential.upsertStation, OWENDO)
     ).rejects.toThrow(/Accès refusé/)
   })
 
@@ -192,7 +194,7 @@ describe("upsertStation — contrôle d'accès", () => {
     const t = convexTest(schema, modules)
     const { ctx } = await asRole(t, "admin_fonctionnel", { isActive: false })
     await expect(
-      ctx.mutation(api.functions.referential.upsertStation, OWENDO),
+      ctx.mutation(api.functions.referential.upsertStation, OWENDO)
     ).rejects.toThrow(/Compte désactivé/)
   })
 
@@ -201,7 +203,7 @@ describe("upsertStation — contrôle d'accès", () => {
     const { ctx } = await asRole(t, "admin_fonctionnel")
     const id = await ctx.mutation(
       api.functions.referential.upsertStation,
-      OWENDO,
+      OWENDO
     )
     expect(id).toBeDefined()
   })
@@ -214,7 +216,7 @@ describe("upsertStation — comportement", () => {
 
     const premier = await ctx.mutation(
       api.functions.referential.upsertStation,
-      OWENDO,
+      OWENDO
     )
     const second = await ctx.mutation(api.functions.referential.upsertStation, {
       ...OWENDO,
@@ -234,7 +236,7 @@ describe("upsertStation — comportement", () => {
       ctx.mutation(api.functions.referential.upsertStation, {
         ...OWENDO,
         kilometerPoint: -10,
-      }),
+      })
     ).rejects.toThrow(/Point kilométrique invalide/)
   })
 
@@ -262,7 +264,7 @@ describe("upsertStation — comportement", () => {
 
     const logs = await t.run(async (c) => c.db.query("auditLogs").collect())
     const modification = logs.find(
-      (l) => l.action === "referentiel.station.modifier",
+      (l) => l.action === "referentiel.station.modifier"
     )
     expect(modification?.before).toContain("Owendo")
     expect(modification?.after).toContain("Owendo Virié")
@@ -304,9 +306,81 @@ describe("Trains et composition", () => {
     expect(trains[0]?.name).toBe("Express rénové")
 
     const logs = await t.run(async (c) => c.db.query("auditLogs").collect())
-    expect(
-      logs.some((l) => l.action === "referentiel.train.modifier"),
-    ).toBe(true)
+    expect(logs.some((l) => l.action === "referentiel.train.modifier")).toBe(
+      true
+    )
+  })
+
+  it("modifie un train par son identifiant et refuse un numéro déjà pris", async () => {
+    const t = convexTest(schema, modules)
+    const { ctx, trainId } = await withTrain(t)
+    await ctx.mutation(api.functions.referential.upsertTrain, {
+      number: "TR-202",
+      name: "Omnibus",
+      type: "OMNIBUS",
+      isActive: true,
+    })
+
+    await ctx.mutation(api.functions.referential.updateTrain, {
+      trainId,
+      number: "tr-203",
+      name: "  Express rénové  ",
+      description: "  Matériel rénové  ",
+      type: "EXPRESS",
+    })
+    expect(await t.run((c) => c.db.get(trainId))).toMatchObject({
+      number: "TR-203",
+      name: "Express rénové",
+      description: "Matériel rénové",
+    })
+
+    await expect(
+      ctx.mutation(api.functions.referential.updateTrain, {
+        trainId,
+        number: "TR-202",
+        name: "Doublon",
+        type: "EXPRESS",
+      })
+    ).rejects.toThrow(/existe déjà/)
+  })
+
+  it("active et désactive un train sans supprimer son historique", async () => {
+    const t = convexTest(schema, modules)
+    const { ctx, trainId } = await withTrain(t)
+
+    await ctx.mutation(api.functions.referential.setTrainActive, {
+      trainId,
+      isActive: false,
+    })
+    expect((await t.run((c) => c.db.get(trainId)))?.isActive).toBe(false)
+
+    await ctx.mutation(api.functions.referential.setTrainActive, {
+      trainId,
+      isActive: true,
+    })
+    expect((await t.run((c) => c.db.get(trainId)))?.isActive).toBe(true)
+    const logs = await t.run((c) => c.db.query("auditLogs").collect())
+    expect(logs.map((log) => log.action)).toEqual(
+      expect.arrayContaining([
+        "referentiel.train.desactiver",
+        "referentiel.train.activer",
+      ])
+    )
+  })
+
+  it("réserve la modification d'un train au droit modifier", async () => {
+    const t = convexTest(schema, modules)
+    const { trainId } = await withTrain(t)
+    const { ctx: reader } = await asRole(t, "vendeur_guichet")
+
+    await expect(
+      reader.mutation(api.functions.referential.updateTrain, {
+        trainId,
+        number: "TR-201",
+        name: "Modification interdite",
+        type: "EXPRESS",
+      })
+    ).rejects.toThrow(/Accès refusé/)
   })
 
   it("masque un train désactivé dans la liste par défaut", async () => {
@@ -318,13 +392,13 @@ describe("Trains et composition", () => {
       type: "EXPRESS",
       isActive: false,
     })
-    expect(await t.query(api.functions.referential.listTrains, {})).toHaveLength(
-      0,
-    )
+    expect(
+      await t.query(api.functions.referential.listTrains, {})
+    ).toHaveLength(0)
     expect(
       await t.query(api.functions.referential.listTrains, {
         includeInactive: true,
-      }),
+      })
     ).toHaveLength(1)
   })
 
@@ -341,7 +415,7 @@ describe("Trains et composition", () => {
         seatCount: 1,
         standingCapacity: -5,
         position: 1,
-      }),
+      })
     ).rejects.toThrow(/places debout invalide/)
   })
 
@@ -361,7 +435,7 @@ describe("Trains et composition", () => {
     await expect(
       ctx.query(api.functions.referential.getTrainComposition, {
         trainId: fantome,
-      }),
+      })
     ).rejects.toThrow(/Train introuvable/)
   })
 
@@ -401,7 +475,7 @@ describe("Trains et composition", () => {
         seatCount: 79,
         standingCapacity: 0,
         position: 1,
-      }),
+      })
     ).rejects.toThrow(/Plan incohérent/)
   })
 
@@ -418,7 +492,7 @@ describe("Trains et composition", () => {
         seatCount: 30,
         standingCapacity: 0,
         position: 1,
-      }),
+      })
     ).rejects.toThrow()
 
     const places = await t.run(async (c) => c.db.query("seats").collect())
@@ -445,7 +519,7 @@ describe("Trains et composition", () => {
       ctx.mutation(api.functions.referential.addCoach, {
         ...voiture,
         position: 2,
-      }),
+      })
     ).rejects.toThrow(/existe déjà/)
   })
 
@@ -472,7 +546,7 @@ describe("Trains et composition", () => {
         seatCount: 1,
         standingCapacity: 0,
         position: 1,
-      }),
+      })
     ).rejects.toThrow(/Train introuvable/)
   })
 
@@ -502,7 +576,7 @@ describe("Trains et composition", () => {
 
     const composition = await ctx.query(
       api.functions.referential.getTrainComposition,
-      { trainId },
+      { trainId }
     )
     expect(composition.coaches).toHaveLength(2)
     expect(composition.capacity.DEUXIEME).toEqual({
@@ -515,6 +589,7 @@ describe("Trains et composition", () => {
       standing: 0,
       total: 48,
     })
+    expect(composition.coaches[0]?.seats).toHaveLength(80)
   })
 
   it("ordonne les voitures par position dans la composition", async () => {
@@ -538,7 +613,7 @@ describe("Trains et composition", () => {
     }
     const composition = await ctx.query(
       api.functions.referential.getTrainComposition,
-      { trainId },
+      { trainId }
     )
     expect(composition.coaches.map((c) => c.label)).toEqual(["V1", "V2", "V3"])
   })
@@ -563,6 +638,137 @@ describe("Trains et composition", () => {
     const voitures = await t.run(async (c) => c.db.query("coaches").collect())
     expect(places).toHaveLength(0)
     expect(voitures).toHaveLength(0)
+  })
+
+  it("modifie une voiture inutilisée et régénère son plan de sièges", async () => {
+    const t = convexTest(schema, modules)
+    const { ctx, trainId } = await withTrain(t)
+    const coachId = (await ctx.mutation(api.functions.referential.addCoach, {
+      trainId,
+      label: "V1",
+      serviceClass: "DEUXIEME",
+      rowCount: 2,
+      columnCount: 2,
+      seatCount: 4,
+      standingCapacity: 0,
+      position: 1,
+    })) as Id<"coaches">
+
+    await ctx.mutation(api.functions.referential.updateCoach, {
+      coachId,
+      label: " v2 ",
+      serviceClass: "PREMIERE",
+      serialNumber: "  SN-42 ",
+      rowCount: 3,
+      columnCount: 2,
+      seatCount: 6,
+      standingCapacity: 2,
+      position: 2,
+    })
+
+    const coach = await t.run((c) => c.db.get(coachId))
+    const seats = await ctx.query(api.functions.referential.listSeats, {
+      coachId,
+    })
+    expect(coach).toMatchObject({
+      label: "V2",
+      serviceClass: "PREMIERE",
+      serialNumber: "SN-42",
+      seatCount: 6,
+      position: 2,
+    })
+    expect(seats).toHaveLength(6)
+    expect(seats[5]?.label).toBe("3B")
+  })
+
+  it("autorise seulement les métadonnées sans effet d'inventaire sur une voiture utilisée", async () => {
+    const t = convexTest(schema, modules)
+    const { ctx, trainId } = await withTrain(t)
+    const coachId = (await ctx.mutation(api.functions.referential.addCoach, {
+      trainId,
+      label: "V1",
+      serviceClass: "DEUXIEME",
+      rowCount: 1,
+      columnCount: 2,
+      seatCount: 2,
+      standingCapacity: 0,
+      position: 1,
+    })) as Id<"coaches">
+    await t.run(async (c) => {
+      const seat = await c.db
+        .query("seats")
+        .withIndex("by_coach", (q) => q.eq("coachId", coachId))
+        .first()
+      const stationId = await c.db.insert("stations", OWENDO)
+      const destinationId = await c.db.insert("stations", FRANCEVILLE)
+      const adminId = await c.db.insert("users", {
+        authId: "seed-admin-update",
+        role: "admin_fonctionnel",
+        identitySource: "annuaire",
+        isActive: true,
+      })
+      const bookletId = await c.db.insert("timetableBooklets", {
+        label: "Test",
+        validFrom: 0,
+        validUntil: 1,
+        status: "actif",
+        createdBy: adminId,
+      })
+      const tripId = await c.db.insert("trips", {
+        bookletId,
+        trainId,
+        trainNumber: "TR-201",
+        trainType: "EXPRESS",
+        serviceDate: "2026-08-14",
+        departureAt: 1,
+        arrivalAt: 2,
+        originStationId: stationId,
+        destinationStationId: destinationId,
+        status: "planifie",
+        delayMinutes: 0,
+        segmentCount: 1,
+        isOpenForSale: true,
+      })
+      await c.db.insert("seatOccupancy", {
+        tripId,
+        seatId: seat!._id,
+        coachId,
+        serviceClass: "DEUXIEME",
+        soldMask: 0,
+        heldMask: 0,
+        blockedMask: 0,
+      })
+    })
+
+    await ctx.mutation(api.functions.referential.updateCoach, {
+      coachId,
+      label: "V9",
+      serviceClass: "DEUXIEME",
+      serialNumber: "SN-9",
+      rowCount: 1,
+      columnCount: 2,
+      seatCount: 2,
+      standingCapacity: 0,
+      position: 9,
+    })
+    expect(await t.run((c) => c.db.get(coachId))).toMatchObject({
+      label: "V9",
+      serialNumber: "SN-9",
+      position: 9,
+    })
+
+    await expect(
+      ctx.mutation(api.functions.referential.updateCoach, {
+        coachId,
+        label: "V9",
+        serviceClass: "PREMIERE",
+        rowCount: 1,
+        columnCount: 2,
+        seatCount: 2,
+        standingCapacity: 0,
+        position: 9,
+      })
+    ).rejects.toThrow(/déjà utilisée/)
   })
 
   it("refuse de supprimer une voiture engagée sur une desserte", async () => {
@@ -627,7 +833,7 @@ describe("Trains et composition", () => {
     })
 
     await expect(
-      ctx.mutation(api.functions.referential.removeCoach, { coachId }),
+      ctx.mutation(api.functions.referential.removeCoach, { coachId })
     ).rejects.toThrow(/engagée sur une desserte/)
   })
 
@@ -647,7 +853,7 @@ describe("Trains et composition", () => {
 
     const { ctx: chefGare } = await asRole(t, "chef_gare")
     await expect(
-      chefGare.mutation(api.functions.referential.removeCoach, { coachId }),
+      chefGare.mutation(api.functions.referential.removeCoach, { coachId })
     ).rejects.toThrow(/Accès refusé/)
   })
 })

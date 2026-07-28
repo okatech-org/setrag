@@ -8,7 +8,6 @@ import { api } from "@workspace/backend/generated"
 
 import {
   DEFAULT_SEARCH,
-  DEMO_STATIONS,
   IS_E2E,
   demoTrips,
   ticketingStorage,
@@ -80,7 +79,7 @@ export function useTripResults() {
   const [typeFilter, setTypeFilter] = useState<TrainTypeFilter>("TOUS")
 
   const trips = useMemo<ResultTrip[]>(() => {
-    if (!canQuery || !results) {
+    if (IS_E2E) {
       return demoTrips(search).map((trip) => ({
         ...trip,
         availableByClass: { DEUXIEME: trip.available },
@@ -89,9 +88,9 @@ export function useTripResults() {
         delayMinutes: 0,
       }))
     }
+    if (!canQuery || !results) return []
 
-    const availableStations =
-      (stations as Station[] | undefined) ?? DEMO_STATIONS
+    const availableStations = (stations as Station[] | undefined) ?? []
     const origin = availableStations.find((s) => s._id === search.originId)
     const destination = availableStations.find(
       (s) => s._id === search.destinationId

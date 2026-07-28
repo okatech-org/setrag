@@ -9,6 +9,7 @@ import { Button } from "@workspace/ui/components/button"
 
 import { AccountNavigation } from "@/components/account/account-navigation"
 import { useTravelerAuth } from "@/hooks/use-traveler-auth"
+import { ticketingStorage } from "@/lib/ticketing"
 
 /**
  * Compte, en mobile — un sommaire.
@@ -30,6 +31,7 @@ export function AccountMobile({ children }: { children?: React.ReactNode }) {
 
   async function logout() {
     await authClient.signOut()
+    ticketingStorage.clearBooking()
     router.replace("/")
     router.refresh()
   }

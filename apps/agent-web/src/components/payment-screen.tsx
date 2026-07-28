@@ -29,7 +29,9 @@ import {
 } from "@/lib/sale-draft"
 import { SellerShell } from "./seller-shell"
 
-const E2E_MODE = process.env.NEXT_PUBLIC_E2E_MODE === "1"
+const E2E_MODE =
+  process.env.NODE_ENV !== "production" &&
+  process.env.NEXT_PUBLIC_E2E_MODE === "1"
 
 export function PaymentScreen({
   dashboard,
