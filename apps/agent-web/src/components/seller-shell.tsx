@@ -41,6 +41,12 @@ import type {
   SellerIdentity,
 } from "@/lib/agent-data"
 import { formatTime, initials, sellerDisplayName } from "@/lib/format"
+import {
+  asAppRole,
+  canAccessManagementPath,
+  canAccessSalePath,
+} from "@/lib/portal-access"
+import { usePortalSession } from "./portal-guard"
 
 interface SellerShellProps {
   seller: SellerIdentity
@@ -109,8 +115,18 @@ export function SellerShell({
   const pathname = usePathname()
   const [clock, setClock] = useState<Date | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const portalSession = usePortalSession()
+  const role = asAppRole(seller.role)
   const navigation =
     portal === "gestion" ? managementNavigation : saleNavigation
+  const authorizedNavigation = role
+    ? navigation.filter(({ href }) =>
+        portal === "gestion"
+          ? canAccessManagementPath(role, href)
+          : canAccessSalePath(role, href)
+      )
+    : navigation
+  const effectiveSignOut = portalSession?.signOut ?? onSignOut
 
   useEffect(() => {
     const update = () => setClock(new Date())
@@ -147,28 +163,9 @@ export function SellerShell({
           className="ml-3 hidden items-center rounded-pill bg-surface-sunk p-1 md:flex"
           aria-label="Espace actif"
         >
-          <Link
-            href="/vente"
-            className={cn(
-              "text-small rounded-pill px-4 py-2 font-semibold",
-              portal === "vente"
-                ? "bg-ink text-ink-inverse"
-                : "text-ink-muted hover:text-ink"
-            )}
-          >
-            Vente
-          </Link>
-          <Link
-            href="/gestion"
-            className={cn(
-              "text-small rounded-pill px-4 py-2 font-semibold",
-              portal === "gestion"
-                ? "bg-ink text-ink-inverse"
-                : "text-ink-muted hover:text-ink"
-            )}
-          >
-            Gestion
-          </Link>
+          <span className="text-small rounded-pill bg-ink px-4 py-2 font-semibold text-ink-inverse">
+            {portal === "vente" ? "Vente" : "Gestion"}
+          </span>
         </div>
 
         <div className="ml-auto hidden min-w-0 text-right md:block">
@@ -193,13 +190,13 @@ export function SellerShell({
           {initials(seller.firstName, seller.lastName)}
         </div>
 
-        {onSignOut ? (
+        {effectiveSignOut ? (
           <Button
             type="button"
             size="icon"
             variant="ghost"
             aria-label="Se déconnecter"
-            onClick={onSignOut}
+            onClick={effectiveSignOut}
           >
             <LogOut />
           </Button>
@@ -217,7 +214,7 @@ export function SellerShell({
             aria-label={`Navigation du portail de ${portal}`}
             className="grid gap-1.5"
           >
-            {navigation.map(({ href, label, icon: Icon }) => {
+            {authorizedNavigation.map(({ href, label, icon: Icon }) => {
               const active =
                 pathname === href ||
                 (href === "/vente" &&

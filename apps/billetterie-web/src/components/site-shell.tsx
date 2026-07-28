@@ -14,6 +14,8 @@ import {
 import { useTravelerAuth } from "@/hooks/use-traveler-auth"
 import { IS_E2E } from "@/lib/ticketing"
 
+const BROWSER_E2E = IS_E2E && process.env.NODE_ENV !== "test"
+
 /**
  * Enveloppe commune aux deux expériences.
  *
@@ -28,6 +30,9 @@ import { IS_E2E } from "@/lib/ticketing"
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { isAuthenticated, isLoading } = useTravelerAuth()
+  // Les parcours Playwright simulent une session afin de couvrir le chrome
+  // authentifié sans dépendre d'un service d'identité externe.
+  const hasTravelerSession = BROWSER_E2E || isAuthenticated
   const encodedReturn = encodeURIComponent(pathname)
   const loginHref = `/connexion?intention=connexion&retour=${encodedReturn}`
   const signupHref = `/connexion?intention=inscription&retour=${encodedReturn}`
@@ -42,16 +47,16 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <DesktopHeader
-          isAuthenticated={isAuthenticated}
+          isAuthenticated={hasTravelerSession}
           isLoading={isLoading}
           loginHref={loginHref}
           signupHref={signupHref}
-          mobileVisible={!isAuthenticated}
+          mobileVisible={!hasTravelerSession}
         />
-        {isAuthenticated && <MobileTopBar />}
+        {hasTravelerSession && <MobileTopBar />}
         {children}
-        <DesktopFooter mobileVisible={!isAuthenticated} />
-        {isAuthenticated && (
+        <DesktopFooter mobileVisible={!hasTravelerSession} />
+        {hasTravelerSession && (
           <>
             <MobileTabBarSpacer />
             <MobileTabBar isAuthenticated />

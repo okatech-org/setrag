@@ -19,7 +19,7 @@ function profileParts(name?: string | null) {
  * chaque voyageur doit aussi posséder un profil dans la table applicative.
  * Ce hook crée ce profil une seule fois puis expose un état prêt à l'emploi.
  */
-export function useTravelerAuth() {
+function useLiveTravelerAuth() {
   const auth = useAuth()
   const { isAuthenticated, user } = auth
   const profile = useQuery(
@@ -59,3 +59,24 @@ export function useTravelerAuth() {
       !isAuthenticated || (profile !== undefined && profile !== null),
   }
 }
+
+function useE2ETravelerAuth() {
+  return {
+    isLoading: false,
+    isAuthenticated: false,
+    user: null,
+    session: null,
+    profile: undefined,
+    isProfileReady: true,
+  }
+}
+
+/**
+ * Le mode navigateur local ne doit jamais contacter Better Auth : son origine
+ * locale n'est volontairement pas autorisée en production et l'erreur CORS
+ * ouvrirait l'overlay Next.js au milieu des parcours Playwright.
+ */
+export const useTravelerAuth =
+  process.env.NEXT_PUBLIC_E2E_MODE === "1" && process.env.NODE_ENV !== "test"
+    ? useE2ETravelerAuth
+    : useLiveTravelerAuth

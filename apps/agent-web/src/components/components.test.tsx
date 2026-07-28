@@ -185,6 +185,9 @@ describe("structure du portail vendeur", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("Connecté au système central")).toBeInTheDocument()
     expect(screen.getByText("Contenu vendeur")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Gestion" })
+    ).not.toBeInTheDocument()
   })
 
   it("ProductShortcut déclenche l’action disponible", () => {
@@ -264,9 +267,7 @@ describe("AW-V-01 · accueil vendeur", () => {
       />
     )
 
-    fireEvent.click(
-      screen.getAllByRole("button", { name: "Réimprimer" })[0]!
-    )
+    fireEvent.click(screen.getAllByRole("button", { name: "Réimprimer" })[0]!)
     await waitFor(() =>
       expect(reprint).toHaveBeenCalledWith(DEMO_DASHBOARD.lastOperations[0]!.id)
     )
@@ -610,28 +611,24 @@ describe("portail Gestion", () => {
       screen.getByRole("heading", { name: "Vue d’ensemble" })
     ).toBeInTheDocument()
     expect(screen.getByText("Recette nette")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Vente" })
+    ).not.toBeInTheDocument()
   })
 
   it("filtre les tableaux et ne fabrique plus de faux succès", () => {
-    render(
-      <ManagementScreen
-        section="trains"
-        online
-        actionUnavailableReason="Composition non raccordée."
-      />
-    )
+    render(<ManagementScreen section="trains" online />)
     fireEvent.change(screen.getByLabelText("Rechercher"), {
       target: { value: "TR-202" },
     })
     expect(screen.getByText("TR-202")).toBeInTheDocument()
     expect(screen.queryByText("TR-201")).not.toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: "Nouvelle composition" })
-    ).toBeDisabled()
+      screen.queryByRole("button", { name: "Nouvelle composition" })
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText(/action enregistrée et journalisée/i)
     ).not.toBeInTheDocument()
-    expect(screen.getByText("Composition non raccordée.")).toBeInTheDocument()
   })
 
   it("crée un procès-verbal depuis un formulaire métier", async () => {

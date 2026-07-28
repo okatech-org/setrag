@@ -107,7 +107,7 @@ test.describe("bureau", () => {
       .click()
     await expect(page).toHaveURL(/\/paiement/)
     await page
-      .getByText("J’accepte les conditions générales de vente SETRAG (version")
+      .getByRole("checkbox", { name: /conditions générales de vente/ })
       .click()
     await page.getByRole("button", { name: /Payer/ }).last().click()
     await expect(page).toHaveURL(/\/paiement\/attente/)
@@ -142,13 +142,17 @@ test.describe("mobile", () => {
         ).toContainText(pageCase.mobileTitle)
       }
 
-      // Le titre du bureau ne doit pas se répéter sous la barre.
-      await expect(
-        page.getByRole("heading", {
-          name: pageCase.desktopHeading,
-          exact: true,
-        })
-      ).toBeHidden()
+      const pageHeading = page.getByRole("heading", {
+        name: pageCase.desktopHeading,
+        exact: true,
+      })
+      if (pageCase.path === "/connexion") {
+        // Le titre du formulaire reste son h1 sémantique ; la barre mobile
+        // indique seulement le contexte de navigation.
+        await expect(pageHeading).toBeVisible()
+      } else {
+        await expect(pageHeading).toBeHidden()
+      }
 
       await expectNoHorizontalOverflow(page)
     })
@@ -180,7 +184,10 @@ test.describe("mobile", () => {
       ["Compte", /\/compte/],
       ["Accueil", /\/$/],
     ] as const) {
-      await nav.getByRole("link", { name: label }).click()
+      // Le bouton flottant des Dev Tools de Next recouvre le premier onglet
+      // uniquement en développement. L'activation clavier valide le même lien
+      // sans laisser cet artefact du runner intercepter le pointeur.
+      await nav.getByRole("link", { name: label }).press("Enter")
       await expect(page).toHaveURL(url)
     }
   })
@@ -208,7 +215,7 @@ test.describe("mobile", () => {
     await expect(page).toHaveURL(/\/paiement/)
 
     await page
-      .getByText("J’accepte les conditions générales de vente SETRAG, version")
+      .getByRole("checkbox", { name: /conditions générales de vente/ })
       .click()
     await page.getByRole("button", { name: /^Payer/ }).click()
     await expect(page).toHaveURL(/\/paiement\/attente/)

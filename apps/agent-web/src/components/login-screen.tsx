@@ -21,6 +21,12 @@ import { Card } from "@workspace/ui/components/card"
 import { Field, Input } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
 
+import {
+  asAppRole,
+  defaultManagementPath,
+  portalForRole,
+} from "@/lib/portal-access"
+
 const E2E_MODE = process.env.NEXT_PUBLIC_E2E_MODE === "1"
 
 interface LoginScreenProps {
@@ -344,12 +350,19 @@ export function LoginPageClient() {
 
   useEffect(() => {
     if (E2E_MODE || isLoading || !isAuthenticated || !profile?.user) return
-    const sellerRoles = new Set([
-      "vendeur_guichet",
-      "vendeur_agence",
-      "taxateur",
-    ])
-    router.replace(sellerRoles.has(profile.user.role) ? "/vente" : "/gestion")
+    const role = asAppRole(profile.user.role)
+    if (!role) return
+    const portal = portalForRole(role)
+    if (portal === "vente") {
+      router.replace("/vente")
+    } else if (portal === "gestion") {
+      router.replace(defaultManagementPath(role))
+    } else {
+      window.location.replace(
+        process.env.NEXT_PUBLIC_TICKETING_URL ??
+          "https://setrag-billetterie-web.vercel.app"
+      )
+    }
   }, [isAuthenticated, isLoading, profile, router])
 
   return (
