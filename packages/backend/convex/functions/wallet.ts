@@ -71,9 +71,15 @@ export const createPass = action({
     const pass = createAppleWalletPass(data, {
       passTypeIdentifier: requiredEnvironment("APPLE_WALLET_PASS_TYPE_ID"),
       teamIdentifier: requiredEnvironment("APPLE_WALLET_TEAM_ID"),
-      signerCertificate: requiredEnvironment("APPLE_WALLET_SIGNER_CERTIFICATE"),
-      signerPrivateKey: requiredEnvironment("APPLE_WALLET_SIGNER_PRIVATE_KEY"),
-      wwdrCertificate: requiredEnvironment("APPLE_WALLET_WWDR_CERTIFICATE"),
+      signerCertificate: requiredBase64Environment(
+        "APPLE_WALLET_SIGNER_CERTIFICATE_BASE64"
+      ),
+      signerPrivateKey: requiredBase64Environment(
+        "APPLE_WALLET_SIGNER_PRIVATE_KEY_BASE64"
+      ),
+      wwdrCertificate: requiredBase64Environment(
+        "APPLE_WALLET_WWDR_CERTIFICATE_BASE64"
+      ),
     })
     return {
       provider: "apple" as const,
