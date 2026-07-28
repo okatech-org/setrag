@@ -20,7 +20,19 @@ crons.daily(
   "roll sale window",
   { hourUTC: 1, minuteUTC: 0 },
   internal.functions.trips.rollSaleWindow,
-  {},
+  {}
+)
+
+/**
+ * Sur un environnement de démonstration, garantit qu'une recherche reste
+ * possible jusqu'à deux mois glissants. La mutation est un no-op partout où
+ * `DEMO_ACCOUNTS_ENABLED` n'est pas activé.
+ */
+crons.daily(
+  "top up demo trip horizon",
+  { hourUTC: 1, minuteUTC: 15 },
+  internal.seeds.demo.topUpTripHorizon,
+  {}
 )
 
 /**
@@ -32,7 +44,7 @@ crons.interval(
   "expire stale holds",
   { minutes: 5 },
   internal.functions.bookings.expireStaleHolds,
-  {},
+  {}
 )
 
 /**
@@ -46,7 +58,7 @@ crons.interval(
   "health check",
   { hours: 4 },
   internal.functions.monitoring.runHealthCheck,
-  {},
+  {}
 )
 
 export default crons

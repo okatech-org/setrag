@@ -1,4 +1,5 @@
 import { internalMutation } from "../_generated/server"
+import { internal } from "../_generated/api"
 import { v } from "convex/values"
 import type { Doc, Id } from "../_generated/dataModel"
 import type { MutationCtx } from "../_generated/server"
@@ -15,9 +16,9 @@ import { segmentCountFor } from "../model/network"
  *
  *   bunx convex run seeds/demo:run
  *
- * ⚠️ Réservé aux environnements de démonstration. Les comptes portent des
- * identifiants prévisibles (`demo-<role>`) : ne jamais exécuter en
- * production.
+ * Réservé aux environnements où `DEMO_ACCOUNTS_ENABLED=true`. Les comptes
+ * portent des identifiants prévisibles (`demo-<role>`) : ne jamais activer
+ * ce mode sur une production qui contient de vraies données client.
  *
  * Prérequis : `bunx convex run seeds/referential:run` (gares, trains,
  * barèmes) doit avoir été exécuté au préalable.
@@ -25,41 +26,161 @@ import { segmentCountFor } from "../model/network"
 
 /** Comptes de démonstration, un par rôle du système. */
 const DEMO_USERS = [
-  { authId: "demo-admin", role: "admin_fonctionnel", firstName: "Aline", lastName: "ADMIN", matricule: "A-001" },
-  { authId: "demo-it", role: "admin_it", firstName: "Ismaël", lastName: "TECH", matricule: "A-002" },
-  { authId: "demo-guichet", role: "vendeur_guichet", firstName: "Aly", lastName: "MBOUMBA", matricule: "V-101" },
-  { authId: "demo-guichet-2", role: "vendeur_guichet", firstName: "Sylvie", lastName: "NZENG", matricule: "V-102" },
-  { authId: "demo-agence", role: "vendeur_agence", firstName: "Paul", lastName: "AGENCE", matricule: "V-201" },
-  { authId: "demo-taxateur", role: "taxateur", firstName: "Thérèse", lastName: "OYANE", matricule: "T-301" },
-  { authId: "demo-controleur", role: "controleur_train", firstName: "Félix", lastName: "ONANGA", matricule: "C-401" },
-  { authId: "demo-controleur-2", role: "controleur_train", firstName: "Jean", lastName: "OBAME", matricule: "C-402" },
-  { authId: "demo-recettes", role: "controleur_recettes", firstName: "Régine", lastName: "MBA", matricule: "R-501" },
-  { authId: "demo-chef-gare", role: "chef_gare", firstName: "Charles", lastName: "NDONG", matricule: "G-601" },
-  { authId: "demo-comptable", role: "comptable", firstName: "Colette", lastName: "IVANGA", matricule: "K-701" },
-  { authId: "demo-kpi", role: "responsable_kpi", firstName: "Karim", lastName: "PONGUI", matricule: "K-801" },
+  {
+    authId: "demo-admin",
+    role: "admin_fonctionnel",
+    firstName: "Aline",
+    lastName: "ADMIN",
+    matricule: "A-001",
+  },
+  {
+    authId: "demo-it",
+    role: "admin_it",
+    firstName: "Ismaël",
+    lastName: "TECH",
+    matricule: "A-002",
+  },
+  {
+    authId: "demo-guichet",
+    role: "vendeur_guichet",
+    firstName: "Aly",
+    lastName: "MBOUMBA",
+    matricule: "V-101",
+  },
+  {
+    authId: "demo-guichet-2",
+    role: "vendeur_guichet",
+    firstName: "Sylvie",
+    lastName: "NZENG",
+    matricule: "V-102",
+  },
+  {
+    authId: "demo-agence",
+    role: "vendeur_agence",
+    firstName: "Paul",
+    lastName: "AGENCE",
+    matricule: "V-201",
+  },
+  {
+    authId: "demo-taxateur",
+    role: "taxateur",
+    firstName: "Thérèse",
+    lastName: "OYANE",
+    matricule: "T-301",
+  },
+  {
+    authId: "demo-controleur",
+    role: "controleur_train",
+    firstName: "Félix",
+    lastName: "ONANGA",
+    matricule: "C-401",
+  },
+  {
+    authId: "demo-controleur-2",
+    role: "controleur_train",
+    firstName: "Jean",
+    lastName: "OBAME",
+    matricule: "C-402",
+  },
+  {
+    authId: "demo-recettes",
+    role: "controleur_recettes",
+    firstName: "Régine",
+    lastName: "MBA",
+    matricule: "R-501",
+  },
+  {
+    authId: "demo-chef-gare",
+    role: "chef_gare",
+    firstName: "Charles",
+    lastName: "NDONG",
+    matricule: "G-601",
+  },
+  {
+    authId: "demo-comptable",
+    role: "comptable",
+    firstName: "Colette",
+    lastName: "IVANGA",
+    matricule: "K-701",
+  },
+  {
+    authId: "demo-kpi",
+    role: "responsable_kpi",
+    firstName: "Karim",
+    lastName: "PONGUI",
+    matricule: "K-801",
+  },
 ] as const
 
 /** Voyageurs de démonstration, pour la vente en ligne. */
 const DEMO_TRAVELLERS = [
-  { authId: "demo-voyageur", firstName: "Paul", lastName: "MBADINGA", phone: "+241 06 11 22 33" },
-  { authId: "demo-voyageur-2", firstName: "Marie", lastName: "NZENG", phone: "+241 06 44 55 66" },
+  {
+    authId: "demo-voyageur",
+    firstName: "Paul",
+    lastName: "MBADINGA",
+    phone: "+241 06 11 22 33",
+  },
+  {
+    authId: "demo-voyageur-2",
+    firstName: "Marie",
+    lastName: "NZENG",
+    phone: "+241 06 44 55 66",
+  },
 ] as const
 
-/** Horaires du livret de démonstration. */
+/** Horizon glissant : deux mois complets, marge incluse. */
+export const DEMO_TRIP_HORIZON_DAYS = 62
+
+/**
+ * Toutes les gares de la ligne, dans l'ordre Owendo → Franceville.
+ *
+ * Les décalages sont des horaires de démonstration cohérents sur quatorze
+ * heures. Ils garantissent surtout que n'importe quelle paire de gares peut
+ * être recherchée dans les deux sens pendant toute la période de démo.
+ */
+const LINE_STOPS = [
+  ["OWE", 0],
+  ["NTM", 50],
+  ["AND", 80],
+  ["MBE", 110],
+  ["OYA", 145],
+  ["ABA", 180],
+  ["NDJ", 230],
+  ["ALE", 260],
+  ["OTO", 290],
+  ["BIS", 320],
+  ["AYE", 350],
+  ["LOP", 400],
+  ["OFF", 430],
+  ["BOO", 460],
+  ["IVI", 510],
+  ["MOU", 555],
+  ["MIL", 600],
+  ["LTV", 650],
+  ["DOU", 690],
+  ["LIF", 730],
+  ["MBA", 770],
+  ["MOA", 800],
+  ["FCV", 840],
+] as const
+
+const RETURN_LINE_STOPS = [...LINE_STOPS]
+  .reverse()
+  .map(([code, offset]) => [code, 840 - offset] as const)
+
+/** Horaires quotidiens du livret de démonstration, un dans chaque sens. */
 const SCHEDULES = [
   {
     trainNumber: "TR-201",
     departureTime: "08:00",
-    daysOfWeek: [1, 3, 5],
-    stopCodes: ["OWE", "NDJ", "BOO", "LTV", "MOA", "FCV"],
-    offsets: [0, 200, 380, 520, 620, 700],
+    daysOfWeek: [],
+    stops: LINE_STOPS,
   },
   {
     trainNumber: "TR-202",
     departureTime: "17:30",
-    daysOfWeek: [2, 6],
-    stopCodes: ["OWE", "NTM", "NDJ", "LOP", "BOO", "IVI", "LTV", "MOA", "FCV"],
-    offsets: [0, 60, 230, 400, 460, 560, 680, 780, 840],
+    daysOfWeek: [],
+    stops: RETURN_LINE_STOPS,
   },
 ] as const
 
@@ -71,11 +192,18 @@ export const run = internalMutation({
     withActivity: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    if (process.env.DEMO_ACCOUNTS_ENABLED !== "true") {
+      throw new Error(
+        "Peuplement refusé : DEMO_ACCOUNTS_ENABLED doit valoir true."
+      )
+    }
+
     const report = {
       users: 0,
       travellers: 0,
       booklet: "",
       trips: 0,
+      tripsScheduled: 0,
       quotas: 0,
       pricingRules: 0,
       sales: 0,
@@ -91,7 +219,7 @@ export const run = internalMutation({
     if (stations.length === 0) {
       throw new Error(
         "Référentiel absent : exécuter d'abord " +
-          "« bunx convex run seeds/referential:run »",
+          "« bunx convex run seeds/referential:run »"
       )
     }
     const byCode = new Map(stations.map((s) => [s.code, s]))
@@ -158,20 +286,41 @@ export const run = internalMutation({
     const adminId = userIds.get("demo-admin")!
 
     /* ── Livret horaire actif ─────────────────────────────────────────── */
-    const days = args.days ?? 21
+    const days = args.days ?? DEMO_TRIP_HORIZON_DAYS
+    if (!Number.isInteger(days) || days < 1 || days > 92) {
+      throw new Error(
+        `Horizon invalide : ${days} jour(s), attendu entre 1 et 92.`
+      )
+    }
     const today = toServiceDate(Date.now())
     const from = fromServiceDate(today, "00:00")
     const until = fromServiceDate(addDays(today, days), "23:00")
 
     // Expire les livrets actifs précédents : deux livrets actifs sur une même
     // période produiraient des dessertes en double.
+    const expiredBookletIds = new Set<Id<"timetableBooklets">>()
     for (const b of await ctx.db.query("timetableBooklets").collect()) {
-      if (b.status === "actif") await ctx.db.patch(b._id, { status: "expire" })
+      if (b.status === "actif") {
+        await ctx.db.patch(b._id, { status: "expire" })
+        expiredBookletIds.add(b._id)
+      }
+    }
+    // Les anciennes dessertes restent en base pour préserver ventes et
+    // contrôles, mais elles ne doivent plus apparaître dans une recherche.
+    for (const trip of await ctx.db.query("trips").collect()) {
+      if (
+        expiredBookletIds.has(trip.bookletId) &&
+        trip.status === "planifie" &&
+        trip.isOpenForSale
+      ) {
+        await ctx.db.patch(trip._id, { isOpenForSale: false })
+      }
     }
 
     const bookletId = await ctx.db.insert("timetableBooklets", {
       label: `Livret de démonstration — ${today}`,
-      description: "Engendré par seeds/demo. Circulation type du Transgabonais.",
+      description:
+        "Engendré par seeds/demo. Circulation type du Transgabonais.",
       validFrom: from,
       validUntil: until,
       status: "actif",
@@ -182,7 +331,8 @@ export const run = internalMutation({
     report.booklet = `actif du ${today} au ${addDays(today, days)}`
 
     const trains = await ctx.db.query("trains").collect()
-    const scheduleIds: Array<{ id: Id<"bookletSchedules">; days: number[] }> = []
+    const scheduleIds: Array<{ id: Id<"bookletSchedules">; days: number[] }> =
+      []
 
     for (const s of SCHEDULES) {
       const train = trains.find((t) => t.number === s.trainNumber)
@@ -190,15 +340,15 @@ export const run = internalMutation({
         report.warnings.push(`Train ${s.trainNumber} absent du référentiel`)
         continue
       }
-      const stops = s.stopCodes.map((code, index) => {
+      const stops = s.stops.map(([code, offset], index) => {
         const station = byCode.get(code)
         if (!station) throw new Error(`Gare ${code} absente du référentiel`)
         return {
           stationId: station._id,
           sequence: index,
-          arrivalOffsetMinutes: index === 0 ? undefined : s.offsets[index],
+          arrivalOffsetMinutes: index === 0 ? undefined : offset,
           departureOffsetMinutes:
-            index === s.stopCodes.length - 1 ? undefined : s.offsets[index],
+            index === s.stops.length - 1 ? undefined : offset,
         }
       })
       const id = await ctx.db.insert("bookletSchedules", {
@@ -214,70 +364,58 @@ export const run = internalMutation({
     }
 
     /* ── Dessertes et inventaire ──────────────────────────────────────── */
-    for (const { id: scheduleId, days: circulation } of scheduleIds) {
-      const schedule = (await ctx.db.get(scheduleId))!
-      for (let offset = 0; offset <= days; offset += 1) {
-        const serviceDate = addDays(today, offset)
-        const weekday = new Date(
-          fromServiceDate(serviceDate, "12:00"),
-        ).getUTCDay()
-        if (!circulation.includes(weekday)) continue
+    // Deux trains complets représentent 680 occupations de places par jour.
+    // On crée aujourd'hui immédiatement, puis chaque journée suivante dans
+    // sa propre mutation afin de rester très loin des limites Convex.
+    const todayResult = await generateTripsForDate(ctx, bookletId, today)
+    report.trips = todayResult.trips
+    report.quotas = todayResult.quotas
+    report.tripsScheduled = scheduleIds.length * days
+    await ctx.scheduler.runAfter(0, internal.seeds.demo.populateTripsDay, {
+      bookletId,
+      date: addDays(today, 1),
+      until: addDays(today, days),
+    })
 
-        const tripId = await generateTrip(ctx, schedule, serviceDate)
-        if (tripId) report.trips += 1
-      }
-    }
-
-    /* ── Yield : contingents et règles ────────────────────────────────── */
-    const trips = await ctx.db.query("trips").collect()
-    for (const trip of trips) {
-      const counters = await ctx.db
-        .query("segmentCounters")
-        .withIndex("by_trip_class", (q) => q.eq("tripId", trip._id))
-        .collect()
-      const classes = [...new Set(counters.map((c) => c.serviceClass))]
-
-      for (const serviceClass of classes) {
-        const existing = await ctx.db
-          .query("fareClassQuotas")
-          .withIndex("by_trip_class", (q) =>
-            q.eq("tripId", trip._id).eq("serviceClass", serviceClass),
-          )
-          .collect()
-        if (existing.length > 0) continue
-
-        const capacity =
-          counters.find((c) => c.serviceClass === serviceClass)?.capacity ?? 0
-        // Répartition type du yield ferroviaire : un cinquième bon marché,
-        // la moitié au tarif de référence, le reste en flexible.
-        for (const [label, part, coefficient, priority] of [
-          ["Bas prix", 0.2, 0.8, 1],
-          ["Standard", 0.55, 1, 2],
-          ["Flexible", 0.25, 1.35, 3],
-        ] as const) {
-          await ctx.db.insert("fareClassQuotas", {
-            tripId: trip._id,
-            serviceClass,
-            label,
-            priority,
-            seatCount: Math.max(1, Math.round(capacity * part)),
-            soldCount: 0,
-            coefficient,
-            isActive: true,
-          })
-          report.quotas += 1
-        }
-      }
-    }
-
+    /* ── Yield : règles de tarification ───────────────────────────────── */
     const existingRules = await ctx.db.query("pricingRules").collect()
     if (existingRules.length === 0) {
       for (const rule of [
-        { type: "anticipation" as const, threshold: 21, modifierPct: -10, priority: 10, code: "anticipation-21j" },
-        { type: "anticipation" as const, threshold: 2, modifierPct: 10, priority: 20, code: "derniere-minute" },
-        { type: "remplissage" as const, threshold: 0.7, modifierPct: 15, priority: 30, code: "remplissage-70" },
-        { type: "remplissage" as const, threshold: 0.9, modifierPct: 15, priority: 40, code: "remplissage-90" },
-        { type: "periode" as const, threshold: 5, modifierPct: 20, priority: 50, code: "vendredi" },
+        {
+          type: "anticipation" as const,
+          threshold: 21,
+          modifierPct: -10,
+          priority: 10,
+          code: "anticipation-21j",
+        },
+        {
+          type: "anticipation" as const,
+          threshold: 2,
+          modifierPct: 10,
+          priority: 20,
+          code: "derniere-minute",
+        },
+        {
+          type: "remplissage" as const,
+          threshold: 0.7,
+          modifierPct: 15,
+          priority: 30,
+          code: "remplissage-70",
+        },
+        {
+          type: "remplissage" as const,
+          threshold: 0.9,
+          modifierPct: 15,
+          priority: 40,
+          code: "remplissage-90",
+        },
+        {
+          type: "periode" as const,
+          threshold: 5,
+          modifierPct: 20,
+          priority: 50,
+          code: "vendredi",
+        },
       ]) {
         await ctx.db.insert("pricingRules", {
           scope: "reseau",
@@ -312,7 +450,7 @@ export const run = internalMutation({
 
     report.warnings.push(
       "Comptes de démonstration à identifiants prévisibles (demo-*) : " +
-        "ne jamais exécuter ce seed en production.",
+        "réservés à une production de prototype sans données client."
     )
 
     await ctx.db.insert("auditLogs", {
@@ -334,6 +472,92 @@ type SeedCtx = MutationCtx
 type Schedule = Doc<"bookletSchedules">
 
 /**
+ * Génère une journée entière, puis enchaîne sur la suivante. La cascade
+ * évite une transaction monolithique de plus de 40 000 occupations.
+ */
+export const populateTripsDay = internalMutation({
+  args: {
+    bookletId: v.id("timetableBooklets"),
+    date: v.string(),
+    until: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const booklet = await ctx.db.get(args.bookletId)
+    if (!booklet || booklet.status !== "actif") {
+      return { date: args.date, trips: 0, quotas: 0, stopped: true }
+    }
+
+    const result = await generateTripsForDate(ctx, args.bookletId, args.date)
+    if (args.date < args.until) {
+      await ctx.scheduler.runAfter(0, internal.seeds.demo.populateTripsDay, {
+        bookletId: args.bookletId,
+        date: addDays(args.date, 1),
+        until: args.until,
+      })
+    }
+    return { date: args.date, ...result, stopped: false }
+  },
+})
+
+/**
+ * Maintient l'horizon à J+62. Sans cela, le jeu de démonstration perdrait un
+ * jour de recherche disponible chaque nuit après son amorçage.
+ */
+export const topUpTripHorizon = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    if (process.env.DEMO_ACCOUNTS_ENABLED !== "true") {
+      return { enabled: false, trips: 0, quotas: 0 }
+    }
+
+    const booklets = await ctx.db.query("timetableBooklets").collect()
+    const booklet = booklets.find(
+      (item) =>
+        item.status === "actif" &&
+        item.label.startsWith("Livret de démonstration —")
+    )
+    if (!booklet) {
+      return { enabled: true, trips: 0, quotas: 0, missingBooklet: true }
+    }
+
+    const horizon = addDays(toServiceDate(Date.now()), DEMO_TRIP_HORIZON_DAYS)
+    const validUntil = fromServiceDate(horizon, "23:00")
+    if (booklet.validUntil < validUntil) {
+      await ctx.db.patch(booklet._id, { validUntil })
+    }
+    const result = await generateTripsForDate(ctx, booklet._id, horizon)
+    return { enabled: true, date: horizon, ...result }
+  },
+})
+
+async function generateTripsForDate(
+  ctx: SeedCtx,
+  bookletId: Id<"timetableBooklets">,
+  serviceDate: string
+): Promise<{ trips: number; quotas: number }> {
+  const schedules = await ctx.db
+    .query("bookletSchedules")
+    .withIndex("by_booklet", (q) => q.eq("bookletId", bookletId))
+    .collect()
+  const weekday = new Date(fromServiceDate(serviceDate, "12:00")).getUTCDay()
+
+  let trips = 0
+  let quotas = 0
+  for (const schedule of schedules) {
+    if (
+      schedule.daysOfWeek.length > 0 &&
+      !schedule.daysOfWeek.includes(weekday)
+    ) {
+      continue
+    }
+    const generated = await generateTrip(ctx, schedule, serviceDate)
+    if (generated.created) trips += 1
+    quotas += await ensureFareQuotas(ctx, generated.tripId)
+  }
+  return { trips, quotas }
+}
+
+/**
  * Crée une desserte avec ses arrêts, l'occupation de chaque place et les
  * compteurs de chaque segment. Idempotent : une desserte déjà engendrée pour
  * ce couple (horaire, date) n'est pas recréée.
@@ -341,15 +565,16 @@ type Schedule = Doc<"bookletSchedules">
 async function generateTrip(
   ctx: SeedCtx,
   schedule: Schedule,
-  serviceDate: string,
-): Promise<Id<"trips"> | null> {
+  serviceDate: string
+): Promise<{ tripId: Id<"trips">; created: boolean }> {
   const existing = await ctx.db
     .query("trips")
     .withIndex("by_train_date", (q) =>
-      q.eq("trainId", schedule.trainId).eq("serviceDate", serviceDate),
+      q.eq("trainId", schedule.trainId).eq("serviceDate", serviceDate)
     )
     .collect()
-  if (existing.some((t) => t.scheduleId === schedule._id)) return null
+  const existingTrip = existing.find((t) => t.scheduleId === schedule._id)
+  if (existingTrip) return { tripId: existingTrip._id, created: false }
 
   const stops = [...schedule.stops].sort((a, b) => a.sequence - b.sequence)
   const segmentCount = segmentCountFor(stops.length)
@@ -422,7 +647,7 @@ async function generateTrip(
       coach.serviceClass,
       (capacityByClass.get(coach.serviceClass) ?? 0) +
         actives.length +
-        coach.standingCapacity,
+        coach.standingCapacity
     )
   }
 
@@ -441,7 +666,51 @@ async function generateTrip(
     }
   }
 
-  return tripId
+  return { tripId, created: true }
+}
+
+async function ensureFareQuotas(
+  ctx: SeedCtx,
+  tripId: Id<"trips">
+): Promise<number> {
+  const counters = await ctx.db
+    .query("segmentCounters")
+    .withIndex("by_trip_class", (q) => q.eq("tripId", tripId))
+    .collect()
+  const classes = [...new Set(counters.map((counter) => counter.serviceClass))]
+  let created = 0
+
+  for (const serviceClass of classes) {
+    const existing = await ctx.db
+      .query("fareClassQuotas")
+      .withIndex("by_trip_class", (q) =>
+        q.eq("tripId", tripId).eq("serviceClass", serviceClass)
+      )
+      .collect()
+    if (existing.length > 0) continue
+
+    const capacity =
+      counters.find((counter) => counter.serviceClass === serviceClass)
+        ?.capacity ?? 0
+    for (const [label, part, coefficient, priority] of [
+      ["Bas prix", 0.2, 0.8, 1],
+      ["Standard", 0.55, 1, 2],
+      ["Flexible", 0.25, 1.35, 3],
+    ] as const) {
+      await ctx.db.insert("fareClassQuotas", {
+        tripId,
+        serviceClass,
+        label,
+        priority,
+        seatCount: Math.max(1, Math.round(capacity * part)),
+        soldCount: 0,
+        coefficient,
+        isActive: true,
+      })
+      created += 1
+    }
+  }
+  return created
 }
 
 /* ────────────────────────── Activité commerciale ───────────────────────── */
@@ -457,7 +726,7 @@ async function seedActivity(
     userIds: Map<string, Id<"users">>
     pointOfSaleId: Id<"pointsOfSale">
     byCode: Map<string, Doc<"stations">>
-  },
+  }
 ): Promise<{
   sales: number
   onlineBookings: number
@@ -505,9 +774,7 @@ async function seedActivity(
 
   // Un incident et un procès-verbal, pour que les écrans terrain vivent.
   const trips = await ctx.db.query("trips").collect()
-  const premiere = trips.sort(
-    (a, b) => a.departureAt - b.departureAt,
-  )[0]
+  const premiere = trips.sort((a, b) => a.departureAt - b.departureAt)[0]
 
   let penalties = 0
   let incidents = 0
