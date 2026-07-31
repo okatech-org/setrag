@@ -142,6 +142,17 @@ servie depuis un cache muet ferait croire à l'agent qu'il travaille en ligne.
 Les données hors ligne vivent dans IndexedDB, où l'application connaît leur âge
 et l'affiche.
 
+**Le worker ne s'enregistre pas en développement.** Il sert les fragments de
+code en cache-first, ce qui fige la version chargée alors que le rechargement
+à chaud en produit une nouvelle à chaque frappe : on croit alors déboguer
+l'application, on débogue un cache — corrections sans effet, pages qui
+refusent de se charger. Le hors-ligne se vérifie donc sur un build de
+production :
+
+```bash
+cd apps/controleur-web && bun run build && bun run start
+```
+
 > **À valider sur un terminal réel.** Le service worker n'a pas pu être vérifié
 > de bout en bout : le navigateur d'aperçu utilisé pendant le développement
 > interrompt la page dès qu'un service worker s'enregistre, quelle que soit sa
@@ -196,6 +207,11 @@ facteurs sont vérifiés par le serveur ; seule la saisie est épargnée. Sur un
 déploiement de développement, le code est relevé automatiquement ; ailleurs,
 l'écran s'arrête à l'étape du code, identifiant pré-rempli.
 
+L'application ne demande **que** le compte qui la concerne
+(`demoAccounts.list` avec `only: ["controle"]`) : proposer un compte guichet
+sur le terminal d'un contrôleur n'aurait aucun sens, et transmettrait au
+passage des identifiants dont cette application n'a pas l'usage.
+
 Variables du déploiement Convex :
 
 ```bash
@@ -218,6 +234,42 @@ contrôles déjà effectués, un procès-verbal réglé, un incident en cours �
 **conflit à arbitrer**, le seul état qu'on ne peut pas produire en manipulant
 l'application, puisqu'il faut un second terminal. Il est idempotent : le
 relancer met à jour sans dupliquer.
+
+Ajouter `--prod` à ces deux commandes les applique à la production.
+
+## Déploiement
+
+L'application est un projet Vercel distinct, `setrag-controleur-web`, dont la
+racine est `apps/controleur-web`. Ses variables pointent vers le déploiement
+Convex de **production** :
+
+```
+NEXT_PUBLIC_CONVEX_URL=https://clean-axolotl-730.convex.cloud
+NEXT_PUBLIC_CONVEX_SITE_URL=https://clean-axolotl-730.convex.site
+```
+
+Sans elles, la compilation échoue sur « Variable d'environnement manquante :
+NEXT_PUBLIC_CONVEX_URL ».
+
+L'URL publique doit ensuite être ajoutée aux origines de confiance, sinon
+l'ouverture de session est refusée par CORS avant même d'atteindre le mot de
+passe :
+
+```bash
+cd packages/backend && bunx convex env set --prod TRUSTED_ORIGINS "https://setrag-billetterie-web.vercel.app,https://setrag-agent-web.vercel.app,https://<url-du-controleur>"
+```
+
+### Le piège du plan Hobby
+
+Vercel refuse de déployer un commit dont l'auteur ne possède pas le compte, et
+le plan Hobby n'accepte pas de collaborateurs sur un dépôt privé. Or les
+commits de fusion créés par GitHub portent `noreply@github.com` : un
+« Merge pull request » est donc **bloqué avant toute compilation**, sans que
+rien n'apparaisse dans les journaux de build.
+
+Deux parades : pousser sur `main` un commit dont l'auteur est l'e-mail du
+compte Vercel (`git config user.email`), ou déployer depuis un poste avec
+`bunx vercel --prod`, qui attribue le déploiement au compte connecté.
 
 ## Vérifications
 

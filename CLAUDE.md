@@ -75,6 +75,18 @@ bun run build
 cd packages/backend && bunx convex dev --once
 ```
 
+## Déploiement Vercel — plan Hobby
+
+Vercel ne déploie que les commits dont l'auteur possède le compte, et le plan
+Hobby n'admet pas de collaborateurs sur un dépôt privé. Les commits de fusion
+créés par GitHub portent `noreply@github.com` : un « Merge pull request » est
+donc **refusé avant toute compilation**, et les journaux de build restent
+vides — le blocage n'apparaît que sur la fiche du déploiement.
+
+L'auteur des commits de ce dépôt est donc `admin@okatech.fr`, l'e-mail du
+compte Vercel. À défaut, déployer depuis un poste avec `bunx vercel --prod`,
+qui attribue le déploiement au compte connecté plutôt qu'à l'auteur du commit.
+
 ## Frictions de typage connues
 
 - `ConvexBetterAuthProvider` : le type `AuthClient` n'infère pas les plugins
