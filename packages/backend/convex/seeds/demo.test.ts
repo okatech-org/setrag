@@ -123,4 +123,30 @@ describe("seed des dessertes de démonstration", () => {
       )
     ).toBe(true)
   })
+
+  it("peut être rejoué sans dupliquer les circulations qui se chevauchent", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-28T08:00:00.000Z"))
+    vi.stubEnv("DEMO_ACCOUNTS_ENABLED", "true")
+    const t = convexTest(schema, modules)
+    await t.mutation(internal.seeds.referential.run, {})
+
+    await t.mutation(internal.seeds.demo.run, {
+      days: 2,
+      withActivity: false,
+    })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    await t.mutation(internal.seeds.demo.run, {
+      days: 2,
+      withActivity: false,
+    })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+
+    const trips = await t.run(async (ctx) => ctx.db.query("trips").collect())
+    const circulationKeys = trips.map(
+      (trip) => `${trip.trainId}|${trip.departureAt}`
+    )
+    expect(new Set(circulationKeys).size).toBe(circulationKeys.length)
+    expect(trips).toHaveLength(6)
+  })
 })

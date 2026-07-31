@@ -567,6 +567,10 @@ async function generateTrip(
   schedule: Schedule,
   serviceDate: string
 ): Promise<{ tripId: Id<"trips">; created: boolean }> {
+  const stops = [...schedule.stops].sort((a, b) => a.sequence - b.sequence)
+  const segmentCount = segmentCountFor(stops.length)
+  const departureAt = fromServiceDate(serviceDate, schedule.departureTime)
+
   const existing = await ctx.db
     .query("trips")
     .withIndex("by_train_date", (q) =>
@@ -576,9 +580,23 @@ async function generateTrip(
   const existingTrip = existing.find((t) => t.scheduleId === schedule._id)
   if (existingTrip) return { tripId: existingTrip._id, created: false }
 
-  const stops = [...schedule.stops].sort((a, b) => a.sequence - b.sequence)
-  const segmentCount = segmentCountFor(stops.length)
-  const departureAt = fromServiceDate(serviceDate, schedule.departureTime)
+  // Le seed peut être rejoué avant que son ancien horizon soit écoulé. Une
+  // nouvelle fiche horaire ne doit pas créer un second ID pour le même train
+  // au même instant : les codes-barres déjà émis resteraient attachés à
+  // l'ancien et le contrôleur pourrait embarquer le manifeste vide. On
+  // conserve donc l'ID existant et le rattache au livret courant.
+  const sameCirculation = existing.find(
+    (trip) => trip.departureAt === departureAt
+  )
+  if (sameCirculation) {
+    await ctx.db.patch(sameCirculation._id, {
+      bookletId: schedule.bookletId,
+      scheduleId: schedule._id,
+      isOpenForSale: true,
+    })
+    return { tripId: sameCirculation._id, created: false }
+  }
+
   const last = stops[stops.length - 1]!
   const arrivalAt =
     departureAt +

@@ -137,6 +137,11 @@ describe("Vérification locale d'un titre", () => {
       now: NOW,
     })
     expect(r.verdict).toBe("mauvaise_desserte")
+    // Deux circulations d'un même train peuvent coexister le même jour : le
+    // motif doit nommer celle qui est embarquée, sinon l'agent voit « mauvaise
+    // desserte » sur un titre qui est bien celui de son train.
+    expect(r.reason).toContain("TR-201")
+    expect(r.reason).toMatch(/manifeste/i)
   })
 
   it("refuse un voyageur au-delà de son parcours payé", () => {

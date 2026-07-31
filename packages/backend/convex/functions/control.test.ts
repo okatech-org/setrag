@@ -1046,6 +1046,46 @@ describe("Préparation du terminal", () => {
     expect(notre!.trainNumber).toBe("TR-201")
     expect(notre!.distanceKm).toBe(648)
   })
+
+  it("masque un doublon vide et conserve la circulation qui porte les titres", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    await issueTicket(t, fx)
+    const original = await t.run(async (dbCtx) => dbCtx.db.get(fx.tripId))
+    if (!original) throw new Error("Desserte de test introuvable")
+
+    const duplicateId = await t.run(async (dbCtx) =>
+      dbCtx.db.insert("trips", {
+        bookletId: original.bookletId,
+        scheduleId: original.scheduleId,
+        trainId: original.trainId,
+        trainNumber: original.trainNumber,
+        trainType: original.trainType,
+        serviceDate: original.serviceDate,
+        departureAt: original.departureAt,
+        arrivalAt: original.arrivalAt,
+        originStationId: original.originStationId,
+        destinationStationId: original.destinationStationId,
+        status: original.status,
+        delayMinutes: original.delayMinutes,
+        segmentCount: original.segmentCount,
+        isOpenForSale: original.isOpenForSale,
+      })
+    )
+    const { ctx } = await asAgent(t, "controleur_train", fx.pos)
+
+    const dessertes = await ctx.query(api.functions.control.assignedTrips, {})
+    const mêmeDépart = dessertes.filter(
+      (trip) =>
+        trip.trainNumber === original.trainNumber &&
+        trip.departureAt === original.departureAt
+    )
+
+    expect(mêmeDépart).toHaveLength(1)
+    expect(mêmeDépart[0]?.id).toBe(fx.tripId)
+    expect(mêmeDépart[0]?.id).not.toBe(duplicateId)
+    expect(mêmeDépart[0]?.expectedPassengers).toBe(1)
+  })
 })
 
 /* ═════════════════════ Ventes à bord rejouées ════════════════════════════ */

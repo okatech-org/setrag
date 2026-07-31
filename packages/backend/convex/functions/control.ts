@@ -224,7 +224,10 @@ export const manifestTickets = query({
   },
   handler: async (ctx, args) => {
     await requirePermission(ctx, "controles", "consulter")
-    const numItems = Math.min(Math.max(Math.trunc(args.pageSize ?? 100), 1), 500)
+    const numItems = Math.min(
+      Math.max(Math.trunc(args.pageSize ?? 100), 1),
+      500
+    )
 
     const page = await ctx.db
       .query("tickets")
@@ -232,9 +235,9 @@ export const manifestTickets = query({
       .paginate({ cursor: args.cursor ?? null, numItems })
 
     return {
-      tickets: page.page.filter((t) => EMBARQUABLES.includes(t.status)).map(
-        embarkTicket
-      ),
+      tickets: page.page
+        .filter((t) => EMBARQUABLES.includes(t.status))
+        .map(embarkTicket),
       cursor: page.continueCursor,
       isDone: page.isDone,
     }
@@ -262,24 +265,67 @@ export const assignedTrips = query({
       .order("asc")
       .take(limit * 3)
 
-    const retenues = trips
-      .filter((t) => t.status !== "annule" && t.departureAt <= now + 72 * HOUR)
+    const candidates = await Promise.all(
+      trips
+        .filter(
+          (trip) =>
+            trip.status !== "annule" && trip.departureAt <= now + 72 * HOUR
+        )
+        .map(async (trip) => {
+          const [booklet, tickets] = await Promise.all([
+            ctx.db.get(trip.bookletId),
+            ctx.db
+              .query("tickets")
+              .withIndex("by_trip", (q) => q.eq("tripId", trip._id))
+              .collect(),
+          ])
+          return {
+            trip,
+            bookletActive: booklet?.status === "actif",
+            ticketCount: tickets.filter((ticket) =>
+              EMBARQUABLES.includes(ticket.status)
+            ).length,
+          }
+        })
+    )
+
+    /**
+     * Une circulation physique est définie par le train et son instant de
+     * départ. Un rejeu du seed de démonstration a pu lui donner deux IDs de
+     * desserte distincts, alors que le code-barres du billet porte un seul de
+     * ces IDs. N'en présenter qu'un évite que le contrôleur embarque le
+     * manifeste vide et refuse ensuite tous les vrais titres.
+     */
+    const byCirculation = new Map<string, (typeof candidates)[number]>()
+    for (const candidate of candidates) {
+      const key = `${candidate.trip.trainId}|${candidate.trip.departureAt}`
+      const current = byCirculation.get(key)
+      if (
+        !current ||
+        candidate.ticketCount > current.ticketCount ||
+        (candidate.ticketCount === current.ticketCount &&
+          candidate.bookletActive &&
+          !current.bookletActive) ||
+        (candidate.ticketCount === current.ticketCount &&
+          candidate.bookletActive === current.bookletActive &&
+          candidate.trip._creationTime > current.trip._creationTime)
+      ) {
+        byCirculation.set(key, candidate)
+      }
+    }
+
+    const retenues = [...byCirculation.values()]
+      .sort((left, right) => left.trip.departureAt - right.trip.departureAt)
       .slice(0, limit)
 
     return await Promise.all(
-      retenues.map(async (trip) => {
-        const [origin, destination, stops, tickets] = await Promise.all([
+      retenues.map(async ({ trip, ticketCount }) => {
+        const [origin, destination, stops] = await Promise.all([
           ctx.db.get(trip.originStationId),
           ctx.db.get(trip.destinationStationId),
           ctx.db
             .query("tripStops")
             .withIndex("by_trip_sequence", (q) => q.eq("tripId", trip._id))
-            .collect(),
-          ctx.db
-            .query("tickets")
-            .withIndex("by_trip_status", (q) =>
-              q.eq("tripId", trip._id).eq("status", "valide")
-            )
             .collect(),
         ])
         const pk = stops.map((s) => s.kilometerPoint)
@@ -294,9 +340,8 @@ export const assignedTrips = query({
           origin: origin?.name ?? "?",
           destination: destination?.name ?? "?",
           stopCount: stops.length,
-          distanceKm:
-            pk.length > 0 ? Math.max(...pk) - Math.min(...pk) : 0,
-          expectedPassengers: tickets.length,
+          distanceKm: pk.length > 0 ? Math.max(...pk) - Math.min(...pk) : 0,
+          expectedPassengers: ticketCount,
         }
       })
     )
@@ -741,9 +786,7 @@ export const syncSale = mutation({
 
     const existing = await ctx.db
       .query("sales")
-      .withIndex("by_client_id", (q) =>
-        q.eq("clientSaleId", args.clientSaleId)
-      )
+      .withIndex("by_client_id", (q) => q.eq("clientSaleId", args.clientSaleId))
       .unique()
     if (existing) {
       const tickets = await ctx.db

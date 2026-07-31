@@ -50,8 +50,9 @@ export const generateOne = internalMutation({
         q.eq("trainId", schedule.trainId).eq("serviceDate", args.serviceDate)
       )
       .collect()
-    if (existing.some((t) => t.scheduleId === args.scheduleId)) {
-      return { created: false, tripId: existing[0]!._id }
+    const sameSchedule = existing.find((t) => t.scheduleId === args.scheduleId)
+    if (sameSchedule) {
+      return { created: false, tripId: sameSchedule._id }
     }
 
     const stops = [...schedule.stops].sort((a, b) => a.sequence - b.sequence)

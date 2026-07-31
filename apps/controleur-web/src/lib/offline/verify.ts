@@ -154,7 +154,14 @@ export function verifyLocally(
   if (scope !== "valide") {
     return {
       verdict: scope,
-      reason: SCOPE_REASONS[scope],
+      // Le motif nomme la desserte embarquée : deux circulations d'un même
+      // train peuvent coexister le même jour (livrets horaires qui se
+      // chevauchent), et « mauvaise desserte » seul laisserait l'agent
+      // devant un titre qu'il croit — à raison — être celui de son train.
+      reason:
+        scope === "mauvaise_desserte"
+          ? `Ce titre vaut pour une autre circulation que ${ctx.manifest.trainNumber} du ${formatDay(ctx.manifest.departureAt)} embarquée ici. Vérifiez que le manifeste téléchargé est celui de votre train.`
+          : SCOPE_REASONS[scope],
       payload,
       ticket: ctx.ticket,
       subscription: ctx.subscription,

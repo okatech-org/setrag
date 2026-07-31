@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { useMutation, useQuery } from "@workspace/api/hooks"
@@ -68,6 +68,22 @@ export function DashboardScreen() {
 
   const stale = manifest ? isStale(manifest, now) : false
   const partial = manifest ? !manifest.complete : false
+
+  /**
+   * Circulations qui portent le même numéro à la même heure.
+   *
+   * Elles existent : deux livrets horaires qui se chevauchent produisent deux
+   * dessertes pour un même train. Le contrôleur ne peut pas les distinguer à
+   * l'œil, et embarquer la mauvaise fait refuser tous les titres du train.
+   */
+  const homonymes = useMemo(() => {
+    const vus = new Map<string, number>()
+    for (const trip of trips ?? []) {
+      const cle = `${trip.trainNumber}|${trip.departureAt}`
+      vus.set(cle, (vus.get(cle) ?? 0) + 1)
+    }
+    return [...vus.entries()].filter(([, n]) => n > 1).map(([cle]) => cle)
+  }, [trips])
 
   return (
     <main className="safe-top flex flex-1 flex-col gap-5 px-5 pt-5 pb-6">
@@ -232,13 +248,25 @@ export function DashboardScreen() {
             Aucune desserte dans la fenêtre de service.
           </p>
         )}
+        {homonymes.length > 0 && (
+          <InlineMessage
+            tone="warning"
+            title="Deux circulations portent le même numéro et la même heure."
+          >
+            Elles viennent de livrets horaires qui se chevauchent. Ce sont bien
+            deux dessertes distinctes : un titre vendu sur l&apos;une sera
+            refusé sur l&apos;autre. Choisissez celle qui porte des titres, et
+            signalez le doublon à l&apos;exploitation.
+          </InlineMessage>
+        )}
         {trips?.map((trip) => {
           const active = manifest?.tripId === trip.id
+          const ambigu = homonymes.includes(`${trip.trainNumber}|${trip.departureAt}`)
           return (
             <button
               key={trip.id}
               type="button"
-              aria-label={`Choisir la desserte ${trip.trainNumber} de ${trip.origin} à ${trip.destination}, départ ${dayTime(trip.departureAt)}`}
+              aria-label={`Choisir la desserte ${trip.trainNumber} de ${trip.origin} à ${trip.destination}, départ ${dayTime(trip.departureAt)}, ${trip.expectedPassengers} titres`}
               onClick={() => {
                 const label = `${trip.trainNumber} · ${trip.origin} → ${trip.destination}`
                 void setActiveTrip(trip.id, label).then(() =>
@@ -247,7 +275,7 @@ export function DashboardScreen() {
               }}
               className="flex min-h-16 items-center gap-3 rounded-md border border-line bg-surface p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <span className="flex-1">
+              <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-semibold tabular">
                   {trip.trainNumber} · {dayTime(trip.departureAt)}
                 </span>
@@ -255,6 +283,14 @@ export function DashboardScreen() {
                   {trip.origin} → {trip.destination} ·{" "}
                   <span className="tabular">{trip.expectedPassengers}</span>{" "}
                   titres
+                  {/* Le nombre de gares départage deux circulations
+                      homonymes : c'est ce qui les distingue réellement. */}
+                  {ambigu && (
+                    <>
+                      {" · "}
+                      <span className="tabular">{trip.stopCount}</span> gares
+                    </>
+                  )}
                 </span>
               </span>
               <StatusTag tone={active ? "success" : "neutral"}>
