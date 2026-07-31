@@ -137,6 +137,8 @@ export interface CounterSaleArgs {
   tendered?: number
   promoCode?: string
   deviceId?: string
+  /** Clé d'idempotence des ventes rejouées depuis un terminal hors ligne. */
+  clientSaleId?: string
 }
 
 /**
@@ -523,6 +525,7 @@ export async function performSale(
       // Le prix est figé pour toute la durée du blocage.
       priceLockedUntil:
         sale.mode === "hold" ? now + (sale.holdMs ?? 0) : undefined,
+      clientSaleId: args.clientSaleId,
       soldAt: now,
     })
 

@@ -7,11 +7,13 @@
     "dev": "next dev --port 3000",
     "build": "next build --webpack",
     "start": "next start -p 3000",
+    "start:verif": "next start -p 3005",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:once": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "icones": "node scripts/generer-icones.mjs"
   },
   "dependencies": {
     "@convex-dev/better-auth": "^0.12.5",
@@ -51,7 +53,9 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^9.39.2",
     "eslint-config-next": "16.2.11",
+    "fake-indexeddb": "^6.0.0",
     "jsdom": "^29.1.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"

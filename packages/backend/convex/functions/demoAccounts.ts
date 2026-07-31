@@ -28,6 +28,13 @@ export const list = query({
         email: process.env.DEMO_MANAGEMENT_EMAIL,
         password: process.env.DEMO_MANAGEMENT_PASSWORD,
       },
+      {
+        key: "controle",
+        label: "Compte contrôleur",
+        description: "Contrôle à bord · Owendo",
+        email: process.env.DEMO_CONTROL_EMAIL,
+        password: process.env.DEMO_CONTROL_PASSWORD,
+      },
     ] as const
 
     return accounts.flatMap((account) =>

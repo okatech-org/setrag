@@ -72,11 +72,13 @@ import type * as model_pricing from "../model/pricing.js";
 import type * as model_sales from "../model/sales.js";
 import type * as model_seating from "../model/seating.js";
 import type * as model_supervision from "../model/supervision.js";
+import type * as seeds_controlDemo from "../seeds/controlDemo.js";
 import type * as seeds_demo from "../seeds/demo.js";
 import type * as seeds_demoAccounts from "../seeds/demoAccounts.js";
 import type * as seeds_history from "../seeds/history.js";
 import type * as seeds_provisionalFares from "../seeds/provisionalFares.js";
 import type * as seeds_referential from "../seeds/referential.js";
+import type * as seeds_staffAccounts from "../seeds/staffAccounts.js";
 import type * as testing from "../testing.js";
 
 import type {
@@ -150,11 +152,13 @@ declare const fullApi: ApiFromModules<{
   "model/sales": typeof model_sales;
   "model/seating": typeof model_seating;
   "model/supervision": typeof model_supervision;
+  "seeds/controlDemo": typeof seeds_controlDemo;
   "seeds/demo": typeof seeds_demo;
   "seeds/demoAccounts": typeof seeds_demoAccounts;
   "seeds/history": typeof seeds_history;
   "seeds/provisionalFares": typeof seeds_provisionalFares;
   "seeds/referential": typeof seeds_referential;
+  "seeds/staffAccounts": typeof seeds_staffAccounts;
   testing: typeof testing;
 }>;
 

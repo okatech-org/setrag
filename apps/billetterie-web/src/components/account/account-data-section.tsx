@@ -4,7 +4,6 @@ import * as React from "react"
 import { Download, TriangleAlert } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-import { authClient } from "@workspace/api/auth-client"
 import { useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { Button } from "@workspace/ui/components/button"
@@ -14,6 +13,7 @@ import { InlineMessage } from "@workspace/ui/components/inline-message"
 
 import { useTravelerAuth } from "@/hooks/use-traveler-auth"
 import { ticketingStorage } from "@/lib/ticketing"
+import { seDeconnecter } from "@/lib/offline/deconnexion"
 
 /**
  * Consentements et droits sur les données, en mobile.
@@ -82,7 +82,7 @@ export function AccountDataSection() {
   async function removeAccount() {
     try {
       await deleteAccount({ confirmation })
-      await authClient.signOut()
+      await seDeconnecter()
       ticketingStorage.clearBooking()
       setConfirmation("")
       router.replace("/")

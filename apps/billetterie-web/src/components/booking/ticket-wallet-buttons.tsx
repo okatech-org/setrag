@@ -24,12 +24,17 @@ export function TicketWalletButtons({
   onAdd: (provider: WalletProvider) => void
   compact?: boolean
 }) {
-  const [platform, setPlatform] =
-    React.useState<ReturnType<typeof detectWalletPlatform>>("desktop")
-
-  React.useEffect(() => {
-    setPlatform(detectWalletPlatform(navigator.userAgent))
-  }, [])
+  /**
+   * La plateforme ne peut être connue qu'au navigateur : le rendu serveur
+   * part donc de `desktop`, et `useSyncExternalStore` fournit la valeur réelle
+   * dès l'hydratation — sans le passage par un effet, qui déclencherait un
+   * second rendu en cascade.
+   */
+  const platform = React.useSyncExternalStore(
+    () => () => {},
+    () => detectWalletPlatform(navigator.userAgent),
+    () => "desktop" as const
+  )
 
   return (
     <div

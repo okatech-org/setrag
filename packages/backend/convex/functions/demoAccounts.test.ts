@@ -33,4 +33,23 @@ describe("Comptes de démonstration", () => {
       },
     ])
   })
+
+  it("expose le compte contrôleur lorsqu'il est configuré", async () => {
+    vi.stubEnv("DEMO_ACCOUNTS_ENABLED", "true")
+    vi.stubEnv("DEMO_AGENT_EMAIL", "")
+    vi.stubEnv("DEMO_MANAGEMENT_EMAIL", "")
+    vi.stubEnv("DEMO_CONTROL_EMAIL", "controle@setrag.ga")
+    vi.stubEnv("DEMO_CONTROL_PASSWORD", "controle-secret")
+    const t = convexTest(schema, modules)
+
+    expect(await t.query(api.functions.demoAccounts.list, {})).toEqual([
+      {
+        key: "controle",
+        label: "Compte contrôleur",
+        description: "Contrôle à bord · Owendo",
+        email: "controle@setrag.ga",
+        password: "controle-secret",
+      },
+    ])
+  })
 })

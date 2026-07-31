@@ -15,6 +15,25 @@ const nextConfig: NextConfig = {
   ],
   reactCompiler: true,
   typedRoutes: true,
+  async headers() {
+    return [
+      {
+        // Le worker est servi depuis `/public`, donc à la racine : sans cet
+        // en-tête son périmètre serait limité à son propre dossier, et il ne
+        // verrait aucune navigation.
+        source: "/sw.js",
+        headers: [
+          { key: "Service-Worker-Allowed", value: "/" },
+          // Le worker porte le nom de ses caches : s'il était lui-même mis en
+          // cache par le navigateur, un déploiement resterait invisible.
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+        ],
+      },
+    ]
+  },
 }
 
 export default nextConfig

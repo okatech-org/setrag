@@ -1,12 +1,13 @@
 # SETRAG — instructions projet
 
-Plateforme de billetterie du Transgabonais. Trois applications et un backend
+Plateforme de billetterie du Transgabonais. Quatre applications et un backend
 Convex packagé (`packages/backend`).
 
 ## Structure
 
 - `apps/billetterie-web` — Next.js 16, billetterie voyageur (port 3000)
 - `apps/agent-web` — Next.js 16, portail agent / back-office (port 3001)
+- `apps/controleur-web` — Next.js 16, contrôle à bord, PWA hors ligne (port 3002)
 - `apps/voyageur-mobile` — Expo SDK 57, application mobile voyageur
 - `packages/backend` — Convex : schéma, fonctions, crons, authentification
 - `packages/ui` — design system web (Tailwind 4)
@@ -30,6 +31,18 @@ Convex packagé (`packages/backend`).
   survente. Les contrôles d'accès passent par `convex/lib/auth.ts`
   (`requireUser`, `requireRole`, `requireAgent`, `requireAdmin`).
 - **Audit** : toute action sensible du back-office appelle `audit()`.
+- **Contrôle à bord** : `apps/controleur-web` travaille hors ligne par défaut.
+  Toute écriture de terrain passe par `commitOperation()`, qui inscrit
+  l'opération ET sa mise en file dans une seule transaction IndexedDB, avec un
+  identifiant client. Un contrôle enregistré n'est **jamais** modifiable —
+  invariante vérifiée par la matrice de droits. Détails :
+  [docs/controleur-web.md](docs/controleur-web.md).
+- **Billetterie voyageur** : `apps/billetterie-web` est installable et consulte
+  billets et parcours hors réseau. Elle ne fait que LIRE hors ligne — aucune
+  file d'envoi. Deux règles : la copie locale ne recouvre jamais une réponse du
+  serveur, et elle n'est effacée qu'à la déconnexion explicite
+  (`seDeconnecter()`) ou en ligne — hors réseau, la session paraît absente sans
+  l'être. Détails : [docs/billetterie-pwa.md](docs/billetterie-pwa.md).
 - **Design system** : le web suit **SETRAG** — voir [docs/design-system.md](docs/design-system.md)
   et la référence vivante sur `/design-system` (billetterie). Source de vérité
   des tokens : `packages/ui/src/styles/tokens.css`, copie du projet Claude

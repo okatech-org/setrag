@@ -1,5 +1,5 @@
 import { v } from "convex/values"
-import { mutation, query } from "../_generated/server"
+import { mutation, query, type QueryCtx } from "../_generated/server"
 import type { Doc, Id } from "../_generated/dataModel"
 import { audit, requirePermission } from "../lib/auth"
 import { scanResult, serviceClass } from "../schema"
@@ -32,9 +32,18 @@ import {
  * fonctionne sans réseau.
  */
 export const manifest = query({
-  args: { tripId: v.id("trips") },
+  args: {
+    tripId: v.id("trips"),
+    /**
+     * Faux quand le terminal télécharge les titres par lots via
+     * `manifestTickets` : l'en-tête arrive alors seul, et l'agent voit
+     * immédiatement ce qu'il embarque pendant que les lots défilent.
+     */
+    includeTickets: v.optional(v.boolean()),
+  },
   handler: async (ctx, args) => {
     await requirePermission(ctx, "controles", "consulter")
+    const withTickets = args.includeTickets ?? true
 
     const trip = await ctx.db.get(args.tripId)
     if (!trip) throw new Error("Desserte introuvable")
@@ -69,9 +78,7 @@ export const manifest = query({
     // Seuls les titres opposables partent sur le terminal : un billet annulé
     // ou remboursé doit être refusé à bord, il est donc transmis avec son
     // statut plutôt qu'omis.
-    const embarquables = tickets.filter((t) =>
-      ["valide", "utilise", "annule", "rembourse"].includes(t.status)
-    )
+    const embarquables = tickets.filter((t) => EMBARQUABLES.includes(t.status))
 
     const scans = await ctx.db
       .query("ticketScans")
@@ -81,18 +88,15 @@ export const manifest = query({
     return {
       trip,
       stops: stations,
-      tickets: embarquables.map((t) => ({
-        _id: t._id,
-        number: t.number,
-        passenger: t.passenger,
-        serviceClass: t.serviceClass,
-        seatLabel: t.seatLabel,
-        coachLabel: t.coachLabel,
-        fromStopIndex: t.fromStopIndex,
-        toStopIndex: t.toStopIndex,
-        status: t.status,
-        barcodePayload: t.barcodePayload,
-      })),
+      tickets: withTickets ? embarquables.map(embarkTicket) : [],
+      /** Nombre total de titres à embarquer, connu avant tout téléchargement. */
+      ticketCount: embarquables.length,
+      subscriptions: await embarkSubscriptions(ctx, trip.departureAt),
+      /**
+       * Barème kilométrique en vigueur, embarqué pour que la régularisation
+       * à bord calcule le même prix que le guichet, sans réseau.
+       */
+      fare: await embarkFareSchedule(ctx),
       alreadyScanned: scans.map((s) => ({
         ticketId: s.ticketId,
         scannedAt: s.scannedAt,
@@ -117,6 +121,185 @@ export const manifest = query({
         isDemoKey: isUsingDemoKey(),
       },
     }
+  },
+})
+
+/** Statuts de titre qui doivent partir sur le terminal, refus compris. */
+const EMBARQUABLES: readonly string[] = [
+  "valide",
+  "utilise",
+  "annule",
+  "rembourse",
+]
+
+/** Projection d'un titre telle qu'elle voyage dans le manifeste. */
+function embarkTicket(t: Doc<"tickets">) {
+  return {
+    _id: t._id,
+    number: t.number,
+    passenger: t.passenger,
+    serviceClass: t.serviceClass,
+    seatLabel: t.seatLabel,
+    coachLabel: t.coachLabel,
+    fromStopIndex: t.fromStopIndex,
+    toStopIndex: t.toStopIndex,
+    status: t.status,
+    barcodePayload: t.barcodePayload,
+  }
+}
+
+/**
+ * Abonnements opposables le jour de la desserte.
+ *
+ * Un abonné ne figure dans aucun manifeste de titres : sa carte vaut droit de
+ * circuler. Sans cette liste, le terminal verrait une signature authentique
+ * sans pouvoir dire à qui elle appartient ni jusqu'à quand elle court.
+ */
+async function embarkSubscriptions(ctx: QueryCtx, atMs: number) {
+  const all = await ctx.db.query("subscriptions").collect()
+  return all
+    .filter(
+      (s) =>
+        s.status === "active" && s.validFrom <= atMs && s.validUntil >= atMs
+    )
+    .map((s) => ({
+      _id: s._id,
+      cardNumber: s.cardNumber,
+      kind: s.kind,
+      serviceClass: s.serviceClass,
+      validFrom: s.validFrom,
+      validUntil: s.validUntil,
+      barcodePayload: s.barcodePayload,
+    }))
+}
+
+/**
+ * Barème kilométrique en vigueur, réduit à ce qu'un terminal doit connaître.
+ *
+ * Le contrôleur qui régularise à bord doit annoncer le prix du guichet. Le
+ * barème part donc avec lui — taux au kilomètre, taxes et assiette d'arrondi
+ * — plutôt qu'un tarif figé qui dériverait à la première révision.
+ */
+async function embarkFareSchedule(ctx: QueryCtx) {
+  const schedule = await ctx.db
+    .query("fareSchedules")
+    .withIndex("by_status", (q) => q.eq("status", "actif"))
+    .first()
+  if (!schedule) return null
+
+  const bases = await ctx.db
+    .query("fareBases")
+    .withIndex("by_schedule", (q) => q.eq("scheduleId", schedule._id))
+    .collect()
+
+  return {
+    scheduleId: schedule._id,
+    label: schedule.label,
+    validFrom: schedule.validFrom,
+    validUntil: schedule.validUntil,
+    roundingBasis: schedule.roundingBasis,
+    vatPct: schedule.vatPct,
+    cssPct: schedule.cssPct,
+    bases: bases.map((b) => ({
+      trainType: b.trainType,
+      serviceClass: b.serviceClass,
+      shortDistanceRate: b.shortDistanceRate,
+      longDistanceRate: b.longDistanceRate,
+    })),
+  }
+}
+
+/**
+ * Titres d'une desserte, page par page.
+ *
+ * Le téléchargement se fait en gare, sur un réseau qui coupe : un lot perdu
+ * ne doit pas condamner le paquet entier. Chaque page confirmée est écrite
+ * localement, et la reprise repart du dernier curseur reçu.
+ */
+export const manifestTickets = query({
+  args: {
+    tripId: v.id("trips"),
+    cursor: v.optional(v.union(v.string(), v.null())),
+    pageSize: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "controles", "consulter")
+    const numItems = Math.min(Math.max(Math.trunc(args.pageSize ?? 100), 1), 500)
+
+    const page = await ctx.db
+      .query("tickets")
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
+      .paginate({ cursor: args.cursor ?? null, numItems })
+
+    return {
+      tickets: page.page.filter((t) => EMBARQUABLES.includes(t.status)).map(
+        embarkTicket
+      ),
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+    }
+  },
+})
+
+/**
+ * Dessertes que le contrôleur peut prendre en charge.
+ *
+ * Aucune table n'affecte nominativement un agent à un train : la feuille de
+ * route reste un document d'exploitation. On propose donc la fenêtre utile —
+ * ce qui roule ou va rouler — et l'agent désigne la sienne.
+ */
+export const assignedTrips = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "controles", "consulter")
+    const limit = Math.min(Math.max(Math.trunc(args.limit ?? 10), 1), 50)
+
+    const now = Date.now()
+    const HOUR = 60 * 60 * 1000
+    const trips = await ctx.db
+      .query("trips")
+      .withIndex("by_departure", (q) => q.gte("departureAt", now - 12 * HOUR))
+      .order("asc")
+      .take(limit * 3)
+
+    const retenues = trips
+      .filter((t) => t.status !== "annule" && t.departureAt <= now + 72 * HOUR)
+      .slice(0, limit)
+
+    return await Promise.all(
+      retenues.map(async (trip) => {
+        const [origin, destination, stops, tickets] = await Promise.all([
+          ctx.db.get(trip.originStationId),
+          ctx.db.get(trip.destinationStationId),
+          ctx.db
+            .query("tripStops")
+            .withIndex("by_trip_sequence", (q) => q.eq("tripId", trip._id))
+            .collect(),
+          ctx.db
+            .query("tickets")
+            .withIndex("by_trip_status", (q) =>
+              q.eq("tripId", trip._id).eq("status", "valide")
+            )
+            .collect(),
+        ])
+        const pk = stops.map((s) => s.kilometerPoint)
+        return {
+          id: trip._id,
+          trainNumber: trip.trainNumber,
+          trainType: trip.trainType,
+          serviceDate: trip.serviceDate,
+          departureAt: trip.departureAt,
+          arrivalAt: trip.arrivalAt,
+          status: trip.status,
+          origin: origin?.name ?? "?",
+          destination: destination?.name ?? "?",
+          stopCount: stops.length,
+          distanceKm:
+            pk.length > 0 ? Math.max(...pk) - Math.min(...pk) : 0,
+          expectedPassengers: tickets.length,
+        }
+      })
+    )
   },
 })
 
@@ -422,6 +605,56 @@ export const resolveConflict = mutation({
   },
 })
 
+/**
+ * Transmet un conflit au chef de gare, sans y toucher.
+ *
+ * Le contrôleur constate le doublon depuis son terminal mais ne l'efface pas :
+ * un contrôle enregistré est immuable, c'est la garantie que sa trace vaut
+ * quelque chose. Il alerte, joint son observation, et l'arbitrage reste au
+ * superviseur — qui, lui, peut clore le conflit.
+ */
+export const flagConflict = mutation({
+  args: {
+    scanId: v.id("ticketScans"),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "controles", "creer")
+    const scan = await ctx.db.get(args.scanId)
+    if (!scan) throw new Error("Contrôle introuvable")
+    if (!scan.conflict) throw new Error("Ce contrôle n'est pas en conflit")
+
+    const ticket = scan.ticketId ? await ctx.db.get(scan.ticketId) : null
+    const note = args.note?.trim()
+
+    const superviseurs = await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("role", "chef_gare"))
+      .collect()
+    for (const chef of superviseurs) {
+      await ctx.db.insert("notifications", {
+        userId: chef._id,
+        channel: "push",
+        title: "Conflit de contrôle signalé",
+        body: `Titre ${ticket?.number ?? "inconnu"} — ${
+          note || "double contrôle à arbitrer"
+        }`.slice(0, 200),
+        data: JSON.stringify({ scanId: args.scanId }),
+      })
+    }
+
+    await audit(ctx, {
+      actorId: actor._id,
+      action: "controle.signaler",
+      entityTable: "ticketScans",
+      entityId: args.scanId,
+      after: { note, notified: superviseurs.length },
+    })
+
+    return { notified: superviseurs.length }
+  },
+})
+
 /* ─────────────────────────── Vente à bord ──────────────────────────────── */
 
 /**
@@ -462,6 +695,107 @@ export const sellOnboard = mutation({
         deviceId: args.deviceId,
       }
     )
+  },
+})
+
+/**
+ * Remonte UNE vente encaissée à bord.
+ *
+ * Une vente par mutation, délibérément : une mutation Convex est une
+ * transaction, et un refus au milieu d'un lot — desserte fermée, segment
+ * complet — annulerait les ventes déjà passées du même envoi. Le terminal
+ * boucle donc sur sa file, et chaque vente vit ou échoue seule.
+ *
+ * Idempotent par `clientSaleId` : le voyageur est déjà reparti avec son code,
+ * une reprise après coupure ne doit pas lui vendre deux titres.
+ *
+ * Le prix est RECALCULÉ par le serveur ; le montant annoncé à bord revient
+ * dans la réponse pour que tout écart apparaisse et se justifie en caisse.
+ */
+export const syncSale = mutation({
+  args: {
+    clientSaleId: v.string(),
+    tripId: v.id("trips"),
+    originStationId: v.id("stations"),
+    destinationStationId: v.id("stations"),
+    serviceClass,
+    passengers: v.array(
+      v.object({
+        lastName: v.string(),
+        firstName: v.string(),
+        gender: v.union(v.literal("M"), v.literal("F")),
+        phone: v.optional(v.string()),
+      })
+    ),
+    /** Montant calculé et encaissé à bord, avec le barème embarqué. */
+    quotedXaf: v.number(),
+    method: v.union(
+      v.literal("especes"),
+      v.literal("airtel_money"),
+      v.literal("moov_money")
+    ),
+    deviceId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requirePermission(ctx, "ventes", "creer")
+
+    const existing = await ctx.db
+      .query("sales")
+      .withIndex("by_client_id", (q) =>
+        q.eq("clientSaleId", args.clientSaleId)
+      )
+      .unique()
+    if (existing) {
+      const tickets = await ctx.db
+        .query("tickets")
+        .withIndex("by_sale", (q) => q.eq("saleId", existing._id))
+        .collect()
+      return {
+        status: "doublon" as const,
+        saleNumber: existing.number,
+        ticketNumbers: tickets.map((t) => t.number),
+        serverXaf: existing.amounts.ttc,
+        quotedXaf: args.quotedXaf,
+      }
+    }
+
+    const done = await performSale(
+      ctx,
+      { actor, channel: "bord", mode: "ferme" },
+      {
+        tripId: args.tripId,
+        originStationId: args.originStationId,
+        destinationStationId: args.destinationStationId,
+        serviceClass: args.serviceClass,
+        passengers: args.passengers,
+        method: args.method,
+        deviceId: args.deviceId,
+        clientSaleId: args.clientSaleId,
+      }
+    )
+
+    return {
+      status: "cree" as const,
+      saleNumber: done.number,
+      ticketNumbers: done.tickets.map((t) => t.number),
+      serverXaf: done.amounts.ttc,
+      quotedXaf: args.quotedXaf,
+    }
+  },
+})
+
+/**
+ * Jeton d'envoi d'une photo d'incident.
+ *
+ * Les photos partent avant leur incident : le stockage rend un identifiant
+ * que la synchronisation joindra ensuite au signalement. Une photo orpheline
+ * coûte moins qu'un incident amputé de sa preuve.
+ */
+export const incidentPhotoUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requirePermission(ctx, "incidents", "creer")
+    return await ctx.storage.generateUploadUrl()
   },
 })
 

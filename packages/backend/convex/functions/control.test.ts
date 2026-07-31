@@ -975,3 +975,186 @@ describe("Signalements d'incident", () => {
     ).rejects.toThrow(/en_cours → ouvert/)
   })
 })
+
+/* ═════════════════════ Embarquement hors ligne ═══════════════════════════ */
+
+describe("Préparation du terminal", () => {
+  it("embarque le barème kilométrique et sait s'en passer d'aucun", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    const { ctx } = await asAgent(t, "controleur_train", fx.pos)
+
+    const m = await ctx.query(api.functions.control.manifest, {
+      tripId: fx.tripId,
+    })
+    expect(m.fare).not.toBeNull()
+    expect(m.fare?.roundingBasis).toBe("TTC")
+    expect(m.fare?.bases).toContainEqual({
+      trainType: "EXPRESS",
+      serviceClass: "DEUXIEME",
+      shortDistanceRate: 47.51,
+      longDistanceRate: 43.42,
+    })
+  })
+
+  it("annonce le nombre de titres avant de les envoyer", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    await issueTicket(t, fx)
+    const { ctx } = await asAgent(t, "controleur_train", fx.pos)
+
+    const entete = await ctx.query(api.functions.control.manifest, {
+      tripId: fx.tripId,
+      includeTickets: false,
+    })
+    expect(entete.tickets).toEqual([])
+    expect(entete.ticketCount).toBe(1)
+  })
+
+  it("télécharge les titres par lots reprenables", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    await issueTicket(t, fx)
+    await issueTicket(t, fx)
+    const { ctx } = await asAgent(t, "controleur_train", fx.pos)
+
+    const lot1 = await ctx.query(api.functions.control.manifestTickets, {
+      tripId: fx.tripId,
+      pageSize: 1,
+    })
+    expect(lot1.tickets).toHaveLength(1)
+    expect(lot1.isDone).toBe(false)
+
+    // Une reprise repart du curseur reçu, sans réémettre le lot confirmé.
+    const lot2 = await ctx.query(api.functions.control.manifestTickets, {
+      tripId: fx.tripId,
+      pageSize: 1,
+      cursor: lot1.cursor,
+    })
+    expect(lot2.tickets).toHaveLength(1)
+    expect(lot2.tickets[0]!.number).not.toBe(lot1.tickets[0]!.number)
+  })
+
+  it("propose au contrôleur les dessertes de sa fenêtre de service", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    const { ctx } = await asAgent(t, "controleur_train", fx.pos)
+
+    const dessertes = await ctx.query(api.functions.control.assignedTrips, {})
+    const notre = dessertes.find((d) => d.id === fx.tripId)
+    expect(notre).toBeDefined()
+    expect(notre!.trainNumber).toBe("TR-201")
+    expect(notre!.distanceKm).toBe(648)
+  })
+})
+
+/* ═════════════════════ Ventes à bord rejouées ════════════════════════════ */
+
+describe("Vente à bord hors ligne", () => {
+  it("ne vend qu'une fois un lot rejoué après coupure", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    const { ctx } = await asAgent(t, "controleur_train", fx.pos)
+    await ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: 0 })
+
+    const envoi = {
+      clientSaleId: "term-042-0001",
+      tripId: fx.tripId,
+      originStationId: fx.owe,
+      destinationStationId: fx.boo,
+      serviceClass: "DEUXIEME" as const,
+      passengers: [
+        { lastName: "NGUEMA", firstName: "Serge", gender: "M" as const },
+      ],
+      quotedXaf: 14_000,
+      method: "especes" as const,
+      deviceId: "term-042",
+    }
+
+    const premier = await ctx.mutation(api.functions.control.syncSale, envoi)
+    expect(premier.status).toBe("cree")
+    expect(premier.ticketNumbers).toHaveLength(1)
+
+    const rejeu = await ctx.mutation(api.functions.control.syncSale, envoi)
+    expect(rejeu.status).toBe("doublon")
+    expect(rejeu.saleNumber).toBe(premier.saleNumber)
+    expect(rejeu.ticketNumbers).toEqual(premier.ticketNumbers)
+
+    const ventes = await t.run(async (c) =>
+      c.db
+        .query("sales")
+        .filter((q) => q.eq(q.field("clientSaleId"), "term-042-0001"))
+        .collect()
+    )
+    expect(ventes).toHaveLength(1)
+  })
+
+  it("rend le prix serveur en regard du prix annoncé à bord", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    const { ctx } = await asAgent(t, "controleur_train", fx.pos)
+    await ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: 0 })
+
+    const r = await ctx.mutation(api.functions.control.syncSale, {
+      clientSaleId: "term-042-0002",
+      tripId: fx.tripId,
+      originStationId: fx.owe,
+      destinationStationId: fx.boo,
+      serviceClass: "DEUXIEME",
+      passengers: [
+        { lastName: "OBAME", firstName: "Marie", gender: "F" as const },
+      ],
+      // Montant volontairement faux : l'écart doit être visible, pas absorbé.
+      quotedXaf: 1,
+      method: "especes",
+    })
+    expect(r.quotedXaf).toBe(1)
+    expect(r.serverXaf).toBeGreaterThan(1)
+  })
+})
+
+/* ═════════════════════ Signalement d'un conflit ══════════════════════════ */
+
+describe("Conflits", () => {
+  it("laisse le contrôleur alerter sans réécrire le contrôle", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    const billet = await issueTicket(t, fx)
+    const a = await asAgent(t, "controleur_train", fx.pos, "-a")
+    const b = await asAgent(t, "controleur_train", fx.pos, "-b")
+    await t.run(async (c) => {
+      c.db.insert("users", {
+        authId: "chef-alerte",
+        role: "chef_gare",
+        identitySource: "annuaire",
+        isActive: true,
+      })
+    })
+
+    const commun = {
+      tripId: fx.tripId,
+      ticketId: billet._id,
+      result: "valide" as const,
+      stopIndex: 0,
+      offline: true,
+    }
+    await a.ctx.mutation(api.functions.control.syncScans, {
+      scans: [{ ...commun, clientScanId: "a-1", scannedAt: Date.now() }],
+    })
+    const collision = await b.ctx.mutation(api.functions.control.syncScans, {
+      scans: [{ ...commun, clientScanId: "b-1", scannedAt: Date.now() + 1000 }],
+    })
+    expect(collision.conflicts).toBe(1)
+
+    const scanId = collision.conflictIds[0]!
+    const r = await b.ctx.mutation(api.functions.control.flagConflict, {
+      scanId,
+      note: "Deux personnes présentent le même titre",
+    })
+    expect(r.notified).toBe(1)
+
+    // Le contrôle reste en conflit : seul le superviseur peut le clore.
+    const apres = await t.run(async (c) => c.db.get(scanId))
+    expect(apres?.conflict).toBe(true)
+  })
+})

@@ -12,6 +12,23 @@ export const metadata: Metadata = {
   },
   description:
     "Réservez et payez vos billets de train sur la ligne Owendo–Franceville : horaires, disponibilités et billets électroniques.",
+  applicationName: "SETRAG",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    // Installée depuis Safari, l'application s'ouvre en plein écran plutôt que
+    // dans un onglet : c'est le seul moyen, sur iOS, d'avoir une icône sur
+    // l'écran d'accueil et une fenêtre sans barre d'adresse.
+    capable: true,
+    title: "SETRAG",
+    statusBarStyle: "black-translucent",
+  },
 }
 
 export const viewport: Viewport = {

@@ -30,6 +30,9 @@ describe("origines de confiance Better Auth", () => {
         "https://localhost:3000",
         "http://localhost:3001",
         "https://localhost:3001",
+        // Application de contrôle à bord.
+        "http://localhost:3002",
+        "https://localhost:3002",
       ])
     )
   })

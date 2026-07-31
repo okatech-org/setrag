@@ -1,4 +1,8 @@
 import "@testing-library/jest-dom/vitest"
+// La base locale des billets s'ouvre dès qu'un écran hors ligne est monté :
+// sans implantation d'IndexedDB, jsdom la refuse et le test échoue sur un
+// détail sans rapport avec ce qu'il vérifie.
+import "fake-indexeddb/auto"
 import { afterEach, vi } from "vitest"
 import { cleanup } from "@testing-library/react"
 

@@ -138,14 +138,31 @@ export const pointOfSaleType = v.union(
 )
 
 /** Résultat d'un contrôle à bord — motifs exigés par l'écran CM-05. */
+/**
+ * Verdicts qu'un contrôle à bord peut consigner.
+ *
+ * L'énumération suit ce que le terminal sait réellement distinguer, car un
+ * contrôle est une pièce probante : ramener « code illisible » et « signature
+ * contrefaite » au même verdict reviendrait à accuser de fraude un voyageur
+ * dont le billet est simplement froissé.
+ */
 export const scanResult = v.union(
   v.literal("valide"),
   v.literal("signature_invalide"),
+  /** Code d'un autre émetteur, tronqué ou abîmé — ni fraude ni titre valide. */
+  v.literal("illisible"),
+  /** Clé de signature retirée du service : incident d'exploitation. */
+  v.literal("cle_hors_service"),
   v.literal("mauvaise_desserte"),
   v.literal("hors_segment"),
   v.literal("expire"),
   v.literal("deja_controle"),
-  v.literal("annule")
+  v.literal("annule"),
+  v.literal("rembourse"),
+  /** Titre réservé mais non réglé. */
+  v.literal("non_paye"),
+  /** Signature authentique, titre absent du manifeste embarqué. */
+  v.literal("inconnu")
 )
 
 /** Canaux conversationnels raccordés au même assistant voyageur. */
@@ -655,6 +672,14 @@ export default defineSchema({
     cgvAcceptedAt: v.optional(v.number()),
     /** PDF multi-billets mis en cache pour le dossier voyageur. */
     bundlePdfStorageId: v.optional(v.id("_storage")),
+    /**
+     * Identifiant attribué par le terminal contrôleur avant l'envoi.
+     *
+     * C'est la clé d'idempotence des ventes à bord : le terminal encaisse
+     * hors ligne et rejoue son lot à la reconnexion. Sans elle, une reprise
+     * après coupure vendrait deux fois le même titre.
+     */
+    clientSaleId: v.optional(v.string()),
     soldAt: v.number(),
     cancelledAt: v.optional(v.number()),
   })
@@ -666,6 +691,7 @@ export default defineSchema({
     .index("by_accounting_day", ["accountingDayId"])
     .index("by_cash_session", ["cashSessionId"])
     .index("by_origin", ["originSaleId"])
+    .index("by_client_id", ["clientSaleId"])
     .index("by_status_hold", ["status", "priceLockedUntil"]),
 
   tickets: defineTable({

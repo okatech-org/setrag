@@ -4,6 +4,9 @@ import { usePathname } from "next/navigation"
 
 import { cn } from "@workspace/ui/lib/utils"
 
+import { BarreReseau } from "@/components/offline/barre-reseau"
+import { InviteInstallation } from "@/components/offline/invite-installation"
+import { ServiceWorker } from "@/components/service-worker"
 import { DesktopFooter, DesktopHeader } from "@/components/shell/desktop-shell"
 import { MobileChromeProvider } from "@/components/shell/mobile-chrome"
 import {
@@ -40,6 +43,9 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   return (
     <MobileChromeProvider>
       <div data-slot="site-shell" className="flex min-h-dvh flex-col bg-canvas">
+        <ServiceWorker />
+        <BarreReseau />
+        <InviteInstallation />
         {IS_E2E && (
           <div className="text-small bg-warning-soft px-4 py-2 text-center text-warning-ink">
             Mode de test — aucune session ni réservation affichée ici n’est

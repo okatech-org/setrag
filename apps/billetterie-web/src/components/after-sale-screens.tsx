@@ -45,10 +45,16 @@ import { formatPrice } from "@workspace/ui/lib/format"
 import { AccountDataSection } from "@/components/account/account-data-section"
 import { AccountMobile } from "@/components/account/account-mobile"
 import { AccountNavigation } from "@/components/account/account-navigation"
+import {
+  BandeauHorsLigne,
+  dateDeReception,
+} from "@/components/offline/bandeau-hors-ligne"
 import { PaymentWaitingMobile } from "@/components/payment/payment-waiting-mobile"
 import { ReservationsMobile } from "@/components/reservations/reservations-mobile"
 import { TrackingMobile } from "@/components/tracking/tracking-mobile"
 import { useReservations } from "@/features/reservations/use-reservations"
+import { useParcoursLocal } from "@/features/suivi/use-parcours-local"
+import { useOnline } from "@/hooks/use-online"
 import {
   DEFAULT_BOOKING,
   DEFAULT_SEARCH,
@@ -60,6 +66,7 @@ import {
 } from "@/lib/ticketing"
 import { savePendingTravelerOnboarding } from "@/lib/traveler-onboarding"
 import { useTravelerAuth } from "@/hooks/use-traveler-auth"
+import { seDeconnecter } from "@/lib/offline/deconnexion"
 
 const E2E_TRACKING_BASE = Date.UTC(2026, 7, 14, 8)
 
@@ -355,6 +362,15 @@ export function ReservationsScreen() {
     )
   }
 
+  if (reservations.state === "hors-ligne") {
+    return (
+      <EmptyState
+        title="Hors réseau"
+        description="Aucun billet n’est enregistré sur cet appareil. Ouvrez cet écran une fois connecté : vos billets y resteront disponibles ensuite, même sans réseau."
+      />
+    )
+  }
+
   if (reservations.state === "empty") {
     return (
       <EmptyState
@@ -371,6 +387,13 @@ export function ReservationsScreen() {
 
   return (
     <>
+      {reservations.depuisLeCache && (
+        <BandeauHorsLigne
+          recuLe={reservations.recuLe}
+          enLigne={reservations.enLigne}
+          objet="Ces billets"
+        />
+      )}
       <ReservationsMobile reservations={reservations} />
       <ReservationsDesktop reservations={reservations} />
     </>
@@ -480,6 +503,7 @@ function ReservationsDesktop({
 export function TrackingScreen() {
   const router = useRouter()
   const params = useSearchParams()
+  const enLigne = useOnline()
   const storedTrip = ticketingStorage.getTrip()
   const fallbackTrip = demoTrips(DEFAULT_SEARCH)[0]!
   const [trainNumber, setTrainNumber] = useState(
@@ -507,16 +531,35 @@ export function TrackingScreen() {
     api.functions.trips.get,
     !IS_E2E && liveTrip ? { tripId: liveTrip._id } : "skip"
   )
-  const delay = liveTrip?.delayMinutes ?? (IS_E2E ? 25 : 0)
-  const showTimeline = IS_E2E || Boolean(liveTrip)
+  // La copie locale ne prend le relais que faute de réponse du serveur : un
+  // horaire relevé la veille ne doit jamais recouvrir celui du jour.
+  const parcoursLocal = useParcoursLocal(
+    trainNumber,
+    serviceDate,
+    !IS_E2E && detail === undefined
+  )
+  const depuisLeCache = detail === undefined && parcoursLocal !== null
+  const trainSuivi = liveTrip ?? parcoursLocal?.detail.trip
+  const delay = trainSuivi?.delayMinutes ?? (IS_E2E ? 25 : 0)
+  const showTimeline = IS_E2E || Boolean(trainSuivi)
   const status =
-    liveTrip?.status === "annule"
+    trainSuivi?.status === "annule"
       ? "Circulation supprimée"
-      : liveTrip?.status === "termine"
+      : trainSuivi?.status === "termine"
         ? "Desserte terminée"
         : delay > 0
           ? `Retard de ${delay} min`
           : "À l’heure"
+  /**
+   * Ce que vaut l'horaire affiché.
+   *
+   * « À l'instant » est vrai tant que la requête aboutit ; sur la copie
+   * locale, il faut dire de quand date le relevé, sans quoi un voyageur
+   * réglerait sa descente sur un retard périmé.
+   */
+  const noteFraicheur = depuisLeCache
+    ? `Relevé du ${dateDeReception(parcoursLocal.enregistreLe)}, enregistré sur cet appareil.`
+    : "Dernière mise à jour : à l’instant."
   const formatHour = (timestamp?: number) =>
     timestamp
       ? new Intl.DateTimeFormat("fr-FR", {
@@ -533,7 +576,9 @@ export function TrackingScreen() {
     router.replace(`/suivi?${query.toString()}`)
   }
 
-  const trackingStops = IS_E2E ? E2E_TRACKING_STOPS : (detail?.stops ?? [])
+  const trackingStops = IS_E2E
+    ? E2E_TRACKING_STOPS
+    : (detail?.stops ?? parcoursLocal?.detail.stops ?? [])
 
   return (
     <div className="grid gap-6">
@@ -546,20 +591,20 @@ export function TrackingScreen() {
         showTimeline={showTimeline}
         status={status}
         statusTone={
-          liveTrip?.status === "annule"
+          trainSuivi?.status === "annule"
             ? "danger"
             : delay > 0
               ? "warning"
               : "success"
         }
         statusNote={
-          liveTrip?.status === "annule"
+          trainSuivi?.status === "annule"
             ? "Consultez votre dossier pour connaître les conditions de report ou de remboursement."
-            : "Dernière mise à jour : à l’instant."
+            : noteFraicheur
         }
         delayMinutes={delay}
         stops={trackingStops}
-        cancelled={liveTrip?.status === "annule"}
+        cancelled={trainSuivi?.status === "annule"}
       />
 
       <form
@@ -609,7 +654,7 @@ export function TrackingScreen() {
           <CardContent className="grid gap-6 pt-6">
             <InlineMessage
               tone={
-                liveTrip?.status === "annule"
+                trainSuivi?.status === "annule"
                   ? "danger"
                   : delay > 0
                     ? "warning"
@@ -617,9 +662,9 @@ export function TrackingScreen() {
               }
               title={status}
             >
-              {liveTrip?.status === "annule"
+              {trainSuivi?.status === "annule"
                 ? "Consultez votre dossier pour connaître les conditions de report ou de remboursement."
-                : "Dernière mise à jour : à l’instant."}
+                : noteFraicheur}
             </InlineMessage>
             <div className="relative grid gap-6 border-l-2 border-accent-line pl-6">
               {trackingStops.map((stop, index, stops) => (
@@ -649,8 +694,16 @@ export function TrackingScreen() {
       ) : (
         <EmptyState
           className="hidden md:grid"
-          title="Saisissez le numéro indiqué sur votre billet"
-          description="Le statut de la desserte apparaîtra ici et se mettra à jour automatiquement."
+          title={
+            enLigne
+              ? "Saisissez le numéro indiqué sur votre billet"
+              : "Hors réseau"
+          }
+          description={
+            enLigne
+              ? "Le statut de la desserte apparaîtra ici et se mettra à jour automatiquement."
+              : "Seuls les trains de vos billets sont consultables sans réseau, et seulement après une première ouverture en ligne."
+          }
         />
       )}
     </div>
@@ -739,7 +792,7 @@ export function AccountScreen() {
   async function removeAccount() {
     try {
       await deleteAccount({ confirmation: deleteConfirmation })
-      await authClient.signOut()
+      await seDeconnecter()
       ticketingStorage.clearBooking()
       setAccountMessage(
         "Votre compte a été anonymisé. Les écritures légalement obligatoires sont conservées."
@@ -855,7 +908,7 @@ export function AccountScreen() {
             <Button
               variant="ghost"
               onClick={async () => {
-                await authClient.signOut()
+                await seDeconnecter()
                 ticketingStorage.clearBooking()
                 router.replace("/")
                 router.refresh()

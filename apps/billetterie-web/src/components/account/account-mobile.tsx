@@ -3,13 +3,13 @@
 import { LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-import { authClient } from "@workspace/api/auth-client"
 import { Avatar } from "@workspace/ui/components/avatar"
 import { Button } from "@workspace/ui/components/button"
 
 import { AccountNavigation } from "@/components/account/account-navigation"
 import { useTravelerAuth } from "@/hooks/use-traveler-auth"
 import { ticketingStorage } from "@/lib/ticketing"
+import { seDeconnecter } from "@/lib/offline/deconnexion"
 
 /**
  * Compte, en mobile — un sommaire.
@@ -30,7 +30,7 @@ export function AccountMobile({ children }: { children?: React.ReactNode }) {
     "Mon compte"
 
   async function logout() {
-    await authClient.signOut()
+    await seDeconnecter()
     ticketingStorage.clearBooking()
     router.replace("/")
     router.refresh()

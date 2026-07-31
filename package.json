@@ -16,6 +16,7 @@
     "test": "turbo test:once",
     "dev:billetterie": "turbo dev --filter=billetterie-web",
     "dev:agent": "turbo dev --filter=agent-web",
+    "dev:controleur": "turbo dev --filter=controleur-web",
     "dev:mobile": "bun run --filter=voyageur-mobile start",
     "dev:convex": "bun run --filter=@workspace/backend dev",
     "deploy:convex": "bun run --filter=@workspace/backend deploy",

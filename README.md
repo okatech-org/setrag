@@ -7,8 +7,9 @@ Société d'Exploitation du Transgabonais (ligne Owendo–Franceville).
 
 | Chemin                 | Nom               | Rôle                                                             | Port |
 | ---------------------- | ----------------- | ---------------------------------------------------------------- | ---- |
-| `apps/billetterie-web` | `billetterie-web` | Billetterie voyageur : recherche, réservation, paiement, billets | 3000 |
+| `apps/billetterie-web` | `billetterie-web` | Billetterie voyageur : recherche, réservation, paiement, billets — installable, billets consultables hors réseau | 3000 |
 | `apps/agent-web`       | `agent-web`       | Portail agent / back-office : guichet, contrôle, exploitation    | 3001 |
+| `apps/controleur-web`  | `controleur-web`  | Contrôle à bord — application web installable, hors ligne        | 3002 |
 | `apps/voyageur-mobile` | `voyageur-mobile` | Application mobile voyageur (iOS / Android)                      | Expo |
 
 ## Paquets partagés
@@ -41,6 +42,52 @@ ce paquet. Aucune application ne référence `convex/` par chemin relatif.
 - **Backend** — Convex 1.42 (base temps réel, fonctions, crons, composants)
 - **Authentification** — Better Auth 1.6 via `@convex-dev/better-auth` (OTP e-mail et SMS)
 - **Qualité** — TypeScript 5.9 strict, ESLint 9, Prettier, Vitest + `convex-test`
+
+## Contrôle à bord
+
+`apps/controleur-web` est une application web installable (PWA) conçue pour le
+terminal d'un contrôleur : elle s'ouvre au pouce, d'une main, dans un train en
+marche. Le hors-ligne y est le régime NOMINAL, pas un mode dégradé — entre
+Booué et Lopé, il n'y a pas de réseau.
+
+Ce qui fonctionne sans réseau, une fois le manifeste embarqué en gare :
+
+- **vérification d'un titre** — signature Ed25519 contrôlée localement avec la
+  clé publique descendue dans le manifeste, puis portée (desserte, segment,
+  expiration) et statut connu du manifeste ;
+- **anti-repassage** — un titre présenté deux fois au même terminal est
+  signalé immédiatement, avec l'heure du premier contrôle ;
+- **recherche manuelle** — par référence, nom ou place, dans le seul manifeste ;
+- **vente à bord** — prix calculé sur le barème kilométrique embarqué, donc
+  identique à celui du guichet, monnaie rendue comprise ;
+- **procès-verbaux** — barème des amendes embarqué, non modifiable par l'agent ;
+- **signalements d'incident**, photos comprises.
+
+Tout ce qui est écrit l'est dans IndexedDB, avec son entrée en file d'envoi
+dans la MÊME transaction, et porte un identifiant client : à la reconnexion,
+le lot est rejoué en entier et le serveur reconnaît ce qu'il a déjà. Un
+incident critique part avant tout le reste ; un échec n'efface rien.
+
+Voir [docs/controleur-web.md](docs/controleur-web.md).
+
+## Billets du voyageur, sans réseau
+
+`apps/billetterie-web` s'installe elle aussi sur l'écran d'accueil. Le régime y
+est inverse de celui du contrôle : le voyageur ne fait que LIRE hors réseau,
+puisque réserver ou payer engage un inventaire de places que seul le serveur
+arbitre. Il n'y a donc ni file d'envoi ni conflit à résoudre.
+
+Une fois l'application ouverte une première fois avec du réseau, restent
+disponibles sur le quai ou dans le train :
+
+- **ses billets**, avec le code que le contrôleur vérifie hors ligne ;
+- **le parcours de son train** — arrêts, heures et retard au dernier relevé.
+
+Tout ce qui vient de la copie locale porte sa date, en clair. Les billets sont
+nominatifs : ils sont effacés à la déconnexion, et dès qu'un autre voyageur se
+connecte sur le même téléphone.
+
+Voir [docs/billetterie-pwa.md](docs/billetterie-pwa.md).
 
 ## Assistants IA voyageurs
 

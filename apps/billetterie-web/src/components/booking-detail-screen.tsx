@@ -32,6 +32,8 @@ import {
 
 import { BookingDetailMobile } from "@/components/booking/booking-detail-mobile"
 import { TicketWalletButtons } from "@/components/booking/ticket-wallet-buttons"
+import { BandeauHorsLigne } from "@/components/offline/bandeau-hors-ligne"
+import { useDonneesLocales } from "@/components/offline/donnees-locales"
 import { ticketingStorage } from "@/lib/ticketing"
 import { useTravelerAuth } from "@/hooks/use-traveler-auth"
 import type { WalletProvider } from "@/lib/wallet-platform"
@@ -109,7 +111,7 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
   const [phone, setPhone] = useState(storedPhone)
   const [accessPhone, setAccessPhone] = useState(storedPhone)
   const canLoad = (isAuthenticated && isProfileReady) || Boolean(accessPhone)
-  const detail = useQuery(
+  const detailServeur = useQuery(
     api.functions.bookings.getByReference,
     canLoad
       ? {
@@ -118,6 +120,15 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
         }
       : "skip"
   )
+  const { dossiers, enLigne, recuLe } = useDonneesLocales()
+  const local = dossiers.find((dossier) => dossier.sale.number === reference)
+  /**
+   * Le serveur fait autorité dès qu'il répond, y compris pour dire que le
+   * dossier n'existe plus : seul son silence — `undefined` — laisse la place à
+   * la copie enregistrée sur l'appareil.
+   */
+  const detail = detailServeur === undefined ? local : detailServeur
+  const depuisLeCache = detailServeur === undefined && local !== undefined
   const ticketPdf = useAction(api.functions.documents.ticketPdf)
   const bookingPdf = useAction(api.functions.documents.bookingPdf)
   const createWalletPass = useAction(api.functions.wallet.createPass)
@@ -131,9 +142,12 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
   }>()
   const [copied, setCopied] = useState(false)
 
-  if (authLoading || (isAuthenticated && !isProfileReady))
+  // Un billet déjà enregistré sur l'appareil s'affiche sans attendre la
+  // session : hors réseau, elle ne peut pas être revalidée, et il n'y a pas
+  // de raison de retenir un billet payé derrière un écran de connexion.
+  if (!local && (authLoading || (isAuthenticated && !isProfileReady)))
     return <SkeletonLines lines={5} />
-  if (!canLoad) {
+  if (!canLoad && !local) {
     return (
       <Card className="mx-auto max-w-lg">
         <CardHeader>
@@ -186,7 +200,26 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
   const isPaid = detail.sale.status === "confirmee"
   const currentTrip = detail.trip
 
+  /**
+   * Refuse ce qui ne peut pas aboutir sans réseau.
+   *
+   * Le PDF, la carte de portefeuille et l'envoi par courriel sont produits par
+   * le serveur. Hors réseau, l'action échouerait sur un délai d'attente et une
+   * erreur technique ; mieux vaut le dire tout de suite, et rappeler que le
+   * billet affiché à l'écran suffit au contrôle.
+   */
+  function exigeReseau(): boolean {
+    if (enLigne) return true
+    setMessage({
+      tone: "info",
+      title: "Cette action demande une connexion.",
+      body: "Le code affiché sur cet écran suffit au contrôle à bord.",
+    })
+    return false
+  }
+
   async function downloadTicket(ticketId: string, number: string) {
+    if (!exigeReseau()) return
     setBusy(ticketId)
     setMessage(undefined)
     try {
@@ -207,6 +240,7 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
   }
 
   async function downloadAll() {
+    if (!exigeReseau()) return
     setBusy("all")
     setMessage(undefined)
     try {
@@ -231,6 +265,7 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
     ticketId: string,
     number: string
   ) {
+    if (!exigeReseau()) return
     setBusy(`wallet-${ticketId}-${provider}`)
     setMessage(undefined)
     try {
@@ -268,6 +303,7 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
   }
 
   async function sendEmail() {
+    if (!exigeReseau()) return
     setBusy("email")
     setMessage(undefined)
     try {
@@ -335,6 +371,14 @@ export function BookingDetailScreen({ reference }: { reference: string }) {
         <InlineMessage tone={message.tone} title={message.title}>
           {message.body}
         </InlineMessage>
+      )}
+
+      {depuisLeCache && (
+        <BandeauHorsLigne
+          recuLe={recuLe}
+          enLigne={enLigne}
+          objet="Les informations de ce dossier"
+        />
       )}
 
       <BookingDetailMobile

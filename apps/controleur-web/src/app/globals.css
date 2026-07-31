@@ -1,0 +1,70 @@
+@import "@workspace/ui/globals.css";
+
+html {
+  background: var(--c-canvas);
+  /* Le terminal se tient à une main, en mouvement : rien ne doit se
+     sélectionner ni rebondir sous le doigt pendant un contrôle. */
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+}
+
+/* Les zones de saisie restent sélectionnables ; le reste de l'interface est
+   une surface d'action, pas un document à copier. */
+button,
+[role="button"],
+nav {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Un `fieldset` porte `min-inline-size: min-content` dans la feuille de style
+   du navigateur : il refuse donc de rétrécir sous la largeur de son contenu,
+   et un groupe de trois boutons déborde de l'écran au lieu de se resserrer.
+   On lui rend le comportement d'un bloc ordinaire. */
+fieldset {
+  min-inline-size: 0;
+}
+
+/* Réserve la hauteur de la barre système sur les terminaux à encoche. */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Balayage du viseur : le seul repère visuel indiquant que la caméra lit. */
+@keyframes cm-sweep {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(220px);
+    opacity: 0;
+  }
+}
+
+.cm-sweep {
+  animation: cm-sweep 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-sweep {
+    animation: none;
+    opacity: 0.6;
+  }
+}
