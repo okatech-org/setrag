@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { act, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { BandeauHorsLigne } from "./bandeau-hors-ligne"
@@ -30,7 +30,9 @@ describe("bandeau de données locales", () => {
     vi.useFakeTimers()
     render(<BandeauHorsLigne recuLe={RECU_LE} enLigne />)
 
-    await vi.advanceTimersByTimeAsync(3_000)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
 
     expect(
       screen.getByText("Affichage depuis cet appareil, le serveur n’a pas encore répondu.")
