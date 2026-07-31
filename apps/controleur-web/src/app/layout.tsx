@@ -16,7 +16,16 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "Contrôle SETRAG",
-    statusBarStyle: "black-translucent",
+    /**
+     * `default`, et surtout PAS `black-translucent`.
+     *
+     * Ce dernier fait passer le contenu SOUS la barre d'état : l'heure et la
+     * batterie se superposent alors au titre de l'écran, et il revient à
+     * l'application de compenser au pixel près. Un terminal de contrôle n'a
+     * rien à gagner à cette immersion — iOS réserve la barre, le contenu
+     * commence dessous, et l'écran reste lisible sur tous les modèles.
+     */
+    statusBarStyle: "default",
   },
   robots: { index: false, follow: false },
 }
