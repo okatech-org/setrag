@@ -31,13 +31,16 @@ fieldset {
   min-inline-size: 0;
 }
 
-/* Réserve la hauteur de la barre système sur les terminaux à encoche. */
+/* Réserve la hauteur de la barre système sur les terminaux à encoche.
+   Le `max()` garde une respiration là où l'encoche n'existe pas — navigateur
+   de bureau, téléphone sans découpe — sinon le titre vient buter contre le
+   bord haut de l'écran. */
 .safe-top {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: max(env(safe-area-inset-top, 0px), 0.75rem);
 }
 
 .safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
 }
 
 /* Balayage du viseur : le seul repère visuel indiquant que la caméra lit. */
