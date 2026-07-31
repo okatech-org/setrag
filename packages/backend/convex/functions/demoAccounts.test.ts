@@ -52,4 +52,19 @@ describe("Comptes de démonstration", () => {
       },
     ])
   })
+
+  it("ne rend que les comptes demandés par l'application appelante", async () => {
+    vi.stubEnv("DEMO_ACCOUNTS_ENABLED", "true")
+    vi.stubEnv("DEMO_AGENT_EMAIL", "agent@setrag.ga")
+    vi.stubEnv("DEMO_AGENT_PASSWORD", "agent-secret")
+    vi.stubEnv("DEMO_CONTROL_EMAIL", "controle@setrag.ga")
+    vi.stubEnv("DEMO_CONTROL_PASSWORD", "controle-secret")
+    const t = convexTest(schema, modules)
+
+    // Le terminal du contrôleur ne doit recevoir aucun identifiant de guichet.
+    const rendus = await t.query(api.functions.demoAccounts.list, {
+      only: ["controle"],
+    })
+    expect(rendus.map((c) => c.key)).toEqual(["controle"])
+  })
 })

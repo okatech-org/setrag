@@ -71,7 +71,11 @@ export function LoginScreen() {
 
   const devStatus = useQuery(api.functions.devAuth.status, {})
   const consumeCode = useMutation(api.functions.devAuth.consumeCode)
-  const demoAccounts = useQuery(api.functions.demoAccounts.list, {})
+  // Ce terminal est celui d'un contrôleur : un compte guichet ou gestion n'y
+  // ouvrirait rien, et ses identifiants n'ont aucune raison de transiter ici.
+  const demoAccounts = useQuery(api.functions.demoAccounts.list, {
+    only: ["controle"],
+  })
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && step === "identite") {
@@ -221,7 +225,11 @@ export function LoginScreen() {
   }
 
   return (
-    <main className="safe-top safe-bottom mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 bg-canvas px-5 py-8">
+    /* `justify-center` sur `min-h-dvh` : la connexion tient dans un écran, elle
+       se pose donc au milieu plutôt que de flotter en haut d'une page vide.
+       Le conteneur grandit si le contenu dépasse — rien ne devient
+       inaccessible au défilement. */
+    <main className="safe-top safe-bottom mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-6 bg-canvas px-5 py-8">
       <header className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <span
@@ -394,7 +402,9 @@ export function LoginScreen() {
         </form>
       )}
 
-      <p className="mt-auto text-[13px] text-ink-muted">
+      {/* Pas de `mt-auto` ici : il absorberait tout l'espace libre et
+          repousserait le formulaire en haut, annulant le centrage. */}
+      <p className="text-[13px] text-ink-muted">
         La session s&apos;ouvre en gare. Une fois ouverte, le contrôle, la vente
         à bord et les procès-verbaux fonctionnent sans réseau.
       </p>
