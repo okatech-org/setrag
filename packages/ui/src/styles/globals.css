@@ -282,6 +282,9 @@
   .pt-safe {
     padding-top: env(safe-area-inset-top, 0px);
   }
+  .pt-safe-s-4 {
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--s-4));
+  }
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }

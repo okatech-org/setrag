@@ -36,7 +36,7 @@ export function DesktopHeader({
     <header
       data-slot="desktop-header"
       className={cn(
-        "sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur",
+        "pt-safe sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur",
         mobileVisible ? "block" : "hidden md:block"
       )}
     >

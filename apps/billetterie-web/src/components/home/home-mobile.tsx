@@ -88,7 +88,15 @@ export function HomeMobile({ className }: { className?: string }) {
       data-experience="mobile-app"
       className={cn("grid gap-s-5 pb-s-6 *:min-w-0 md:hidden", className)}
     >
-      <header className="grid gap-s-4 bg-ink px-s-5 pt-s-4 pb-s-8 text-ink-inverse">
+      <header
+        className={cn(
+          "grid gap-s-4 bg-ink px-s-5 pb-s-8 text-ink-inverse",
+          // Connecté, aucun chrome ne précède le hero sur l'accueil : son fond
+          // doit donc remonter sous la barre iOS, tandis que son contenu reste
+          // sous l'encoche. Déconnecté, le header public porte déjà cet inset.
+          isAuthenticated ? "pt-safe-s-4" : "pt-s-4"
+        )}
+      >
         <div className="flex items-center gap-s-3">
           <span className="grid min-w-0 flex-1 gap-0.5">
             <span className="text-caption min-h-4 text-accent-on-ink">

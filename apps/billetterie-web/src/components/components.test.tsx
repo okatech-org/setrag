@@ -99,6 +99,9 @@ describe("composants de structure", () => {
     expect(
       document.querySelector('[data-slot="desktop-footer-container"]')
     ).toHaveClass("mt-auto")
+    expect(document.querySelector('[data-slot="desktop-header"]')).toHaveClass(
+      "pt-safe"
+    )
     expect(screen.getByText("Contenu")).toBeInTheDocument()
   })
 
@@ -205,6 +208,10 @@ describe("composants de structure", () => {
     const mobile = container.querySelector(
       '[data-experience="mobile-app"]'
     ) as HTMLElement
+    expect(mobile.querySelector(":scope > header")).toHaveClass("pt-s-4")
+    expect(mobile.querySelector(":scope > header")).not.toHaveClass(
+      "pt-safe-s-4"
+    )
     expect(
       within(mobile).getByRole("button", { name: "1 voyageur" })
     ).toHaveAttribute("data-slot", "chip")
@@ -229,6 +236,9 @@ describe("composants de structure", () => {
     expect(
       container.querySelector('[data-experience="public-web"]')
     ).not.toHaveClass("block")
+    expect(
+      container.querySelector('[data-experience="mobile-app"] > header')
+    ).toHaveClass("pt-safe-s-4")
   })
 
   it("PageIntro restitue le titre et la description", () => {
