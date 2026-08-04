@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { api, internal } from "../_generated/api"
 import schema from "../schema"
 import { modules } from "../test.setup"
+import { isExplicitBookingAuthorization } from "./realtime"
 import { canonicalToolInput } from "./tools"
 
 const GUEST_KEY = "guest-session-key-0123456789-abcdef"
@@ -24,6 +25,16 @@ afterEach(() => {
 })
 
 describe("sessions vocales OpenAI Realtime", () => {
+  it("reconnaît un accord explicite sans accepter un refus", () => {
+    expect(isExplicitBookingAuthorization("Oui, je confirme.")).toBe(true)
+    expect(isExplicitBookingAuthorization("Vas-y, réserve.")).toBe(true)
+    expect(
+      isExplicitBookingAuthorization("Fais-moi la réservation maintenant.")
+    ).toBe(true)
+    expect(isExplicitBookingAuthorization("Non, ne réserve pas.")).toBe(false)
+    expect(isExplicitBookingAuthorization("Je vais réfléchir.")).toBe(false)
+  })
+
   it("signale explicitement une fonctionnalité désactivée sans appeler OpenAI", async () => {
     vi.stubEnv("AI_REALTIME_ENABLED", "false")
     const fetchMock = vi.fn()
@@ -112,7 +123,9 @@ describe("sessions vocales OpenAI Realtime", () => {
       (tool) => tool.name === "create_booking"
     )
     expect(createBooking?.requiresApproval).toBe(false)
-    expect(createBooking?.parameters.required).toContain("voiceAuthorization")
+    expect(createBooking?.parameters.required).not.toContain(
+      "voiceAuthorization"
+    )
     expect(result.tools.some((tool) => tool.name === "list_my_tickets")).toBe(
       false
     )
@@ -338,46 +351,85 @@ describe("sessions vocales OpenAI Realtime", () => {
     })
   })
 
-  it("exige une autorisation vocale puis consomme l'approbation en un seul appel", async () => {
+  it("consomme l'autorisation vocale sans exiger un champ fabriqué par le modèle", async () => {
     const t = convexTest(schema, modules)
     rateLimiterTest.register(t)
     const conversation = await t.mutation(api.ai.conversations.create, {
       guestKey: GUEST_KEY,
       assistantId: "booking",
     })
-
-    const missingAuthorization = await t.action(
-      api.ai.realtime.executeVoiceTool,
+    const voiceSessionId = await t.mutation(
+      internal.ai.realtime.recordVoiceSession,
       {
         conversationId: conversation.conversationId,
-        guestKey: GUEST_KEY,
-        callId: "voice-booking-without-authorization",
-        name: "create_booking",
-        input: {
-          tripId: "trip-1",
-          originStationId: "station-1",
-          destinationStationId: "station-2",
-          serviceClass: "DEUXIEME",
-          passengers: [],
-          contactPhone: "077000000",
-        },
+        model: "gpt-realtime-test",
       }
     )
-    expect(missingAuthorization).toEqual({
-      status: "error",
-      message:
-        "La réservation attend encore l'autorisation vocale explicite du voyageur.",
+    await t.action(api.ai.realtime.updateVoiceSession, {
+      conversationId: conversation.conversationId,
+      guestKey: GUEST_KEY,
+      voiceSessionId,
+      status: "connected",
     })
-    expect(
-      await t.query(internal.ai.tools.getExecution, {
+
+    const unauthorized = await t.action(api.ai.realtime.executeVoiceTool, {
+      conversationId: conversation.conversationId,
+      guestKey: GUEST_KEY,
+      voiceSessionId,
+      callId: "voice-booking-unauthorized",
+      name: "create_booking",
+      input: {
+        tripId: "trip-1",
+        originStationId: "station-1",
+        destinationStationId: "station-2",
+        serviceClass: "DEUXIEME",
+        passengers: [],
+        contactPhone: "077000000",
+      },
+    })
+    expect(unauthorized).toEqual({
+      status: "error",
+      message: "Dites clairement oui avant de lancer la réservation.",
+    })
+
+    await expect(
+      t.action(api.ai.realtime.authorizeVoiceBooking, {
         conversationId: conversation.conversationId,
-        callId: "voice-booking-without-authorization",
+        guestKey: GUEST_KEY,
+        voiceSessionId,
+        transcript: "Oui, je confirme la réservation.",
       })
-    ).toBeNull()
+    ).resolves.toEqual({ authorized: false })
+    const quoteExecution = await t.mutation(
+      internal.ai.tools.prepareExecution,
+      {
+        conversationId: conversation.conversationId,
+        callId: "voice-quote-before-booking",
+        toolName: "quote_booking",
+        inputJson: "{}",
+        requiresApproval: false,
+        approved: false,
+      }
+    )
+    await t.mutation(internal.ai.tools.completeExecution, {
+      executionId: quoteExecution.execution._id,
+      succeeded: true,
+      outputJson: '{"totalTtc":35000}',
+    })
+
+    await expect(
+      t.action(api.ai.realtime.authorizeVoiceBooking, {
+        conversationId: conversation.conversationId,
+        guestKey: GUEST_KEY,
+        voiceSessionId,
+        transcript: "Oui, je confirme la réservation.",
+      })
+    ).resolves.toEqual({ authorized: true })
 
     const confirmed = await t.action(api.ai.realtime.executeVoiceTool, {
       conversationId: conversation.conversationId,
       guestKey: GUEST_KEY,
+      voiceSessionId,
       callId: "voice-booking-confirmed",
       name: "create_booking",
       input: {
@@ -387,7 +439,6 @@ describe("sessions vocales OpenAI Realtime", () => {
         serviceClass: "DEUXIEME",
         passengers: [],
         contactPhone: "077000000",
-        voiceAuthorization: "confirmed",
       },
     })
     expect(confirmed).toMatchObject({
@@ -402,6 +453,11 @@ describe("sessions vocales OpenAI Realtime", () => {
       status: "failed",
       approvedAt: expect.any(Number),
     })
+    expect(JSON.parse(execution!.inputJson)).toMatchObject({
+      voiceAuthorization: "confirmed",
+    })
+    const session = await t.run((ctx) => ctx.db.get(voiceSessionId))
+    expect(session?.bookingAuthorizationConsumedAt).toEqual(expect.any(Number))
   })
 
   it("ne rejoue pas une réservation vocale identique déjà réussie", async () => {
@@ -425,13 +481,15 @@ describe("sessions vocales OpenAI Realtime", () => {
         },
       ],
       contactPhone: "077000000",
-      voiceAuthorization: "confirmed",
     }
     const prepared = await t.mutation(internal.ai.tools.prepareExecution, {
       conversationId: conversation.conversationId,
       callId: "voice-booking-original",
       toolName: "create_booking",
-      inputJson: canonicalToolInput(input),
+      inputJson: canonicalToolInput({
+        ...input,
+        voiceAuthorization: "confirmed",
+      }),
       requiresApproval: false,
       approved: false,
     })

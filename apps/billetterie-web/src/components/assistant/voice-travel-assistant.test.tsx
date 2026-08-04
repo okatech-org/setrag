@@ -15,6 +15,7 @@ import {
 import { ticketingStorage } from "@/lib/ticketing"
 
 const {
+  authorizeVoiceBooking,
   createConversation,
   executeVoiceTool,
   mintVoiceToken,
@@ -22,6 +23,7 @@ const {
   push,
   updateVoiceSession,
 } = vi.hoisted(() => ({
+  authorizeVoiceBooking: vi.fn(),
   createConversation: vi.fn(),
   executeVoiceTool: vi.fn(),
   mintVoiceToken: vi.fn(),
@@ -58,6 +60,8 @@ vi.mock("@workspace/api/hooks", () => ({
   useAction: (reference: Record<PropertyKey, unknown>) => {
     const name = reference[Symbol.for("functionName")]
     if (name === "ai/realtime:mintVoiceToken") return mintVoiceToken
+    if (name === "ai/realtime:authorizeVoiceBooking")
+      return authorizeVoiceBooking
     if (name === "ai/realtime:executeVoiceTool") return executeVoiceTool
     if (name === "ai/realtime:updateVoiceSession") return updateVoiceSession
     throw new Error(`Action inattendue : ${String(name)}`)
@@ -144,6 +148,7 @@ describe("VoiceTravelAssistant", () => {
       tools: [],
     })
     executeVoiceTool.mockReset()
+    authorizeVoiceBooking.mockReset().mockResolvedValue({ authorized: true })
     updateVoiceSession.mockReset().mockResolvedValue({ updated: true })
 
     peer = new FakePeerConnection()
@@ -277,6 +282,7 @@ describe("VoiceTravelAssistant", () => {
       expect(executeVoiceTool).toHaveBeenCalledWith({
         conversationId: "conversation-1",
         guestKey: expect.any(String),
+        voiceSessionId: "voice-session-1",
         callId: "call-search",
         name: "search_trips",
         input: {
@@ -420,7 +426,7 @@ describe("VoiceTravelAssistant", () => {
   })
 
   it("redirige vers le paiement dès que la réservation est créée", async () => {
-    executeVoiceTool.mockResolvedValue({
+    const bookingResult = {
       status: "ok",
       executionId: "execution-booking",
       cached: false,
@@ -442,7 +448,20 @@ describe("VoiceTravelAssistant", () => {
           available: 18,
         },
       },
-    })
+    } as const
+    executeVoiceTool.mockImplementation(({ name }: { name: string }) =>
+      Promise.resolve(
+        name === "quote_booking"
+          ? {
+              status: "ok",
+              executionId: "execution-quote",
+              cached: false,
+              clientAction: "show_quote",
+              output: { totalTtc: 35_000 },
+            }
+          : bookingResult
+      )
+    )
     render(
       <>
         <VoiceTravelAssistantHost />
@@ -460,6 +479,48 @@ describe("VoiceTravelAssistant", () => {
       .spyOn(window, "setTimeout")
       .mockImplementation(() => ({}) as ReturnType<typeof setTimeout>)
     try {
+      await act(async () => {
+        peer.channel.emit(
+          "message",
+          new MessageEvent("message", {
+            data: JSON.stringify({
+              type: "response.done",
+              response: {
+                id: "response-quote",
+                output: [
+                  {
+                    type: "function_call",
+                    call_id: "call-quote-before-booking",
+                    name: "quote_booking",
+                    arguments: JSON.stringify({
+                      tripId: "trip-1",
+                      originStationId: "owe",
+                      destinationStationId: "boo",
+                      serviceClass: "DEUXIEME",
+                      passengerCount: 1,
+                      discountCodes: null,
+                    }),
+                  },
+                ],
+              },
+            }),
+          })
+        )
+        await Promise.resolve()
+      })
+      await act(async () => {
+        peer.channel.emit(
+          "message",
+          new MessageEvent("message", {
+            data: JSON.stringify({
+              type: "conversation.item.input_audio_transcription.completed",
+              item_id: "authorization-1",
+              transcript: "Oui, je confirme la réservation.",
+            }),
+          })
+        )
+        await Promise.resolve()
+      })
       await act(async () => {
         peer.channel.emit(
           "message",
@@ -487,7 +548,6 @@ describe("VoiceTravelAssistant", () => {
                         },
                       ],
                       contactPhone: "+24106000000",
-                      voiceAuthorization: "confirmed",
                     }),
                   },
                 ],
@@ -499,6 +559,12 @@ describe("VoiceTravelAssistant", () => {
       })
 
       expect(push).toHaveBeenCalledWith("/paiement")
+      expect(authorizeVoiceBooking).toHaveBeenCalledWith({
+        conversationId: "conversation-1",
+        guestKey: expect.any(String),
+        voiceSessionId: "voice-session-1",
+        transcript: "Oui, je confirme la réservation.",
+      })
       expect(ticketingStorage.getTrip()).toMatchObject({
         tripId: "trip-1",
         originName: "Owendo",

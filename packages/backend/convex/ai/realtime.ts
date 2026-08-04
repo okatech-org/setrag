@@ -28,6 +28,34 @@ const SUPPORTED_VOICES = [
   "cedar",
 ] as const
 
+const BOOKING_AUTHORIZATION_TTL_MS = 60_000
+
+export function isExplicitBookingAuthorization(transcript: string): boolean {
+  const normalized = transcript
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr")
+    .replace(/[’']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!normalized) return false
+  if (
+    /\b(non|annule|annuler|stop|arrete|refuse)\b/.test(normalized) ||
+    /\bne\b.{0,40}\bpas\b/.test(normalized)
+  ) {
+    return false
+  }
+  return (
+    /\boui\b/.test(normalized) ||
+    /\bje confirme\b/.test(normalized) ||
+    /\bvas y\b/.test(normalized) ||
+    /\b(fais|faites|lance|cree|valide)\b.{0,30}\breservation\b/.test(
+      normalized
+    ) ||
+    /\breserv(e|ez)\b/.test(normalized)
+  )
+}
+
 type VoiceName = (typeof SUPPORTED_VOICES)[number]
 
 type VoiceGrant =
@@ -93,21 +121,9 @@ function voiceTool(tool: AssistantToolDefinition): AssistantToolDefinition {
     ...tool,
     description:
       "Crée immédiatement la réservation après une autorisation vocale explicite. N'appelle cet outil qu'une seule fois, dans le même tour que le oui ou l'ordre clair de réserver.",
-    parameters: {
-      ...tool.parameters,
-      properties: {
-        ...tool.parameters.properties,
-        voiceAuthorization: {
-          type: "string",
-          enum: ["confirmed"],
-          description:
-            "Utiliser confirmed uniquement après que le voyageur a clairement dit oui, confirmé, vas-y, réserve ou une formulation équivalente.",
-        },
-      },
-      required: [...tool.parameters.required, "voiceAuthorization"],
-    },
-    // L'approbation est portée par voiceAuthorization. La définition métier
-    // reste engageante et conserve son journal d'approbation côté backend.
+    // Dans le canal vocal, l'appel de l'outil après l'accord du voyageur est
+    // la preuve d'intention. Le marqueur d'audit est ajouté côté serveur : le
+    // modèle ne doit pas fabriquer un champ technique fragile.
     requiresApproval: false,
   }
 }
@@ -154,6 +170,85 @@ export const setVoiceSessionStatus = internalMutation({
           ? Date.now()
           : undefined,
     })
+  },
+})
+
+export const recordBookingAuthorization = internalMutation({
+  args: {
+    conversationId: v.id("assistantConversations"),
+    voiceSessionId: v.id("assistantVoiceSessions"),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.voiceSessionId)
+    if (
+      !session ||
+      session.conversationId !== args.conversationId ||
+      session.status !== "connected"
+    ) {
+      throw new Error("Session vocale active introuvable.")
+    }
+    const authorizedAt = Date.now()
+    await ctx.db.patch(session._id, {
+      bookingAuthorizedAt: authorizedAt,
+      bookingAuthorizationConsumedAt: undefined,
+    })
+    return authorizedAt
+  },
+})
+
+export const consumeBookingAuthorization = internalMutation({
+  args: {
+    conversationId: v.id("assistantConversations"),
+    voiceSessionId: v.id("assistantVoiceSessions"),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.voiceSessionId)
+    const authorizedAt = session?.bookingAuthorizedAt
+    if (
+      !session ||
+      session.conversationId !== args.conversationId ||
+      session.status !== "connected" ||
+      !authorizedAt ||
+      Date.now() - authorizedAt > BOOKING_AUTHORIZATION_TTL_MS ||
+      (session.bookingAuthorizationConsumedAt ?? 0) >= authorizedAt
+    ) {
+      return false
+    }
+    await ctx.db.patch(session._id, {
+      bookingAuthorizationConsumedAt: Date.now(),
+    })
+    return true
+  },
+})
+
+export const authorizeVoiceBooking = action({
+  args: {
+    conversationId: v.id("assistantConversations"),
+    guestKey: v.optional(v.string()),
+    voiceSessionId: v.id("assistantVoiceSessions"),
+    transcript: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.runQuery(internal.ai.conversations.accessContext, {
+      conversationId: args.conversationId,
+      guestKey: args.guestKey,
+    })
+    if (!isExplicitBookingAuthorization(args.transcript)) {
+      return { authorized: false }
+    }
+    const hasQuote = await ctx.runQuery(
+      internal.ai.tools.hasSucceededToolExecution,
+      {
+        conversationId: args.conversationId,
+        toolName: "quote_booking",
+      }
+    )
+    if (!hasQuote) return { authorized: false }
+    await ctx.runMutation(internal.ai.realtime.recordBookingAuthorization, {
+      conversationId: args.conversationId,
+      voiceSessionId: args.voiceSessionId,
+    })
+    return { authorized: true }
   },
 })
 
@@ -212,7 +307,7 @@ Conduis le voyageur jusqu'à une réservation prête à payer, avec le moins de 
 3. Une fois le train, la classe, les voyageurs et le téléphone connus, calcule le devis.
 4. Résume en une phrase le trajet et le montant, puis demande exactement une fois : « Je réserve ? »
 5. Un « oui », « je confirme », « vas-y », « réserve », « fais la réservation » ou équivalent autorise la réservation. Si l'utilisateur avait déjà donné cet ordre après le récapitulatif, considère l'autorisation comme acquise.
-6. Dès cette autorisation, appelle create_booking dans le même tour avec voiceAuthorization="confirmed". Ne demande jamais une deuxième confirmation et ne parle jamais de confirmation dans l'interface.
+6. Dès cette autorisation, appelle create_booking dans le même tour. Ne demande jamais une deuxième confirmation et ne parle jamais de confirmation dans l'interface.
 7. Après le succès, annonce seulement que la réservation est créée et invite le voyageur à payer dans l'interface.
 
 # Limites
@@ -329,23 +424,19 @@ export const executeVoiceTool = action({
     callId: v.string(),
     name: v.string(),
     input: v.any(),
+    voiceSessionId: v.optional(v.id("assistantVoiceSessions")),
     approved: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<ToolExecutionResult> => {
-    const input =
+    const rawInput =
       args.input && typeof args.input === "object" && !Array.isArray(args.input)
         ? (args.input as Record<string, unknown>)
         : {}
-    if (
-      args.name === "create_booking" &&
-      input.voiceAuthorization !== "confirmed"
-    ) {
-      return {
-        status: "error",
-        message:
-          "La réservation attend encore l'autorisation vocale explicite du voyageur.",
-      }
-    }
+    const input =
+      args.name === "create_booking"
+        ? { ...rawInput, voiceAuthorization: "confirmed" }
+        : rawInput
+    const executionArgs = { ...args, input }
 
     if (args.name === "create_booking") {
       await ctx.runQuery(internal.ai.conversations.accessContext, {
@@ -357,7 +448,7 @@ export const executeVoiceTool = action({
         {
           conversationId: args.conversationId,
           toolName: args.name,
-          inputJson: canonicalToolInput(args.input),
+          inputJson: canonicalToolInput(input),
         }
       )
       if (previous) {
@@ -369,9 +460,28 @@ export const executeVoiceTool = action({
           cached: true,
         }
       }
+      if (!args.voiceSessionId) {
+        return {
+          status: "error",
+          message: "Dites clairement oui avant de lancer la réservation.",
+        }
+      }
+      const authorized = await ctx.runMutation(
+        internal.ai.realtime.consumeBookingAuthorization,
+        {
+          conversationId: args.conversationId,
+          voiceSessionId: args.voiceSessionId,
+        }
+      )
+      if (!authorized) {
+        return {
+          status: "error",
+          message: "Dites clairement oui avant de lancer la réservation.",
+        }
+      }
     }
 
-    const initial = await executeAssistantTool(ctx, args)
+    const initial = await executeAssistantTool(ctx, executionArgs)
     if (
       args.name !== "create_booking" ||
       initial.status !== "approval_required"
@@ -385,7 +495,7 @@ export const executeVoiceTool = action({
       toolName: args.name,
     })
     return executeAssistantTool(ctx, {
-      ...args,
+      ...executionArgs,
       approved: true,
     })
   },

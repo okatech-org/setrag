@@ -24,6 +24,7 @@ import {
   completedAssistantTranscript,
   emptyVoiceJourneyMemory,
   getAssistantGuestKey,
+  isExplicitBookingAuthorization,
   parseRealtimeFunctionCalls,
   realtimeTranscriptEvent,
   rememberSuccessfulVoiceTool,
@@ -161,6 +162,7 @@ export function VoiceTravelAssistantHost() {
   const createConversation = useMutation(api.ai.conversations.create)
   const mintVoiceToken = useAction(api.ai.realtime.mintVoiceToken)
   const executeVoiceTool = useAction(api.ai.realtime.executeVoiceTool)
+  const authorizeVoiceBooking = useAction(api.ai.realtime.authorizeVoiceBooking)
   const updateVoiceSession = useAction(api.ai.realtime.updateVoiceSession)
   const { profile } = useTravelerAuth()
 
@@ -183,6 +185,8 @@ export function VoiceTravelAssistantHost() {
   const processedCallsRef = useRef(new Set<string>())
   const journeyRef = useRef<VoiceJourneyMemory>(emptyVoiceJourneyMemory())
   const closingRef = useRef(false)
+  const bookingAuthorizationRef = useRef<Promise<unknown> | null>(null)
+  const voiceSessionReadyRef = useRef<Promise<unknown> | null>(null)
 
   const appendMessage = useCallback((next: TranscriptMessage) => {
     setMessages((current) => {
@@ -320,9 +324,14 @@ export function VoiceTravelAssistantHost() {
         processedCallsRef.current.add(call.callId)
         let result: ToolResult
         try {
+          if (call.name === "create_booking") {
+            await bookingAuthorizationRef.current
+            bookingAuthorizationRef.current = null
+          }
           result = (await executeVoiceTool({
             conversationId: conversationIdRef.current as never,
             guestKey: guestKeyRef.current || undefined,
+            voiceSessionId: voiceSessionIdRef.current as never,
             callId: call.callId,
             name: call.name,
             input: call.input,
@@ -341,6 +350,11 @@ export function VoiceTravelAssistantHost() {
           setError(
             "Mbolo attend une autorisation vocale claire avant de réserver."
           )
+          setStatus("listening")
+        }
+
+        if (result.status === "error") {
+          setError(result.message)
           setStatus("listening")
         }
 
@@ -400,6 +414,23 @@ export function VoiceTravelAssistantHost() {
           role: transcript.role,
           text: transcript.text,
         })
+        if (
+          transcript.role === "user" &&
+          isExplicitBookingAuthorization(transcript.text) &&
+          Boolean(journeyRef.current.quoteOutput) &&
+          conversationIdRef.current &&
+          voiceSessionIdRef.current
+        ) {
+          bookingAuthorizationRef.current = (async () => {
+            await voiceSessionReadyRef.current
+            return authorizeVoiceBooking({
+              conversationId: conversationIdRef.current as never,
+              guestKey: guestKeyRef.current || undefined,
+              voiceSessionId: voiceSessionIdRef.current as never,
+              transcript: transcript.text,
+            })
+          })().catch(() => undefined)
+        }
       }
 
       if (type !== "response.done") return
@@ -418,7 +449,13 @@ export function VoiceTravelAssistantHost() {
         setStatus("listening")
       }
     },
-    [appendDelta, appendMessage, processFunctionCalls, status]
+    [
+      appendDelta,
+      appendMessage,
+      authorizeVoiceBooking,
+      processFunctionCalls,
+      status,
+    ]
   )
 
   const start = useCallback(async () => {
@@ -433,6 +470,8 @@ export function VoiceTravelAssistantHost() {
     closingRef.current = false
     processedCallsRef.current.clear()
     journeyRef.current = emptyVoiceJourneyMemory()
+    bookingAuthorizationRef.current = null
+    voiceSessionReadyRef.current = null
 
     try {
       if (
@@ -496,7 +535,7 @@ export function VoiceTravelAssistantHost() {
       })
       channel.addEventListener("open", () => {
         setStatus("speaking")
-        void updateVoiceSession({
+        voiceSessionReadyRef.current = updateVoiceSession({
           conversationId: conversation.conversationId,
           guestKey,
           voiceSessionId: grant.voiceSessionId,

@@ -85,6 +85,32 @@ function numberValue(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined
 }
 
+export function isExplicitBookingAuthorization(transcript: string): boolean {
+  const normalized = transcript
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr")
+    .replace(/[’']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!normalized) return false
+  if (
+    /\b(non|annule|annuler|stop|arrete|refuse)\b/.test(normalized) ||
+    /\bne\b.{0,40}\bpas\b/.test(normalized)
+  ) {
+    return false
+  }
+  return (
+    /\boui\b/.test(normalized) ||
+    /\bje confirme\b/.test(normalized) ||
+    /\bvas y\b/.test(normalized) ||
+    /\b(fais|faites|lance|cree|valide)\b.{0,30}\breservation\b/.test(
+      normalized
+    ) ||
+    /\breserv(e|ez)\b/.test(normalized)
+  )
+}
+
 export function parseRealtimeFunctionCalls(
   event: unknown
 ): RealtimeFunctionCall[] {

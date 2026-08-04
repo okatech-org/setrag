@@ -1401,6 +1401,8 @@ export default defineSchema({
     expiresAt: v.optional(v.number()),
     createdAt: v.number(),
     endedAt: v.optional(v.number()),
+    bookingAuthorizedAt: v.optional(v.number()),
+    bookingAuthorizationConsumedAt: v.optional(v.number()),
   })
     .index("by_conversation_and_created_at", ["conversationId", "createdAt"])
     .index("by_status_and_created_at", ["status", "createdAt"]),

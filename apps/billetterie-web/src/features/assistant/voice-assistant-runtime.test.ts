@@ -4,6 +4,7 @@ import {
   completedAssistantTranscript,
   emptyVoiceJourneyMemory,
   getAssistantGuestKey,
+  isExplicitBookingAuthorization,
   parseRealtimeFunctionCalls,
   realtimeTranscriptEvent,
   rememberSuccessfulVoiceTool,
@@ -27,6 +28,12 @@ describe("contrat du client vocal Realtime", () => {
     )
     expect(second).toBe(first)
     expect(window.location.href).not.toContain(first)
+  })
+
+  it("distingue un accord vocal d'un refus", () => {
+    expect(isExplicitBookingAuthorization("Oui, je confirme.")).toBe(true)
+    expect(isExplicitBookingAuthorization("Vas-y, réserve.")).toBe(true)
+    expect(isExplicitBookingAuthorization("Non, ne réserve pas.")).toBe(false)
   })
 
   it("extrait tous les appels de fonction d'une réponse terminée", () => {
