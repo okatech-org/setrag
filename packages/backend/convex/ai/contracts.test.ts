@@ -103,6 +103,22 @@ describe("contrats des assistants voyageurs", () => {
     expect(prompt).toContain("code OTP")
     expect(prompt).toContain("ne les prononce jamais")
     expect(prompt).toContain("attribuées automatiquement")
+    expect(prompt).toContain(
+      "Date de service aujourd'hui à Libreville : 2026-07-26"
+    )
+    expect(prompt).toContain("Demain : 2026-07-27")
+    expect(prompt).toContain("Dans 2 jours : 2026-07-28")
+    expect(prompt).toContain("relativeDaysFromToday égal au nombre exact")
+  })
+
+  it("délègue les dates relatives au calcul déterministe du backend", () => {
+    const search = ASSISTANT_TOOLS.find((tool) => tool.name === "search_trips")!
+    expect(search.parameters.required).toContain("relativeDaysFromToday")
+    expect(search.parameters.properties.relativeDaysFromToday).toMatchObject({
+      type: ["integer", "null"],
+      minimum: 0,
+      maximum: 365,
+    })
   })
 
   it("injecte le profil authentifié comme données déjà connues", () => {

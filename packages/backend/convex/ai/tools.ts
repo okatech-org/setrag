@@ -7,6 +7,7 @@ import {
   type ActionCtx,
 } from "../_generated/server"
 import type { Id } from "../_generated/dataModel"
+import { addDays, toServiceDate } from "../model/calendar"
 import { getAssistantTools } from "./contracts"
 import { assistantRateLimiter } from "./rateLimiter"
 
@@ -73,6 +74,26 @@ function requiredInteger(
   ) {
     throw new Error(
       `Le champ « ${key} » doit être compris entre ${min} et ${max}.`
+    )
+  }
+  return value as number
+}
+
+function optionalInteger(
+  input: Record<string, unknown>,
+  key: string,
+  min: number,
+  max: number
+): number | null {
+  const value = input[key]
+  if (value === null || value === undefined) return null
+  if (
+    !Number.isInteger(value) ||
+    (value as number) < min ||
+    (value as number) > max
+  ) {
+    throw new Error(
+      `Le champ « ${key} » doit être un entier entre ${min} et ${max}.`
     )
   }
   return value as number
@@ -295,6 +316,16 @@ export async function dispatchAssistantTool(
       )
     }
     case "search_trips": {
+      const relativeDaysFromToday = optionalInteger(
+        input,
+        "relativeDaysFromToday",
+        0,
+        365
+      )
+      const serviceDate =
+        relativeDaysFromToday === null
+          ? requiredString(input, "serviceDate")
+          : addDays(toServiceDate(Date.now()), relativeDaysFromToday)
       const results = await ctx.runQuery(api.functions.trips.search, {
         originStationId: requiredString(
           input,
@@ -304,7 +335,7 @@ export async function dispatchAssistantTool(
           input,
           "destinationStationId"
         ) as Id<"stations">,
-        serviceDate: requiredString(input, "serviceDate"),
+        serviceDate,
         passengers: requiredInteger(input, "passengers", 1, 20),
       })
       return results.map(

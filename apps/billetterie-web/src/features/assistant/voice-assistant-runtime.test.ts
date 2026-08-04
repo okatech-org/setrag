@@ -175,6 +175,37 @@ describe("contrat du client vocal Realtime", () => {
     })
   })
 
+  it("reprend la date relative calculée par le backend", () => {
+    const memory = emptyVoiceJourneyMemory()
+    const effect = rememberSuccessfulVoiceTool(
+      memory,
+      "search_trips",
+      {
+        originStationId: "owe",
+        destinationStationId: "boo",
+        serviceDate: null,
+        relativeDaysFromToday: 2,
+        passengers: 1,
+      },
+      [
+        {
+          tripId: "trip-relative",
+          trainNumber: "TR-202",
+          trainType: "EXPRESS",
+          serviceDate: "2026-08-07",
+          status: "a_lheure",
+          departureAt: 1_786_090_200_000,
+          arrivalAt: 1_786_102_200_000,
+          distanceKm: 335,
+          availableByClass: { DEUXIEME: 18 },
+          hasAvailability: true,
+        },
+      ]
+    )
+
+    expect(effect.search?.serviceDate).toBe("2026-08-07")
+  })
+
   it("prépare le paiement après une réservation vocale confirmée", () => {
     const memory = emptyVoiceJourneyMemory()
     rememberSuccessfulVoiceTool(memory, "list_stations", {}, [

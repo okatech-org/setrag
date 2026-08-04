@@ -101,6 +101,10 @@ describe("sessions vocales OpenAI Realtime", () => {
     })
     if (!result.available) throw new Error("Session vocale attendue.")
     expect(result.tools.some((tool) => tool.name === "search_trips")).toBe(true)
+    const searchTrips = result.tools.find(
+      (tool) => tool.name === "search_trips"
+    )
+    expect(searchTrips?.parameters.required).toContain("relativeDaysFromToday")
     expect(
       result.tools.some((tool) => tool.name === "confirm_pending_action")
     ).toBe(false)
@@ -139,6 +143,7 @@ describe("sessions vocales OpenAI Realtime", () => {
       },
     })
     expect(request.session.instructions).toContain("# Parcours de réservation")
+    expect(request.session.instructions).toContain("« dans 2 jours »=2")
     expect(request.session.instructions).toContain(
       "Ne demande jamais une deuxième confirmation"
     )

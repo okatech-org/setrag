@@ -247,7 +247,11 @@ export function rememberSuccessfulVoiceTool(
   if (toolName === "search_trips") {
     const originStationId = stringValue(input.originStationId)
     const destinationStationId = stringValue(input.destinationStationId)
-    const serviceDate = stringValue(input.serviceDate)
+    if (Array.isArray(output)) {
+      memory.trips = output.flatMap(parseVoiceTrip)
+    }
+    const serviceDate =
+      stringValue(input.serviceDate) ?? memory.trips?.[0]?.serviceDate
     const passengers = numberValue(input.passengers)
     if (originStationId && destinationStationId && serviceDate && passengers) {
       memory.searchInput = {
@@ -256,9 +260,6 @@ export function rememberSuccessfulVoiceTool(
         serviceDate,
         passengers,
       }
-    }
-    if (Array.isArray(output)) {
-      memory.trips = output.flatMap(parseVoiceTrip)
     }
     if (memory.searchInput) {
       return {

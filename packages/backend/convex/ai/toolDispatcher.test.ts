@@ -124,6 +124,30 @@ describe("répartition des outils IA vers le domaine", () => {
     })
   })
 
+  it("calcule les dates relatives dans le calendrier de Libreville", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-08-04T23:30:00.000Z"))
+    try {
+      const trips = fakeActionContext({ queryResult: [] })
+      await dispatchAssistantTool(trips.ctx, "search_trips", {
+        originStationId: "station-1",
+        destinationStationId: "station-2",
+        serviceDate: null,
+        relativeDaysFromToday: 2,
+        passengers: 1,
+      })
+
+      expect(trips.runQuery).toHaveBeenCalledWith(api.functions.trips.search, {
+        originStationId: "station-1",
+        destinationStationId: "station-2",
+        serviceDate: "2026-08-07",
+        passengers: 1,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("transmet correctement devis et consultations de réservations", async () => {
     const quoteResult = { amountTtc: 42_000, currency: "XAF" }
     const quote = fakeActionContext({ queryResult: quoteResult })
