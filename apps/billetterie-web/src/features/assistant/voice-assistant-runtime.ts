@@ -364,7 +364,16 @@ function buildPaymentHandoff(
   const destinationId = stringValue(input.destinationStationId)
   const serviceClass = stringValue(input.serviceClass)
   const rawPassengers = Array.isArray(input.passengers) ? input.passengers : []
-  const trip = memory.trips.find((candidate) => candidate.tripId === tripId)
+  const paymentContext = recordOf(output.paymentContext)
+  const contextTrip = parseVoiceTrip({
+    ...paymentContext,
+    availableByClass: {
+      [serviceClass ?? "DEUXIEME"]: numberValue(paymentContext.available) ?? 0,
+    },
+    hasAvailability: true,
+  })[0]
+  const trip =
+    memory.trips.find((candidate) => candidate.tripId === tripId) ?? contextTrip
   if (
     !reference ||
     !trip ||
@@ -427,11 +436,18 @@ function buildPaymentHandoff(
       arrivalAt: trip.arrivalAt,
       originId,
       destinationId,
-      originName: origin?.name ?? "Gare de départ",
-      destinationName: destination?.name ?? "Gare d’arrivée",
+      originName:
+        origin?.name ??
+        stringValue(paymentContext.originName) ??
+        "Gare de départ",
+      destinationName:
+        destination?.name ??
+        stringValue(paymentContext.destinationName) ??
+        "Gare d’arrivée",
       passengers: passengers.length,
       priceXaf,
-      available: Math.max(...availability, 0),
+      available:
+        numberValue(paymentContext.available) ?? Math.max(...availability, 0),
     },
     booking: {
       reference,

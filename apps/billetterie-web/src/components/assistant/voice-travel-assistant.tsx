@@ -269,7 +269,25 @@ export function VoiceTravelAssistantHost() {
       }
       if (effect.trips) setSuggestions(effect.trips)
       if (effect.quote) setQuote(effect.quote)
-      if (!effect.handoff) return
+      if (!effect.handoff) {
+        if (effectiveCall.name === "create_booking") {
+          console.error(
+            "[ai.realtime] réservation créée sans contexte de paiement",
+            {
+              callId: effectiveCall.callId,
+              outputKeys:
+                result.output && typeof result.output === "object"
+                  ? Object.keys(result.output)
+                  : [],
+            }
+          )
+          setError(
+            "La réservation est créée, mais la page de paiement n’a pas pu être préparée. Retrouvez-la dans Mes réservations."
+          )
+          setStatus("error")
+        }
+        return
+      }
 
       ticketingStorage.setSearch(effect.handoff.search)
       ticketingStorage.setTrip(effect.handoff.trip)
@@ -280,8 +298,12 @@ export function VoiceTravelAssistantHost() {
         text: `Réservation ${effect.handoff.booking.reference} créée. Vos places sont bloquées pendant quinze minutes.`,
       })
       setStatus("reserved")
-      await endConnection("ended", false)
-      window.setTimeout(() => router.push("/paiement"), 900)
+      router.push("/paiement")
+      // Laisse à Mbolo le temps d'annoncer le succès après la réponse d'outil,
+      // puis coupe le micro automatiquement sur la page de paiement.
+      window.setTimeout(() => {
+        void endConnection("ended", false)
+      }, 4_000)
     },
     [appendMessage, endConnection, router]
   )

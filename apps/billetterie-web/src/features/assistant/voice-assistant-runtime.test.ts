@@ -333,4 +333,58 @@ describe("contrat du client vocal Realtime", () => {
       },
     })
   })
+
+  it("prépare le paiement avec la réponse autonome de la réservation", () => {
+    const memory = emptyVoiceJourneyMemory()
+    const effect = rememberSuccessfulVoiceTool(
+      memory,
+      "create_booking",
+      {
+        tripId: "trip-1",
+        originStationId: "owe",
+        destinationStationId: "boo",
+        serviceClass: "DEUXIEME",
+        passengers: [
+          {
+            firstName: "Ariane",
+            lastName: "Moussavou",
+            gender: "F",
+            discountCode: null,
+          },
+        ],
+        contactPhone: "+24106000000",
+      },
+      {
+        reference: "V-LIGNE-20260807-000001",
+        holdExpiresAt: 1_900_000_000_000,
+        amounts: { ttc: 35_000 },
+        paymentContext: {
+          tripId: "trip-1",
+          trainNumber: "TR-201",
+          trainType: "EXPRESS",
+          serviceDate: "2026-08-07",
+          status: "planifie",
+          departureAt: 1_786_090_200_000,
+          arrivalAt: 1_786_102_200_000,
+          originName: "Owendo",
+          destinationName: "Booué",
+          available: 18,
+        },
+      }
+    )
+
+    expect(effect.handoff).toMatchObject({
+      search: {
+        originId: "owe",
+        destinationId: "boo",
+        serviceDate: "2026-08-07",
+      },
+      trip: {
+        tripId: "trip-1",
+        originName: "Owendo",
+        destinationName: "Booué",
+      },
+      booking: { reference: "V-LIGNE-20260807-000001" },
+    })
+  })
 })

@@ -441,26 +441,96 @@ export async function dispatchAssistantTool(
           seatId: undefined,
         }
       })
-      return await ctx.runMutation(api.functions.bookings.create, {
-        tripId: requiredString(input, "tripId") as Id<"trips">,
-        originStationId: requiredString(
-          input,
-          "originStationId"
-        ) as Id<"stations">,
-        destinationStationId: requiredString(
-          input,
-          "destinationStationId"
-        ) as Id<"stations">,
-        serviceClass: oneOf(input, "serviceClass", [
-          "DEUXIEME",
-          "PREMIERE",
-          "VIP",
-        ] as const),
+      const tripId = requiredString(input, "tripId") as Id<"trips">
+      const originStationId = requiredString(
+        input,
+        "originStationId"
+      ) as Id<"stations">
+      const destinationStationId = requiredString(
+        input,
+        "destinationStationId"
+      ) as Id<"stations">
+      const serviceClass = oneOf(input, "serviceClass", [
+        "DEUXIEME",
+        "PREMIERE",
+        "VIP",
+      ] as const)
+      const detail = (await ctx.runQuery(api.functions.trips.get, {
+        tripId,
+      })) as {
+        trip: {
+          trainNumber: string
+          trainType: string
+          serviceDate: string
+          status: string
+          departureAt: number
+          arrivalAt: number
+        }
+        stops: Array<{
+          stationId: Id<"stations">
+          sequence: number
+          departureAt?: number
+          arrivalAt?: number
+          station: { name: string } | null
+        }>
+        counters: Array<{
+          serviceClass: string
+          segmentIndex: number
+          available: number
+        }>
+      }
+      const originStop = detail.stops.find(
+        (stop) => stop.stationId === originStationId
+      )
+      const destinationStop = detail.stops.find(
+        (stop) => stop.stationId === destinationStationId
+      )
+      if (
+        !originStop?.station ||
+        !destinationStop?.station ||
+        destinationStop.sequence <= originStop.sequence
+      ) {
+        throw new Error("Les gares de cette réservation sont invalides.")
+      }
+      const available = detail.counters
+        .filter(
+          (counter) =>
+            counter.serviceClass === serviceClass &&
+            counter.segmentIndex >= originStop.sequence &&
+            counter.segmentIndex < destinationStop.sequence
+        )
+        .reduce<number | null>(
+          (minimum, counter) =>
+            minimum === null
+              ? counter.available
+              : Math.min(minimum, counter.available),
+          null
+        )
+      const created = await ctx.runMutation(api.functions.bookings.create, {
+        tripId,
+        originStationId,
+        destinationStationId,
+        serviceClass,
         passengers,
         contactPhone: requiredString(input, "contactPhone"),
         contactEmail: undefined,
         promoCode: undefined,
       })
+      return {
+        ...created,
+        paymentContext: {
+          tripId,
+          trainNumber: detail.trip.trainNumber,
+          trainType: detail.trip.trainType,
+          serviceDate: detail.trip.serviceDate,
+          status: detail.trip.status,
+          departureAt: originStop.departureAt ?? detail.trip.departureAt,
+          arrivalAt: destinationStop.arrivalAt ?? detail.trip.arrivalAt,
+          originName: originStop.station.name,
+          destinationName: destinationStop.station.name,
+          available: available ?? 0,
+        },
+      }
     }
     case "get_booking":
       return await ctx.runQuery(api.functions.bookings.getByReference, {

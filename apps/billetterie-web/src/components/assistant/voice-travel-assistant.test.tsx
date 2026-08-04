@@ -419,6 +419,99 @@ describe("VoiceTravelAssistant", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("redirige vers le paiement dès que la réservation est créée", async () => {
+    executeVoiceTool.mockResolvedValue({
+      status: "ok",
+      executionId: "execution-booking",
+      cached: false,
+      clientAction: "show_booking",
+      output: {
+        reference: "V-LIGNE-20260807-000001",
+        holdExpiresAt: 1_900_000_000_000,
+        amounts: { ttc: 35_000 },
+        paymentContext: {
+          tripId: "trip-1",
+          trainNumber: "TR-201",
+          trainType: "EXPRESS",
+          serviceDate: "2026-08-07",
+          status: "planifie",
+          departureAt: 1_786_090_200_000,
+          arrivalAt: 1_786_102_200_000,
+          originName: "Owendo",
+          destinationName: "Booué",
+          available: 18,
+        },
+      },
+    })
+    render(
+      <>
+        <VoiceTravelAssistantHost />
+        <VoiceTravelAssistant />
+      </>
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Réserver avec l’assistant vocal",
+      })
+    )
+    await waitFor(() => expect(peer.channel.readyState).toBe("open"))
+
+    const timeout = vi
+      .spyOn(window, "setTimeout")
+      .mockImplementation(() => ({}) as ReturnType<typeof setTimeout>)
+    try {
+      await act(async () => {
+        peer.channel.emit(
+          "message",
+          new MessageEvent("message", {
+            data: JSON.stringify({
+              type: "response.done",
+              response: {
+                id: "response-booking",
+                output: [
+                  {
+                    type: "function_call",
+                    call_id: "call-booking",
+                    name: "create_booking",
+                    arguments: JSON.stringify({
+                      tripId: "trip-1",
+                      originStationId: "owe",
+                      destinationStationId: "boo",
+                      serviceClass: "DEUXIEME",
+                      passengers: [
+                        {
+                          firstName: "Ariane",
+                          lastName: "Moussavou",
+                          gender: "F",
+                          discountCode: null,
+                        },
+                      ],
+                      contactPhone: "+24106000000",
+                      voiceAuthorization: "confirmed",
+                    }),
+                  },
+                ],
+              },
+            }),
+          })
+        )
+        await Promise.resolve()
+      })
+
+      expect(push).toHaveBeenCalledWith("/paiement")
+      expect(ticketingStorage.getTrip()).toMatchObject({
+        tripId: "trip-1",
+        originName: "Owendo",
+        destinationName: "Booué",
+      })
+      expect(ticketingStorage.getBooking()).toMatchObject({
+        reference: "V-LIGNE-20260807-000001",
+      })
+    } finally {
+      timeout.mockRestore()
+    }
+  })
+
   it("conserve la session lorsque le contenu de la page change", async () => {
     const view = render(
       <>

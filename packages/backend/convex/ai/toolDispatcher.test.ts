@@ -202,8 +202,42 @@ describe("répartition des outils IA vers le domaine", () => {
   })
 
   it("normalise la création, le paiement et l'annulation d'une réservation", async () => {
-    const created = { reference: "SET-NEW" }
-    const create = fakeActionContext({ mutationResult: created })
+    const created = {
+      reference: "SET-NEW",
+      holdExpiresAt: 1_900_000_000_000,
+      amounts: { ttc: 35_000 },
+    }
+    const create = fakeActionContext({
+      mutationResult: created,
+      queryResult: {
+        trip: {
+          trainNumber: "TR-201",
+          trainType: "EXPRESS",
+          serviceDate: "2026-08-07",
+          status: "planifie",
+          departureAt: 100,
+          arrivalAt: 500,
+        },
+        stops: [
+          {
+            stationId: "station-1",
+            sequence: 0,
+            departureAt: 120,
+            station: { name: "Owendo" },
+          },
+          {
+            stationId: "station-2",
+            sequence: 2,
+            arrivalAt: 480,
+            station: { name: "Booué" },
+          },
+        ],
+        counters: [
+          { serviceClass: "DEUXIEME", segmentIndex: 0, available: 18 },
+          { serviceClass: "DEUXIEME", segmentIndex: 1, available: 12 },
+        ],
+      },
+    })
     const createInput = {
       tripId: "trip-1",
       originStationId: "station-1",
@@ -229,7 +263,24 @@ describe("répartition des outils IA vers le domaine", () => {
     }
     await expect(
       dispatchAssistantTool(create.ctx, "create_booking", createInput)
-    ).resolves.toBe(created)
+    ).resolves.toEqual({
+      ...created,
+      paymentContext: {
+        tripId: "trip-1",
+        trainNumber: "TR-201",
+        trainType: "EXPRESS",
+        serviceDate: "2026-08-07",
+        status: "planifie",
+        departureAt: 120,
+        arrivalAt: 480,
+        originName: "Owendo",
+        destinationName: "Booué",
+        available: 12,
+      },
+    })
+    expect(create.runQuery).toHaveBeenCalledWith(api.functions.trips.get, {
+      tripId: "trip-1",
+    })
     expect(create.runMutation).toHaveBeenCalledWith(
       api.functions.bookings.create,
       {
