@@ -1,13 +1,17 @@
 "use client"
 
 import {
+  CalendarDays,
   Check,
   CircleStop,
+  Clock3,
   LoaderCircle,
   Mic,
   MicOff,
+  TrainFront,
+  UserRound,
   Volume2,
-  X,
+  WalletCards,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -25,8 +29,10 @@ import {
   rememberSuccessfulVoiceTool,
   type RealtimeFunctionCall,
   type VoiceJourneyMemory,
+  type VoiceQuoteSummary,
   type VoiceTrip,
 } from "@/features/assistant/voice-assistant-runtime"
+import { useTravelerAuth } from "@/hooks/use-traveler-auth"
 import { ticketingStorage } from "@/lib/ticketing"
 
 type VoiceStatus =
@@ -35,7 +41,6 @@ type VoiceStatus =
   | "listening"
   | "thinking"
   | "speaking"
-  | "approval"
   | "reserved"
   | "error"
   | "ended"
@@ -46,13 +51,6 @@ type TranscriptMessage = {
   text: string
 }
 
-type PendingApproval = {
-  callId: string
-  toolName: string
-  label: string
-  input: unknown
-}
-
 type ToolResult =
   | {
       status: "ok"
@@ -60,13 +58,7 @@ type ToolResult =
       clientAction?: string
       cached: boolean
     }
-  | {
-      status: "approval_required"
-      callId: string
-      toolName: string
-      label: string
-      input: unknown
-    }
+  | { status: "approval_required"; message?: string }
   | { status: "error"; message: string }
 
 const statusCopy: Record<VoiceStatus, { label: string; description: string }> =
@@ -91,10 +83,6 @@ const statusCopy: Record<VoiceStatus, { label: string; description: string }> =
       label: "Mbolo répond",
       description: "Vous pouvez l’interrompre naturellement en parlant.",
     },
-    approval: {
-      label: "Confirmation",
-      description: "Une confirmation claire est requise avant de réserver.",
-    },
     reserved: {
       label: "Trajet réservé",
       description: "Vos places sont bloquées. Passage au paiement…",
@@ -108,6 +96,32 @@ const statusCopy: Record<VoiceStatus, { label: string; description: string }> =
       description: "Vous pouvez relancer l’assistant à tout moment.",
     },
   }
+
+const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
+  timeZone: "Africa/Libreville",
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+})
+
+const timeFormatter = new Intl.DateTimeFormat("fr-FR", {
+  timeZone: "Africa/Libreville",
+  hour: "2-digit",
+  minute: "2-digit",
+})
+
+const moneyFormatter = new Intl.NumberFormat("fr-FR")
+
+const classLabels: Record<VoiceQuoteSummary["serviceClass"], string> = {
+  DEUXIEME: "2de classe",
+  PREMIERE: "1re classe",
+  VIP: "VIP",
+}
+
+function maskPhone(phone: string): string {
+  const compact = phone.replace(/\s+/g, "")
+  return compact.length <= 4 ? compact : `•••• ${compact.slice(-4)}`
+}
 
 function recordOf(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -148,13 +162,13 @@ export function VoiceTravelAssistantHost() {
   const mintVoiceToken = useAction(api.ai.realtime.mintVoiceToken)
   const executeVoiceTool = useAction(api.ai.realtime.executeVoiceTool)
   const updateVoiceSession = useAction(api.ai.realtime.updateVoiceSession)
-  const rejectToolCall = useAction(api.ai.chat.rejectToolCall)
+  const { profile } = useTravelerAuth()
 
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<VoiceStatus>("idle")
   const [messages, setMessages] = useState<TranscriptMessage[]>([])
-  const [pending, setPending] = useState<PendingApproval[]>([])
   const [suggestions, setSuggestions] = useState<VoiceTrip[]>([])
+  const [quote, setQuote] = useState<VoiceQuoteSummary>()
   const [error, setError] = useState<string>()
   const [muted, setMuted] = useState(false)
   const [hasMicrophone, setHasMicrophone] = useState(false)
@@ -166,7 +180,6 @@ export function VoiceTravelAssistantHost() {
   const conversationIdRef = useRef<string | null>(null)
   const voiceSessionIdRef = useRef<string | null>(null)
   const guestKeyRef = useRef("")
-  const pendingRef = useRef(new Map<string, PendingApproval>())
   const processedCallsRef = useRef(new Set<string>())
   const journeyRef = useRef<VoiceJourneyMemory>(emptyVoiceJourneyMemory())
   const closingRef = useRef(false)
@@ -206,29 +219,6 @@ export function VoiceTravelAssistantHost() {
     channel.send(JSON.stringify(event))
     return true
   }, [])
-
-  const sendUserConfirmation = useCallback(
-    (accepted: boolean) => {
-      sendChannelEvent({
-        type: "conversation.item.create",
-        item: {
-          type: "message",
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: accepted
-                ? "Oui, je confirme explicitement cette réservation."
-                : "Non, je refuse cette réservation.",
-            },
-          ],
-        },
-      })
-      sendChannelEvent({ type: "response.create" })
-      setStatus("thinking")
-    },
-    [sendChannelEvent]
-  )
 
   const endConnection = useCallback(
     async (finalStatus: "ended" | "failed" = "ended", updateUi = true) => {
@@ -278,6 +268,7 @@ export function VoiceTravelAssistantHost() {
         ticketingStorage.setSearch(effect.search)
       }
       if (effect.trips) setSuggestions(effect.trips)
+      if (effect.quote) setQuote(effect.quote)
       if (!effect.handoff) return
 
       ticketingStorage.setSearch(effect.handoff.search)
@@ -288,8 +279,6 @@ export function VoiceTravelAssistantHost() {
         role: "system",
         text: `Réservation ${effect.handoff.booking.reference} créée. Vos places sont bloquées pendant quinze minutes.`,
       })
-      setPending([])
-      pendingRef.current.clear()
       setStatus("reserved")
       await endConnection("ended", false)
       window.setTimeout(() => router.push("/paiement"), 900)
@@ -327,35 +316,14 @@ export function VoiceTravelAssistantHost() {
         }
 
         if (result.status === "approval_required") {
-          const approval = {
-            callId: result.callId,
-            toolName: result.toolName,
-            label: result.label,
-            input: result.input,
-          }
-          pendingRef.current.set(result.callId, approval)
-          setPending([...pendingRef.current.values()])
-          setStatus("approval")
+          setError(
+            "Mbolo attend une autorisation vocale claire avant de réserver."
+          )
+          setStatus("listening")
         }
 
         if (result.status === "ok") {
-          let effectiveCall = call
-          if (call.name === "confirm_pending_action") {
-            const pendingCallId = recordOf(call.input).callId
-            if (typeof pendingCallId === "string") {
-              const original = pendingRef.current.get(pendingCallId)
-              if (original) {
-                effectiveCall = {
-                  callId: original.callId,
-                  name: original.toolName,
-                  input: original.input,
-                }
-                pendingRef.current.delete(pendingCallId)
-                setPending([...pendingRef.current.values()])
-              }
-            }
-          }
-          await completeBookingHandoff(effectiveCall, result)
+          await completeBookingHandoff(call, result)
         }
 
         sendChannelEvent({
@@ -424,8 +392,6 @@ export function VoiceTravelAssistantHost() {
       const calls = parseRealtimeFunctionCalls(event)
       if (calls.length > 0) {
         await processFunctionCalls(calls)
-      } else if (pendingRef.current.size > 0) {
-        setStatus("approval")
       } else if (status !== "reserved") {
         setStatus("listening")
       }
@@ -437,13 +403,12 @@ export function VoiceTravelAssistantHost() {
     if (status === "connecting" || peerRef.current) return
     setError(undefined)
     setMessages([])
-    setPending([])
     setSuggestions([])
+    setQuote(undefined)
     setMuted(false)
     setHasMicrophone(false)
     setStatus("connecting")
     closingRef.current = false
-    pendingRef.current.clear()
     processedCallsRef.current.clear()
     journeyRef.current = emptyVoiceJourneyMemory()
 
@@ -520,7 +485,7 @@ export function VoiceTravelAssistantHost() {
             type: "response.create",
             response: {
               instructions:
-                "Accueille brièvement le voyageur en français, présente-toi comme Mbolo, puis demande-lui sa destination. Pose une seule question.",
+                "Dis seulement : « Bonjour, je suis Mbolo. Où souhaitez-vous aller ? »",
             },
           })
         )
@@ -572,25 +537,6 @@ export function VoiceTravelAssistantHost() {
     []
   )
 
-  async function rejectApproval(approval: PendingApproval) {
-    try {
-      await rejectToolCall({
-        conversationId: conversationIdRef.current as never,
-        guestKey: guestKeyRef.current || undefined,
-        callId: approval.callId,
-      })
-      pendingRef.current.delete(approval.callId)
-      setPending([...pendingRef.current.values()])
-      sendUserConfirmation(false)
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Le refus n’a pas pu être enregistré."
-      )
-    }
-  }
-
   function toggleMute() {
     const next = !muted
     streamRef.current?.getAudioTracks().forEach((track) => {
@@ -617,6 +563,13 @@ export function VoiceTravelAssistantHost() {
 
   const copy = statusCopy[status]
   const latestMessage = messages.at(-1)
+  const traveler = profile?.user
+  const travelerName = [traveler?.firstName, traveler?.lastName]
+    .filter(Boolean)
+    .join(" ")
+  const quotedTrip = quote
+    ? suggestions.find((trip) => trip.tripId === quote.tripId)
+    : undefined
   const isActive =
     status === "connecting" ||
     status === "listening" ||
@@ -641,7 +594,7 @@ export function VoiceTravelAssistantHost() {
 
       {open && (
         <aside
-          className="fixed right-4 bottom-4 left-4 z-50 grid gap-3 rounded-2xl border border-white/10 bg-ink p-3 text-ink-inverse shadow-2xl sm:right-6 sm:bottom-6 sm:left-auto sm:w-[min(390px,calc(100vw-3rem))]"
+          className="fixed right-4 bottom-4 left-4 z-50 grid max-h-[min(80dvh,680px)] gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-ink p-3 text-ink-inverse shadow-2xl sm:right-6 sm:bottom-6 sm:left-auto sm:w-[min(410px,calc(100vw-3rem))]"
           aria-label="Assistant vocal Mbolo"
           aria-live="polite"
         >
@@ -687,44 +640,90 @@ export function VoiceTravelAssistantHost() {
             </p>
           )}
 
-          {suggestions.length > 0 && (
-            <p className="text-caption text-ink-faint">
-              {suggestions.length} train{suggestions.length > 1 ? "s" : ""}{" "}
-              disponible{suggestions.length > 1 ? "s" : ""}.
-            </p>
+          {(travelerName || traveler?.phone) && (
+            <section
+              className="flex items-center gap-3 rounded-xl bg-white/8 px-3 py-2"
+              aria-label="Voyageur retenu"
+            >
+              <UserRound className="size-4 shrink-0 text-accent-on-ink" />
+              <span className="grid min-w-0 gap-0.5">
+                <span className="text-caption text-ink-faint">Voyageur</span>
+                {travelerName && (
+                  <strong className="text-small truncate">
+                    {travelerName}
+                  </strong>
+                )}
+                {traveler?.phone && (
+                  <span className="text-caption text-ink-faint">
+                    Téléphone enregistré · {maskPhone(traveler.phone)}
+                  </span>
+                )}
+              </span>
+            </section>
           )}
 
-          {pending.map((approval) => (
+          {quote && (
             <section
-              key={approval.callId}
-              className="grid gap-2 rounded-xl bg-warning-soft p-3 text-ink"
-              aria-label="Confirmation de réservation"
+              className="grid gap-2 rounded-xl bg-surface p-3 text-ink"
+              aria-label="Devis du voyage"
             >
-              <strong className="text-small">{approval.label}</strong>
-              <span className="text-caption text-ink-muted">
-                Dites « oui, je confirme » ou choisissez ci-dessous.
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => sendUserConfirmation(true)}
-                >
-                  <Check />
-                  Confirmer
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => void rejectApproval(approval)}
-                >
-                  <X />
-                  Refuser
-                </Button>
+              <div className="flex items-start gap-2">
+                <TrainFront className="mt-0.5 size-4 shrink-0 text-accent-ink" />
+                <span className="grid min-w-0 flex-1 gap-0.5">
+                  <strong className="text-small">
+                    {[quote.originName, quote.destinationName]
+                      .filter(Boolean)
+                      .join(" → ") ||
+                      quotedTrip?.trainNumber ||
+                      "Trajet sélectionné"}
+                  </strong>
+                  {quotedTrip && (
+                    <span className="text-caption flex flex-wrap gap-x-3 gap-y-1 text-ink-muted">
+                      <span className="inline-flex items-center gap-1">
+                        <CalendarDays className="size-3.5" />
+                        {dateFormatter.format(quotedTrip.departureAt)}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock3 className="size-3.5" />
+                        {timeFormatter.format(quotedTrip.departureAt)}
+                      </span>
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-end justify-between gap-3 border-t border-line pt-2">
+                <span className="text-caption text-ink-muted">
+                  {classLabels[quote.serviceClass]} · {quote.passengerCount}{" "}
+                  voyageur{quote.passengerCount > 1 ? "s" : ""}
+                </span>
+                <strong className="text-body inline-flex items-center gap-1.5 text-accent-ink">
+                  <WalletCards className="size-4" />
+                  {moneyFormatter.format(quote.totalTtc)} FCFA
+                </strong>
               </div>
             </section>
-          ))}
+          )}
+
+          {suggestions.length > 0 && (
+            <section className="grid gap-2" aria-label="Trains proposés">
+              <span className="text-caption text-ink-faint">
+                {suggestions.length} train{suggestions.length > 1 ? "s" : ""}{" "}
+                disponible{suggestions.length > 1 ? "s" : ""}
+              </span>
+              {suggestions.slice(0, 3).map((trip) => (
+                <div
+                  key={trip.tripId}
+                  className="flex items-center justify-between gap-3 rounded-lg bg-white/8 px-3 py-2"
+                >
+                  <strong className="text-small">{trip.trainNumber}</strong>
+                  <span className="text-caption text-right text-ink-faint">
+                    {dateFormatter.format(trip.departureAt)} ·{" "}
+                    {timeFormatter.format(trip.departureAt)}
+                  </span>
+                </div>
+              ))}
+            </section>
+          )}
 
           {error && (
             <p className="text-caption rounded-lg bg-danger/15 px-3 py-2 text-ink-inverse">

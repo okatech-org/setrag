@@ -205,16 +205,28 @@ describe("contrat du client vocal Realtime", () => {
         },
       ]
     )
-    rememberSuccessfulVoiceTool(
+    const quoteEffect = rememberSuccessfulVoiceTool(
       memory,
       "quote_booking",
       {
         tripId: "trip-1",
+        originStationId: "owe",
+        destinationStationId: "boo",
         serviceClass: "DEUXIEME",
         passengerCount: 2,
       },
       { totalTtc: 50_000 }
     )
+    expect(quoteEffect.quote).toEqual({
+      tripId: "trip-1",
+      originStationId: "owe",
+      destinationStationId: "boo",
+      originName: "Owendo",
+      destinationName: "Booué",
+      serviceClass: "DEUXIEME",
+      passengerCount: 2,
+      totalTtc: 50_000,
+    })
 
     const effect = rememberSuccessfulVoiceTool(
       memory,

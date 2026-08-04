@@ -41,6 +41,17 @@ export type VoiceJourneyMemory = {
   quoteOutput?: Record<string, unknown>
 }
 
+export type VoiceQuoteSummary = {
+  tripId: string
+  originStationId?: string
+  destinationStationId?: string
+  originName?: string
+  destinationName?: string
+  serviceClass: "DEUXIEME" | "PREMIERE" | "VIP"
+  passengerCount: number
+  totalTtc: number
+}
+
 export type PaymentHandoff = {
   search: SearchDraft
   trip: SelectedTrip
@@ -209,6 +220,7 @@ export function rememberSuccessfulVoiceTool(
 ): {
   search?: SearchDraft
   trips?: VoiceTrip[]
+  quote?: VoiceQuoteSummary
   handoff?: PaymentHandoff
 } {
   const input = recordOf(inputValue)
@@ -265,6 +277,33 @@ export function rememberSuccessfulVoiceTool(
   if (toolName === "quote_booking") {
     memory.quoteInput = input
     memory.quoteOutput = recordOf(output)
+    const tripId = stringValue(input.tripId)
+    const serviceClass = stringValue(input.serviceClass)
+    const passengerCount = numberValue(input.passengerCount)
+    const totalTtc = numberValue(memory.quoteOutput.totalTtc)
+    if (
+      tripId &&
+      ["DEUXIEME", "PREMIERE", "VIP"].includes(serviceClass ?? "") &&
+      passengerCount !== undefined &&
+      totalTtc !== undefined
+    ) {
+      return {
+        quote: {
+          tripId,
+          originStationId: stringValue(input.originStationId),
+          destinationStationId: stringValue(input.destinationStationId),
+          originName: memory.stations.find(
+            (station) => station.id === stringValue(input.originStationId)
+          )?.name,
+          destinationName: memory.stations.find(
+            (station) => station.id === stringValue(input.destinationStationId)
+          )?.name,
+          serviceClass: serviceClass as VoiceQuoteSummary["serviceClass"],
+          passengerCount,
+          totalTtc,
+        },
+      }
+    }
   }
 
   if (toolName === "create_booking") {

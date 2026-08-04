@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { api, internal } from "../_generated/api"
 import schema from "../schema"
 import { modules } from "../test.setup"
+import { canonicalToolInput } from "./tools"
 
 const GUEST_KEY = "guest-session-key-0123456789-abcdef"
 
@@ -102,7 +103,12 @@ describe("sessions vocales OpenAI Realtime", () => {
     expect(result.tools.some((tool) => tool.name === "search_trips")).toBe(true)
     expect(
       result.tools.some((tool) => tool.name === "confirm_pending_action")
-    ).toBe(true)
+    ).toBe(false)
+    const createBooking = result.tools.find(
+      (tool) => tool.name === "create_booking"
+    )
+    expect(createBooking?.requiresApproval).toBe(false)
+    expect(createBooking?.parameters.required).toContain("voiceAuthorization")
     expect(result.tools.some((tool) => tool.name === "list_my_tickets")).toBe(
       false
     )
@@ -119,6 +125,7 @@ describe("sessions vocales OpenAI Realtime", () => {
         type: "realtime",
         model: "gpt-realtime-test",
         output_modalities: ["audio"],
+        max_output_tokens: 180,
         audio: {
           input: {
             transcription: { language: "fr" },
@@ -131,6 +138,10 @@ describe("sessions vocales OpenAI Realtime", () => {
         },
       },
     })
+    expect(request.session.instructions).toContain("# Parcours de réservation")
+    expect(request.session.instructions).toContain(
+      "Ne demande jamais une deuxième confirmation"
+    )
 
     const sessions = await t.run((ctx) =>
       ctx.db.query("assistantVoiceSessions").collect()
@@ -322,43 +333,101 @@ describe("sessions vocales OpenAI Realtime", () => {
     })
   })
 
-  it("valide l'identifiant et confirme exactement l'action vocale mémorisée", async () => {
+  it("exige une autorisation vocale puis consomme l'approbation en un seul appel", async () => {
     const t = convexTest(schema, modules)
     rateLimiterTest.register(t)
     const conversation = await t.mutation(api.ai.conversations.create, {
       guestKey: GUEST_KEY,
+      assistantId: "booking",
     })
 
-    const invalid = await t.action(api.ai.realtime.executeVoiceTool, {
+    const missingAuthorization = await t.action(
+      api.ai.realtime.executeVoiceTool,
+      {
+        conversationId: conversation.conversationId,
+        guestKey: GUEST_KEY,
+        callId: "voice-booking-without-authorization",
+        name: "create_booking",
+        input: {
+          tripId: "trip-1",
+          originStationId: "station-1",
+          destinationStationId: "station-2",
+          serviceClass: "DEUXIEME",
+          passengers: [],
+          contactPhone: "077000000",
+        },
+      }
+    )
+    expect(missingAuthorization).toEqual({
+      status: "error",
+      message:
+        "La réservation attend encore l'autorisation vocale explicite du voyageur.",
+    })
+    expect(
+      await t.query(internal.ai.tools.getExecution, {
+        conversationId: conversation.conversationId,
+        callId: "voice-booking-without-authorization",
+      })
+    ).toBeNull()
+
+    const confirmed = await t.action(api.ai.realtime.executeVoiceTool, {
       conversationId: conversation.conversationId,
       guestKey: GUEST_KEY,
-      callId: "voice-confirm-invalid",
-      name: "confirm_pending_action",
-      input: {},
+      callId: "voice-booking-confirmed",
+      name: "create_booking",
+      input: {
+        tripId: "trip-1",
+        originStationId: "station-1",
+        destinationStationId: "station-2",
+        serviceClass: "DEUXIEME",
+        passengers: [],
+        contactPhone: "077000000",
+        voiceAuthorization: "confirmed",
+      },
     })
-    expect(invalid).toEqual({
+    expect(confirmed).toMatchObject({
       status: "error",
-      message: "Identifiant de confirmation invalide.",
+      message: "Au moins un voyageur est obligatoire.",
     })
-
-    const missing = await t.action(api.ai.realtime.executeVoiceTool, {
+    const execution = await t.query(internal.ai.tools.getExecution, {
       conversationId: conversation.conversationId,
-      guestKey: GUEST_KEY,
-      callId: "voice-confirm-missing",
-      name: "confirm_pending_action",
-      input: { callId: "unknown-call" },
+      callId: "voice-booking-confirmed",
     })
-    expect(missing).toEqual({
-      status: "error",
-      message: "Action en attente introuvable.",
+    expect(execution).toMatchObject({
+      status: "failed",
+      approvedAt: expect.any(Number),
     })
+  })
 
+  it("ne rejoue pas une réservation vocale identique déjà réussie", async () => {
+    const t = convexTest(schema, modules)
+    rateLimiterTest.register(t)
+    const conversation = await t.mutation(api.ai.conversations.create, {
+      guestKey: GUEST_KEY,
+      assistantId: "booking",
+    })
+    const input = {
+      tripId: "trip-1",
+      originStationId: "station-1",
+      destinationStationId: "station-2",
+      serviceClass: "DEUXIEME",
+      passengers: [
+        {
+          firstName: "Ariane",
+          lastName: "Moussavou",
+          gender: "F",
+          discountCode: null,
+        },
+      ],
+      contactPhone: "077000000",
+      voiceAuthorization: "confirmed",
+    }
     const prepared = await t.mutation(internal.ai.tools.prepareExecution, {
       conversationId: conversation.conversationId,
-      callId: "pending-booking-call",
+      callId: "voice-booking-original",
       toolName: "create_booking",
-      inputJson: '{"reference":"SET-VOICE-1"}',
-      requiresApproval: true,
+      inputJson: canonicalToolInput(input),
+      requiresApproval: false,
       approved: false,
     })
     await t.mutation(internal.ai.tools.completeExecution, {
@@ -367,18 +436,25 @@ describe("sessions vocales OpenAI Realtime", () => {
       outputJson: '{"reference":"SET-VOICE-1"}',
     })
 
-    const confirmed = await t.action(api.ai.realtime.executeVoiceTool, {
+    const replay = await t.action(api.ai.realtime.executeVoiceTool, {
       conversationId: conversation.conversationId,
       guestKey: GUEST_KEY,
-      callId: "voice-confirm-wrapper",
-      name: "confirm_pending_action",
-      input: { callId: "pending-booking-call" },
+      callId: "voice-booking-replayed-with-new-call-id",
+      name: "create_booking",
+      input,
     })
-    expect(confirmed).toMatchObject({
+
+    expect(replay).toMatchObject({
       status: "ok",
       cached: true,
       output: { reference: "SET-VOICE-1" },
     })
+    expect(
+      await t.query(internal.ai.tools.getExecution, {
+        conversationId: conversation.conversationId,
+        callId: "voice-booking-replayed-with-new-call-id",
+      })
+    ).toBeNull()
   })
 
   it("exécute les outils vocaux ordinaires par le même point sécurisé", async () => {

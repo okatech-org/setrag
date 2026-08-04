@@ -90,12 +90,28 @@ function oneOf<T extends string>(
   return value as T
 }
 
-function boundedJson(value: unknown): string {
-  const json = JSON.stringify(value ?? {})
+function canonicalValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalValue)
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, canonicalValue(item)])
+    )
+  }
+  return value
+}
+
+export function canonicalToolInput(value: unknown): string {
+  const json = JSON.stringify(canonicalValue(value ?? {}))
   if (json.length > 32_000) {
     throw new Error("Arguments d'outil trop volumineux.")
   }
   return json
+}
+
+function boundedJson(value: unknown): string {
+  return canonicalToolInput(value)
 }
 
 function safeError(error: unknown): string {
@@ -118,6 +134,29 @@ export const getExecution = internalQuery({
         q.eq("conversationId", args.conversationId).eq("callId", args.callId)
       )
       .unique(),
+})
+
+export const findSucceededExecution = internalQuery({
+  args: {
+    conversationId: v.id("assistantConversations"),
+    toolName: v.string(),
+    inputJson: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const executions = await ctx.db
+      .query("assistantToolExecutions")
+      .withIndex("by_conversation_and_status", (q) =>
+        q.eq("conversationId", args.conversationId).eq("status", "succeeded")
+      )
+      .collect()
+    return (
+      executions.find(
+        (execution) =>
+          execution.toolName === args.toolName &&
+          execution.inputJson === args.inputJson
+      ) ?? null
+    )
+  },
 })
 
 export const prepareExecution = internalMutation({

@@ -1,11 +1,19 @@
 import { v } from "convex/values"
 import { internal } from "../_generated/api"
 import { action, internalMutation, type ActionCtx } from "../_generated/server"
-import type { Doc, Id } from "../_generated/dataModel"
-import { buildAssistantInstructions, getAssistantTools } from "./contracts"
+import type { Id } from "../_generated/dataModel"
+import {
+  buildAssistantInstructions,
+  getAssistantTools,
+  type AssistantToolDefinition,
+} from "./contracts"
 import { hashGuestKey } from "./conversations"
 import { assistantRateLimiter } from "./rateLimiter"
-import { executeAssistantTool, type ToolExecutionResult } from "./tools"
+import {
+  canonicalToolInput,
+  executeAssistantTool,
+  type ToolExecutionResult,
+} from "./tools"
 
 const SUPPORTED_VOICES = [
   "alloy",
@@ -76,6 +84,31 @@ function turnDetection() {
     silence_duration_ms: 500,
     interrupt_response: true,
     create_response: true,
+  }
+}
+
+function voiceTool(tool: AssistantToolDefinition): AssistantToolDefinition {
+  if (tool.name !== "create_booking") return tool
+  return {
+    ...tool,
+    description:
+      "Crée immédiatement la réservation après une autorisation vocale explicite. N'appelle cet outil qu'une seule fois, dans le même tour que le oui ou l'ordre clair de réserver.",
+    parameters: {
+      ...tool.parameters,
+      properties: {
+        ...tool.parameters.properties,
+        voiceAuthorization: {
+          type: "string",
+          enum: ["confirmed"],
+          description:
+            "Utiliser confirmed uniquement après que le voyageur a clairement dit oui, confirmé, vas-y, réserve ou une formulation équivalente.",
+        },
+      },
+      required: [...tool.parameters.required, "voiceAuthorization"],
+    },
+    // L'approbation est portée par voiceAuthorization. La définition métier
+    // reste engageante et conserve son journal d'approbation côté backend.
+    requiresApproval: false,
   }
 }
 
@@ -155,19 +188,37 @@ export const mintVoiceToken = action({
     const tools = getAssistantTools(
       access.conversation.assistantId,
       access.isAuthenticated
-    )
+    ).map(voiceTool)
     const instructions = `${buildAssistantInstructions(
       access.conversation.assistantId,
       new Date().toISOString(),
       access.travelerContext
     )}
 
-Règles vocales :
-- lorsqu'un outil renvoie approval_required, demande oralement confirmation ;
-- si l'utilisateur confirme clairement, appelle confirm_pending_action avec le callId indiqué par ce résultat ;
-- ne réappelle pas l'outil métier avec de nouveaux arguments ;
-- pour une réservation, recueille les informations manquantes une par une, calcule le devis, puis arrête-toi après create_booking ;
-- le voyageur effectue toujours lui-même le paiement dans l'interface.`
+# Rôle vocal
+Conduis le voyageur jusqu'à une réservation prête à payer, avec le moins de paroles possible.
+
+# Verbosité
+- Réponse directe : une phrase courte.
+- Question : une seule question courte à la fois.
+- Résultat d'outil : donne uniquement le résultat utile et la prochaine question.
+- Ne reformule pas tout ce que le voyageur vient de dire.
+- Pas de préambule pour une recherche rapide, une correction, un refus ou une confirmation.
+- L'interface affiche les horaires, le prix et le voyageur : ne récite pas toutes ces données oralement.
+
+# Parcours de réservation
+1. Recueille seulement le départ, l'arrivée, la date et le nombre de voyageurs manquants.
+2. Recherche les trains et propose au maximum trois choix avec heure et prix utile.
+3. Une fois le train, la classe, les voyageurs et le téléphone connus, calcule le devis.
+4. Résume en une phrase le trajet et le montant, puis demande exactement une fois : « Je réserve ? »
+5. Un « oui », « je confirme », « vas-y », « réserve », « fais la réservation » ou équivalent autorise la réservation. Si l'utilisateur avait déjà donné cet ordre après le récapitulatif, considère l'autorisation comme acquise.
+6. Dès cette autorisation, appelle create_booking dans le même tour avec voiceAuthorization="confirmed". Ne demande jamais une deuxième confirmation et ne parle jamais de confirmation dans l'interface.
+7. Après le succès, annonce seulement que la réservation est créée et invite le voyageur à payer dans l'interface.
+
+# Limites
+- N'appelle jamais create_booking avant une autorisation vocale explicite.
+- Une autorisation vaut uniquement pour la réservation récapitulée. Si les informations changent ensuite, demande une nouvelle autorisation.
+- Ne propose et n'effectue jamais le paiement : le voyageur paie lui-même dans l'interface.`
     console.info("[ai.realtime] contexte voyageur préparé", {
       assistantId: access.conversation.assistantId,
       authenticated: access.isAuthenticated,
@@ -175,26 +226,7 @@ Règles vocales :
       hasPhone: Boolean(access.travelerContext?.profile.phone),
       savedPassengerCount: access.travelerContext?.savedPassengers.length ?? 0,
     })
-    const confirmTool = {
-      name: "confirm_pending_action",
-      label: "Confirmer l'action en attente",
-      description:
-        "Confirme exactement une action en attente après un oui explicite de l'utilisateur.",
-      parameters: {
-        type: "object" as const,
-        properties: {
-          callId: {
-            type: "string",
-            description:
-              "callId exact renvoyé dans le résultat approval_required.",
-          },
-        },
-        required: ["callId"],
-        additionalProperties: false as const,
-      },
-      requiresApproval: false,
-    }
-    const realtimeTools = [...tools, confirmTool]
+    const realtimeTools = tools
     const response = await fetch(
       "https://api.openai.com/v1/realtime/client_secrets",
       {
@@ -211,6 +243,7 @@ Règles vocales :
             model: cfg.model,
             instructions,
             output_modalities: ["audio"],
+            max_output_tokens: 180,
             tool_choice: "auto",
             tools: realtimeTools.map((tool) => ({
               type: "function",
@@ -299,40 +332,60 @@ export const executeVoiceTool = action({
     approved: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<ToolExecutionResult> => {
-    if (args.name !== "confirm_pending_action") {
-      return executeAssistantTool(ctx, args)
-    }
-    await ctx.runQuery(internal.ai.conversations.accessContext, {
-      conversationId: args.conversationId,
-      guestKey: args.guestKey,
-    })
     const input =
       args.input && typeof args.input === "object" && !Array.isArray(args.input)
         ? (args.input as Record<string, unknown>)
         : {}
-    const pendingCallId = input.callId
-    if (typeof pendingCallId !== "string" || !pendingCallId) {
+    if (
+      args.name === "create_booking" &&
+      input.voiceAuthorization !== "confirmed"
+    ) {
       return {
         status: "error",
-        message: "Identifiant de confirmation invalide.",
+        message:
+          "La réservation attend encore l'autorisation vocale explicite du voyageur.",
       }
     }
-    const execution: Doc<"assistantToolExecutions"> | null = await ctx.runQuery(
-      internal.ai.tools.getExecution,
-      {
+
+    if (args.name === "create_booking") {
+      await ctx.runQuery(internal.ai.conversations.accessContext, {
         conversationId: args.conversationId,
-        callId: pendingCallId,
+        guestKey: args.guestKey,
+      })
+      const previous = await ctx.runQuery(
+        internal.ai.tools.findSucceededExecution,
+        {
+          conversationId: args.conversationId,
+          toolName: args.name,
+          inputJson: canonicalToolInput(args.input),
+        }
+      )
+      if (previous) {
+        return {
+          status: "ok",
+          executionId: previous._id,
+          output: previous.outputJson ? JSON.parse(previous.outputJson) : null,
+          clientAction: "show_booking",
+          cached: true,
+        }
       }
-    )
-    if (!execution) {
-      return { status: "error", message: "Action en attente introuvable." }
     }
-    return executeAssistantTool(ctx, {
+
+    const initial = await executeAssistantTool(ctx, args)
+    if (
+      args.name !== "create_booking" ||
+      initial.status !== "approval_required"
+    ) {
+      return initial
+    }
+
+    console.info("[ai.realtime] autorisation vocale consommée", {
       conversationId: args.conversationId,
-      guestKey: args.guestKey,
-      callId: execution.callId,
-      name: execution.toolName,
-      input: JSON.parse(execution.inputJson),
+      callId: args.callId,
+      toolName: args.name,
+    })
+    return executeAssistantTool(ctx, {
+      ...args,
       approved: true,
     })
   },
