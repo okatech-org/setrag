@@ -22,7 +22,11 @@ import {
   saveSettings,
 } from "@/lib/offline/db"
 import { humanError } from "@/lib/errors"
-import { synchronize, type SyncProgress, type SyncTransport } from "@/lib/offline/sync"
+import {
+  synchronize,
+  type SyncProgress,
+  type SyncTransport,
+} from "@/lib/offline/sync"
 import type {
   EmbarkedManifest,
   QueueKind,
@@ -88,6 +92,14 @@ const DEFAULT_SETTINGS: TerminalSettings = {
   torch: false,
   deviceId: "WEB",
 }
+
+/**
+ * Une écriture fraîche part presque immédiatement. Après un refus, on espace
+ * les reprises pour ne pas marteler un serveur indisponible — tout en évitant
+ * d'exiger une action manuelle du contrôleur.
+ */
+const AUTO_SYNC_DELAY_MS = 750
+const AUTO_RETRY_DELAY_MS = 30_000
 
 /**
  * Lecture complète de l'état embarqué.
@@ -252,14 +264,39 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     [isAuthenticated, refresh, transport]
   )
 
-  // Retour du réseau ET de la session : on tente l'envoi sans rien demander à
-  // l'agent, qui a les mains prises. Le silence est voulu — seul un échec
-  // l'interrompt.
+  // Nouvelle écriture, retour du réseau OU retour de la session : on tente
+  // l'envoi sans rien demander à l'agent, qui a les mains prises. Après un
+  // échec, la boucle reprend à intervalle raisonnable tant que le serveur et
+  // le réseau sont de nouveau joignables.
   useEffect(() => {
-    if (!online || !ready || !isAuthenticated) return
-    const timer = window.setTimeout(() => void syncNow({ silent: true }), 1500)
-    return () => window.clearTimeout(timer)
-  }, [isAuthenticated, online, ready, syncNow])
+    if (!online || !ready || !isAuthenticated || queue.total === 0) return
+
+    let cancelled = false
+    let timer: number | undefined
+
+    const schedule = (delay: number) => {
+      timer = window.setTimeout(() => {
+        void (async () => {
+          await syncNow({ silent: true })
+          // Si `refresh()` a vidé ou modifié la file, le nouvel effet annule
+          // celui-ci. Si rien n'a changé (serveur toujours indisponible), on
+          // conserve une reprise automatique espacée.
+          if (!cancelled) schedule(AUTO_RETRY_DELAY_MS)
+        })()
+      }, delay)
+    }
+
+    // Une nouvelle écriture ne doit pas attendre derrière un ancien échec :
+    // tant qu'il existe au moins un élément jamais tenté, l'envoi reste
+    // immédiat. Le délai long ne concerne qu'une file entièrement en échec.
+    schedule(
+      queue.total > queue.failed ? AUTO_SYNC_DELAY_MS : AUTO_RETRY_DELAY_MS
+    )
+    return () => {
+      cancelled = true
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
+  }, [isAuthenticated, online, queue.failed, queue.total, ready, syncNow])
 
   const value = useMemo<TerminalContextValue>(
     () => ({
@@ -293,6 +330,8 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <TerminalContext.Provider value={value}>{children}</TerminalContext.Provider>
+    <TerminalContext.Provider value={value}>
+      {children}
+    </TerminalContext.Provider>
   )
 }

@@ -343,7 +343,11 @@ describe("composants du parcours d'achat", () => {
   })
 
   it("TripSearchForm affiche l'assistant vocal flottant sans ouvrir de modale", async () => {
-    render(<TripSearchForm />)
+    render(
+      <SiteShell>
+        <TripSearchForm />
+      </SiteShell>
+    )
 
     fireEvent.click(
       screen.getByRole("button", {

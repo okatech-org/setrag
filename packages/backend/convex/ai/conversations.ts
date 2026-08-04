@@ -191,10 +191,32 @@ export const accessContext = internalQuery({
     if (conversation.status !== "active") {
       throw new Error("Cette conversation est terminée.")
     }
+    const savedPassengers = user
+      ? await ctx.db
+          .query("savedPassengers")
+          .withIndex("by_user", (q) => q.eq("userId", user._id))
+          .collect()
+      : []
     return {
       conversation,
       isAuthenticated: user !== null,
       rateLimitKey: user?._id ?? conversation.guestKeyHash,
+      travelerContext: user
+        ? {
+            profile: {
+              firstName: user.firstName ?? null,
+              lastName: user.lastName ?? null,
+              phone: user.phone ?? null,
+              email: user.email ?? null,
+            },
+            savedPassengers: savedPassengers.map((passenger) => ({
+              firstName: passenger.firstName,
+              lastName: passenger.lastName,
+              gender: passenger.gender,
+              phone: passenger.phone ?? null,
+            })),
+          }
+        : null,
     }
   },
 })

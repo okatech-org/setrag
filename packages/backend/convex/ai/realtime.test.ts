@@ -144,6 +144,54 @@ describe("sessions vocales OpenAI Realtime", () => {
     })
   })
 
+  it("transmet automatiquement le profil connecté dans les instructions Realtime", async () => {
+    vi.stubEnv("AI_REALTIME_ENABLED", "true")
+    vi.stubEnv("AI_REALTIME_API_KEY", "sk-test-realtime")
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        value: "ek_test_ephemeral",
+        session: { id: "sess_profile", model: "gpt-realtime-test" },
+      })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const t = convexTest(schema, modules)
+    rateLimiterTest.register(t)
+    await t.run((ctx) =>
+      ctx.db.insert("users", {
+        authId: "traveler-profile",
+        firstName: "Paul",
+        lastName: "Mba",
+        phone: "+241060000000",
+        email: "paul@example.ga",
+        role: "voyageur",
+        identitySource: "local",
+        isActive: true,
+      })
+    )
+    const traveler = t.withIdentity({ subject: "traveler-profile" })
+    const conversation = await traveler.mutation(api.ai.conversations.create, {
+      guestKey: GUEST_KEY,
+      assistantId: "booking",
+    })
+
+    const result = await traveler.action(api.ai.realtime.mintVoiceToken, {
+      conversationId: conversation.conversationId,
+      guestKey: GUEST_KEY,
+    })
+
+    expect(result.available).toBe(true)
+    const [, init] = fetchMock.mock.calls[0]!
+    const request = JSON.parse(init.body as string)
+    expect(request.session.instructions).toContain(
+      "Contexte voyageur authentifié"
+    )
+    expect(request.session.instructions).toContain("+241060000000")
+    expect(request.session.instructions).toContain(
+      "Ne redemande jamais une information déjà présente"
+    )
+  })
+
   it("refuse une réponse OpenAI en erreur et ne persiste pas de session", async () => {
     vi.stubEnv("AI_REALTIME_ENABLED", "true")
     vi.stubEnv("AI_REALTIME_API_KEY", "sk-test-realtime")

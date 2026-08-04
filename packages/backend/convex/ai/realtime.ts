@@ -158,7 +158,8 @@ export const mintVoiceToken = action({
     )
     const instructions = `${buildAssistantInstructions(
       access.conversation.assistantId,
-      new Date().toISOString()
+      new Date().toISOString(),
+      access.travelerContext
     )}
 
 Règles vocales :
@@ -167,6 +168,13 @@ Règles vocales :
 - ne réappelle pas l'outil métier avec de nouveaux arguments ;
 - pour une réservation, recueille les informations manquantes une par une, calcule le devis, puis arrête-toi après create_booking ;
 - le voyageur effectue toujours lui-même le paiement dans l'interface.`
+    console.info("[ai.realtime] contexte voyageur préparé", {
+      assistantId: access.conversation.assistantId,
+      authenticated: access.isAuthenticated,
+      profileHydrated: access.travelerContext !== null,
+      hasPhone: Boolean(access.travelerContext?.profile.phone),
+      savedPassengerCount: access.travelerContext?.savedPassengers.length ?? 0,
+    })
     const confirmTool = {
       name: "confirm_pending_action",
       label: "Confirmer l'action en attente",

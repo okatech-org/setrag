@@ -118,7 +118,7 @@ export function TripSearchForm({ compact = false }: { compact?: boolean }) {
           <Button type="submit" size="lg" className="min-w-0 flex-1">
             Rechercher un train
           </Button>
-          <VoiceTravelAssistant onSearchChange={search.update} />
+          <VoiceTravelAssistant />
         </div>
       </div>
 

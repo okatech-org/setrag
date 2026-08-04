@@ -195,7 +195,8 @@ export const sendMessage = action({
         config,
         instructions: buildAssistantInstructions(
           access.conversation.assistantId,
-          new Date().toISOString()
+          new Date().toISOString(),
+          access.travelerContext
         ),
         messages,
         tools,

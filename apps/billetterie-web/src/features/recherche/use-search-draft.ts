@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import { useQuery } from "@workspace/api/hooks"
@@ -43,6 +43,8 @@ export function useSearchDraft() {
     () => ticketingStorage.getSearch() ?? DEFAULT_SEARCH
   )
   const [submitted, setSubmitted] = useState(false)
+
+  useEffect(() => ticketingStorage.subscribeSearch(setDraft), [])
 
   /**
    * Le brouillon part des gares de démonstration, dont les identifiants

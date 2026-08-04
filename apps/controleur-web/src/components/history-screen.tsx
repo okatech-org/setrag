@@ -33,8 +33,16 @@ import { useTerminal } from "./terminal-provider"
 type View = "file" | "controles"
 
 export function HistoryScreen() {
-  const { manifest, queue, online, authenticated, syncing, progress, syncNow, refresh } =
-    useTerminal()
+  const {
+    manifest,
+    queue,
+    online,
+    authenticated,
+    syncing,
+    progress,
+    syncNow,
+    refresh,
+  } = useTerminal()
   // L'envoi exige le réseau ET une session : sans elle, chaque écriture
   // reviendrait en échec pour un motif qui ne la concerne pas.
   const serverReady = online && authenticated
@@ -70,8 +78,7 @@ export function HistoryScreen() {
     penalties: queue.byKind.penalty.sent,
     incidents: queue.byKind.incident.sent,
   }
-  const totalSent =
-    sent.scans + sent.sales + sent.penalties + sent.incidents
+  const totalSent = sent.scans + sent.sales + sent.penalties + sent.incidents
   const canPurge = queue.total === 0 && totalSent > 0
 
   async function purge() {
@@ -125,7 +132,9 @@ export function HistoryScreen() {
         <>
           <section className="overflow-hidden rounded-md border border-line">
             <table className="w-full text-[15px]">
-              <caption className="sr-only">File d&apos;envoi du terminal</caption>
+              <caption className="sr-only">
+                File d&apos;envoi du terminal
+              </caption>
               <thead className="bg-surface-sunk text-[13px] text-ink-muted">
                 <tr>
                   <th scope="col" className="px-4 py-2 text-left font-medium">
@@ -142,7 +151,10 @@ export function HistoryScreen() {
               <tbody>
                 <QueueRow label="Contrôles" counts={queue.byKind.scan} />
                 <QueueRow label="Ventes à bord" counts={queue.byKind.sale} />
-                <QueueRow label="Procès-verbaux" counts={queue.byKind.penalty} />
+                <QueueRow
+                  label="Procès-verbaux"
+                  counts={queue.byKind.penalty}
+                />
                 <QueueRow
                   label="Incidents"
                   counts={queue.byKind.incident}
@@ -158,7 +170,7 @@ export function HistoryScreen() {
                 <h2 className="text-h4">
                   Lot {progress.batch} sur {progress.batchCount}
                 </h2>
-                <span className="text-[13px] text-ink-muted tabular">
+                <span className="tabular text-[13px] text-ink-muted">
                   {progress.sent} / {progress.total}
                 </span>
               </div>
@@ -188,14 +200,14 @@ export function HistoryScreen() {
               tone={serverReady ? "info" : "warning"}
               title={
                 serverReady
-                  ? `Réseau disponible — ${queue.total} éléments prêts à partir.`
+                  ? `Envoi automatique — ${queue.total} éléments en attente de confirmation.`
                   : online
                     ? "Session non reconnue — l'envoi reprendra dès qu'elle sera rétablie."
                     : "Aucun réseau — l'envoi partira automatiquement dès le retour du signal."
               }
             >
               {serverReady
-                ? "Lancez la synchronisation avant de quitter le terminal en fin de tournée."
+                ? "Aucune action n'est requise : l'application les transmet et réessaie seule. Le bouton ci-dessous permet seulement de forcer une reprise immédiate."
                 : "C'est le cas nominal en pleine voie : rien n'est perdu, tout est écrit dans la base du terminal."}
             </InlineMessage>
           )}
@@ -206,9 +218,9 @@ export function HistoryScreen() {
                 tone="danger"
                 title={`${failures.length} éléments en échec — non perdus, conservés localement.`}
               >
-                Rien n&apos;est jamais supprimé après un échec. L&apos;identifiant
-                client de chaque écriture garantit l&apos;absence de doublon à la
-                reprise.
+                Rien n&apos;est jamais supprimé après un échec.
+                L&apos;identifiant client de chaque écriture garantit
+                l&apos;absence de doublon à la reprise.
               </InlineMessage>
               <ul className="overflow-hidden rounded-md border border-line">
                 {failures.slice(0, 8).map((entry) => (
@@ -256,8 +268,8 @@ export function HistoryScreen() {
                 : !serverReady
                   ? "Envoi impossible sans réseau"
                   : failures.length > 0
-                    ? "Relancer les envois en échec"
-                    : "Synchroniser maintenant"}
+                    ? "Réessayer maintenant"
+                    : "Envoyer sans attendre"}
             </Button>
             <Button variant="secondary" size="lg" block asChild>
               <Link href="/conflits">Voir les conflits</Link>
@@ -288,11 +300,11 @@ export function HistoryScreen() {
                   key={scan.clientScanId}
                   className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 last:border-b-0"
                 >
-                  <span className="w-12 text-[13px] text-ink-muted tabular">
+                  <span className="tabular w-12 text-[13px] text-ink-muted">
                     {hhmm(scan.scannedAt)}
                   </span>
                   <span className="flex-1">
-                    <span className="block text-[15px] tabular">
+                    <span className="tabular block text-[15px]">
                       {scan.ticketNumber ?? "code illisible"}
                     </span>
                     {scan.passengerName && (
@@ -321,7 +333,7 @@ export function HistoryScreen() {
                     className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 last:border-b-0"
                   >
                     <span className="flex-1">
-                      <span className="block text-[15px] tabular">
+                      <span className="tabular block text-[15px]">
                         {sale.serverSaleNumber ?? sale.localRef}
                       </span>
                       <span className="block text-[13px] text-ink-muted">
@@ -329,14 +341,14 @@ export function HistoryScreen() {
                       </span>
                     </span>
                     <span className="text-right">
-                      <span className="block text-[15px] tabular">
+                      <span className="tabular block text-[15px]">
                         {xaf(sale.quotedXaf)}
                       </span>
                       {/* Les deux montants côte à côte : l'agent doit voir ce
                           qu'il a encaissé ET ce que le système a facturé. */}
                       {sale.serverXaf !== undefined &&
                         sale.serverXaf !== sale.quotedXaf && (
-                          <span className="block text-[13px] font-semibold text-warning-ink tabular">
+                          <span className="tabular block text-[13px] font-semibold text-warning-ink">
                             facturé {xaf(sale.serverXaf)}
                           </span>
                         )}
@@ -348,8 +360,8 @@ export function HistoryScreen() {
                 (s) => s.serverXaf !== undefined && s.serverXaf !== s.quotedXaf
               ) && (
                 <InlineMessage tone="warning" title="Écart de tarification.">
-                  Un montant recalculé par le système diffère de celui encaissé à
-                  bord. Signalez-le à votre caisse : l&apos;écart doit être
+                  Un montant recalculé par le système diffère de celui encaissé
+                  à bord. Signalez-le à votre caisse : l&apos;écart doit être
                   justifié, pas absorbé.
                 </InlineMessage>
               )}
@@ -384,7 +396,7 @@ function QueueRow({
       <th scope="row" className="px-4 py-3 text-left font-normal">
         {label}
       </th>
-      <td className="px-4 py-3 text-right tabular">{total}</td>
+      <td className="tabular px-4 py-3 text-right">{total}</td>
       <td className="px-4 py-3 text-right text-[13px]">
         {total === 0 ? (
           // Une ligne vide n'a rien été « envoyé » : le dire serait un
@@ -395,7 +407,11 @@ function QueueRow({
             {counts.failed} en échec
           </span>
         ) : waiting > 0 ? (
-          <span className={priority ? "font-semibold text-warning-ink" : "text-ink-muted"}>
+          <span
+            className={
+              priority ? "font-semibold text-warning-ink" : "text-ink-muted"
+            }
+          >
             {priority ? "priorité" : "en attente"}
           </span>
         ) : (

@@ -121,7 +121,7 @@ export function MobileSearchCard() {
         >
           Rechercher une desserte
         </Button>
-        <VoiceTravelAssistant onSearchChange={search.update} />
+        <VoiceTravelAssistant />
       </div>
 
       <Sheet

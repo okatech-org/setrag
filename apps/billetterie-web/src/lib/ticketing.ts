@@ -168,6 +168,7 @@ export function demoTrips(search: SearchDraft): SelectedTrip[] {
 }
 
 const SEARCH_KEY = "setrag:search"
+const SEARCH_UPDATED_EVENT = "setrag:search-updated"
 const TRIP_KEY = "setrag:trip"
 const BOOKING_KEY = "setrag:booking"
 const BOOKING_OWNER_KEY = "setrag:booking-owner"
@@ -191,7 +192,23 @@ function write<T>(key: string, value: T) {
 
 export const ticketingStorage = {
   getSearch: () => read<SearchDraft>(SEARCH_KEY),
-  setSearch: (value: SearchDraft) => write(SEARCH_KEY, value),
+  setSearch: (value: SearchDraft) => {
+    write(SEARCH_KEY, value)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent<SearchDraft>(SEARCH_UPDATED_EVENT, { detail: value })
+      )
+    }
+  },
+  subscribeSearch: (listener: (value: SearchDraft) => void) => {
+    if (typeof window === "undefined") return () => undefined
+    const onSearchUpdated = (event: Event) => {
+      listener((event as CustomEvent<SearchDraft>).detail)
+    }
+    window.addEventListener(SEARCH_UPDATED_EVENT, onSearchUpdated)
+    return () =>
+      window.removeEventListener(SEARCH_UPDATED_EVENT, onSearchUpdated)
+  },
   getTrip: () => read<SelectedTrip>(TRIP_KEY),
   setTrip: (value: SelectedTrip) => write(TRIP_KEY, value),
   getBooking: (ownerId?: string) => {

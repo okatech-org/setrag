@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation"
 
 import { cn } from "@workspace/ui/lib/utils"
 
+import { VoiceTravelAssistantHost } from "@/components/assistant/voice-travel-assistant"
 import { BarreReseau } from "@/components/offline/barre-reseau"
 import { InviteInstallation } from "@/components/offline/invite-installation"
 import { ServiceWorker } from "@/components/service-worker"
@@ -68,6 +69,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             <MobileTabBar isAuthenticated />
           </>
         )}
+        <VoiceTravelAssistantHost />
       </div>
     </MobileChromeProvider>
   )

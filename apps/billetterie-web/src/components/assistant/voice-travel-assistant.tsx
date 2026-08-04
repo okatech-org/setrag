@@ -9,7 +9,7 @@ import {
   Volume2,
   X,
 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useAction, useMutation } from "@workspace/api/hooks"
@@ -27,7 +27,7 @@ import {
   type VoiceJourneyMemory,
   type VoiceTrip,
 } from "@/features/assistant/voice-assistant-runtime"
-import { ticketingStorage, type SearchDraft } from "@/lib/ticketing"
+import { ticketingStorage } from "@/lib/ticketing"
 
 type VoiceStatus =
   | "idle"
@@ -115,12 +115,35 @@ function recordOf(value: unknown): Record<string, unknown> {
     : {}
 }
 
-export function VoiceTravelAssistant({
-  onSearchChange,
-}: {
-  onSearchChange?: (patch: Partial<SearchDraft>) => void
-}) {
+const OPEN_VOICE_ASSISTANT_EVENT = "setrag:voice-assistant:open"
+
+/** Bouton local qui ouvre l'unique assistant monté dans le shell global. */
+export function VoiceTravelAssistant() {
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      size="icon-lg"
+      onClick={() =>
+        window.dispatchEvent(new Event(OPEN_VOICE_ASSISTANT_EVENT))
+      }
+      aria-label="Réserver avec l’assistant vocal"
+      title="Parler à Mbolo"
+    >
+      <Mic aria-hidden />
+    </Button>
+  )
+}
+
+/**
+ * Hôte persistant de la conversation vocale.
+ *
+ * Il est monté une seule fois dans SiteShell : les changements de route
+ * remplacent les pages enfants sans détruire la connexion WebRTC.
+ */
+export function VoiceTravelAssistantHost() {
   const router = useRouter()
+  const pathname = usePathname()
   const createConversation = useMutation(api.ai.conversations.create)
   const mintVoiceToken = useAction(api.ai.realtime.mintVoiceToken)
   const executeVoiceTool = useAction(api.ai.realtime.executeVoiceTool)
@@ -253,7 +276,6 @@ export function VoiceTravelAssistant({
       )
       if (effect.search) {
         ticketingStorage.setSearch(effect.search)
-        onSearchChange?.(effect.search)
       }
       if (effect.trips) setSuggestions(effect.trips)
       if (!effect.handoff) return
@@ -261,7 +283,6 @@ export function VoiceTravelAssistant({
       ticketingStorage.setSearch(effect.handoff.search)
       ticketingStorage.setTrip(effect.handoff.trip)
       ticketingStorage.setBooking(effect.handoff.booking)
-      onSearchChange?.(effect.handoff.search)
       appendMessage({
         id: `reservation-${effect.handoff.booking.reference}`,
         role: "system",
@@ -273,7 +294,7 @@ export function VoiceTravelAssistant({
       await endConnection("ended", false)
       window.setTimeout(() => router.push("/paiement"), 900)
     },
-    [appendMessage, endConnection, onSearchChange, router]
+    [appendMessage, endConnection, router]
   )
 
   const processFunctionCalls = useCallback(
@@ -578,10 +599,16 @@ export function VoiceTravelAssistant({
     setMuted(next)
   }
 
-  function openAssistant() {
+  const openAssistant = useCallback(() => {
     setOpen(true)
     window.setTimeout(() => void start(), 0)
-  }
+  }, [start])
+
+  useEffect(() => {
+    const open = () => openAssistant()
+    window.addEventListener(OPEN_VOICE_ASSISTANT_EVENT, open)
+    return () => window.removeEventListener(OPEN_VOICE_ASSISTANT_EVENT, open)
+  }, [openAssistant])
 
   function closeAssistant() {
     setOpen(false)
@@ -598,16 +625,19 @@ export function VoiceTravelAssistant({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="secondary"
-        size="icon-lg"
-        onClick={openAssistant}
-        aria-label="Réserver avec l’assistant vocal"
-        title="Parler à Mbolo"
-      >
-        <Mic aria-hidden />
-      </Button>
+      {!open && pathname !== "/" && (
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon-lg"
+          className="fixed right-4 bottom-24 z-40 rounded-full shadow-xl md:right-6 md:bottom-6"
+          onClick={openAssistant}
+          aria-label="Réserver avec l’assistant vocal"
+          title="Parler à Mbolo"
+        >
+          <Mic aria-hidden />
+        </Button>
+      )}
 
       {open && (
         <aside

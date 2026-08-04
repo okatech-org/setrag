@@ -22,19 +22,19 @@ billet est authentique ; il l'établit lui-même.
 
 ## Écrans
 
-| Écran  | Route         | Rôle                                                      |
-| ------ | ------------- | --------------------------------------------------------- |
-| CM-01  | `/connexion`  | Mot de passe puis code à six chiffres, tous deux vérifiés |
-| CM-02  | `/tournee`    | Desserte du jour, fraîcheur des données, compteurs        |
-| CM-03  | `/manifeste`  | Téléchargement par lots, reprenable, interruptible        |
-| CM-04  | `/scan`       | Viseur Aztec, lampe, voiture, recherche                   |
-| CM-05  | —             | Verdict, en surcouche du viseur                           |
-| CM-06  | `/recherche`  | Recherche locale par référence, nom ou place              |
-| CM-07  | `/vente`      | Vente à bord — trajet, encaissement, titre                |
-| CM-08  | `/pv`         | Procès-verbal — motif, montant, signature                 |
-| CM-09  | `/incident`   | Signalement, photos, gravité                              |
-| CM-10  | `/historique` | File d'envoi, synchronisation, purge                      |
-| CM-11  | `/conflits`   | Titres contrôlés sur deux terminaux                       |
+| Écran | Route         | Rôle                                                      |
+| ----- | ------------- | --------------------------------------------------------- |
+| CM-01 | `/connexion`  | Mot de passe puis code à six chiffres, tous deux vérifiés |
+| CM-02 | `/tournee`    | Desserte du jour, fraîcheur des données, compteurs        |
+| CM-03 | `/manifeste`  | Téléchargement par lots, reprenable, interruptible        |
+| CM-04 | `/scan`       | Viseur Aztec, lampe, voiture, recherche                   |
+| CM-05 | —             | Verdict, en surcouche du viseur                           |
+| CM-06 | `/recherche`  | Recherche locale par référence, nom ou place              |
+| CM-07 | `/vente`      | Vente à bord — trajet, encaissement, titre                |
+| CM-08 | `/pv`         | Procès-verbal — motif, montant, signature                 |
+| CM-09 | `/incident`   | Signalement, photos, gravité                              |
+| CM-10 | `/historique` | File d'envoi, synchronisation, purge                      |
+| CM-11 | `/conflits`   | Titres contrôlés sur deux terminaux                       |
 
 ## Authentification
 
@@ -77,14 +77,14 @@ entrée en file d'envoi sont écrites dans une seule transaction**
 (`commitOperation`). Une coupure entre les deux produirait soit un contrôle
 jamais envoyé, soit un envoi sans objet.
 
-| Magasin                        | Contenu                                    |
-| ------------------------------ | ------------------------------------------ |
-| `manifests`                    | En-tête, arrêts, barèmes, clé publique     |
-| `tickets`, `subscriptions`     | Titres embarqués, indexés pour la recherche |
-| `scans`, `sales`, `penalties`, `incidents` | Écritures de terrain           |
-| `photos`                       | Images d'incident, envoyées avant leur incident |
-| `queue`                        | File d'envoi : nature, priorité, tentatives |
-| `settings`                     | Réglages du terminal, trace de session     |
+| Magasin                                    | Contenu                                         |
+| ------------------------------------------ | ----------------------------------------------- |
+| `manifests`                                | En-tête, arrêts, barèmes, clé publique          |
+| `tickets`, `subscriptions`                 | Titres embarqués, indexés pour la recherche     |
+| `scans`, `sales`, `penalties`, `incidents` | Écritures de terrain                            |
+| `photos`                                   | Images d'incident, envoyées avant leur incident |
+| `queue`                                    | File d'envoi : nature, priorité, tentatives     |
+| `settings`                                 | Réglages du terminal, trace de session          |
 
 ## Synchronisation
 
@@ -103,6 +103,12 @@ un refus au milieu d'un lot annulerait les ventes déjà passées du même envoi
 Un échec ne supprime rien : l'écriture reste due, avec son motif et son nombre
 de tentatives, jusqu'à ce qu'elle passe. La purge de fin de tournée n'est
 offerte qu'une fois **tout** confirmé.
+
+L'envoi est **automatique** dès qu'une opération entre dans la file si le
+réseau et la session sont disponibles. Il reprend aussi automatiquement au
+retour du réseau ou de la session. Après un échec transitoire, le terminal
+réessaie toutes les 30 secondes ; l'action manuelle de l'écran historique
+n'est qu'un raccourci pour forcer une reprise immédiate.
 
 Le prix d'une vente est **recalculé par le serveur**. Le montant encaissé à
 bord revient dans la réponse, et l'écran affiche les deux côte à côte lorsque
@@ -170,14 +176,14 @@ cd apps/controleur-web && bun run build && bun run start
 
 Ajouts à `convex/functions/control.ts` pour ce portage :
 
-| Fonction                  | Rôle                                                |
-| ------------------------- | --------------------------------------------------- |
-| `manifest`                | Enrichi : barème kilométrique, abonnements, `includeTickets` |
-| `manifestTickets`         | Titres par pages reprenables                        |
-| `assignedTrips`           | Dessertes de la fenêtre de service                  |
-| `syncSale`                | Une vente, idempotente par `clientSaleId`           |
-| `flagConflict`            | Signale un conflit au chef de gare, sans y toucher  |
-| `incidentPhotoUploadUrl`  | Jeton d'envoi d'une photo                           |
+| Fonction                 | Rôle                                                         |
+| ------------------------ | ------------------------------------------------------------ |
+| `manifest`               | Enrichi : barème kilométrique, abonnements, `includeTickets` |
+| `manifestTickets`        | Titres par pages reprenables                                 |
+| `assignedTrips`          | Dessertes de la fenêtre de service                           |
+| `syncSale`               | Une vente, idempotente par `clientSaleId`                    |
+| `flagConflict`           | Signale un conflit au chef de gare, sans y toucher           |
+| `incidentPhotoUploadUrl` | Jeton d'envoi d'une photo                                    |
 
 **Un contrôle enregistré n'est jamais modifiable** — invariante du projet,
 vérifiée par un test de la matrice de droits. Le contrôleur signale donc un

@@ -1,0 +1,19 @@
+.git
+.turbo
+**/.turbo
+**/node_modules
+**/.next
+**/coverage
+**/test-results
+**/playwright-report
+.ds-sync
+ds-bundle
+.design-sync/.cache
+.design-sync/learnings
+.design-sync/node_modules
+tmp
+
+# Applications unrelated to the project selected with `--project`.
+apps/agent-web
+apps/billetterie-web
+apps/voyageur-mobile

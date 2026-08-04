@@ -1,12 +1,17 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { VoiceTravelAssistant } from "./voice-travel-assistant"
+import {
+  VoiceTravelAssistant,
+  VoiceTravelAssistantHost,
+} from "./voice-travel-assistant"
+import { ticketingStorage } from "@/lib/ticketing"
 
 const {
   createConversation,
   executeVoiceTool,
   mintVoiceToken,
+  pathnameState,
   push,
   rejectToolCall,
   updateVoiceSession,
@@ -14,12 +19,14 @@ const {
   createConversation: vi.fn(),
   executeVoiceTool: vi.fn(),
   mintVoiceToken: vi.fn(),
+  pathnameState: { value: "/" },
   push: vi.fn(),
   rejectToolCall: vi.fn(),
   updateVoiceSession: vi.fn(),
 }))
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => pathnameState.value,
   useRouter: () => ({ push }),
 }))
 
@@ -95,6 +102,7 @@ const getUserMedia = vi.fn()
 describe("VoiceTravelAssistant", () => {
   beforeEach(() => {
     window.sessionStorage.clear()
+    pathnameState.value = "/"
     push.mockReset()
     stopTrack.mockReset()
     createConversation.mockReset().mockResolvedValue({
@@ -137,7 +145,12 @@ describe("VoiceTravelAssistant", () => {
   })
 
   it("ouvre une session WebRTC avec un secret éphémère et démarre l'accueil", async () => {
-    render(<VoiceTravelAssistant />)
+    render(
+      <>
+        <VoiceTravelAssistantHost />
+        <VoiceTravelAssistant />
+      </>
+    )
     fireEvent.click(
       screen.getByRole("button", {
         name: "Réserver avec l’assistant vocal",
@@ -183,7 +196,6 @@ describe("VoiceTravelAssistant", () => {
   })
 
   it("exécute une recherche demandée par le modèle et affiche les horaires", async () => {
-    const onSearchChange = vi.fn()
     executeVoiceTool.mockResolvedValue({
       status: "ok",
       executionId: "execution-1",
@@ -204,7 +216,12 @@ describe("VoiceTravelAssistant", () => {
         },
       ],
     })
-    render(<VoiceTravelAssistant onSearchChange={onSearchChange} />)
+    render(
+      <>
+        <VoiceTravelAssistantHost />
+        <VoiceTravelAssistant />
+      </>
+    )
     fireEvent.click(
       screen.getByRole("button", {
         name: "Réserver avec l’assistant vocal",
@@ -249,7 +266,7 @@ describe("VoiceTravelAssistant", () => {
         },
       })
     )
-    expect(onSearchChange).toHaveBeenCalledWith({
+    expect(ticketingStorage.getSearch()).toEqual({
       originId: "owe",
       destinationId: "boo",
       serviceDate: "2026-08-02",
@@ -265,5 +282,45 @@ describe("VoiceTravelAssistant", () => {
         output: expect.stringContaining('"status":"ok"'),
       },
     })
+  })
+
+  it("conserve la session lorsque le contenu de la page change", async () => {
+    const view = render(
+      <>
+        <VoiceTravelAssistantHost />
+        <VoiceTravelAssistant />
+      </>
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Réserver avec l’assistant vocal",
+      })
+    )
+    await waitFor(() => expect(peer.channel.readyState).toBe("open"))
+
+    view.rerender(
+      <>
+        <VoiceTravelAssistantHost />
+        <main>Nouvelle page</main>
+      </>
+    )
+
+    expect(screen.getByText("Nouvelle page")).toBeInTheDocument()
+    expect(
+      screen.getByRole("complementary", { name: "Assistant vocal Mbolo" })
+    ).toBeInTheDocument()
+    expect(peer.connectionState).toBe("connected")
+    expect(stopTrack).not.toHaveBeenCalled()
+  })
+
+  it("reste accessible depuis une page sans formulaire de recherche", () => {
+    pathnameState.value = "/reservation"
+    render(<VoiceTravelAssistantHost />)
+
+    expect(
+      screen.getByRole("button", {
+        name: "Réserver avec l’assistant vocal",
+      })
+    ).toBeInTheDocument()
   })
 })

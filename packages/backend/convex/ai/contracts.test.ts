@@ -104,4 +104,33 @@ describe("contrats des assistants voyageurs", () => {
     expect(prompt).toContain("ne les prononce jamais")
     expect(prompt).toContain("attribuées automatiquement")
   })
+
+  it("injecte le profil authentifié comme données déjà connues", () => {
+    const prompt = buildAssistantInstructions(
+      "booking",
+      "2026-08-04T12:00:00.000Z",
+      {
+        profile: {
+          firstName: "Paul",
+          lastName: "Mba",
+          phone: "+241060000000",
+          email: "paul@example.ga",
+        },
+        savedPassengers: [
+          {
+            firstName: "Alice",
+            lastName: "Mba",
+            gender: "F",
+            phone: null,
+          },
+        ],
+      }
+    )
+
+    expect(prompt).toContain("Contexte voyageur authentifié")
+    expect(prompt).toContain("+241060000000")
+    expect(prompt).toContain("profile.phone")
+    expect(prompt).toContain("Ne redemande jamais")
+    expect(prompt).toContain("Alice")
+  })
 })

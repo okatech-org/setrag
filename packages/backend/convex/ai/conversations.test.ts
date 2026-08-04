@@ -101,6 +101,59 @@ describe("conversations IA", () => {
     )
   })
 
+  it("précharge le profil et les voyageurs enregistrés dans le contexte", async () => {
+    const t = convexTest(schema, modules)
+    const userId = await t.run((ctx) =>
+      ctx.db.insert("users", {
+        authId: "traveler-context",
+        firstName: "Paul",
+        lastName: "Mba",
+        phone: "+241060000000",
+        email: "paul@example.ga",
+        role: "voyageur",
+        identitySource: "local",
+        isActive: true,
+      })
+    )
+    await t.run((ctx) =>
+      ctx.db.insert("savedPassengers", {
+        userId,
+        firstName: "Alice",
+        lastName: "Mba",
+        gender: "F",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      })
+    )
+    const traveler = t.withIdentity({ subject: "traveler-context" })
+    const created = await traveler.mutation(api.ai.conversations.create, {
+      guestKey: GUEST_KEY,
+      assistantId: "booking",
+    })
+
+    const access = await traveler.query(
+      internal.ai.conversations.accessContext,
+      { conversationId: created.conversationId }
+    )
+
+    expect(access.travelerContext).toEqual({
+      profile: {
+        firstName: "Paul",
+        lastName: "Mba",
+        phone: "+241060000000",
+        email: "paul@example.ga",
+      },
+      savedPassengers: [
+        {
+          firstName: "Alice",
+          lastName: "Mba",
+          gender: "F",
+          phone: null,
+        },
+      ],
+    })
+  })
+
   it("mémorise un tour avec une clé d'idempotence", async () => {
     const t = convexTest(schema, modules)
     const created = await t.mutation(api.ai.conversations.create, {
