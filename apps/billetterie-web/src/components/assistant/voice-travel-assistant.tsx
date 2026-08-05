@@ -24,8 +24,8 @@ import {
   completedAssistantTranscript,
   emptyVoiceJourneyMemory,
   getAssistantGuestKey,
-  isExplicitBookingAuthorization,
   parseRealtimeFunctionCalls,
+  realtimeFunctionCallEvent,
   realtimeTranscriptEvent,
   rememberSuccessfulVoiceTool,
   type RealtimeFunctionCall,
@@ -58,6 +58,10 @@ type ToolResult =
       output: unknown
       clientAction?: string
       cached: boolean
+      uiAction?: {
+        type: string
+        payload?: Record<string, unknown>
+      }
     }
   | { status: "approval_required"; message?: string }
   | { status: "error"; message: string }
@@ -162,7 +166,6 @@ export function VoiceTravelAssistantHost() {
   const createConversation = useMutation(api.ai.conversations.create)
   const mintVoiceToken = useAction(api.ai.realtime.mintVoiceToken)
   const executeVoiceTool = useAction(api.ai.realtime.executeVoiceTool)
-  const authorizeVoiceBooking = useAction(api.ai.realtime.authorizeVoiceBooking)
   const updateVoiceSession = useAction(api.ai.realtime.updateVoiceSession)
   const { profile } = useTravelerAuth()
 
@@ -185,8 +188,11 @@ export function VoiceTravelAssistantHost() {
   const processedCallsRef = useRef(new Set<string>())
   const journeyRef = useRef<VoiceJourneyMemory>(emptyVoiceJourneyMemory())
   const closingRef = useRef(false)
-  const bookingAuthorizationRef = useRef<Promise<unknown> | null>(null)
-  const voiceSessionReadyRef = useRef<Promise<unknown> | null>(null)
+  // Une seule réponse OpenAI peut être active : un `response.create` envoyé
+  // pendant qu'elle parle est rejeté et laisserait le modèle muet. On le
+  // diffère jusqu'au `response.done`.
+  const activeResponseRef = useRef(false)
+  const pendingResponseCreateRef = useRef(false)
 
   const appendMessage = useCallback((next: TranscriptMessage) => {
     setMessages((current) => {
@@ -257,11 +263,11 @@ export function VoiceTravelAssistantHost() {
     [updateVoiceSession]
   )
 
-  const completeBookingHandoff = useCallback(
+  const applySuccessfulToolResult = useCallback(
     async (
       effectiveCall: RealtimeFunctionCall,
       result: Extract<ToolResult, { status: "ok" }>
-    ) => {
+    ): Promise<boolean> => {
       const effect = rememberSuccessfulVoiceTool(
         journeyRef.current,
         effectiveCall.name,
@@ -290,7 +296,7 @@ export function VoiceTravelAssistantHost() {
           )
           setStatus("error")
         }
-        return
+        return effectiveCall.name !== "create_booking"
       }
 
       ticketingStorage.setSearch(effect.handoff.search)
@@ -302,14 +308,26 @@ export function VoiceTravelAssistantHost() {
         text: `Réservation ${effect.handoff.booking.reference} créée. Vos places sont bloquées pendant quinze minutes.`,
       })
       setStatus("reserved")
-      router.push("/paiement")
-      // Laisse à Mbolo le temps d'annoncer le succès après la réponse d'outil,
-      // puis coupe le micro automatiquement sur la page de paiement.
-      window.setTimeout(() => {
-        void endConnection("ended", false)
-      }, 4_000)
+      return true
     },
-    [appendMessage, endConnection, router]
+    [appendMessage]
+  )
+
+  const dispatchUiAction = useCallback(
+    (
+      uiAction: NonNullable<Extract<ToolResult, { status: "ok" }>["uiAction"]>,
+      paymentReady: boolean
+    ) => {
+      if (uiAction.type !== "navigate") return
+      const route = uiAction.payload?.route
+      if (route !== "/paiement" || !paymentReady) {
+        setError("La page demandée par l’assistant n’est pas disponible.")
+        setStatus("error")
+        return
+      }
+      router.push(route)
+    },
+    [router]
   )
 
   const processFunctionCalls = useCallback(
@@ -324,10 +342,6 @@ export function VoiceTravelAssistantHost() {
         processedCallsRef.current.add(call.callId)
         let result: ToolResult
         try {
-          if (call.name === "create_booking") {
-            await bookingAuthorizationRef.current
-            bookingAuthorizationRef.current = null
-          }
           result = (await executeVoiceTool({
             conversationId: conversationIdRef.current as never,
             guestKey: guestKeyRef.current || undefined,
@@ -359,7 +373,10 @@ export function VoiceTravelAssistantHost() {
         }
 
         if (result.status === "ok") {
-          await completeBookingHandoff(call, result)
+          const paymentReady = await applySuccessfulToolResult(call, result)
+          if (result.uiAction) {
+            dispatchUiAction(result.uiAction, paymentReady)
+          }
         }
 
         sendChannelEvent({
@@ -371,9 +388,13 @@ export function VoiceTravelAssistantHost() {
           },
         })
       }
-      sendChannelEvent({ type: "response.create" })
+      if (activeResponseRef.current) {
+        pendingResponseCreateRef.current = true
+      } else {
+        sendChannelEvent({ type: "response.create" })
+      }
     },
-    [completeBookingHandoff, executeVoiceTool, sendChannelEvent]
+    [applySuccessfulToolResult, dispatchUiAction, executeVoiceTool, sendChannelEvent]
   )
 
   const handleServerEvent = useCallback(
@@ -388,7 +409,10 @@ export function VoiceTravelAssistantHost() {
       const type = root.type
       if (type === "input_audio_buffer.speech_started") setStatus("listening")
       if (type === "input_audio_buffer.speech_stopped") setStatus("thinking")
-      if (type === "response.created") setStatus("thinking")
+      if (type === "response.created") {
+        activeResponseRef.current = true
+        setStatus("thinking")
+      }
       if (
         type === "response.output_audio.delta" ||
         type === "response.audio.delta"
@@ -396,9 +420,16 @@ export function VoiceTravelAssistantHost() {
         setStatus("speaking")
       }
       if (type === "error") {
+        const details = recordOf(root.error)
+        if (details.code === "conversation_already_has_active_response") {
+          // Notre relance a croisé une réponse encore active : on la rejouera
+          // au prochain `response.done` au lieu de couper la conversation.
+          pendingResponseCreateRef.current = true
+          return
+        }
         const message =
-          typeof recordOf(root.error).message === "string"
-            ? String(recordOf(root.error).message)
+          typeof details.message === "string"
+            ? String(details.message)
             : "OpenAI Realtime a interrompu la conversation."
         setError(message)
         setStatus("error")
@@ -414,26 +445,20 @@ export function VoiceTravelAssistantHost() {
           role: transcript.role,
           text: transcript.text,
         })
-        if (
-          transcript.role === "user" &&
-          isExplicitBookingAuthorization(transcript.text) &&
-          Boolean(journeyRef.current.quoteOutput) &&
-          conversationIdRef.current &&
-          voiceSessionIdRef.current
-        ) {
-          bookingAuthorizationRef.current = (async () => {
-            await voiceSessionReadyRef.current
-            return authorizeVoiceBooking({
-              conversationId: conversationIdRef.current as never,
-              guestKey: guestKeyRef.current || undefined,
-              voiceSessionId: voiceSessionIdRef.current as never,
-              transcript: transcript.text,
-            })
-          })().catch(() => undefined)
-        }
+      }
+
+      const realtimeCall = realtimeFunctionCallEvent(event)
+      if (realtimeCall) {
+        await processFunctionCalls([realtimeCall])
+        return
       }
 
       if (type !== "response.done") return
+      activeResponseRef.current = false
+      if (pendingResponseCreateRef.current) {
+        pendingResponseCreateRef.current = false
+        sendChannelEvent({ type: "response.create" })
+      }
       const completed = completedAssistantTranscript(event)
       if (completed) {
         appendMessage({
@@ -445,17 +470,13 @@ export function VoiceTravelAssistantHost() {
       const calls = parseRealtimeFunctionCalls(event)
       if (calls.length > 0) {
         await processFunctionCalls(calls)
-      } else if (status !== "reserved") {
-        setStatus("listening")
+      } else {
+        // Le canal WebRTC garde le premier gestionnaire : l'état se lit dans
+        // le setter, jamais dans la fermeture, sinon il serait périmé.
+        setStatus((current) => (current === "reserved" ? current : "listening"))
       }
     },
-    [
-      appendDelta,
-      appendMessage,
-      authorizeVoiceBooking,
-      processFunctionCalls,
-      status,
-    ]
+    [appendDelta, appendMessage, processFunctionCalls, sendChannelEvent]
   )
 
   const start = useCallback(async () => {
@@ -470,8 +491,8 @@ export function VoiceTravelAssistantHost() {
     closingRef.current = false
     processedCallsRef.current.clear()
     journeyRef.current = emptyVoiceJourneyMemory()
-    bookingAuthorizationRef.current = null
-    voiceSessionReadyRef.current = null
+    activeResponseRef.current = false
+    pendingResponseCreateRef.current = false
 
     try {
       if (
@@ -535,7 +556,7 @@ export function VoiceTravelAssistantHost() {
       })
       channel.addEventListener("open", () => {
         setStatus("speaking")
-        voiceSessionReadyRef.current = updateVoiceSession({
+        void updateVoiceSession({
           conversationId: conversation.conversationId,
           guestKey,
           voiceSessionId: grant.voiceSessionId,

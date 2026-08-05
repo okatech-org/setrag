@@ -4,8 +4,8 @@ import {
   completedAssistantTranscript,
   emptyVoiceJourneyMemory,
   getAssistantGuestKey,
-  isExplicitBookingAuthorization,
   parseRealtimeFunctionCalls,
+  realtimeFunctionCallEvent,
   realtimeTranscriptEvent,
   rememberSuccessfulVoiceTool,
 } from "./voice-assistant-runtime"
@@ -30,10 +30,25 @@ describe("contrat du client vocal Realtime", () => {
     expect(window.location.href).not.toContain(first)
   })
 
-  it("distingue un accord vocal d'un refus", () => {
-    expect(isExplicitBookingAuthorization("Oui, je confirme.")).toBe(true)
-    expect(isExplicitBookingAuthorization("Vas-y, réserve.")).toBe(true)
-    expect(isExplicitBookingAuthorization("Non, ne réserve pas.")).toBe(false)
+  it("extrait un appel dès que ses arguments Realtime sont terminés", () => {
+    expect(
+      realtimeFunctionCallEvent({
+        type: "response.function_call_arguments.done",
+        call_id: "call-search",
+        name: "search_trips",
+        arguments:
+          '{"originStationId":"owe","destinationStationId":"boo","serviceDate":"2026-08-02","passengers":2}',
+      })
+    ).toEqual({
+      callId: "call-search",
+      name: "search_trips",
+      input: {
+        originStationId: "owe",
+        destinationStationId: "boo",
+        serviceDate: "2026-08-02",
+        passengers: 2,
+      },
+    })
   })
 
   it("extrait tous les appels de fonction d'une réponse terminée", () => {

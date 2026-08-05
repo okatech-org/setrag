@@ -85,30 +85,31 @@ function numberValue(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined
 }
 
-export function isExplicitBookingAuthorization(transcript: string): boolean {
-  const normalized = transcript
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("fr")
-    .replace(/[’']/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-  if (!normalized) return false
-  if (
-    /\b(non|annule|annuler|stop|arrete|refuse)\b/.test(normalized) ||
-    /\bne\b.{0,40}\bpas\b/.test(normalized)
-  ) {
-    return false
+/**
+ * OpenAI Realtime annonce un appel d'outil dès que ses arguments sont prêts.
+ * L'exécuter sur cet événement évite d'attendre `response.done`, qui peut
+ * arriver après que le modèle a déjà suspendu son tour en attente du résultat.
+ */
+export function realtimeFunctionCallEvent(
+  event: unknown
+): RealtimeFunctionCall | undefined {
+  const root = recordOf(event)
+  if (root.type !== "response.function_call_arguments.done") return undefined
+  const callId = stringValue(root.call_id)
+  const name = stringValue(root.name)
+  if (!callId || !name) return undefined
+  try {
+    return {
+      callId,
+      name,
+      input:
+        typeof root.arguments === "string"
+          ? JSON.parse(root.arguments || "{}")
+          : (root.arguments ?? {}),
+    }
+  } catch {
+    return { callId, name, input: {} }
   }
-  return (
-    /\boui\b/.test(normalized) ||
-    /\bje confirme\b/.test(normalized) ||
-    /\bvas y\b/.test(normalized) ||
-    /\b(fais|faites|lance|cree|valide)\b.{0,30}\breservation\b/.test(
-      normalized
-    ) ||
-    /\breserv(e|ez)\b/.test(normalized)
-  )
 }
 
 export function parseRealtimeFunctionCalls(

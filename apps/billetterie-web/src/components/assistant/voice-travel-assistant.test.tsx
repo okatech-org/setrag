@@ -15,7 +15,6 @@ import {
 import { ticketingStorage } from "@/lib/ticketing"
 
 const {
-  authorizeVoiceBooking,
   createConversation,
   executeVoiceTool,
   mintVoiceToken,
@@ -23,7 +22,6 @@ const {
   push,
   updateVoiceSession,
 } = vi.hoisted(() => ({
-  authorizeVoiceBooking: vi.fn(),
   createConversation: vi.fn(),
   executeVoiceTool: vi.fn(),
   mintVoiceToken: vi.fn(),
@@ -60,8 +58,6 @@ vi.mock("@workspace/api/hooks", () => ({
   useAction: (reference: Record<PropertyKey, unknown>) => {
     const name = reference[Symbol.for("functionName")]
     if (name === "ai/realtime:mintVoiceToken") return mintVoiceToken
-    if (name === "ai/realtime:authorizeVoiceBooking")
-      return authorizeVoiceBooking
     if (name === "ai/realtime:executeVoiceTool") return executeVoiceTool
     if (name === "ai/realtime:updateVoiceSession") return updateVoiceSession
     throw new Error(`Action inattendue : ${String(name)}`)
@@ -148,7 +144,6 @@ describe("VoiceTravelAssistant", () => {
       tools: [],
     })
     executeVoiceTool.mockReset()
-    authorizeVoiceBooking.mockReset().mockResolvedValue({ authorized: true })
     updateVoiceSession.mockReset().mockResolvedValue({ updated: true })
 
     peer = new FakePeerConnection()
@@ -260,19 +255,11 @@ describe("VoiceTravelAssistant", () => {
         "message",
         new MessageEvent("message", {
           data: JSON.stringify({
-            type: "response.done",
-            response: {
-              id: "response-search",
-              output: [
-                {
-                  type: "function_call",
-                  call_id: "call-search",
-                  name: "search_trips",
-                  arguments:
-                    '{"originStationId":"owe","destinationStationId":"boo","serviceDate":"2026-08-02","passengers":1}',
-                },
-              ],
-            },
+            type: "response.function_call_arguments.done",
+            call_id: "call-search",
+            name: "search_trips",
+            arguments:
+              '{"originStationId":"owe","destinationStationId":"boo","serviceDate":"2026-08-02","passengers":1}',
           }),
         })
       )
@@ -391,11 +378,8 @@ describe("VoiceTravelAssistant", () => {
           "message",
           new MessageEvent("message", {
             data: JSON.stringify({
-              type: "response.done",
-              response: {
-                id: `response-${call.call_id}`,
-                output: [{ type: "function_call", ...call }],
-              },
+              type: "response.function_call_arguments.done",
+              ...call,
             }),
           })
         )
@@ -431,6 +415,10 @@ describe("VoiceTravelAssistant", () => {
       executionId: "execution-booking",
       cached: false,
       clientAction: "show_booking",
+      uiAction: {
+        type: "navigate",
+        payload: { route: "/paiement" },
+      },
       output: {
         reference: "V-LIGNE-20260807-000001",
         holdExpiresAt: 1_900_000_000_000,
@@ -475,107 +463,133 @@ describe("VoiceTravelAssistant", () => {
     )
     await waitFor(() => expect(peer.channel.readyState).toBe("open"))
 
-    const timeout = vi
-      .spyOn(window, "setTimeout")
-      .mockImplementation(() => ({}) as ReturnType<typeof setTimeout>)
-    try {
-      await act(async () => {
-        peer.channel.emit(
-          "message",
-          new MessageEvent("message", {
-            data: JSON.stringify({
-              type: "response.done",
-              response: {
-                id: "response-quote",
-                output: [
-                  {
-                    type: "function_call",
-                    call_id: "call-quote-before-booking",
-                    name: "quote_booking",
-                    arguments: JSON.stringify({
-                      tripId: "trip-1",
-                      originStationId: "owe",
-                      destinationStationId: "boo",
-                      serviceClass: "DEUXIEME",
-                      passengerCount: 1,
-                      discountCodes: null,
-                    }),
-                  },
-                ],
-              },
+    await act(async () => {
+      peer.channel.emit(
+        "message",
+        new MessageEvent("message", {
+          data: JSON.stringify({
+            type: "response.function_call_arguments.done",
+            call_id: "call-quote-before-booking",
+            name: "quote_booking",
+            arguments: JSON.stringify({
+              tripId: "trip-1",
+              originStationId: "owe",
+              destinationStationId: "boo",
+              serviceClass: "DEUXIEME",
+              passengerCount: 1,
+              discountCodes: null,
             }),
-          })
-        )
-        await Promise.resolve()
+          }),
+        })
+      )
+      await Promise.resolve()
+    })
+    await act(async () => {
+      peer.channel.emit(
+        "message",
+        new MessageEvent("message", {
+          data: JSON.stringify({
+            type: "response.function_call_arguments.done",
+            call_id: "call-booking",
+            name: "create_booking",
+            arguments: JSON.stringify({
+              tripId: "trip-1",
+              originStationId: "owe",
+              destinationStationId: "boo",
+              serviceClass: "DEUXIEME",
+              passengers: [
+                {
+                  firstName: "Ariane",
+                  lastName: "Moussavou",
+                  gender: "F",
+                  discountCode: null,
+                },
+              ],
+              contactPhone: "+24106000000",
+            }),
+          }),
+        })
+      )
+      await Promise.resolve()
+    })
+
+    expect(push).toHaveBeenCalledWith("/paiement")
+    expect(ticketingStorage.getTrip()).toMatchObject({
+      tripId: "trip-1",
+      originName: "Owendo",
+      destinationName: "Booué",
+    })
+    expect(ticketingStorage.getBooking()).toMatchObject({
+      reference: "V-LIGNE-20260807-000001",
+    })
+    expect(peer.connectionState).toBe("connected")
+    expect(stopTrack).not.toHaveBeenCalled()
+  })
+
+  it("diffère la relance tant qu'une réponse du modèle est active", async () => {
+    executeVoiceTool.mockResolvedValue({
+      status: "ok",
+      cached: false,
+      output: [],
+    })
+    render(
+      <>
+        <VoiceTravelAssistantHost />
+        <VoiceTravelAssistant />
+      </>
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Réserver avec l’assistant vocal",
       })
-      await act(async () => {
+    )
+    await waitFor(() => expect(peer.channel.readyState).toBe("open"))
+    const emit = (payload: Record<string, unknown>) =>
+      act(async () => {
         peer.channel.emit(
           "message",
-          new MessageEvent("message", {
-            data: JSON.stringify({
-              type: "conversation.item.input_audio_transcription.completed",
-              item_id: "authorization-1",
-              transcript: "Oui, je confirme la réservation.",
-            }),
-          })
-        )
-        await Promise.resolve()
-      })
-      await act(async () => {
-        peer.channel.emit(
-          "message",
-          new MessageEvent("message", {
-            data: JSON.stringify({
-              type: "response.done",
-              response: {
-                id: "response-booking",
-                output: [
-                  {
-                    type: "function_call",
-                    call_id: "call-booking",
-                    name: "create_booking",
-                    arguments: JSON.stringify({
-                      tripId: "trip-1",
-                      originStationId: "owe",
-                      destinationStationId: "boo",
-                      serviceClass: "DEUXIEME",
-                      passengers: [
-                        {
-                          firstName: "Ariane",
-                          lastName: "Moussavou",
-                          gender: "F",
-                          discountCode: null,
-                        },
-                      ],
-                      contactPhone: "+24106000000",
-                    }),
-                  },
-                ],
-              },
-            }),
-          })
+          new MessageEvent("message", { data: JSON.stringify(payload) })
         )
         await Promise.resolve()
       })
 
-      expect(push).toHaveBeenCalledWith("/paiement")
-      expect(authorizeVoiceBooking).toHaveBeenCalledWith({
-        conversationId: "conversation-1",
-        guestKey: expect.any(String),
-        voiceSessionId: "voice-session-1",
-        transcript: "Oui, je confirme la réservation.",
-      })
-      expect(ticketingStorage.getTrip()).toMatchObject({
-        tripId: "trip-1",
-        originName: "Owendo",
-        destinationName: "Booué",
-      })
-      expect(ticketingStorage.getBooking()).toMatchObject({
-        reference: "V-LIGNE-20260807-000001",
-      })
-    } finally {
-      timeout.mockRestore()
-    }
+    await emit({ type: "response.created", response: { id: "resp-1" } })
+    await emit({
+      type: "response.function_call_arguments.done",
+      call_id: "call-stations",
+      name: "list_stations",
+      arguments: "{}",
+    })
+    await waitFor(() =>
+      expect(peer.channel.sent).toContainEqual(
+        expect.objectContaining({ type: "conversation.item.create" })
+      )
+    )
+
+    const relances = () =>
+      peer.channel.sent.filter(
+        (event) =>
+          (event as { type: string; response?: unknown }).type ===
+            "response.create" &&
+          !(event as { response?: unknown }).response
+      )
+    expect(relances()).toHaveLength(0)
+
+    await emit({ type: "response.done", response: { id: "resp-1" } })
+    expect(relances()).toHaveLength(1)
+
+    // Une collision résiduelle est bénigne : elle se rejoue au tour suivant.
+    await emit({ type: "response.created", response: { id: "resp-2" } })
+    await emit({
+      type: "error",
+      error: {
+        code: "conversation_already_has_active_response",
+        message: "Conversation already has an active response",
+      },
+    })
+    expect(screen.queryByText("Indisponible")).not.toBeInTheDocument()
+    await emit({ type: "response.done", response: { id: "resp-2" } })
+    expect(relances()).toHaveLength(2)
   })
 
   it("conserve la session lorsque le contenu de la page change", async () => {

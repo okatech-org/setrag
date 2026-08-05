@@ -28,35 +28,14 @@ const SUPPORTED_VOICES = [
   "cedar",
 ] as const
 
-const BOOKING_AUTHORIZATION_TTL_MS = 60_000
-
-export function isExplicitBookingAuthorization(transcript: string): boolean {
-  const normalized = transcript
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("fr")
-    .replace(/[’']/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-  if (!normalized) return false
-  if (
-    /\b(non|annule|annuler|stop|arrete|refuse)\b/.test(normalized) ||
-    /\bne\b.{0,40}\bpas\b/.test(normalized)
-  ) {
-    return false
-  }
-  return (
-    /\boui\b/.test(normalized) ||
-    /\bje confirme\b/.test(normalized) ||
-    /\bvas y\b/.test(normalized) ||
-    /\b(fais|faites|lance|cree|valide)\b.{0,30}\breservation\b/.test(
-      normalized
-    ) ||
-    /\breserv(e|ez)\b/.test(normalized)
-  )
-}
-
 type VoiceName = (typeof SUPPORTED_VOICES)[number]
+
+type VoiceToolExecutionResult = ToolExecutionResult & {
+  uiAction?: {
+    type: "navigate"
+    payload: { route: "/paiement" }
+  }
+}
 
 type VoiceGrant =
   | {
@@ -173,85 +152,6 @@ export const setVoiceSessionStatus = internalMutation({
   },
 })
 
-export const recordBookingAuthorization = internalMutation({
-  args: {
-    conversationId: v.id("assistantConversations"),
-    voiceSessionId: v.id("assistantVoiceSessions"),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db.get(args.voiceSessionId)
-    if (
-      !session ||
-      session.conversationId !== args.conversationId ||
-      session.status !== "connected"
-    ) {
-      throw new Error("Session vocale active introuvable.")
-    }
-    const authorizedAt = Date.now()
-    await ctx.db.patch(session._id, {
-      bookingAuthorizedAt: authorizedAt,
-      bookingAuthorizationConsumedAt: undefined,
-    })
-    return authorizedAt
-  },
-})
-
-export const consumeBookingAuthorization = internalMutation({
-  args: {
-    conversationId: v.id("assistantConversations"),
-    voiceSessionId: v.id("assistantVoiceSessions"),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db.get(args.voiceSessionId)
-    const authorizedAt = session?.bookingAuthorizedAt
-    if (
-      !session ||
-      session.conversationId !== args.conversationId ||
-      session.status !== "connected" ||
-      !authorizedAt ||
-      Date.now() - authorizedAt > BOOKING_AUTHORIZATION_TTL_MS ||
-      (session.bookingAuthorizationConsumedAt ?? 0) >= authorizedAt
-    ) {
-      return false
-    }
-    await ctx.db.patch(session._id, {
-      bookingAuthorizationConsumedAt: Date.now(),
-    })
-    return true
-  },
-})
-
-export const authorizeVoiceBooking = action({
-  args: {
-    conversationId: v.id("assistantConversations"),
-    guestKey: v.optional(v.string()),
-    voiceSessionId: v.id("assistantVoiceSessions"),
-    transcript: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.runQuery(internal.ai.conversations.accessContext, {
-      conversationId: args.conversationId,
-      guestKey: args.guestKey,
-    })
-    if (!isExplicitBookingAuthorization(args.transcript)) {
-      return { authorized: false }
-    }
-    const hasQuote = await ctx.runQuery(
-      internal.ai.tools.hasSucceededToolExecution,
-      {
-        conversationId: args.conversationId,
-        toolName: "quote_booking",
-      }
-    )
-    if (!hasQuote) return { authorized: false }
-    await ctx.runMutation(internal.ai.realtime.recordBookingAuthorization, {
-      conversationId: args.conversationId,
-      voiceSessionId: args.voiceSessionId,
-    })
-    return { authorized: true }
-  },
-})
-
 /**
  * Crée un secret éphémère OpenAI. La clé API standard ne quitte jamais le
  * backend ; le navigateur/mobile reçoit uniquement le secret lié à la session.
@@ -338,7 +238,8 @@ Conduis le voyageur jusqu'à une réservation prête à payer, avec le moins de 
             model: cfg.model,
             instructions,
             output_modalities: ["audio"],
-            max_output_tokens: 180,
+            // Pas de max_output_tokens : un plafond coupe la voix en pleine
+            // phrase. La brièveté est portée par les instructions.
             tool_choice: "auto",
             tools: realtimeTools.map((tool) => ({
               type: "function",
@@ -427,16 +328,12 @@ export const executeVoiceTool = action({
     voiceSessionId: v.optional(v.id("assistantVoiceSessions")),
     approved: v.optional(v.boolean()),
   },
-  handler: async (ctx, args): Promise<ToolExecutionResult> => {
+  handler: async (ctx, args): Promise<VoiceToolExecutionResult> => {
     const rawInput =
       args.input && typeof args.input === "object" && !Array.isArray(args.input)
         ? (args.input as Record<string, unknown>)
         : {}
-    const input =
-      args.name === "create_booking"
-        ? { ...rawInput, voiceAuthorization: "confirmed" }
-        : rawInput
-    const executionArgs = { ...args, input }
+    const executionArgs = { ...args, input: rawInput }
 
     if (args.name === "create_booking") {
       await ctx.runQuery(internal.ai.conversations.accessContext, {
@@ -448,7 +345,7 @@ export const executeVoiceTool = action({
         {
           conversationId: args.conversationId,
           toolName: args.name,
-          inputJson: canonicalToolInput(input),
+          inputJson: canonicalToolInput(rawInput),
         }
       )
       if (previous) {
@@ -458,46 +355,44 @@ export const executeVoiceTool = action({
           output: previous.outputJson ? JSON.parse(previous.outputJson) : null,
           clientAction: "show_booking",
           cached: true,
-        }
-      }
-      if (!args.voiceSessionId) {
-        return {
-          status: "error",
-          message: "Dites clairement oui avant de lancer la réservation.",
-        }
-      }
-      const authorized = await ctx.runMutation(
-        internal.ai.realtime.consumeBookingAuthorization,
-        {
-          conversationId: args.conversationId,
-          voiceSessionId: args.voiceSessionId,
-        }
-      )
-      if (!authorized) {
-        return {
-          status: "error",
-          message: "Dites clairement oui avant de lancer la réservation.",
+          uiAction: {
+            type: "navigate",
+            payload: { route: "/paiement" },
+          },
         }
       }
     }
 
     const initial = await executeAssistantTool(ctx, executionArgs)
-    if (
-      args.name !== "create_booking" ||
-      initial.status !== "approval_required"
-    ) {
-      return initial
+    if (args.name !== "create_booking") return initial
+    if (initial.status === "ok") {
+      return {
+        ...initial,
+        uiAction: {
+          type: "navigate",
+          payload: { route: "/paiement" },
+        },
+      }
     }
+    if (initial.status !== "approval_required") return initial
 
-    console.info("[ai.realtime] autorisation vocale consommée", {
+    console.info("[ai.realtime] réservation vocale autorisée par l'appel d'outil", {
       conversationId: args.conversationId,
       callId: args.callId,
       toolName: args.name,
     })
-    return executeAssistantTool(ctx, {
+    const result = await executeAssistantTool(ctx, {
       ...executionArgs,
       approved: true,
     })
+    if (result.status !== "ok") return result
+    return {
+      ...result,
+      uiAction: {
+        type: "navigate",
+        payload: { route: "/paiement" },
+      },
+    }
   },
 })
 

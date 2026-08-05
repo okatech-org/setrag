@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { api, internal } from "../_generated/api"
 import schema from "../schema"
 import { modules } from "../test.setup"
-import { isExplicitBookingAuthorization } from "./realtime"
 import { canonicalToolInput } from "./tools"
 
 const GUEST_KEY = "guest-session-key-0123456789-abcdef"
@@ -25,16 +24,6 @@ afterEach(() => {
 })
 
 describe("sessions vocales OpenAI Realtime", () => {
-  it("reconnaît un accord explicite sans accepter un refus", () => {
-    expect(isExplicitBookingAuthorization("Oui, je confirme.")).toBe(true)
-    expect(isExplicitBookingAuthorization("Vas-y, réserve.")).toBe(true)
-    expect(
-      isExplicitBookingAuthorization("Fais-moi la réservation maintenant.")
-    ).toBe(true)
-    expect(isExplicitBookingAuthorization("Non, ne réserve pas.")).toBe(false)
-    expect(isExplicitBookingAuthorization("Je vais réfléchir.")).toBe(false)
-  })
-
   it("signale explicitement une fonctionnalité désactivée sans appeler OpenAI", async () => {
     vi.stubEnv("AI_REALTIME_ENABLED", "false")
     const fetchMock = vi.fn()
@@ -142,7 +131,6 @@ describe("sessions vocales OpenAI Realtime", () => {
         type: "realtime",
         model: "gpt-realtime-test",
         output_modalities: ["audio"],
-        max_output_tokens: 180,
         audio: {
           input: {
             transcription: { language: "fr" },
@@ -155,6 +143,8 @@ describe("sessions vocales OpenAI Realtime", () => {
         },
       },
     })
+    // Un plafond de tokens couperait la voix en pleine phrase.
+    expect(request.session.max_output_tokens).toBeUndefined()
     expect(request.session.instructions).toContain("# Parcours de réservation")
     expect(request.session.instructions).toContain("« dans 2 jours »=2")
     expect(request.session.instructions).toContain(
@@ -351,32 +341,17 @@ describe("sessions vocales OpenAI Realtime", () => {
     })
   })
 
-  it("consomme l'autorisation vocale sans exiger un champ fabriqué par le modèle", async () => {
+  it("exécute directement la réservation appelée par la session vocale", async () => {
     const t = convexTest(schema, modules)
     rateLimiterTest.register(t)
     const conversation = await t.mutation(api.ai.conversations.create, {
       guestKey: GUEST_KEY,
       assistantId: "booking",
     })
-    const voiceSessionId = await t.mutation(
-      internal.ai.realtime.recordVoiceSession,
-      {
-        conversationId: conversation.conversationId,
-        model: "gpt-realtime-test",
-      }
-    )
-    await t.action(api.ai.realtime.updateVoiceSession, {
+    const result = await t.action(api.ai.realtime.executeVoiceTool, {
       conversationId: conversation.conversationId,
       guestKey: GUEST_KEY,
-      voiceSessionId,
-      status: "connected",
-    })
-
-    const unauthorized = await t.action(api.ai.realtime.executeVoiceTool, {
-      conversationId: conversation.conversationId,
-      guestKey: GUEST_KEY,
-      voiceSessionId,
-      callId: "voice-booking-unauthorized",
+      callId: "voice-booking",
       name: "create_booking",
       input: {
         tripId: "trip-1",
@@ -387,77 +362,21 @@ describe("sessions vocales OpenAI Realtime", () => {
         contactPhone: "077000000",
       },
     })
-    expect(unauthorized).toEqual({
-      status: "error",
-      message: "Dites clairement oui avant de lancer la réservation.",
-    })
-
-    await expect(
-      t.action(api.ai.realtime.authorizeVoiceBooking, {
-        conversationId: conversation.conversationId,
-        guestKey: GUEST_KEY,
-        voiceSessionId,
-        transcript: "Oui, je confirme la réservation.",
-      })
-    ).resolves.toEqual({ authorized: false })
-    const quoteExecution = await t.mutation(
-      internal.ai.tools.prepareExecution,
-      {
-        conversationId: conversation.conversationId,
-        callId: "voice-quote-before-booking",
-        toolName: "quote_booking",
-        inputJson: "{}",
-        requiresApproval: false,
-        approved: false,
-      }
-    )
-    await t.mutation(internal.ai.tools.completeExecution, {
-      executionId: quoteExecution.execution._id,
-      succeeded: true,
-      outputJson: '{"totalTtc":35000}',
-    })
-
-    await expect(
-      t.action(api.ai.realtime.authorizeVoiceBooking, {
-        conversationId: conversation.conversationId,
-        guestKey: GUEST_KEY,
-        voiceSessionId,
-        transcript: "Oui, je confirme la réservation.",
-      })
-    ).resolves.toEqual({ authorized: true })
-
-    const confirmed = await t.action(api.ai.realtime.executeVoiceTool, {
-      conversationId: conversation.conversationId,
-      guestKey: GUEST_KEY,
-      voiceSessionId,
-      callId: "voice-booking-confirmed",
-      name: "create_booking",
-      input: {
-        tripId: "trip-1",
-        originStationId: "station-1",
-        destinationStationId: "station-2",
-        serviceClass: "DEUXIEME",
-        passengers: [],
-        contactPhone: "077000000",
-      },
-    })
-    expect(confirmed).toMatchObject({
+    expect(result).toMatchObject({
       status: "error",
       message: "Au moins un voyageur est obligatoire.",
     })
     const execution = await t.query(internal.ai.tools.getExecution, {
       conversationId: conversation.conversationId,
-      callId: "voice-booking-confirmed",
+      callId: "voice-booking",
     })
     expect(execution).toMatchObject({
       status: "failed",
       approvedAt: expect.any(Number),
     })
-    expect(JSON.parse(execution!.inputJson)).toMatchObject({
-      voiceAuthorization: "confirmed",
-    })
-    const session = await t.run((ctx) => ctx.db.get(voiceSessionId))
-    expect(session?.bookingAuthorizationConsumedAt).toEqual(expect.any(Number))
+    expect(JSON.parse(execution!.inputJson)).not.toHaveProperty(
+      "voiceAuthorization"
+    )
   })
 
   it("ne rejoue pas une réservation vocale identique déjà réussie", async () => {
@@ -486,10 +405,7 @@ describe("sessions vocales OpenAI Realtime", () => {
       conversationId: conversation.conversationId,
       callId: "voice-booking-original",
       toolName: "create_booking",
-      inputJson: canonicalToolInput({
-        ...input,
-        voiceAuthorization: "confirmed",
-      }),
+      inputJson: canonicalToolInput(input),
       requiresApproval: false,
       approved: false,
     })
@@ -511,6 +427,10 @@ describe("sessions vocales OpenAI Realtime", () => {
       status: "ok",
       cached: true,
       output: { reference: "SET-VOICE-1" },
+      uiAction: {
+        type: "navigate",
+        payload: { route: "/paiement" },
+      },
     })
     expect(
       await t.query(internal.ai.tools.getExecution, {

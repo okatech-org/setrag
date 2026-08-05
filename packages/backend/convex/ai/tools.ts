@@ -180,22 +180,6 @@ export const findSucceededExecution = internalQuery({
   },
 })
 
-export const hasSucceededToolExecution = internalQuery({
-  args: {
-    conversationId: v.id("assistantConversations"),
-    toolName: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const executions = await ctx.db
-      .query("assistantToolExecutions")
-      .withIndex("by_conversation_and_status", (q) =>
-        q.eq("conversationId", args.conversationId).eq("status", "succeeded")
-      )
-      .collect()
-    return executions.some((execution) => execution.toolName === args.toolName)
-  },
-})
-
 export const prepareExecution = internalMutation({
   args: {
     conversationId: v.id("assistantConversations"),
