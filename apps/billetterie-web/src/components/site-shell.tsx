@@ -41,6 +41,12 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   const loginHref = `/connexion?intention=connexion&retour=${encodedReturn}`
   const signupHref = `/connexion?intention=inscription&retour=${encodedReturn}`
 
+  // Le dossier de présentation s'adresse à la SETRAG, pas à un voyageur : il
+  // porte son propre en-tête et n'a rien à faire du chrome de la billetterie.
+  if (pathname.startsWith("/presentation")) {
+    return <>{children}</>
+  }
+
   return (
     <MobileChromeProvider>
       <div data-slot="site-shell" className="flex min-h-dvh flex-col bg-canvas">
