@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Étude des Transports et du Fret</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 20mm 15mm 20mm 15mm;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.55;
+    font-size: 11pt;
+    background: #ffffff;
+    margin: 0;
+    padding: 0;
+  }
+  .header-bar {
+    border-bottom: 2px solid #0f2c59;
+    padding-bottom: 8px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-logo {
+    font-size: 16pt;
+    font-weight: 800;
+    color: #0f2c59;
+    letter-spacing: 1px;
+  }
+  .header-meta {
+    font-size: 9pt;
+    color: #64748b;
+    text-align: right;
+  }
+  .doc-h1 {
+    color: #0f2c59;
+    font-size: 19pt;
+    border-bottom: 2px solid #d39e00;
+    padding-bottom: 10px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    font-weight: 700;
+  }
+  .doc-h2 {
+    color: #1e3a8a;
+    font-size: 14pt;
+    margin-top: 25px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    border-left: 4px solid #d39e00;
+    padding-left: 10px;
+  }
+  .doc-h3 {
+    color: #0f2c59;
+    font-size: 12pt;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .doc-h4 {
+    color: #334155;
+    font-size: 11pt;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .paragraph {
+    margin: 6px 0;
+    text-align: justify;
+  }
+  .list-item, .num-item {
+    margin: 4px 0 4px 20px;
+  }
+  .doc-hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 25px 0;
+  }
+  .spacer {
+    height: 6px;
+  }
+  .table-container {
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+  th {
+    background-color: #0f2c59;
+    color: #ffffff;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid #0f2c59;
+  }
+  td {
+    padding: 7px 10px;
+    border: 1px solid #cbd5e1;
+    vertical-align: top;
+  }
+  tr:nth-child(even) {
+    background-color: #f8fafc;
+  }
+  .code-block {
+    background: #0f172a;
+    color: #f1f5f9;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 8.5pt;
+    margin: 15px 0;
+    overflow-x: auto;
+    border-left: 4px solid #d39e00;
+  }
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+  strong {
+    color: #0f172a;
+  }
+  .footer {
+    margin-top: 40px;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 10px;
+    font-size: 8pt;
+    color: #64748b;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+  <div class="header-bar">
+    <div class="header-logo">SETRAG · TRANSGABONAIS</div>
+    <div class="header-meta">
+      <strong>RÉPUBLIQUE GABONAISE</strong><br>
+      Direction des Systèmes d'Information & Projets Métiers
+    </div>
+  </div>
+  
+  <h1 class='doc-h1'>Document 02 — Étude Approfondie des Métiers du Rail et Typologie des Transports de la SETRAG au Gabon</h1>
+<div class='spacer'></div>
+<p class='paragraph'><strong>Projet :</strong> SETRAG Enterprise Operating System (SI Intégré Ferroviaire)  </p>
+<p class='paragraph'><strong>Entité :</strong> Société d'Exploitation du Transgabonais (SETRAG) — République Gabonaise  </p>
+<p class='paragraph'><strong>Référence :</strong> ETUDE-FRET-SET-2026-V1.0  </p>
+<p class='paragraph'><strong>Date d'étude :</strong> Septembre 2026  </p>
+<p class='paragraph'><strong>Expertise :</strong> Ingénierie des Transports Lourds & Économie Ferroviaire Gabonaise  </p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>1. Vue d'Ensemble du Réseau Transgabonais</h2>
+<div class='spacer'></div>
+<p class='paragraph'>Le chemin de fer <strong>Transgabonais</strong> est l'unique ligne ferroviaire de la République Gabonaise. Longue de <strong>648 kilomètres</strong> en voie unique à écartement standard (1 435 mm), elle relie le port en eau profonde d'<strong>Owendo</strong> (banlieue sud de Libreville) à la gare terminus de <strong>Franceville</strong> (chef-lieu de la province du Haut-Ogooué), en traversant cinq provinces stratégiques : l'Estuaire, le Moyen-Ogooué, l'Ogooué-Ivindo, l'Ogooué-Lolo et le Haut-Ogooué.</p>
+<div class='spacer'></div>
+<div class='code-block'><pre>
+       CARTE SYNOPTIQUE DE L&#x27;AXE FERROVIAIRE DU TRANSGABONAIS (648 KM)
+=============================================================================
+ [PK 0] OWENDO (Ports minéralier/commercial, Ateliers centraux, Siège SETRAG)
+   |
+ [PK 35] NKOK (Zone Économique Spéciale / ZES - Déchargement Grumes)
+   |
+ [PK 182] NDJOLÉ (Gare de transit, fleuve Ogooué, bifurcation forestière)
+   |
+ [PK 252] LOPÉ (Traversée du Parc National de la Lopé, zone UNESCO)
+   |
+ [PK 338] BOOUÉ (Centre névralgique de régulation et relais traction)
+   |
+ [PK 485] LASTOURSVILLE (Bassin forestier et carrières)
+   |
+ [PK 608] MOANDA (Gisement de manganèse COMILOG / Plateau de Bangombé)
+   |
+ [PK 648] FRANCEVILLE (Terminus sud-est, hub logistique frontalier)
+=============================================================================
+</pre></div>
+<div class='spacer'></div>
+<p class='paragraph'>Bien que le grand public connaisse principalement la SETRAG à travers ses trains de passagers, <strong>le modèle économique de la société repose à plus de 80 % sur le transport lourd de marchandises (fret minier, forestier et conteneurs)</strong>.</p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>2. Le Fret Minier (Manganèse) : Le Poumon Économique</h2>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.1 Contexte et Acteurs</h3>
+<p class='paragraph'>Le Gabon est le <strong>2e producteur mondial de manganèse</strong> à haute teneur, extrait par la <strong>COMILOG</strong> (Compagnie Minière de l'Ogooué, filiale du groupe Eramet et actionnaire à 51 % de la SETRAG) sur le plateau de Bangombé à Moanda. L'évacuation de ce minerai vers le marché mondial est <strong>100 % tributaire du Transgabonais</strong>.</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.2 Caractéristiques des Convois Minéraliers</h3>
+<li class='list-item'><strong>Volume annuel :</strong> Entre 4 et 7 millions de tonnes de minerai transportées par an.</li>
+<li class='list-item'><strong>Composition type d'un train minéralier :</strong></li>
+<p class='paragraph'>  - <strong>Traction :</strong> 2 à 3 locomotives diesel-électriques de forte puissance (3 300 à 4 400 ch type General Electric GT46MAC ou EMD).</p>
+<p class='paragraph'>  - <strong>Matériel remorqué :</strong> 84 à 100+ wagons trémies spéciaux (wagons à déchargement par le fond ou rotatifs).</p>
+<p class='paragraph'>  - <strong>Masse brute d'un convoi :</strong> 8 000 à 10 000 tonnes (parmi les trains les plus lourds d'Afrique subsaharienne).</p>
+<p class='paragraph'>  - <strong>Charge à l'essieu :</strong> 21 à 25 tonnes par essieu, soumettant la plateforme et les rails à une fatigue mécanique extrême.</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.3 Processus Opérationnel & Besoins Système (Module Fret Minier)</h3>
+<li class='num-item'><strong>1.</strong> <strong>Planification & Ordre d'Expédition :</strong> Émission du programme hebdomadaire d'expédition par la COMILOG en liaison avec le planning des minéraliers au port d'Owendo.</li>
+<li class='num-item'><strong>2.</strong> <strong>Pesage Dynamique en Gare de Chargement (Moanda) :</strong> Détection en marche de la charge par essieu et de la tare pour éviter les surcharges dangereuses pour la voie.</li>
+<li class='num-item'><strong>3.</strong> <strong>Traçabilité en Ligne & Suivi GPS :</strong> Contrôle de la progression du convoi par le COTRAF (Contrôle Trafic), gestion des créneaux de croisement avec les autres trains.</li>
+<li class='num-item'><strong>4.</strong> <strong>Réception et Déchargement au Port Minéralier d'Owendo (GSEZ/COMILOG) :</strong> Basculeurs de wagons, retournement des rames et contrôle des temps de rotation (<em>turnaround time</em>).</li>
+<li class='num-item'><strong>5.</strong> <strong>Facturation au Tonnage/Kilomètre :</strong> Application des conventions tarifaires cadre minières, intégrant les bonus/malus d'efficacité et la taxe de passage d'infrastructure.</li>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>3. Le Fret Forestier (Bois en Grumes et Débité)</h2>
+<div class='spacer'></div>
+<h3 class='doc-h3'>3.1 Contexte Industriel Gabonais</h3>
+<p class='paragraph'>Depuis l'interdiction d'exporter des grumes brutes non transformées décidée en 2010 par le Gabon, la filière bois a connu une mutation radicale. Le Transgabonais achemine :</p>
+<li class='list-item'>Les grumes depuis les concessions forestières de l'intérieur (Booué, Lastoursville, Ndjolé) vers les usines de sciage et de placage de la <strong>Zone Économique Spéciale (ZES) de Nkok (GSEZ)</strong>.</li>
+<li class='list-item'>Les conteneurs de bois ouvré (contreplaqué, bois de sciage raboté) depuis Nkok vers le port commercial d'Owendo pour l'export.</li>
+<div class='spacer'></div>
+<h3 class='doc-h3'>3.2 Acteurs de la Filière</h3>
+<p class='paragraph'>Les grands exploitants et industriels du bois : <strong>Rougier Gabon, Precious Woods, BSO, SNBG, Thebault</strong>, et les dizaines d'entreprises installées à Nkok.</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>3.3 Caractéristiques Opérationnelles</h3>
+<li class='list-item'><strong>Matériel roulant :</strong> Wagons plats spécialisés équipés de ranchers amovibles ou fixes, et wagons porte-conteneurs.</li>
+<li class='list-item'><strong>Réglementation & Traçabilité :</strong> Contrôle strict des cubages (système de mesure des billes au diamètre/longueur), vérification des autorisations légales d'abattage (Bordereaux de Suivi Forestier délivrés par le Ministère des Eaux et Forêts) et certificats phytosanitaires.</li>
+<li class='list-item'><strong>Besoins Système du Module Bois :</strong></li>
+<p class='paragraph'>  - Gestion du cubage commercial (formule de Brereton ou volume cylindrique en m3).</p>
+<p class='paragraph'>  - Intégration de l'identifiant unique de chaque bille (code barre forestier) dans la lettre de voiture ferroviaire.</p>
+<p class='paragraph'>  - Gestion des parcs à bois des gares de chargement (Lastoursville, Booué) avec inventaire des stocks en attente de mise sur wagon.</p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>4. Le Fret d'Hydrocarbures et de Marchandises Diverses</h2>
+<div class='spacer'></div>
+<h3 class='doc-h3'>4.1 Transport des Produits Pétroliers</h3>
+<p class='paragraph'>Le Gabon consomme ses hydrocarbures raffinés (carburants, gazole, kérosène) qui proviennent de la raffinerie de Port-Gentil (SOGARA), acheminés par cabotage jusqu'à Owendo, puis dispatchés par le rail vers l'intérieur du pays.</p>
+<li class='list-item'><strong>Acteurs :</strong> GOC (Gabon Oil Company), TotalEnergies Marketing Gabon, PetroGabon, Engen.</li>
+<li class='list-item'><strong>Matériel :</strong> Wagons citernes sécurisés aux normes TMD (Transport de Marchandises Dangereuses).</li>
+<li class='list-item'><strong>Enjeux :</strong> Suivi strict des jauges de remplissage, purge des citernes, certification des soupapes et prévention des risques d'explosion ou d'incendie en milieu équatorial.</li>
+<div class='spacer'></div>
+<h3 class='doc-h3'>4.2 Transport de Marchandises Générales et Conteneurs</h3>
+<li class='list-item'><strong>Matériaux de construction :</strong> Cimenterie d'Owendo (Cimgabon) approvisionnant le Haut-Ogooué en ciment pour les chantiers d'infrastructure.</li>
+<li class='list-item'><strong>Conteneurs maritimes (EVP) :</strong> Équipements industriels lourds, intrants chimiques pour les mines, biens de grande consommation destinés aux supermarchés de Moanda et Franceville.</li>
+<li class='list-item'><strong>Interfaces :</strong> Opérateurs portuaires (OPRAG, GSEZ Ports, AGL - Africa Global Logistics / MSC, Bolloré).</li>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>5. Le Transport de Voyageurs : Un Rôle Social Vital</h2>
+<div class='spacer'></div>
+<p class='paragraph'>Bien que déficitaire au plan purement financier, le service passagers est <strong>stratégique et obligatoire</strong> au titre de la concession signée avec l'État gabonais. Il assure le désenclavement total de bassins de vie inaccessibles par la route lors des saisons des pluies.</p>
+<li class='list-item'><strong>Trafic :</strong> Environ 280 000 à 330 000 passagers transportés par an.</li>
+<li class='list-item'><strong>Régimes de trains :</strong></li>
+<p class='paragraph'>  - <strong>Train Express :</strong> Dessert les gares principales en reliant Owendo à Franceville en ~12 heures.</p>
+<p class='paragraph'>  - <strong>Train Omnibus :</strong> Dessert les 24 gares et arrêts de brousse pour le ravitaillement des populations rurales.</p>
+<li class='list-item'><strong>Services complémentaires intégrés :</strong></li>
+<p class='paragraph'>  - Messagerie et Colis Express (transport vital de plis officiels, médicaments, denrées fraîches).</p>
+<p class='paragraph'>  - Train Auto Accompagné (TAA) permettant aux usagers de transporter leurs véhicules 4x4 entre Libreville et l'intérieur.</p>
+<p class='paragraph'>  - Transport funéraire (mission sociale essentielle au Gabon pour le retour des défunts dans leurs provinces natales).</p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>6. La Contrainte Majeure : L'Exploitation en Voie Unique</h2>
+<div class='spacer'></div>
+<p class='paragraph'>L'ensemble de ces trafics hétérogènes (trains minéraliers ultralourds de 10 000 tonnes, trains de grumes, trains voyageurs rapides, trains de travaux PRN) circule sur <strong>une seule et même voie de 648 km</strong>.</p>
+<div class='spacer'></div>
+<div class='code-block'><pre>
+                           RÈGLES DE GESTION DU CROISEMENT EN VOIE UNIQUE
+===================================================================================================
+ GARE DE CROISEMENT (Ex: Gare de Booué)
+ --------------------------------------------------------------------------------------------------
+   Voie Principale   ===&gt; [ Train Minier Chargé 8 000 t ] ===&gt; (Priorité inertie, arrêt coûteux)
+   Voie d&#x27;Évitement  ===&gt; [ Train Omnibus à l&#x27;arrêt     ] ===&gt; (Attente dépassement ou croisement)
+ --------------------------------------------------------------------------------------------------
+ * Règle de priorité ferroviaire gabonaise :
+   1. Train de Secours / Train de Travaux d&#x27;urgence
+   2. Train Voyageurs Express
+   3. Train Minéralier plein (Moanda -&gt; Owendo)
+   4. Train Voyageurs Omnibus
+   5. Train de Grumes / Marchandises
+   6. Train Minéralier vide (Owendo -&gt; Moanda)
+===================================================================================================
+</pre></div>
+<div class='spacer'></div>
+<h3 class='doc-h3'>Exigences pour le futur Système d'Exploitation SETRAG :</h3>
+<li class='num-item'><strong>1.</strong> <strong>Module Régulation & COTRAF :</strong> Suivi graphique des circulations (graphique d'espace-temps numérique) pour anticiper les conflits de croisement.</li>
+<li class='num-item'><strong>2.</strong> <strong>Gestion des Priorités Métier :</strong> Arbitrage automatique par algorithme/IA entre l'engagement horaire des passagers et la fluidité des flux miniers d'exportation.</li>
+<li class='num-item'><strong>3.</strong> <strong>Traçabilité des Retards & Litiges :</strong> Imputation précise des causes d'arrêts (avarie locomotive, incident voie, dépassement de canton, fausse manœuvre d'aiguille).</li>
+  
+  <div class="footer">
+    <div>Projet : SETRAG Enterprise Operating System — Document Officiel d'Ingénierie</div>
+    <div>Confidentiel · Tous droits réservés OkaTech / SETRAG 2026</div>
+  </div>
+</body>
+</html>

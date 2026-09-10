@@ -47,6 +47,7 @@ import {
   canAccessSalePath,
 } from "@/lib/portal-access"
 import { usePortalSession } from "./portal-guard"
+import { EnterpriseTopNav } from "./enterprise-nav"
 
 interface SellerShellProps {
   seller: SellerIdentity
@@ -137,6 +138,7 @@ export function SellerShell({
 
   return (
     <div className="min-h-dvh bg-canvas">
+      <EnterpriseTopNav role={role} />
       <header className="sticky top-0 z-30 flex h-18 items-center gap-3 border-b border-line bg-surface px-4 shadow-sm lg:px-6">
         <Button
           type="button"

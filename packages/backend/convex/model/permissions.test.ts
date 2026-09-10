@@ -137,6 +137,7 @@ describe("Séparation des tâches — garde-fous anti-fraude", () => {
     expect(can("admin_it", "tarifs", "modifier")).toBe(false)
     expect(can("admin_it", "yield", "modifier")).toBe(false)
     expect(can("admin_it", "caisse", "consulter")).toBe(false)
+    expect(can("admin_it", "fret", "consulter")).toBe(false)
   })
 
   it("l'administrateur fonctionnel ne gère pas les intégrations techniques", () => {
@@ -147,6 +148,13 @@ describe("Séparation des tâches — garde-fous anti-fraude", () => {
 })
 
 describe("Droits opérationnels par métier", () => {
+  it("cloisonne les données Fret selon la politique minimale", () => {
+    expect(permissionsFor("responsable_kpi", "fret")).toEqual(["consulter"])
+    expect(permissionsFor("chef_gare", "fret")).toEqual(["consulter"])
+    expect(permissionsFor("admin_fonctionnel", "fret")).toEqual(PERMISSIONS)
+    expect(permissionsFor("admin_it", "fret")).toEqual([])
+  })
+
   it("le vendeur guichet vend et encaisse", () => {
     expect(can("vendeur_guichet", "ventes", "creer")).toBe(true)
     expect(can("vendeur_guichet", "duplicatas", "creer")).toBe(true)

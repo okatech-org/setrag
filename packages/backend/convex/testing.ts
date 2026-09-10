@@ -35,6 +35,19 @@ function assertTestMode(): void {
 
 /** Toutes les tables applicatives, dans l'ordre de purge. */
 const TABLES = [
+  "approvalSteps",
+  "approvalInstances",
+  "documentVersions",
+  "documentRecords",
+  "integrationReceipts",
+  "integrationEvents",
+  "integrationEndpoints",
+  "auditSeals",
+  "moduleActivations",
+  "userAssignments",
+  "positions",
+  "sites",
+  "organizations",
   "messagingOutbox",
   "messagingApprovals",
   "messagingEvents",

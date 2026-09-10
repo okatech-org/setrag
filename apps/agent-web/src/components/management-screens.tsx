@@ -3,7 +3,7 @@
 import { ArrowRight, BarChart3, Download, Plus, Search } from "lucide-react"
 import Link from "next/link"
 import type { Route } from "next"
-import { useMemo, useState } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { useConvex } from "convex/react"
 
 import { useAction, useMutation, useQuery } from "@workspace/api/hooks"
@@ -24,6 +24,7 @@ import {
 
 import { useOnlineStatus } from "@/hooks/use-online-status"
 import { asAppRole, canRole } from "@/lib/portal-access"
+import { PLATFORM_MODULES_API_ENABLED } from "@/lib/platform-modules-runtime"
 import {
   MANAGEMENT_SECTIONS,
   type ManagementSection,
@@ -32,6 +33,10 @@ import type { SellerIdentity } from "@/lib/agent-data"
 import { formatXaf } from "@/lib/format"
 import { SellerShell } from "./seller-shell"
 import { usePortalSession } from "./portal-guard"
+import {
+  PlatformIntegrationOutbox,
+  shouldLoadIntegrationOutbox,
+} from "./modules/integrations/integration-outbox"
 import {
   DataSelectionDialog,
   FareScheduleDialog,
@@ -203,6 +208,7 @@ export function ManagementScreen({
   onPrimaryAction,
   primaryHref,
   onSignOut,
+  integrationOutbox,
 }: {
   section: ManagementSection
   live?: LiveSummary
@@ -212,6 +218,7 @@ export function ManagementScreen({
   onPrimaryAction?: () => void | Promise<string | void>
   primaryHref?: string
   onSignOut?: () => void
+  integrationOutbox?: ReactNode
 }) {
   const config = MANAGEMENT_SECTIONS[section]
   const [search, setSearch] = useState("")
@@ -316,6 +323,8 @@ export function ManagementScreen({
         {message ? <InlineMessage tone={messageTone} title={message} /> : null}
 
         {section === "tableau-de-bord" ? <Overview live={live} /> : null}
+
+        {section === "integrations" ? integrationOutbox : null}
 
         {section !== "tableau-de-bord" ? (
           <>
@@ -1149,6 +1158,18 @@ export function ManagementPageClient({
             : MANAGEMENT_IDENTITY
         }
         onPrimaryAction={primaryAction}
+        integrationOutbox={
+          shouldLoadIntegrationOutbox({
+            apiEnabled: PLATFORM_MODULES_API_ENABLED,
+            isIntegrationSection: section === "integrations",
+            canConsult: may("integrations"),
+          }) ? (
+            <PlatformIntegrationOutbox
+              canReplay={may("integrations", "modifier")}
+              online={online}
+            />
+          ) : undefined
+        }
       />
       {dialog === "penalty" ? (
         <PenaltyDialog

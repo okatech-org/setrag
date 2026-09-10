@@ -9,6 +9,13 @@ import {
 
 export type { AppRole, Permission, ProtectedResource }
 
+export type AuditResult = "succes" | "refus" | "echec"
+export type AuditClassification =
+  | "public"
+  | "interne"
+  | "confidentiel"
+  | "restreint"
+
 /**
  * Profil applicatif de l'utilisateur courant, ou `null`.
  *
@@ -85,24 +92,40 @@ export async function audit(
   ctx: MutationCtx,
   params: {
     actorId?: Id<"users">
+    assignmentId?: Id<"userAssignments">
     action: string
     entityTable: string
     entityId: string
+    permission?: Permission
+    reason?: string
+    result?: AuditResult
+    correlationId?: string
+    causationId?: string
+    classification?: AuditClassification
     before?: unknown
     after?: unknown
     metadata?: unknown
+    context?: unknown
     ipAddress?: string
     deviceId?: string
   },
 ): Promise<void> {
   await ctx.db.insert("auditLogs", {
     actorId: params.actorId,
+    assignmentId: params.assignmentId,
     action: params.action,
     entityTable: params.entityTable,
     entityId: params.entityId,
+    permission: params.permission,
+    reason: params.reason,
+    result: params.result ?? "succes",
+    correlationId: params.correlationId,
+    causationId: params.causationId,
+    classification: params.classification,
     before: serialize(params.before),
     after: serialize(params.after),
     metadata: serialize(params.metadata),
+    context: serialize(params.context),
     ipAddress: params.ipAddress,
     deviceId: params.deviceId,
     createdAt: Date.now(),

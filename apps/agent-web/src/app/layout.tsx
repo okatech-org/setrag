@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   },
   description:
     "Portail SETRAG pour la vente au guichet, l’encaissement et le suivi des opérations.",
+  icons: {
+    icon: { url: "/setrag-logo.png", type: "image/png" },
+    apple: "/setrag-logo.png",
+  },
   robots: { index: false, follow: false },
 }
 

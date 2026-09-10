@@ -4,8 +4,12 @@ import { afterEach, vi } from "vitest"
 
 afterEach(() => {
   cleanup()
-  window.localStorage?.clear()
-  window.sessionStorage?.clear()
+  if (typeof window.localStorage?.clear === "function") {
+    window.localStorage.clear()
+  }
+  if (typeof window.sessionStorage?.clear === "function") {
+    window.sessionStorage.clear()
+  }
   vi.clearAllMocks()
 })
 

@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest"
 
+import { MODULE_MANIFEST } from "@workspace/backend/modules"
 import { APP_ROLES, can, type AppRole } from "@workspace/backend/permissions"
 
 import {
+  ENTERPRISE_DESTINATIONS,
   MANAGEMENT_DESTINATIONS,
   SELLER_ROLES,
+  STAFF_WIDE_PATHS,
   canAccessManagementPath,
   canAccessSalePath,
   defaultManagementPath,
@@ -62,6 +65,51 @@ describe("accès aux portails par profil", () => {
           `${role} → ${destination.href}`
         ).toBe(can(role, destination.resource, "consulter"))
       }
+    }
+  })
+
+  it("adosse chaque module officiel du manifeste à la matrice Convex", () => {
+    for (const role of APP_ROLES) {
+      for (const destination of MODULE_MANIFEST.filter(
+        ({ route }) => route !== "/gestion"
+      )) {
+        expect(
+          canAccessManagementPath(role, destination.route),
+          `${role} → ${destination.route}`
+        ).toBe(can(role, destination.resource, "consulter"))
+      }
+    }
+  })
+
+  it("utilise la ressource Fret dédiée", () => {
+    const freight = MODULE_MANIFEST.find(({ code }) => code === "fret")
+
+    expect(freight?.resource).toBe("fret")
+    expect(
+      ENTERPRISE_DESTINATIONS.find(({ href }) => href === "/fret")?.resource
+    ).toBe("fret")
+  })
+
+  it("réserve les modules transverses au personnel interne", () => {
+    for (const href of STAFF_WIDE_PATHS) {
+      expect(canAccessManagementPath("voyageur", href), href).toBe(false)
+      for (const role of APP_ROLES.filter(
+        (candidate) => candidate !== "voyageur"
+      )) {
+        expect(canAccessManagementPath(role, href), `${role} → ${href}`).toBe(
+          true
+        )
+      }
+    }
+  })
+
+  it("n’ouvre aucun module d’entreprise à un chemin inconnu", () => {
+    for (const role of APP_ROLES) {
+      expect(canAccessManagementPath(role, "/module-inconnu"), role).toBe(false)
+      expect(
+        canAccessManagementPath(role, "/module-inconnu/detail"),
+        role
+      ).toBe(false)
     }
   })
 

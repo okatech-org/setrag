@@ -1,10 +1,12 @@
 import {
   APP_ROLES,
   can,
+  isInternalRole,
   type AppRole,
   type Permission,
   type ProtectedResource,
 } from "@workspace/backend/permissions"
+import { MODULE_MANIFEST } from "@workspace/backend/modules"
 
 export type StaffPortal = "vente" | "gestion"
 
@@ -35,6 +37,21 @@ export const MANAGEMENT_DESTINATIONS = [
   resource: ProtectedResource
 }[]
 
+/** Destinations officielles dérivées du manifeste partagé avec le serveur. */
+export const ENTERPRISE_DESTINATIONS = MODULE_MANIFEST.map(
+  ({ route, resource }) => ({ href: route, resource })
+) satisfies readonly {
+  href: string
+  resource: ProtectedResource
+}[]
+
+/** Utilitaires internes qui ne constituent pas un module officiel. */
+export const STAFF_WIDE_PATHS = ["/etudes"] as const
+
+function matchesPath(href: string, pathname: string) {
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 export function asAppRole(role: string | undefined): AppRole | undefined {
   return APP_ROLES.find((candidate) => candidate === role)
 }
@@ -53,12 +70,13 @@ export function canRole(
 }
 
 export function canAccessManagementPath(role: AppRole, pathname: string) {
-  const destination = [...MANAGEMENT_DESTINATIONS]
+  if (STAFF_WIDE_PATHS.some((href) => matchesPath(href, pathname))) {
+    return isInternalRole(role)
+  }
+  const destination = [...MANAGEMENT_DESTINATIONS, ...ENTERPRISE_DESTINATIONS]
     .sort((left, right) => right.href.length - left.href.length)
-    .find(
-      ({ href }) =>
-        pathname === href ||
-        (href !== "/gestion" && pathname.startsWith(`${href}/`))
+    .find(({ href }) =>
+      href === "/gestion" ? pathname === href : matchesPath(href, pathname)
     )
   return Boolean(destination && can(role, destination.resource, "consulter"))
 }

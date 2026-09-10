@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cartographie des Acteurs & Parties Prenantes</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 20mm 15mm 20mm 15mm;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.55;
+    font-size: 11pt;
+    background: #ffffff;
+    margin: 0;
+    padding: 0;
+  }
+  .header-bar {
+    border-bottom: 2px solid #0f2c59;
+    padding-bottom: 8px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-logo {
+    font-size: 16pt;
+    font-weight: 800;
+    color: #0f2c59;
+    letter-spacing: 1px;
+  }
+  .header-meta {
+    font-size: 9pt;
+    color: #64748b;
+    text-align: right;
+  }
+  .doc-h1 {
+    color: #0f2c59;
+    font-size: 19pt;
+    border-bottom: 2px solid #d39e00;
+    padding-bottom: 10px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    font-weight: 700;
+  }
+  .doc-h2 {
+    color: #1e3a8a;
+    font-size: 14pt;
+    margin-top: 25px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    border-left: 4px solid #d39e00;
+    padding-left: 10px;
+  }
+  .doc-h3 {
+    color: #0f2c59;
+    font-size: 12pt;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .doc-h4 {
+    color: #334155;
+    font-size: 11pt;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .paragraph {
+    margin: 6px 0;
+    text-align: justify;
+  }
+  .list-item, .num-item {
+    margin: 4px 0 4px 20px;
+  }
+  .doc-hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 25px 0;
+  }
+  .spacer {
+    height: 6px;
+  }
+  .table-container {
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+  th {
+    background-color: #0f2c59;
+    color: #ffffff;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid #0f2c59;
+  }
+  td {
+    padding: 7px 10px;
+    border: 1px solid #cbd5e1;
+    vertical-align: top;
+  }
+  tr:nth-child(even) {
+    background-color: #f8fafc;
+  }
+  .code-block {
+    background: #0f172a;
+    color: #f1f5f9;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 8.5pt;
+    margin: 15px 0;
+    overflow-x: auto;
+    border-left: 4px solid #d39e00;
+  }
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+  strong {
+    color: #0f172a;
+  }
+  .footer {
+    margin-top: 40px;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 10px;
+    font-size: 8pt;
+    color: #64748b;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+  <div class="header-bar">
+    <div class="header-logo">SETRAG · TRANSGABONAIS</div>
+    <div class="header-meta">
+      <strong>RÉPUBLIQUE GABONAISE</strong><br>
+      Direction des Systèmes d'Information & Projets Métiers
+    </div>
+  </div>
+  
+  <h1 class='doc-h1'>Document 03 — Cartographie Exhaustive des Acteurs et Parties Prenantes de la SETRAG</h1>
+<div class='spacer'></div>
+<p class='paragraph'><strong>Projet :</strong> SETRAG Enterprise Operating System (SI Intégré Ferroviaire)  </p>
+<p class='paragraph'><strong>Entité :</strong> Société d'Exploitation du Transgabonais (SETRAG) — République Gabonaise  </p>
+<p class='paragraph'><strong>Référence :</strong> CARTOG-ACTEURS-SET-2026-V1.0  </p>
+<p class='paragraph'><strong>Date d'étude :</strong> Septembre 2026  </p>
+<p class='paragraph'><strong>Domaine :</strong> Analyse Organisationnelle, Rôles Métiers & Écosystème Institutionnel  </p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>1. Introduction & Objectif de la Cartographie</h2>
+<div class='spacer'></div>
+<p class='paragraph'>Le fonctionnement du chemin de fer Transgabonais mobilise un écosystème complexe composé de plus de <strong>1 500 agents directs</strong>, de plusieurs centaines de sous-traitants, de géants miniers et forestiers mondiaux, d'institutions régaliennes de la République Gabonaise et de bailleurs de fonds internationaux.</p>
+<div class='spacer'></div>
+<p class='paragraph'>Ce document dresse la <strong>matrice complète des acteurs internes (collaborateurs SETRAG)</strong> et des <strong>parties prenantes externes</strong>. Pour chaque acteur, il identifie ses missions, ses contraintes de terrain et ses exigences fonctionnelles vis-à-vis du futur <strong>Système d'Exploitation d'Entreprise (ERP Intégré)</strong>.</p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>2. Cartographie des Acteurs Internes (Collaborateurs SETRAG)</h2>
+<div class='spacer'></div>
+<div class='code-block'><pre>
+                            ORGANIGRAMME FONCTIONNEL DE LA SETRAG
+===================================================================================================
+                                      [ CONSEIL D&#x27;ADMINISTRATION ]
+                           (Eramet/Comilog 51% | Meridiam 40% | État Gabonais 9%)
+                                                   |
+                                         [ DIRECTION GÉNÉRALE ]
+                            (Direction Générale, Audit &amp; Risques, Juridique)
+                                                   |
+       +--------------------+----------------------+--------------------+--------------------+
+       |                    |                      |                    |                    |
+     [ DEF ]             [ DMAT ]              [ DINFRA ]             [ DCFV ]             [ DFC ]
+  Exploitation       Matériel Roulant        Installations Fixes     Commercial      Finances &amp; Compta
+  - COTRAF           - Ateliers Owendo       - Brigades Voies       - Billetterie    - SYSCOHADA
+  - Conducteurs      - Ateliers Booué        - Travaux PRN          - Grands Comptes - Fiscalité DGI
+  - Chefs de Gare    - Locos &amp; Wagons        - Ouvrages &amp; Ponts     - Litiges Fret   - Trésorerie
+       |                    |                      |                    |                    |
+       +--------------------+----------------------+--------------------+--------------------+
+                            |                                           |
+                         [ DRH ]                                     [ DSED ]
+                    Ressources Humaines                         Sécurité &amp; Environnement
+                    - Paie Gabonaise (CNSS/CNAMGS)              - Sécurité Circulations
+                    - Roulements 3x8 Conducteurs                - Enquêtes Accidents
+                    - Médecine du Travail                       - Parc National de la Lopé
+===================================================================================================
+</pre></div>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.1 Direction de l'Exploitation Ferroviaire (DEF)</h3>
+<p class='paragraph'>La DEF est le cœur opérationnel de la circulation des trains :</p>
+<li class='num-item'><strong>1.</strong> <strong>Régulateurs du COTRAF (Poste de Commande Centralisé - Owendo/Booué) :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Gestion en temps réel du trafic sur les 648 km de voie unique, espacement des trains (cantonnement), délivrance des bulletins de circulation, commande des aiguillages et gestion des retards.</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Graphique de circulation informatisé temps réel, alertes automatiques de franchissement de canton, aide à la décision pour le croisement en gare.</p>
+<li class='num-item'><strong>2.</strong> <strong>Chefs de Gare (25 gares de la ligne) :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Accueil des trains, manœuvres d'aiguilles locales, sécurité des départs, surveillance du quai, interface avec les usagers et les chargeurs locaux.</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Vue locale des trains en approche, registre numérique de circulation de gare, validation des arrivées/départs.</p>
+<li class='num-item'><strong>3.</strong> <strong>Conducteurs de Ligne (Mécaniciens de Train) :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Conduite des locomotives de fret lourd (10 000 t) et des trains express, respect strict des limitations de vitesse selon l'état de la voie.</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Fiche de train numérique sur tablette durcie (vitesse limite, profil de la voie, bulletins d'ordres temporaires de ralentissement).</p>
+<li class='num-item'><strong>4.</strong> <strong>Chefs de Train & Contrôleurs :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Sécurité à bord, vérification des titres de transport, gestion des litiges, encaissement des procès-verbaux (PV), gestion des incidents voyageurs.</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Application mobile connectée/déconnectée (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>controleur-web</code>), contrôle cryptographique hors ligne, synchronisation automatique en gare.</p>
+<li class='num-item'><strong>5.</strong> <strong>Agents de Visite Technique (Visiteurs de Rames) :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Inspection visuelle et mécanique des wagons avant départ (boîtes d'essieux, attelages, conduites de frein pneumatique).</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Saisie mobile des bulletins de visite technique et déclaration des wagons réformés pour avarie.</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.2 Direction du Matériel Roulant (DMAT)</h3>
+<li class='num-item'><strong>1.</strong> <strong>Ingénieurs & Contremaîtres d'Atelier (Owendo et Booué) :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Maintenance préventive et curative des 40+ locomotives diesel et des 1 500+ wagons (trémies, plats, citernes, voitures voyageurs).</p>
+<p class='paragraph'>   - <em>Besoins SI (GMAO) :</em> Ordres de travail numériques, historique des pannes par numéro de caisse/bogies, suivi de l'usure des semelles de frein et des essieux.</p>
+<li class='num-item'><strong>2.</strong> <strong>Gestionnaires de Stocks & Magasiniers Pièces de Rechange :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Gestion des magasins centraux d'Owendo et des magasins secondaires de ligne, réapprovisionnement des pièces critiques (importations Europe/USA/Afrique du Sud).</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Gestion des stocks avec seuils d'alerte, traçabilité des numéros de série des composants critiques (moteurs de traction, compresseurs).</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.3 Direction des Installations Fixes (DINFRA)</h3>
+<li class='num-item'><strong>1.</strong> <strong>Brigades de Voie & Cantonniers :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Surveillance quotidienne à pied des sections de voie, détection des affaissements de terrain, des rails cassés ou des glissements de talus (climat équatorial).</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Signalement géolocalisé des anomalies de voie sur application mobile terrain.</p>
+<li class='num-item'><strong>2.</strong> <strong>Équipes du Programme de Remise à Niveau (PRN) :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Pose des traverses en béton bibloc en remplacement des traverses en bois usées, renouvellement du ballast et rectification de la géométrie de voie par bourrage mécanique.</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Planification des fenêtres d'interruption de trafic (chantiers de voie), suivi kilométrique de l'avancement du PRN.</p>
+<li class='num-item'><strong>3.</strong> <strong>Techniciens Télécoms & Signalisation :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Entretien des boucles de détection, des feux de signalisation des gares, des passages à niveau et du réseau radio sol-train (VHF/Fibre optique le long du rail).</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Supervision d'état des équipements de télécommunications et alertes de coupure de fibre.</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.4 Direction Commerciale Fret & Voyageurs (DCFV)</h3>
+<li class='num-item'><strong>1.</strong> <strong>Guichetiers & Chefs de Vente :</strong> Émission des billets, encaissement, arrêtés de caisse quotidiens (couverts actuellement par <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>agent-web</code>).</li>
+<li class='num-item'><strong>2.</strong> <strong>Gestionnaires Grands Comptes Fret :</strong> Suivi des contrats-cadres avec la COMILOG, les exploitants forestiers et les distributeurs pétroliers.</li>
+<p class='paragraph'>   - <em>Besoins SI :</em> Émission des lettres de voiture ferroviaires dématérialisées, suivi de la facturation au tonnage/km, gestion des pénalités d'immobilisation de wagons.</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.5 Direction Financière et Comptable (DFC)</h3>
+<li class='num-item'><strong>1.</strong> <strong>Comptables Généraux & Auxiliaires :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Tenue des livres comptables aux normes du <strong>SYSCOHADA révisé</strong>, suivi des comptes fournisseurs, clients fret et voyageurs.</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Plan comptable OHADA intégré (classes 1 à 9), lettrage automatique, rapprochement bancaire et mobile money automatique.</p>
+<li class='num-item'><strong>2.</strong> <strong>Fiscalistes & Trésoriers :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Déclarations fiscales mensuelles auprès de la DGI Gabon (TVA 18%, CSS 1%, précomptes, retenues à la source 9.5%), équilibre de trésorerie multi-devises (FCFA, EUR, USD).</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Générateur automatique de la déclaration fiscale gabonaise (e-tax) et de la liasse financière OHADA.</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.6 Direction des Ressources Humaines (DRH)</h3>
+<li class='num-item'><strong>1.</strong> <strong>Gestionnaires de Paie Gabonaise :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Établissement mensuel des bulletins de paie de 1 500+ collaborateurs en stricte conformité avec le Code du Travail gabonais et la Convention Collective Ferroviaire.</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Moteur de paie gabonais calculant l'IRPP, la Taxe Complémentaire sur les Salaires (TCS 5%), les cotisations CNSS (plafond 1,5 M FCFA) et CNAMGS.</p>
+<li class='num-item'><strong>2.</strong> <strong>Planificateurs des Roulements Ferroviaires :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Élaboration des plannings de service des conducteurs et contrôleurs (régime 3x8, repos périodiques, découchés en gares d'étape comme Booué ou Franceville).</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Grille de planification des roulements avec contrôle strict des durées maximales de conduite continue pour prévenir l'endormissement et les accidents.</p>
+<li class='num-item'><strong>3.</strong> <strong>Médecins & Infirmiers du Travail (Centre Médical SETRAG Owendo) :</strong></li>
+<p class='paragraph'>   - <em>Missions :</em> Visites médicales d'aptitude obligatoire à la sécurité ferroviaire (acuité visuelle, tests auditifs, dépistage toxicologique des conducteurs et régulateurs).</p>
+<p class='paragraph'>   - <em>Besoins SI :</em> Dossier médical d'aptitude ferroviaire informatisé avec alerte de renouvellement obligatoire d'habilitation de sécurité.</p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>3. Cartographie des Acteurs & Parties Prenantes Externes</h2>
+<div class='spacer'></div>
+<div class='table-container'><table>
+<thead><tr><th>Acteur / Institution</th><th>Statut / Rôle</th><th>Enjeux & Interactions avec la SETRAG</th><th>Interfaces Requises dans l'ERP</th></tr></thead><tbody>
+<tr><td><strong>Eramet / COMILOG</strong></td><td>Actionnaire majoritaire (51 %) & 1er client fret</td><td>Évacuation de 7 Mt/an de manganèse de Moanda vers Owendo. Rentabilité industrielle du groupe.</td><td>EDI / API : programmes hebdomadaires de trains miniers, données de pesage, facturation fret.</td></tr>
+<tr><td><strong>Meridiam</strong></td><td>Actionnaire stratégique (40 %)</td><td>Fonds d'investissement international spécialisé en infrastructures durables, co-financeur du PRN.</td><td>Tableaux de bord financiers, KPI ESG (Environnement, Social, Gouvernance), reporting d'avancement des investissements.</td></tr>
+<tr><td><strong>État Gabonais</strong></td><td>Actionnaire (9 %) & Conédant</td><td>Propriétaire de l'infrastructure ferroviaire, garant de la continuité territoriale et du service public voyageurs.</td><td>Rapports de suivi de la concession, statistiques de trafic, contrôle des tarifs réglementés.</td></tr>
+<tr><td><strong>ARTF</strong> (Autorité de Régulation des Transports Ferroviaires)</td><td>Régulateur étatique indépendant</td><td>Veille au respect des règles de sécurité, de concurrence et d'entretien de la voie ferrée concédée.</td><td>Registre officiel des incidents et accidents ferroviaires, homologation du matériel roulant, audits de sécurité.</td></tr>
+<tr><td><strong>Ministère des Eaux et Forêts</strong></td><td>Autorité de tutelle forestière</td><td>Contrôle de la légalité du bois transporté (lutte contre le braconnage et l'abattage illégal de bois précieux).</td><td>Validation des Bordereaux de Suivi Forestier (BSF), traçabilité des billes par code-barres avant chargement sur wagon.</td></tr>
+<tr><td><strong>Douanes Gabonaises (DGDDI)</strong></td><td>Administration régalienne</td><td>Contrôle des flux d'exportation (minerai, bois) et des importations de matériels ferroviaires (régime douanier privilégié PRN).</td><td>Dédouanement fret, manifestes électroniques d'entrée/sortie au port d'Owendo.</td></tr>
+<tr><td><strong>GSEZ (Nkok & Ports)</strong></td><td>Opérateur de la Zone Spéciale et des ports</td><td>Réception des grumes à Nkok, gestion du terminal minéralier et du terminal à conteneurs d'Owendo.</td><td>Échange de données de chargement/déchargement, planification des sillons de desserte portuaire.</td></tr>
+<tr><td><strong>DGI (Direction Générale des Impôts)</strong></td><td>Administration fiscale du Gabon</td><td>Perception des impôts, TVA (18%), CSS (1%), impôt sur les sociétés (30%), contrôles fiscaux.</td><td>Télédéclaration fiscale normalisée, piste d'audit fiable (PAF) pour justifier les déductions de TVA.</td></tr>
+<tr><td><strong>CNSS & CNAMGS</strong></td><td>Caisses de sécurité sociale & santé</td><td>Protection sociale des travailleurs gabonais, cotisations retraite, accidents du travail et assurance maladie.</td><td>Télé-déclaration mensuelle nominative des salaires (DTS) et bordereaux d'appels de cotisations.</td></tr>
+<tr><td><strong>AFD / SFI / Proparco / UE</strong></td><td>Bailleurs de fonds internationaux</td><td>Financement par prêts et garanties du Programme de Remise à Niveau (PRN) à hauteur de plusieurs centaines de millions d'euros.</td><td>Suivi rigoureux de l'affectation des fonds, audits de conformité environnementale et sociale (normes de performance SFI).</td></tr>
+</tbody></table></div>
+  
+  <div class="footer">
+    <div>Projet : SETRAG Enterprise Operating System — Document Officiel d'Ingénierie</div>
+    <div>Confidentiel · Tous droits réservés OkaTech / SETRAG 2026</div>
+  </div>
+</body>
+</html>

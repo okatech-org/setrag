@@ -60,6 +60,7 @@ export const PROTECTED_RESOURCES = [
   "parametrage",
   "integrations",
   "rapports",
+  "fret",
 ] as const
 export type ProtectedResource = (typeof PROTECTED_RESOURCES)[number]
 
@@ -182,6 +183,7 @@ const MATRIX: Readonly<Record<AppRole, ResourceGrants>> = {
     rapports: READ,
     livrets_horaires: READ,
     tarifs: READ,
+    fret: READ,
   },
 
   /* Comptabilité et déversement SAGE. */
@@ -204,6 +206,7 @@ const MATRIX: Readonly<Record<AppRole, ResourceGrants>> = {
     donnees_voyageurs: READ,
     livrets_horaires: READ,
     tarifs: READ,
+    fret: READ,
   },
 
   /* Administration fonctionnelle : le paramétrage métier. */
@@ -230,6 +233,7 @@ const MATRIX: Readonly<Record<AppRole, ResourceGrants>> = {
     parametrage: ALL,
     rapports: ALL,
     integrations: READ,
+    fret: ALL,
   },
 
   /* Administration technique : utilisateurs, intégrations, supervision. */

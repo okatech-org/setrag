@@ -560,10 +560,18 @@ describe("Recherche de dessertes", () => {
     const { ctx, bookletId, scheduleId } = await seedBooklet(t, net)
     await ctx.mutation(api.functions.booklets.submit, { bookletId })
     await ctx.mutation(api.functions.booklets.approve, { bookletId })
-    const rapport = await t.mutation(internal.functions.trips.generateOne, {
-      scheduleId,
-      serviceDate: "2026-08-14",
-    })
+    // La date du scénario est volontairement fixe ; figer « aujourd'hui »
+    // empêche ce test de devenir rouge quand cette desserte sort de la fenêtre
+    // de vente de 31 jours.
+    const now = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(Date.UTC(2026, 7, 7, 12))
+    const rapport = await t
+      .mutation(internal.functions.trips.generateOne, {
+        scheduleId,
+        serviceDate: "2026-08-14",
+      })
+      .finally(() => now.mockRestore())
     return { net, ctx, tripId: rapport.tripId as Id<"trips"> }
   }
 
@@ -748,10 +756,15 @@ describe("Statut et fenêtre de vente", () => {
     const { ctx, bookletId, scheduleId } = await seedBooklet(t, net)
     await ctx.mutation(api.functions.booklets.submit, { bookletId })
     await ctx.mutation(api.functions.booklets.approve, { bookletId })
-    const rapport = await t.mutation(internal.functions.trips.generateOne, {
-      scheduleId,
-      serviceDate: "2026-08-14",
-    })
+    const now = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(Date.UTC(2026, 7, 7, 12))
+    const rapport = await t
+      .mutation(internal.functions.trips.generateOne, {
+        scheduleId,
+        serviceDate: "2026-08-14",
+      })
+      .finally(() => now.mockRestore())
     const tripId = rapport.tripId as Id<"trips">
 
     await ctx.mutation(api.functions.trips.setStatus, {
