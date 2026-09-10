@@ -24,7 +24,10 @@ import { useEffect, useMemo, useState } from "react"
 import { useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { MODULE_MANIFEST, type ModuleCode } from "@workspace/backend/modules"
-import type { AppRole } from "@workspace/backend/permissions"
+import {
+  EXTERNAL_STAKEHOLDER_ROLES,
+  type AppRole,
+} from "@workspace/backend/permissions"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
@@ -85,6 +88,10 @@ export function EnterpriseTopNav({ role }: { role?: AppRole }) {
       : asAppRole(portalSession?.profile.user.role))
   const isManagementUser = Boolean(
     effectiveRole && portalForRole(effectiveRole) === "gestion"
+  )
+  const isExternalStakeholder = Boolean(
+    effectiveRole &&
+    (EXTERNAL_STAKEHOLDER_ROLES as readonly AppRole[]).includes(effectiveRole)
   )
   const liveModuleCodes = useQuery(
     api.modules.platform.queries.listMyModules,
@@ -164,7 +171,7 @@ export function EnterpriseTopNav({ role }: { role?: AppRole }) {
             variant="outline"
             className="hidden border-[#D39E00]/60 bg-[#D39E00]/20 text-xs font-medium text-[#D39E00] md:inline-flex"
           >
-            Portail interne
+            {isExternalStakeholder ? "Portail partenaire" : "Portail interne"}
           </Badge>
         </div>
 

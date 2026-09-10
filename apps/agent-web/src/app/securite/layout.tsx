@@ -1,12 +1,12 @@
 import { ModuleGuard } from "@/components/module-guard"
 import { PortalGuard } from "@/components/portal-guard"
 
-export default function CopilotLayout({
+export default function SecurityLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <PortalGuard portal="gestion">
-      <ModuleGuard moduleCode="copilot">{children}</ModuleGuard>
+      <ModuleGuard moduleCode="securite">{children}</ModuleGuard>
     </PortalGuard>
   )
 }

@@ -1,5 +1,7 @@
 import { defineSchema, defineTable } from "convex/server"
 import { v } from "convex/values"
+import { continuityTables } from "./modules/continuity/tables"
+import { financeTables } from "./modules/finance/tables"
 import { platformTables } from "./modules/platform/tables"
 import { appRoleValidator } from "./modules/platform/validators"
 
@@ -203,6 +205,8 @@ const fareTrace = v.object({
 
 export default defineSchema({
   ...platformTables,
+  ...financeTables,
+  ...continuityTables,
 
   /* ══════════════════ Identités & habilitations ═════════════════════════ */
 

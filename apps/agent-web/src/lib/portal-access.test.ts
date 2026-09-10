@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import { MODULE_MANIFEST } from "@workspace/backend/modules"
-import { APP_ROLES, can, type AppRole } from "@workspace/backend/permissions"
+import {
+  APP_ROLES,
+  can,
+  isInternalRole,
+  type AppRole,
+} from "@workspace/backend/permissions"
 
 import {
   ENTERPRISE_DESTINATIONS,
@@ -15,7 +20,7 @@ import {
 } from "./portal-access"
 
 describe("accès aux portails par profil", () => {
-  it("classe exhaustivement les onze profils", () => {
+  it("classe exhaustivement les profils", () => {
     const expected: Record<AppRole, "vente" | "gestion" | null> = {
       voyageur: null,
       vendeur_guichet: "vente",
@@ -28,6 +33,48 @@ describe("accès aux portails par profil", () => {
       responsable_kpi: "gestion",
       admin_fonctionnel: "gestion",
       admin_it: "gestion",
+      direction_generale: "gestion",
+      audit_risques: "gestion",
+      juriste: "gestion",
+      regulateur_cotraf: "gestion",
+      conducteur_ligne: "gestion",
+      visiteur_rames: "gestion",
+      responsable_atelier: "gestion",
+      magasinier: "gestion",
+      agent_voie: "gestion",
+      responsable_prn: "gestion",
+      technicien_signalisation: "gestion",
+      gestionnaire_fret: "gestion",
+      fiscaliste_tresorier: "gestion",
+      gestionnaire_paie: "gestion",
+      planificateur_roulements: "gestion",
+      medecin_travail: "gestion",
+      inspecteur_securite: "gestion",
+      chef_train: "gestion",
+      ingenieur_atelier: "gestion",
+      contremaitre_atelier: "gestion",
+      gestionnaire_stocks: "gestion",
+      cantonnier: "gestion",
+      agent_ouvrages_ponts: "gestion",
+      technicien_telecoms: "gestion",
+      chef_vente: "gestion",
+      gestionnaire_litiges_fret: "gestion",
+      comptable_auxiliaire: "gestion",
+      fiscaliste: "gestion",
+      tresorier: "gestion",
+      infirmier_travail: "gestion",
+      enqueteur_accidents: "gestion",
+      responsable_environnement: "gestion",
+      representant_comilog: "gestion",
+      representant_meridiam: "gestion",
+      representant_etat: "gestion",
+      auditeur_artf: "gestion",
+      controleur_eaux_forets: "gestion",
+      agent_douanes: "gestion",
+      operateur_gsez: "gestion",
+      agent_dgi: "gestion",
+      organisme_social: "gestion",
+      bailleur_fonds: "gestion",
     }
 
     for (const role of APP_ROLES) {
@@ -97,7 +144,7 @@ describe("accès aux portails par profil", () => {
         (candidate) => candidate !== "voyageur"
       )) {
         expect(canAccessManagementPath(role, href), `${role} → ${href}`).toBe(
-          true
+          isInternalRole(role)
         )
       }
     }
@@ -120,6 +167,58 @@ describe("accès aux portails par profil", () => {
       const destination = defaultManagementPath(role)
       expect(destination, role).not.toBe("/connexion")
       expect(canAccessManagementPath(role, destination), role).toBe(true)
+    }
+  })
+
+  it("oriente les acteurs vers leur espace métier primaire", () => {
+    const expectedPaths: Partial<Record<AppRole, string>> = {
+      direction_generale: "/gestion",
+      audit_risques: "/securite",
+      juriste: "/bureautique",
+      regulateur_cotraf: "/cotraf",
+      conducteur_ligne: "/cotraf",
+      visiteur_rames: "/materiel",
+      responsable_atelier: "/materiel",
+      magasinier: "/materiel",
+      agent_voie: "/infrastructures",
+      responsable_prn: "/infrastructures",
+      technicien_signalisation: "/infrastructures",
+      gestionnaire_fret: "/fret",
+      fiscaliste_tresorier: "/finances",
+      gestionnaire_paie: "/rh",
+      planificateur_roulements: "/rh",
+      medecin_travail: "/rh",
+      inspecteur_securite: "/securite",
+      chef_train: "/securite",
+      ingenieur_atelier: "/materiel",
+      contremaitre_atelier: "/materiel",
+      gestionnaire_stocks: "/materiel",
+      cantonnier: "/infrastructures",
+      agent_ouvrages_ponts: "/infrastructures",
+      technicien_telecoms: "/infrastructures",
+      chef_vente: "/gestion",
+      gestionnaire_litiges_fret: "/fret",
+      comptable_auxiliaire: "/finances",
+      fiscaliste: "/finances",
+      tresorier: "/finances",
+      infirmier_travail: "/rh",
+      enqueteur_accidents: "/securite",
+      responsable_environnement: "/securite",
+      representant_comilog: "/fret",
+      representant_meridiam: "/infrastructures",
+      representant_etat: "/gestion",
+      auditeur_artf: "/securite",
+      controleur_eaux_forets: "/fret",
+      agent_douanes: "/fret",
+      operateur_gsez: "/fret",
+      agent_dgi: "/finances",
+      organisme_social: "/rh",
+      bailleur_fonds: "/infrastructures",
+    }
+
+    for (const [role, path] of Object.entries(expectedPaths)) {
+      expect(defaultManagementPath(role as AppRole), role).toBe(path)
+      expect(canAccessManagementPath(role as AppRole, path), role).toBe(true)
     }
   })
 })

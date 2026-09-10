@@ -1,14 +1,6 @@
 "use client"
 
-import {
-  Building2,
-  KeyRound,
-  ShieldCheck,
-  UserRoundCheck,
-  UsersRound,
-  Wifi,
-  X,
-} from "lucide-react"
+import { Building2, KeyRound, ShieldCheck, Wifi } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { FormEvent, useEffect, useState } from "react"
@@ -17,10 +9,13 @@ import { authClient } from "@workspace/api/auth-client"
 import { useAuth, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { Button } from "@workspace/ui/components/button"
-import { Card } from "@workspace/ui/components/card"
 import { Field, Input } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
 
+import {
+  DemoAccountPicker,
+  type DemoAccount,
+} from "@/components/demo-account-picker"
 import {
   asAppRole,
   defaultManagementPath,
@@ -47,7 +42,6 @@ export function LoginScreen({
   const [password, setPassword] = useState("")
   const [pending, setPending] = useState(false)
   const [demoPending, setDemoPending] = useState("")
-  const [demoOpen, setDemoOpen] = useState(false)
   const demoAccounts = useQuery(
     api.functions.demoAccounts.list,
     E2E_MODE ? "skip" : {}
@@ -90,11 +84,7 @@ export function LoginScreen({
     }
   }
 
-  async function signInWithDemoAccount(account: {
-    key: string
-    email: string
-    password: string
-  }) {
+  async function signInWithDemoAccount(account: DemoAccount) {
     setMessage(null)
     setDemoPending(account.key)
     try {
@@ -102,6 +92,7 @@ export function LoginScreen({
         email: account.email,
         password: account.password,
       })
+      if (account.landingPath) window.location.assign(account.landingPath)
     } catch {
       setMessage({
         tone: "danger",
@@ -141,14 +132,14 @@ export function LoginScreen({
 
           <div className="relative grid max-w-lg gap-5">
             <span className="text-mono-label text-accent-on-ink">
-              Billettique SETRAG
+              SETRAG Enterprise OS
             </span>
             <h1 className="text-h1 text-ink">
               Le portail opérationnel du Transgabonais.
             </h1>
             <p className="text-body-lg max-w-md text-ink-muted">
-              Vente, encaissement et suivi des opérations depuis votre point de
-              vente habilité.
+              Pilotez circulation, fret, matériel, infrastructures, finances,
+              ressources humaines et collaboration selon votre périmètre.
             </p>
             <div className="text-small mt-4 grid gap-3 text-ink-muted">
               <span className="flex items-center gap-3">
@@ -157,7 +148,7 @@ export function LoginScreen({
               </span>
               <span className="flex items-center gap-3">
                 <Building2 className="size-5 text-accent-on-ink" />
-                Session liée au guichet et à l’appareil
+                Session liée au rôle, au site et au périmètre
               </span>
               <span className="flex items-center gap-3">
                 <Wifi className="size-5 text-info" />
@@ -167,7 +158,7 @@ export function LoginScreen({
           </div>
 
           <p className="text-caption relative text-ink-faint">
-            Accès réservé au personnel et aux agences accréditées.
+            Accès réservé au personnel et aux partenaires habilités.
           </p>
         </section>
 
@@ -186,7 +177,7 @@ export function LoginScreen({
               <span className="text-mono-label text-accent-ink">AW-00</span>
               <h2 className="text-h2">Connexion</h2>
               <p className="text-ink-muted">
-                Utilisez votre identité professionnelle SETRAG.
+                Utilisez votre identité SETRAG ou partenaire habilitée.
               </p>
             </div>
 
@@ -273,71 +264,11 @@ export function LoginScreen({
         </section>
       </main>
 
-      {demoAccounts && demoAccounts.length > 0 ? (
-        <div className="fixed right-4 bottom-4 z-50 grid justify-items-end gap-3 sm:right-6 sm:bottom-6">
-          {demoOpen ? (
-            <Card className="w-[min(22rem,calc(100vw-2rem))] gap-4 border-accent-base bg-surface p-4 shadow-xl">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <span className="text-mono-label text-accent-ink">
-                    ACCÈS RAPIDE
-                  </span>
-                  <h2 className="text-h4 mt-1">Comptes de démonstration</h2>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Fermer les comptes de démonstration"
-                  onClick={() => setDemoOpen(false)}
-                >
-                  <X />
-                </Button>
-              </div>
-              <p className="text-small text-ink-muted">
-                Choisissez un profil pour vous connecter directement avec les
-                identifiants configurés dans Convex.
-              </p>
-              <div className="grid gap-2">
-                {demoAccounts.map((account) => (
-                  <Button
-                    key={account.key}
-                    type="button"
-                    variant="secondary"
-                    size="lg"
-                    block
-                    className="h-auto justify-start py-3 text-left"
-                    loading={demoPending === account.key}
-                    loadingLabel={`Connexion ${account.label.toLowerCase()}…`}
-                    disabled={Boolean(
-                      demoPending && demoPending !== account.key
-                    )}
-                    onClick={() => signInWithDemoAccount(account)}
-                  >
-                    <UserRoundCheck />
-                    <span className="grid">
-                      <span>{account.label}</span>
-                      <span className="text-caption font-normal opacity-75">
-                        {account.description}
-                      </span>
-                    </span>
-                  </Button>
-                ))}
-              </div>
-            </Card>
-          ) : null}
-          <Button
-            type="button"
-            size="lg"
-            className="rounded-full shadow-xl"
-            aria-expanded={demoOpen}
-            onClick={() => setDemoOpen((open) => !open)}
-          >
-            <UsersRound />
-            Comptes démo
-          </Button>
-        </div>
-      ) : null}
+      <DemoAccountPicker
+        accounts={demoAccounts ?? []}
+        pendingAccountKey={demoPending}
+        onSelect={signInWithDemoAccount}
+      />
     </>
   )
 }

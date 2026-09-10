@@ -1,8 +1,13 @@
 "use client"
 
-import { LogOut } from "lucide-react"
+import { Handshake, LogOut } from "lucide-react"
 import { ReactNode } from "react"
 
+import {
+  EXTERNAL_STAKEHOLDER_ROLES,
+  type AppRole,
+} from "@workspace/backend/permissions"
+import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 
 import { initials, sellerDisplayName } from "@/lib/format"
@@ -26,9 +31,12 @@ export function EnterpriseShell({
   const user = session?.profile.user
   const role = asAppRole(user?.role)
   const displayName = sellerDisplayName(user?.firstName, user?.lastName)
+  const isExternalStakeholder = Boolean(
+    role && (EXTERNAL_STAKEHOLDER_ROLES as readonly AppRole[]).includes(role)
+  )
 
   return (
-    <div className="min-h-dvh flex flex-col bg-canvas text-ink">
+    <div className="flex min-h-dvh flex-col bg-canvas text-ink">
       <EnterpriseTopNav />
 
       {/* En-tête de module et espace du collaborateur connecté */}
@@ -44,12 +52,19 @@ export function EnterpriseShell({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {isExternalStakeholder ? (
+              <Badge variant="warning">
+                <Handshake aria-hidden />
+                Accès partenaire · lecture seule
+              </Badge>
+            ) : null}
+
             {actions ? (
               <div className="flex items-center gap-2.5">{actions}</div>
             ) : null}
 
             {user ? (
-              <div className="flex items-center gap-2.5 rounded-pill border border-line bg-surface-raised py-1.5 pr-1.5 pl-3">
+              <div className="bg-surface-raised flex items-center gap-2.5 rounded-pill border border-line py-1.5 pr-1.5 pl-3">
                 <div
                   aria-hidden
                   className="text-caption flex size-9 items-center justify-center rounded-full bg-accent-soft font-bold text-accent-ink"
@@ -88,7 +103,7 @@ export function EnterpriseShell({
 
       {/* Pied de page institutionnel */}
       <footer className="border-t border-line bg-surface py-4 text-center text-xs text-ink-muted">
-        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between px-4 gap-2">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 sm:flex-row">
           <span>
             SETRAG · Société d&apos;Exploitation du Transgabonais · Réseau
             National (648 km)

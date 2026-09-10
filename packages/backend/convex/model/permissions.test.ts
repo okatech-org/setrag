@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 import {
   ADMIN_ROLES,
   APP_ROLES,
+  EXTERNAL_STAKEHOLDER_ROLES,
   INTERNAL_ROLES,
+  MODULE_RESOURCES,
   ONBOARD_ROLES,
   PERMISSIONS,
   PROTECTED_RESOURCES,
@@ -15,8 +17,21 @@ import {
 } from "./permissions"
 
 describe("Cohérence de la matrice", () => {
-  it("couvre les 11 rôles du plan", () => {
-    expect(APP_ROLES).toHaveLength(11)
+  it("conserve les 11 rôles historiques et couvre les nouveaux acteurs", () => {
+    expect(APP_ROLES.slice(0, 11)).toEqual([
+      "voyageur",
+      "vendeur_guichet",
+      "vendeur_agence",
+      "taxateur",
+      "controleur_train",
+      "controleur_recettes",
+      "chef_gare",
+      "comptable",
+      "responsable_kpi",
+      "admin_fonctionnel",
+      "admin_it",
+    ])
+    expect(APP_ROLES).toHaveLength(53)
     expect(new Set(APP_ROLES).size).toBe(APP_ROLES.length)
   })
 
@@ -37,7 +52,7 @@ describe("Cohérence de la matrice", () => {
   it("refuse par défaut : aucun rôle n'a tous les droits sur tout", () => {
     for (const role of APP_ROLES) {
       const complet = PROTECTED_RESOURCES.every((resource) =>
-        PERMISSIONS.every((p) => can(role, resource, p)),
+        PERMISSIONS.every((p) => can(role, resource, p))
       )
       expect(complet).toBe(false)
     }
@@ -76,12 +91,16 @@ describe("Cloisonnement du rôle voyageur", () => {
     }
   })
 
-  it("est le seul rôle non interne", () => {
+  it("distingue le voyageur et les parties prenantes du personnel interne", () => {
     expect(isInternalRole("voyageur")).toBe(false)
     for (const role of INTERNAL_ROLES) {
       expect(isInternalRole(role)).toBe(true)
     }
-    expect(INTERNAL_ROLES).toHaveLength(10)
+    for (const role of EXTERNAL_STAKEHOLDER_ROLES) {
+      expect(isInternalRole(role)).toBe(false)
+    }
+    expect(INTERNAL_ROLES).toHaveLength(42)
+    expect(EXTERNAL_STAKEHOLDER_ROLES).toHaveLength(10)
   })
 })
 
@@ -94,7 +113,9 @@ describe("Séparation des tâches — garde-fous anti-fraude", () => {
 
   it("un vendeur ne clôture pas la journée comptable", () => {
     expect(can("vendeur_guichet", "journee_comptable", "valider")).toBe(false)
-    expect(can("controleur_recettes", "journee_comptable", "valider")).toBe(true)
+    expect(can("controleur_recettes", "journee_comptable", "valider")).toBe(
+      true
+    )
     expect(can("comptable", "journee_comptable", "valider")).toBe(true)
   })
 
@@ -137,7 +158,7 @@ describe("Séparation des tâches — garde-fous anti-fraude", () => {
     expect(can("admin_it", "tarifs", "modifier")).toBe(false)
     expect(can("admin_it", "yield", "modifier")).toBe(false)
     expect(can("admin_it", "caisse", "consulter")).toBe(false)
-    expect(can("admin_it", "fret", "consulter")).toBe(false)
+    expect(can("admin_it", "fret", "consulter")).toBe(true)
   })
 
   it("l'administrateur fonctionnel ne gère pas les intégrations techniques", () => {
@@ -152,7 +173,7 @@ describe("Droits opérationnels par métier", () => {
     expect(permissionsFor("responsable_kpi", "fret")).toEqual(["consulter"])
     expect(permissionsFor("chef_gare", "fret")).toEqual(["consulter"])
     expect(permissionsFor("admin_fonctionnel", "fret")).toEqual(PERMISSIONS)
-    expect(permissionsFor("admin_it", "fret")).toEqual([])
+    expect(permissionsFor("admin_it", "fret")).toEqual(["consulter"])
   })
 
   it("le vendeur guichet vend et encaisse", () => {
@@ -211,7 +232,7 @@ describe("Droits opérationnels par métier", () => {
     const valideurs = APP_ROLES.filter((r) => can(r, "tarifs", "valider"))
     expect(valideurs).toEqual(["admin_fonctionnel"])
     const valideursLivrets = APP_ROLES.filter((r) =>
-      can(r, "livrets_horaires", "valider"),
+      can(r, "livrets_horaires", "valider")
     )
     expect(valideursLivrets).toEqual(["admin_fonctionnel"])
   })
@@ -221,23 +242,86 @@ describe("Droits opérationnels par métier", () => {
     expect(can("admin_fonctionnel", "utilisateurs", "supprimer")).toBe(false)
     expect(can("admin_fonctionnel", "utilisateurs", "modifier")).toBe(true)
   })
+
+  it("autorise l'écriture sur le module primaire et la lecture des secondaires", () => {
+    expect(can("responsable_atelier", "gmao", "modifier")).toBe(true)
+    expect(can("responsable_atelier", "finance", "consulter")).toBe(true)
+    expect(can("responsable_atelier", "finance", "modifier")).toBe(false)
+
+    expect(can("inspecteur_securite", "securite", "creer")).toBe(true)
+    expect(can("inspecteur_securite", "infrastructure", "consulter")).toBe(true)
+    expect(can("inspecteur_securite", "infrastructure", "modifier")).toBe(false)
+  })
+
+  it("habilite séparément chaque fonction interne nouvellement distinguée", () => {
+    const primaryResources = [
+      ["chef_train", "securite"],
+      ["ingenieur_atelier", "gmao"],
+      ["contremaitre_atelier", "gmao"],
+      ["gestionnaire_stocks", "gmao"],
+      ["cantonnier", "infrastructure"],
+      ["agent_ouvrages_ponts", "infrastructure"],
+      ["technicien_telecoms", "infrastructure"],
+      ["chef_vente", "voyageurs"],
+      ["gestionnaire_litiges_fret", "fret"],
+      ["comptable_auxiliaire", "finance"],
+      ["fiscaliste", "finance"],
+      ["tresorier", "finance"],
+      ["infirmier_travail", "rh"],
+      ["enqueteur_accidents", "securite"],
+      ["responsable_environnement", "securite"],
+    ] as const
+
+    for (const [role, resource] of primaryResources) {
+      expect(isInternalRole(role)).toBe(true)
+      expect(can(role, resource, "consulter")).toBe(true)
+      expect(can(role, resource, "creer")).toBe(true)
+      expect(can(role, resource, "modifier")).toBe(true)
+    }
+    expect(can("gestionnaire_stocks", "finance", "consulter")).toBe(true)
+    expect(can("gestionnaire_stocks", "finance", "modifier")).toBe(false)
+    expect(can("responsable_environnement", "fret", "consulter")).toBe(true)
+    expect(can("responsable_environnement", "fret", "modifier")).toBe(false)
+  })
+
+  it("accorde la lecture des dix modules aux rôles transverses", () => {
+    for (const resource of MODULE_RESOURCES) {
+      expect(can("responsable_kpi", resource, "consulter")).toBe(true)
+      expect(can("admin_it", resource, "consulter")).toBe(true)
+      for (const permission of PERMISSIONS) {
+        expect(can("admin_fonctionnel", resource, permission)).toBe(true)
+      }
+    }
+  })
+
+  it("maintient toutes les parties prenantes externes en lecture seule", () => {
+    for (const role of EXTERNAL_STAKEHOLDER_ROLES) {
+      expect(accessibleResources(role).length).toBeGreaterThan(0)
+      for (const resource of PROTECTED_RESOURCES) {
+        expect(
+          permissionsFor(role, resource).every((p) => p === "consulter")
+        ).toBe(true)
+      }
+    }
+  })
 })
 
 describe("Accès aux données personnelles des voyageurs", () => {
   it("est limité aux rôles qui en ont un besoin opérationnel", () => {
     const habilites = APP_ROLES.filter((r) =>
-      can(r, "donnees_voyageurs", "consulter"),
+      can(r, "donnees_voyageurs", "consulter")
     )
     expect(habilites.sort()).toEqual(
       [
         "vendeur_guichet",
         "taxateur",
         "controleur_train",
+        "chef_train",
         "controleur_recettes",
         "chef_gare",
         "responsable_kpi",
         "admin_fonctionnel",
-      ].sort(),
+      ].sort()
     )
   })
 
@@ -264,6 +348,12 @@ describe("Authentification forte", () => {
 
   it("ne s'applique pas au voyageur, authentifié par code à usage unique", () => {
     expect(requiresMfa("voyageur")).toBe(false)
+  })
+
+  it("reste exigée pour les comptes externes de démonstration", () => {
+    for (const role of EXTERNAL_STAKEHOLDER_ROLES) {
+      expect(requiresMfa(role)).toBe(true)
+    }
   })
 
   it("liste les rôles habilités au contrôle à bord", () => {

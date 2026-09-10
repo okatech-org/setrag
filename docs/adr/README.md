@@ -29,6 +29,8 @@ qui remplace le précédent, et l'ancien passe en `remplacé par`.
 | [0014](0014-monolithe-modulaire-et-frontiere-de-surete-cotraf.md) | Monolithe modulaire et frontière de sûreté COTRAF                  | accepté sous réserve |
 | [0015](0015-outbox-plateforme-et-scellement-audit.md)             | Outbox plateforme versionnée et scellement de l’audit              | accepté sous réserve |
 | [0016](0016-documents-versionnes-et-approbations-generiques.md)   | Documents versionnés et approbations génériques                    | accepté sous réserve |
+| [0017](0017-pca-pra-objectifs-et-preuves.md)                      | Objectifs PCA/PRA et preuves d’exercice                            | accepté sous réserve |
+| [0018](0018-finance-ohada-et-regles-fiscales-versionnees.md)      | Finance OHADA et règles fiscales versionnées                       | accepté sous réserve |
 
 ## Fils conducteurs
 

@@ -39,6 +39,12 @@ describe("Catalogue des modules", () => {
     ).toEqual(["voyageurs", "fret"])
   })
 
+  it("protège chaque module par une ressource dédiée portant le même code", () => {
+    expect(MODULE_MANIFEST.map(({ resource }) => resource)).toEqual(
+      MODULE_CODES
+    )
+  })
+
   it("dérive l'environnement côté serveur avec un défaut development", () => {
     expect(derivePlatformEnvironment()).toBe("development")
     expect(derivePlatformEnvironment({ SETRAG_ENV: "staging" })).toBe("staging")

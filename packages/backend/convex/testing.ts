@@ -35,6 +35,15 @@ function assertTestMode(): void {
 
 /** Toutes les tables applicatives, dans l'ordre de purge. */
 const TABLES = [
+  "financeMutationReceipts",
+  "financeJournalLines",
+  "financeJournalBatches",
+  "financeTaxRules",
+  "financeTaxRuleSets",
+  "financeAccounts",
+  "financeChartVersions",
+  "continuityExercises",
+  "continuityPolicies",
   "approvalSteps",
   "approvalInstances",
   "documentVersions",

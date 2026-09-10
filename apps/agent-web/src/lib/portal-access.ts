@@ -17,7 +17,7 @@ export const SELLER_ROLES: readonly AppRole[] = [
 ]
 
 export const MANAGEMENT_DESTINATIONS = [
-  { href: "/gestion", resource: "rapports" },
+  { href: "/gestion", resource: "voyageurs" },
   { href: "/gestion/livrets", resource: "livrets_horaires" },
   { href: "/gestion/tarifs", resource: "tarifs" },
   { href: "/gestion/yield", resource: "yield" },
@@ -47,6 +47,51 @@ export const ENTERPRISE_DESTINATIONS = MODULE_MANIFEST.map(
 
 /** Utilitaires internes qui ne constituent pas un module officiel. */
 export const STAFF_WIDE_PATHS = ["/etudes"] as const
+
+const PRIMARY_MANAGEMENT_PATHS: Partial<Record<AppRole, string>> = {
+  direction_generale: "/gestion",
+  audit_risques: "/securite",
+  juriste: "/bureautique",
+  regulateur_cotraf: "/cotraf",
+  conducteur_ligne: "/cotraf",
+  visiteur_rames: "/materiel",
+  responsable_atelier: "/materiel",
+  magasinier: "/materiel",
+  agent_voie: "/infrastructures",
+  responsable_prn: "/infrastructures",
+  technicien_signalisation: "/infrastructures",
+  gestionnaire_fret: "/fret",
+  fiscaliste_tresorier: "/finances",
+  gestionnaire_paie: "/rh",
+  planificateur_roulements: "/rh",
+  medecin_travail: "/rh",
+  inspecteur_securite: "/securite",
+  chef_train: "/securite",
+  ingenieur_atelier: "/materiel",
+  contremaitre_atelier: "/materiel",
+  gestionnaire_stocks: "/materiel",
+  cantonnier: "/infrastructures",
+  agent_ouvrages_ponts: "/infrastructures",
+  technicien_telecoms: "/infrastructures",
+  chef_vente: "/gestion",
+  gestionnaire_litiges_fret: "/fret",
+  comptable_auxiliaire: "/finances",
+  fiscaliste: "/finances",
+  tresorier: "/finances",
+  infirmier_travail: "/rh",
+  enqueteur_accidents: "/securite",
+  responsable_environnement: "/securite",
+  representant_comilog: "/fret",
+  representant_meridiam: "/infrastructures",
+  representant_etat: "/gestion",
+  auditeur_artf: "/securite",
+  controleur_eaux_forets: "/fret",
+  agent_douanes: "/fret",
+  operateur_gsez: "/fret",
+  agent_dgi: "/finances",
+  organisme_social: "/rh",
+  bailleur_fonds: "/infrastructures",
+}
 
 function matchesPath(href: string, pathname: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
@@ -82,6 +127,9 @@ export function canAccessManagementPath(role: AppRole, pathname: string) {
 }
 
 export function defaultManagementPath(role: AppRole) {
+  const primaryPath = PRIMARY_MANAGEMENT_PATHS[role]
+  if (primaryPath) return primaryPath
+
   return (
     MANAGEMENT_DESTINATIONS.find(({ resource }) =>
       can(role, resource, "consulter")
