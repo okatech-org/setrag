@@ -91,6 +91,7 @@ describe("Accès modulaire Fret", () => {
       moduleCode: "fret",
       dataState: "empty",
       accessibleSiteIds: [],
+      dataset: null,
       kpis: [],
       operations: [],
       alerts: [],

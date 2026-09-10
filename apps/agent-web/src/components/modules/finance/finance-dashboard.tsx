@@ -4,6 +4,7 @@ import type { FunctionReference } from "convex/server"
 import {
   BookOpenCheck,
   FileSpreadsheet,
+  FlaskConical,
   Landmark,
   Receipt,
   Scale,
@@ -36,6 +37,12 @@ import { EnterpriseShell } from "@/components/enterprise-layout"
 
 export interface FinanceOverviewDto {
   generatedAt: number
+  dataState: "empty" | "synthetic_demo" | "operational"
+  dataset: null | {
+    label: string
+    notice: string
+    referencePeriod: string
+  }
   configuration: {
     activeRuleSet: null | {
       _id: string
@@ -392,6 +399,21 @@ export function FinanceDashboardScreen({
 
   return (
     <div className="grid gap-6">
+      {overview.dataState === "synthetic_demo" && overview.dataset ? (
+        <InlineMessage
+          tone="warning"
+          title="Données synthétiques de démonstration"
+        >
+          <span className="flex items-start gap-2">
+            <FlaskConical aria-hidden className="mt-0.5 size-4 shrink-0" />
+            <span>
+              {overview.dataset.notice} Période du scénario :{" "}
+              {overview.dataset.referencePeriod}.
+            </span>
+          </span>
+        </InlineMessage>
+      ) : null}
+
       <Card className="border-line bg-surface">
         <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -400,11 +422,14 @@ export function FinanceDashboardScreen({
             </span>
             <div>
               <p className="font-semibold text-ink">
-                Données comptables serveur
+                {overview.dataState === "synthetic_demo"
+                  ? overview.dataset?.label
+                  : "Données comptables serveur"}
               </p>
               <p className="text-small text-ink-muted">
-                Aucun indicateur financier n’est calculé à partir d’un scénario
-                de démonstration.
+                {overview.dataState === "synthetic_demo"
+                  ? "Scénario pédagogique persisté côté serveur et isolé par des références DEMO-."
+                  : "Les indicateurs proviennent exclusivement des écritures persistées côté serveur."}
               </p>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server"
 import { v } from "convex/values"
 import { continuityTables } from "./modules/continuity/tables"
 import { financeTables } from "./modules/finance/tables"
+import { fretTables } from "./modules/fret/tables"
 import { platformTables } from "./modules/platform/tables"
 import { appRoleValidator } from "./modules/platform/validators"
 
@@ -207,6 +208,7 @@ export default defineSchema({
   ...platformTables,
   ...financeTables,
   ...continuityTables,
+  ...fretTables,
 
   /* ══════════════════ Identités & habilitations ═════════════════════════ */
 
@@ -1486,11 +1488,7 @@ export default defineSchema({
     ),
     reason: v.optional(v.string()),
     result: v.optional(
-      v.union(
-        v.literal("succes"),
-        v.literal("refus"),
-        v.literal("echec")
-      )
+      v.union(v.literal("succes"), v.literal("refus"), v.literal("echec"))
     ),
     correlationId: v.optional(v.string()),
     causationId: v.optional(v.string()),

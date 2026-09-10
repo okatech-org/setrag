@@ -21,6 +21,7 @@ import {
 } from "@workspace/ui/components/table"
 
 import { EnterpriseShell } from "@/components/enterprise-layout"
+import { DemoDataNotice } from "@/components/demo-data-notice"
 
 const PRN_SECTIONS = [
   {
@@ -92,6 +93,7 @@ export default function InfrastructuresPage() {
       }
     >
       <div className="space-y-6">
+        <DemoDataNotice scope="Avancement PRN, état des actifs et alertes d'infrastructure simulés." />
         <section
           aria-label="Indicateurs du réseau"
           className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"

@@ -13,6 +13,8 @@ describe("tableau de bord financier", () => {
   it("rend un état vide honnête et bloque les productions réglementaires", () => {
     const overview = {
       generatedAt: GENERATED_AT,
+      dataState: "empty",
+      dataset: null,
       configuration: {
         activeRuleSet: null,
         activeAccounts: 0,
@@ -56,6 +58,8 @@ describe("tableau de bord financier", () => {
   it("affiche uniquement les comptes, règles et écritures fournis par le serveur", () => {
     const overview = {
       generatedAt: GENERATED_AT,
+      dataState: "operational",
+      dataset: null,
       configuration: {
         activeRuleSet: {
           _id: "ruleset-1",
@@ -124,5 +128,42 @@ describe("tableau de bord financier", () => {
     expect(
       screen.queryByText(/TVA au taux normal|OD-2026/)
     ).not.toBeInTheDocument()
+  })
+
+  it("identifie sans ambiguïté un jeu financier synthétique", () => {
+    const overview = {
+      generatedAt: GENERATED_AT,
+      dataState: "synthetic_demo",
+      dataset: {
+        label: "Scénario financier ferroviaire SETRAG — démonstration",
+        notice: "Données entièrement synthétiques.",
+        referencePeriod: "2026-09",
+      },
+      configuration: {
+        activeRuleSet: null,
+        activeAccounts: 0,
+        totalAccounts: 0,
+      },
+      journal: {
+        postedBatches: 0,
+        totalDebit: 0,
+        totalCredit: 0,
+        latest: [],
+      },
+      readiness: {
+        canPrepareTaxReturns: false,
+        blockers: ["Homologation SAGE X3 et e-tax non démontrée"],
+      },
+    } satisfies FinanceOverviewDto
+
+    render(<FinanceDashboardScreen overview={overview} />)
+
+    expect(
+      screen.getByText("Données synthétiques de démonstration")
+    ).toBeInTheDocument()
+    expect(screen.getByText(/2026-09/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Scénario financier ferroviaire SETRAG/)
+    ).toBeInTheDocument()
   })
 })

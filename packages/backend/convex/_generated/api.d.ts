@@ -85,6 +85,7 @@ import type * as modules_fret_manifest from "../modules/fret/manifest.js";
 import type * as modules_fret_model from "../modules/fret/model.js";
 import type * as modules_fret_permissions from "../modules/fret/permissions.js";
 import type * as modules_fret_queries from "../modules/fret/queries.js";
+import type * as modules_fret_tables from "../modules/fret/tables.js";
 import type * as modules_platform_approvalModel from "../modules/platform/approvalModel.js";
 import type * as modules_platform_approvals from "../modules/platform/approvals.js";
 import type * as modules_platform_audit from "../modules/platform/audit.js";
@@ -102,6 +103,8 @@ import type * as modules_platform_validators from "../modules/platform/validator
 import type * as seeds_controlDemo from "../seeds/controlDemo.js";
 import type * as seeds_demo from "../seeds/demo.js";
 import type * as seeds_demoAccounts from "../seeds/demoAccounts.js";
+import type * as seeds_enterpriseDemo from "../seeds/enterpriseDemo.js";
+import type * as seeds_fretDemo from "../seeds/fretDemo.js";
 import type * as seeds_history from "../seeds/history.js";
 import type * as seeds_provisionalFares from "../seeds/provisionalFares.js";
 import type * as seeds_referential from "../seeds/referential.js";
@@ -192,6 +195,7 @@ declare const fullApi: ApiFromModules<{
   "modules/fret/model": typeof modules_fret_model;
   "modules/fret/permissions": typeof modules_fret_permissions;
   "modules/fret/queries": typeof modules_fret_queries;
+  "modules/fret/tables": typeof modules_fret_tables;
   "modules/platform/approvalModel": typeof modules_platform_approvalModel;
   "modules/platform/approvals": typeof modules_platform_approvals;
   "modules/platform/audit": typeof modules_platform_audit;
@@ -209,6 +213,8 @@ declare const fullApi: ApiFromModules<{
   "seeds/controlDemo": typeof seeds_controlDemo;
   "seeds/demo": typeof seeds_demo;
   "seeds/demoAccounts": typeof seeds_demoAccounts;
+  "seeds/enterpriseDemo": typeof seeds_enterpriseDemo;
+  "seeds/fretDemo": typeof seeds_fretDemo;
   "seeds/history": typeof seeds_history;
   "seeds/provisionalFares": typeof seeds_provisionalFares;
   "seeds/referential": typeof seeds_referential;

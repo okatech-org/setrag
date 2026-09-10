@@ -1,5 +1,6 @@
 "use client"
 
+import type { FunctionReturnType } from "convex/server"
 import {
   AlertTriangle,
   CheckCircle2,
@@ -9,6 +10,8 @@ import {
   ShieldCheck,
 } from "lucide-react"
 
+import { useQuery } from "@workspace/api/hooks"
+import { api } from "@workspace/backend/generated"
 import { Badge } from "@workspace/ui/components/badge"
 import { Card } from "@workspace/ui/components/card"
 import {
@@ -21,6 +24,7 @@ import {
 } from "@workspace/ui/components/table"
 
 import { EnterpriseShell } from "@/components/enterprise-layout"
+import { DemoDataNotice } from "@/components/demo-data-notice"
 
 const EVENTS = [
   {
@@ -73,7 +77,118 @@ const CORRECTIVE_ACTIONS = [
   },
 ] as const
 
+type ContinuitySummary = FunctionReturnType<
+  typeof api.modules.continuity.queries.getContinuitySummary
+>
+
+const CONTINUITY_GAP_LABELS: Record<
+  ContinuitySummary["policies"][number]["readiness"]["gaps"][number],
+  string
+> = {
+  objectifs_invalides: "Objectifs à corriger",
+  politique_non_approuvee: "Politique non approuvée",
+  reprise_non_mesuree_ou_hors_objectifs: "Reprise non prouvée",
+  autonomie_hors_ligne_non_prouvee: "Autonomie hors ligne non prouvée",
+  procedure_papier_non_testee: "Repli papier non testé",
+}
+
+function ContinuityPanel({ summary }: { summary: ContinuitySummary }) {
+  return (
+    <Card className="overflow-hidden border-line bg-surface">
+      <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="font-bold text-[#0F2C59]">Préparation PCA / PRA</h2>
+          <p className="text-xs text-ink-muted">
+            Objectifs de reprise, autonomie hors ligne et repli papier
+          </p>
+        </div>
+        {summary.provenanceState === "synthetic_demo" ? (
+          <Badge
+            variant="outline"
+            className="w-fit border-amber-300 bg-amber-50 text-amber-900"
+          >
+            Données synthétiques · Démonstration
+          </Badge>
+        ) : (
+          <Badge variant="outline">
+            {summary.readyPolicyCount} / {summary.evaluatedPolicyCount} prêts
+          </Badge>
+        )}
+      </div>
+
+      {summary.dataset ? (
+        <div className="border-b border-amber-200 bg-amber-50/70 px-4 py-3 text-xs text-amber-950">
+          <span className="font-semibold">{summary.dataset.label}.</span>{" "}
+          {summary.dataset.notice}
+        </div>
+      ) : null}
+
+      {summary.policies.length === 0 ? (
+        <div className="p-4 text-sm text-ink-muted">
+          Aucune politique approuvée n’est disponible dans le registre.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-surface-raised">
+                <TableHead>Périmètre</TableHead>
+                <TableHead>Objectifs</TableHead>
+                <TableHead>État probant</TableHead>
+                <TableHead>Écarts à traiter</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {summary.policies.map(({ policy, readiness }) => (
+                <TableRow key={policy._id}>
+                  <TableCell>
+                    <p className="text-xs font-semibold text-[#0F2C59]">
+                      {policy.title}
+                    </p>
+                    <p className="font-mono text-[11px] text-ink-muted">
+                      {policy.policyCode} · v{policy.version}
+                    </p>
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    RPO {policy.rpoSeconds.toLocaleString("fr-FR")} s · RTO{" "}
+                    {policy.rtoMinutes.toLocaleString("fr-FR")} min · hors ligne{" "}
+                    {policy.offlineAutonomyHours} h
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        readiness.ready
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                          : "border-amber-300 bg-amber-50 text-amber-900"
+                      }
+                    >
+                      {readiness.ready ? "Prêt et prouvé" : "À renforcer"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-sm text-xs text-ink-muted">
+                    {readiness.gaps.length === 0
+                      ? "Aucun écart dans la fenêtre évaluée"
+                      : readiness.gaps
+                          .map((gap) => CONTINUITY_GAP_LABELS[gap])
+                          .join(" · ")}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 export default function SecurityPage() {
+  const continuitySummary = useQuery(
+    api.modules.continuity.queries.getContinuitySummary,
+    { policyLimit: 8 }
+  )
+
   return (
     <EnterpriseShell
       title="Sécurité ferroviaire, conformité & environnement"
@@ -88,6 +203,7 @@ export default function SecurityPage() {
       }
     >
       <div className="space-y-6">
+        <DemoDataNotice scope="Événements, enquêtes, actions correctives et indicateurs ARTF simulés." />
         <section
           aria-label="Indicateurs de sécurité"
           className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
@@ -144,6 +260,18 @@ export default function SecurityPage() {
             </p>
           </Card>
         </section>
+
+        {continuitySummary ? (
+          <ContinuityPanel summary={continuitySummary} />
+        ) : (
+          <Card
+            role="status"
+            aria-label="Chargement de la préparation PCA PRA"
+            className="border-line bg-surface p-4 text-sm text-ink-muted"
+          >
+            Chargement du registre PCA / PRA…
+          </Card>
+        )}
 
         <Card className="overflow-hidden border-line bg-surface">
           <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between">

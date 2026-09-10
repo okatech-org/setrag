@@ -6,6 +6,7 @@ const CONFIG_READ_LIMIT = 100
 const ACCOUNT_READ_LIMIT = 5_000
 const JOURNAL_READ_LIMIT = 1_000
 const LATEST_JOURNAL_LIMIT = 10
+const DEMO_CODE_PREFIX = "DEMO-"
 
 /**
  * DTO réel consommé par le tableau de bord Finance. Les absences et limites
@@ -158,8 +159,38 @@ export const getFinanceOverview = query({
       )
     }
 
+    const provenanceCodes = [
+      ...activeCharts.map((chart) => chart.code),
+      ...activeTaxRuleSets.map((ruleSet) => ruleSet.code),
+      ...validatedBatches.map((batch) => batch.batchNumber),
+    ]
+    const hasFinanceData =
+      provenanceCodes.length > 0 || totalAccounts > 0 || rules.length > 0
+    const isSyntheticDemo =
+      provenanceCodes.length > 0 &&
+      provenanceCodes.every((code) => code.startsWith(DEMO_CODE_PREFIX))
+    const referencePeriods = Array.from(
+      new Set(validatedBatches.map((batch) => batch.period))
+    ).sort()
+
     return {
       generatedAt,
+      dataState: !hasFinanceData
+        ? ("empty" as const)
+        : isSyntheticDemo
+          ? ("synthetic_demo" as const)
+          : ("operational" as const),
+      dataset: isSyntheticDemo
+        ? {
+            label: "Scénario financier ferroviaire SETRAG — démonstration",
+            notice:
+              "Données entièrement synthétiques : elles ne constituent ni des comptes publiés, ni une déclaration fiscale, ni une situation comptable de la SETRAG.",
+            referencePeriod:
+              referencePeriods.length > 0
+                ? referencePeriods.join(", ")
+                : "Configuration de démonstration",
+          }
+        : null,
       configuration: {
         activeRuleSet,
         activeAccounts,

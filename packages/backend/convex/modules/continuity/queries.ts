@@ -183,8 +183,23 @@ export const getContinuitySummary = query({
     const readyCount = policies.filter(
       ({ readiness }) => readiness.ready
     ).length
+    const provenanceState =
+      policies.length === 0
+        ? ("empty" as const)
+        : policies.every(({ policy }) => policy.policyCode.startsWith("DEMO-"))
+          ? ("synthetic_demo" as const)
+          : ("operational" as const)
 
     return {
+      provenanceState,
+      dataset:
+        provenanceState === "synthetic_demo"
+          ? {
+              label: "Exercices PCA/PRA ferroviaires — démonstration",
+              notice:
+                "Scénarios et preuves entièrement synthétiques, sans valeur d'audit ni de certification.",
+            }
+          : null,
       dataState:
         policies.length === 0
           ? ("aucune_politique_approuvee" as const)
