@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server"
 import { v } from "convex/values"
 import { continuityTables } from "./modules/continuity/tables"
+import { cotrafTables } from "./modules/cotraf/tables"
 import { financeTables } from "./modules/finance/tables"
 import { fretTables } from "./modules/fret/tables"
 import { platformTables } from "./modules/platform/tables"
@@ -209,6 +210,7 @@ export default defineSchema({
   ...financeTables,
   ...continuityTables,
   ...fretTables,
+  ...cotrafTables,
 
   /* ══════════════════ Identités & habilitations ═════════════════════════ */
 
