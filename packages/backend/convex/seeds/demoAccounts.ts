@@ -176,8 +176,6 @@ export const provisionPersonas = internalAction({
             email: account.email,
             password: account.password,
             name: `${account.firstName} ${account.lastName}`,
-            firstName: account.firstName,
-            lastName: account.lastName,
           },
         })
         authUser = signedUp.user
