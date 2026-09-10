@@ -28,7 +28,7 @@ function assertTestMode(): void {
   if (process.env.IS_TEST !== "true") {
     throw new Error(
       "Fonction réservée aux tests : la variable IS_TEST n'est pas active " +
-        "sur ce déploiement.",
+        "sur ce déploiement."
     )
   }
 }
@@ -52,6 +52,7 @@ const TABLES = [
   "integrationEvents",
   "integrationEndpoints",
   "auditSeals",
+  "moduleAccessGrants",
   "moduleActivations",
   "userAssignments",
   "positions",

@@ -11,6 +11,7 @@ import {
 import {
   ENTERPRISE_DESTINATIONS,
   MANAGEMENT_DESTINATIONS,
+  MODULE_ADMINISTRATION_PATH,
   SELLER_ROLES,
   STAFF_WIDE_PATHS,
   canAccessManagementPath,
@@ -150,6 +151,21 @@ describe("accès aux portails par profil", () => {
     }
   })
 
+  it("laisse la garde modulaire filtrer l’espace d’administration", () => {
+    expect(
+      canAccessManagementPath("admin_it", MODULE_ADMINISTRATION_PATH)
+    ).toBe(true)
+    expect(
+      canAccessManagementPath("direction_generale", MODULE_ADMINISTRATION_PATH)
+    ).toBe(true)
+    expect(
+      canAccessManagementPath("representant_etat", MODULE_ADMINISTRATION_PATH)
+    ).toBe(false)
+    expect(
+      canAccessManagementPath("voyageur", MODULE_ADMINISTRATION_PATH)
+    ).toBe(false)
+  })
+
   it("n’ouvre aucun module d’entreprise à un chemin inconnu", () => {
     for (const role of APP_ROLES) {
       expect(canAccessManagementPath(role, "/module-inconnu"), role).toBe(false)
@@ -172,6 +188,7 @@ describe("accès aux portails par profil", () => {
 
   it("oriente les acteurs vers leur espace métier primaire", () => {
     const expectedPaths: Partial<Record<AppRole, string>> = {
+      admin_it: "/administration",
       direction_generale: "/gestion",
       audit_risques: "/securite",
       juriste: "/bureautique",

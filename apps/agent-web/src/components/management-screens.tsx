@@ -34,6 +34,10 @@ import { formatXaf } from "@/lib/format"
 import { SellerShell } from "./seller-shell"
 import { usePortalSession } from "./portal-guard"
 import {
+  canPerformModuleActions,
+  useModuleNavigationAccesses,
+} from "./module-access-navigation"
+import {
   PlatformIntegrationOutbox,
   shouldLoadIntegrationOutbox,
 } from "./modules/integrations/integration-outbox"
@@ -483,10 +487,21 @@ export function ManagementPageClient({
   const role = E2E_MODE
     ? ("admin_fonctionnel" as const)
     : asAppRole(profile?.user?.role)
+  const { accesses: moduleAccesses } = useModuleNavigationAccesses(role)
+  const voyageursAccessLevel = moduleAccesses.find(
+    ({ code }) => code === "voyageurs"
+  )?.accessLevel
+  const canUseVoyageursModule = canPerformModuleActions(
+    voyageursAccessLevel,
+    role
+  )
   const may = (
     resource: Parameters<typeof canRole>[1],
     permission: Parameters<typeof canRole>[2] = "consulter"
-  ) => canRole(role, resource, permission)
+  ) =>
+    canRole(role, resource, permission) &&
+    (permission === "consulter" ||
+      canPerformModuleActions(voyageursAccessLevel, role))
   const today = new Date().toISOString().slice(0, 10)
   const monthStart = `${today.slice(0, 8)}01`
   const [dialog, setDialog] = useState<
@@ -886,14 +901,16 @@ export function ManagementPageClient({
                               : undefined
 
   const primaryHref =
-    section === "trains" && may("referentiel", "creer")
+    canUseVoyageursModule && section === "trains" && may("referentiel", "creer")
       ? "/gestion/trains/nouveau"
-      : section === "places" && may("places", "creer")
+      : canUseVoyageursModule && section === "places" && may("places", "creer")
         ? "/gestion/places/nouveau"
         : undefined
 
   const primaryAction: (() => void | Promise<string | void>) | undefined =
-    section === "incidents" && may("proces_verbaux", "creer")
+    !canUseVoyageursModule
+      ? undefined
+      : section === "incidents" && may("proces_verbaux", "creer")
       ? () => setDialog("penalty")
       : section === "rapports" && may("rapports", "creer")
         ? () => setDialog("schedule")

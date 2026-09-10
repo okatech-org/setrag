@@ -3,6 +3,7 @@ import { v } from "convex/values"
 
 import {
   appRoleValidator,
+  moduleAccessLevelValidator,
   moduleCodeValidator,
   organizationTypeValidator,
   platformEnvironmentValidator,
@@ -273,4 +274,22 @@ export const platformTables = {
       "moduleCode",
       "userId",
     ]),
+
+  /**
+   * Override explicite du niveau d'accès d'un utilisateur à un module.
+   * Un document sans `accessLevel` matérialise un refus, et non une absence
+   * de décision ; l'historique détaillé reste conservé dans `auditLogs`.
+   */
+  moduleAccessGrants: defineTable({
+    userId: v.id("users"),
+    moduleCode: moduleCodeValidator,
+    accessLevel: v.optional(moduleAccessLevelValidator),
+    reason: v.string(),
+    grantedBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_module", ["userId", "moduleCode", "updatedAt"])
+    .index("by_user", ["userId", "updatedAt"])
+    .index("by_module", ["moduleCode", "updatedAt"]),
 } as const

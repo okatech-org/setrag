@@ -8,6 +8,11 @@ import type { ReactNode } from "react"
 import { Button } from "@workspace/ui/components/button"
 
 import { useOnlineStatus } from "@/hooks/use-online-status"
+import { asAppRole } from "@/lib/portal-access"
+import {
+  canPerformModuleActions,
+  useModuleNavigationAccesses,
+} from "./module-access-navigation"
 import { SellerShell } from "./seller-shell"
 import { usePortalSession } from "./portal-guard"
 
@@ -31,6 +36,16 @@ export function ManagementDetailShell({
   const online = useOnlineStatus()
   const session = usePortalSession()
   const user = session?.profile.user
+  const role = asAppRole(user?.role)
+  const { accesses: moduleAccesses, loading: moduleAccessesLoading } =
+    useModuleNavigationAccesses(role)
+  const voyageursAccessLevel = moduleAccesses.find(
+    ({ code }) => code === "voyageurs"
+  )?.accessLevel
+  const isReadOnly =
+    moduleAccessesLoading ||
+    (voyageursAccessLevel !== undefined &&
+      !canPerformModuleActions(voyageursAccessLevel, role))
 
   if (!user) {
     return (
@@ -69,7 +84,19 @@ export function ManagementDetailShell({
             </Link>
           </Button>
         </header>
-        {children}
+        {isReadOnly ? (
+          <div
+            role="status"
+            className="rounded-lg border border-line bg-surface px-4 py-3 text-xs text-ink-muted"
+          >
+            {role === "admin_it"
+              ? "Administration système : ce dossier est visible pour la gouvernance, sans action métier."
+              : "Mode Lecture : vous pouvez consulter ce dossier, mais ses actions sont désactivées."}
+          </div>
+        ) : null}
+        <fieldset disabled={isReadOnly} className="contents">
+          {children}
+        </fieldset>
       </div>
     </SellerShell>
   )

@@ -4,6 +4,7 @@ import type { Doc, Id } from "../../_generated/dataModel"
 import { mutation, type MutationCtx } from "../../_generated/server"
 import { audit } from "../../lib/auth"
 import { assertCan } from "../platform/model"
+import type { ModuleAccessLevel } from "../platform/catalog"
 import {
   assertDateInPeriod,
   assertNoEffectivePeriodOverlap,
@@ -52,11 +53,16 @@ const journalLineValidator = v.object({
 
 type FinancePermission = "creer" | "modifier" | "valider"
 
-async function authorize(ctx: MutationCtx, permission: FinancePermission) {
+async function authorize(
+  ctx: MutationCtx,
+  permission: FinancePermission,
+  requiredLevel?: ModuleAccessLevel
+) {
   return await assertCan(ctx, {
     moduleCode: "finance",
     resource: "finance",
     permission,
+    requiredLevel,
   })
 }
 
@@ -184,7 +190,7 @@ export const upsertAccount = mutation({
     causationId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const access = await authorize(ctx, "modifier")
+    const access = await authorize(ctx, "modifier", "admin")
     const chart = normalizedDefinition(args.chart)
     const account = {
       code: normalizeSyscohadaAccountCode(args.account.code),
@@ -319,7 +325,7 @@ export const activateChartVersion = mutation({
     causationId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const access = await authorize(ctx, "valider")
+    const access = await authorize(ctx, "valider", "admin")
     const reason = normalizeReason(args.reason)
     const idempotencyKey = normalizeIdempotencyKey(args.idempotencyKey)
     const correlationId = normalizeCorrelationId(args.correlationId)
@@ -418,7 +424,7 @@ export const createTaxRuleSetDraft = mutation({
     causationId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const access = await authorize(ctx, "creer")
+    const access = await authorize(ctx, "creer", "admin")
     const ruleSet = normalizedDefinition(args.ruleSet)
     if (args.rules.length < 1 || args.rules.length > MAX_TAX_RULES_PER_SET) {
       throw new Error(
@@ -524,7 +530,7 @@ export const activateTaxRuleSet = mutation({
     causationId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const access = await authorize(ctx, "valider")
+    const access = await authorize(ctx, "valider", "admin")
     const reason = normalizeReason(args.reason)
     const idempotencyKey = normalizeIdempotencyKey(args.idempotencyKey)
     const correlationId = normalizeCorrelationId(args.correlationId)

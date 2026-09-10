@@ -48,7 +48,15 @@ export const ENTERPRISE_DESTINATIONS = MODULE_MANIFEST.map(
 /** Utilitaires internes qui ne constituent pas un module officiel. */
 export const STAFF_WIDE_PATHS = ["/etudes"] as const
 
+/**
+ * La page n'expose aucune donnée seule : la query serveur filtre les modules
+ * administrables. L'accès statique laisse donc la garde fine aux niveaux
+ * modulaires, y compris pour un administrateur délégué.
+ */
+export const MODULE_ADMINISTRATION_PATH = "/administration" as const
+
 const PRIMARY_MANAGEMENT_PATHS: Partial<Record<AppRole, string>> = {
+  admin_it: MODULE_ADMINISTRATION_PATH,
   direction_generale: "/gestion",
   audit_risques: "/securite",
   juriste: "/bureautique",
@@ -115,6 +123,9 @@ export function canRole(
 }
 
 export function canAccessManagementPath(role: AppRole, pathname: string) {
+  if (matchesPath(MODULE_ADMINISTRATION_PATH, pathname)) {
+    return isInternalRole(role)
+  }
   if (STAFF_WIDE_PATHS.some((href) => matchesPath(href, pathname))) {
     return isInternalRole(role)
   }

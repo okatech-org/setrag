@@ -11,7 +11,10 @@ export const ROLES = [
   ["comptable", "Comptable"],
   ["responsable_kpi", "Responsable KPI"],
   ["admin_fonctionnel", "Administrateur fonctionnel"],
-  ["admin_it", "Administrateur technique"],
+  [
+    "admin_it",
+    "Administrateur système — Direction des Systèmes d’Information & Projets Métiers",
+  ],
   ["direction_generale", "Direction générale"],
   ["audit_risques", "Audit et risques"],
   ["juriste", "Juriste"],

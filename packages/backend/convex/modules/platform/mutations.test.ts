@@ -8,7 +8,7 @@ import { modules } from "../../test.setup"
 async function seedUser(
   t: ReturnType<typeof convexTest>,
   authId: string,
-  role: "admin_fonctionnel" | "vendeur_guichet"
+  role: "admin_fonctionnel" | "admin_it" | "vendeur_guichet"
 ) {
   const userId = await t.run((ctx) =>
     ctx.db.insert("users", {
@@ -24,7 +24,7 @@ async function seedUser(
 describe("Administration de la fondation plateforme", () => {
   it("configure et audite les référentiels, l'affectation et l'activation", async () => {
     const t = convexTest(schema, modules)
-    const admin = await seedUser(t, "admin-fondation", "admin_fonctionnel")
+    const admin = await seedUser(t, "admin-fondation", "admin_it")
     const target = await seedUser(t, "agent-fret", "vendeur_guichet")
 
     const organizationId = await admin.client.mutation(

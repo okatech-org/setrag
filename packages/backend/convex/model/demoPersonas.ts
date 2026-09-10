@@ -3,6 +3,7 @@ import type { AppRole } from "./permissions"
 
 export const DEMO_PERSONA_GROUPS = {
   gouvernance: "Gouvernance",
+  dsi: "DSI · Systèmes d’information & projets métiers",
   def: "DEF · Exploitation ferroviaire",
   dmat: "DMAT · Matériel roulant",
   dinfra: "DINFRA · Installations fixes",
@@ -89,6 +90,31 @@ export const DEMO_PERSONAS = [
     moduleCodes: ["ged", "securite", "copilot"],
     firstName: "Démo",
     lastName: "Juridique",
+  }),
+  persona({
+    key: "dsi",
+    label:
+      "Administrateur système — Direction des Systèmes d’Information & Projets Métiers",
+    description:
+      "Administration du SI SETRAG : architecture, accès, exploitation et gouvernance des systèmes maîtres",
+    actorType: "interne",
+    group: "dsi",
+    role: "admin_it",
+    landingPath: "/administration",
+    moduleCodes: [
+      "voyageurs",
+      "fret",
+      "cotraf",
+      "gmao",
+      "infrastructure",
+      "finance",
+      "rh",
+      "ged",
+      "securite",
+      "copilot",
+    ],
+    firstName: "Démo",
+    lastName: "DSI",
   }),
   persona({
     key: "cotraf",

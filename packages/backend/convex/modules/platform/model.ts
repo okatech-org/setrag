@@ -3,23 +3,30 @@ import type { MutationCtx, QueryCtx } from "../../_generated/server"
 import { requireUser } from "../../lib/auth"
 import {
   can,
+  permissionsFor,
   type Permission,
   type ProtectedResource,
 } from "../../model/permissions"
 import { currentPlatformEnvironment } from "./environment"
 import {
   moduleManifestEntry,
+  hasModuleAccessLevel,
+  type ModuleAccessLevel,
   type ModuleCode,
   type ModuleManifestEntry,
 } from "./catalog"
 
 type DatabaseCtx = QueryCtx | MutationCtx
 
-export type PermissionSource = "legacyRole" | "assignment" | null
+export type PermissionSource =
+  "legacyRole" | "assignment" | "moduleGrant" | null
 export type ActivationSource = "user" | "site" | "environment" | "default"
+export type ModuleAccessSource = "system" | "grant" | "role" | null
 
 export interface ModuleAccessDecision {
   readonly enabled: boolean
+  readonly accessLevel: ModuleAccessLevel | null
+  readonly accessSource: ModuleAccessSource
   readonly permissionGranted: boolean
   readonly canAccess: boolean
   readonly activationSource: ActivationSource
@@ -32,6 +39,8 @@ export interface AssertCanInput {
   readonly moduleCode: ModuleCode
   readonly resource: ProtectedResource
   readonly permission: Permission
+  /** Niveau modulaire minimal, pour distinguer usage et configuration. */
+  readonly requiredLevel?: ModuleAccessLevel
   readonly siteId?: Id<"sites">
   /** Réservé aux pages d'atterrissage qui ne lisent aucune donnée métier. */
   readonly allowScopedLanding?: boolean
@@ -59,6 +68,21 @@ function newest(
       right.updatedAt - left.updatedAt ||
       right._creationTime - left._creationTime
   )[0]
+}
+
+/** Retourne l'override utilisateur/module le plus récent, refus compris. */
+export async function latestModuleAccessGrant(
+  ctx: DatabaseCtx,
+  userId: Id<"users">,
+  moduleCode: ModuleCode
+): Promise<Doc<"moduleAccessGrants"> | null> {
+  return await ctx.db
+    .query("moduleAccessGrants")
+    .withIndex("by_user_module", (query) =>
+      query.eq("userId", userId).eq("moduleCode", moduleCode)
+    )
+    .order("desc")
+    .first()
 }
 
 /** Applique la précédence utilisateur > site > environnement > manifeste. */
@@ -177,6 +201,221 @@ async function sitesCoveredByAssignment(
     }
   }
   return covered
+}
+
+function roleModuleAccessLevel(
+  role: Doc<"users">["role"],
+  resource: ProtectedResource
+): ModuleAccessLevel | null {
+  const permissions = permissionsFor(role, resource)
+  if (!permissions.includes("consulter")) return null
+  return permissions.some((permission) => permission !== "consulter")
+    ? "utilisation"
+    : "lecture"
+}
+
+function highestRoleModuleAccessLevel(
+  roles: readonly Doc<"users">["role"][],
+  resource: ProtectedResource
+): ModuleAccessLevel | null {
+  let result: ModuleAccessLevel | null = null
+  for (const role of roles) {
+    const level = roleModuleAccessLevel(role, resource)
+    if (level === "utilisation") return level
+    if (level === "lecture") result = level
+  }
+  return result
+}
+
+/**
+ * Dérive le niveau modulaire des droits fins existants. Un rôle ne produit
+ * jamais le niveau `admin` : ce niveau est une décision explicite du DSI.
+ */
+async function roleModuleAccessDecision(
+  ctx: DatabaseCtx,
+  user: Doc<"users">,
+  module: ModuleManifestEntry,
+  siteId?: Id<"sites">
+): Promise<{
+  accessLevel: ModuleAccessLevel | null
+  permissionSource: PermissionSource
+  hasGlobalScope: boolean
+  accessibleSiteIds: Id<"sites">[]
+}> {
+  const legacyLevel = roleModuleAccessLevel(user.role, module.resource)
+  if (legacyLevel) {
+    return {
+      accessLevel: legacyLevel,
+      permissionSource: "legacyRole",
+      hasGlobalScope: true,
+      accessibleSiteIds: [],
+    }
+  }
+
+  const at = Date.now()
+  const assignments = await ctx.db
+    .query("userAssignments")
+    .withIndex("by_user", (query) => query.eq("userId", user._id))
+    .collect()
+  const matchingAssignments = assignments.filter(
+    (assignment) =>
+      isAssignmentEffective(assignment, at) &&
+      roleModuleAccessLevel(assignment.role, module.resource) !== null
+  )
+
+  if (siteId) {
+    const covering: Doc<"userAssignments">[] = []
+    for (const assignment of matchingAssignments) {
+      if (await assignmentCoversSite(ctx, assignment, siteId)) {
+        covering.push(assignment)
+      }
+    }
+    return {
+      accessLevel: highestRoleModuleAccessLevel(
+        covering.map(({ role }) => role),
+        module.resource
+      ),
+      permissionSource: covering.length > 0 ? "assignment" : null,
+      hasGlobalScope: covering.some(
+        (assignment) => !assignment.siteId && !assignment.organizationId
+      ),
+      accessibleSiteIds: covering.length > 0 ? [siteId] : [],
+    }
+  }
+
+  const globalAssignments = matchingAssignments.filter(
+    (assignment) => !assignment.siteId && !assignment.organizationId
+  )
+  if (globalAssignments.length > 0) {
+    return {
+      accessLevel: highestRoleModuleAccessLevel(
+        globalAssignments.map(({ role }) => role),
+        module.resource
+      ),
+      permissionSource: "assignment",
+      hasGlobalScope: true,
+      accessibleSiteIds: [],
+    }
+  }
+
+  const coveredSiteIds = new Set<Id<"sites">>()
+  const effectiveScopedRoles: Doc<"users">["role"][] = []
+  for (const assignment of matchingAssignments) {
+    const covered = await sitesCoveredByAssignment(ctx, assignment)
+    if (covered.length === 0) continue
+    effectiveScopedRoles.push(assignment.role)
+    for (const coveredSiteId of covered) coveredSiteIds.add(coveredSiteId)
+  }
+  const accessibleSiteIds = [...coveredSiteIds]
+  return {
+    accessLevel: highestRoleModuleAccessLevel(
+      effectiveScopedRoles,
+      module.resource
+    ),
+    permissionSource: accessibleSiteIds.length > 0 ? "assignment" : null,
+    hasGlobalScope: false,
+    accessibleSiteIds,
+  }
+}
+
+async function directGrantScopeDecision(
+  ctx: DatabaseCtx,
+  user: Doc<"users">,
+  siteId?: Id<"sites">
+): Promise<{
+  readonly coversRequestedScope: boolean
+  readonly hasGlobalScope: boolean
+  readonly accessibleSiteIds: readonly Id<"sites">[]
+}> {
+  const at = Date.now()
+  const assignments = (
+    await ctx.db
+      .query("userAssignments")
+      .withIndex("by_user", (query) => query.eq("userId", user._id))
+      .collect()
+  ).filter((assignment) => isAssignmentEffective(assignment, at))
+  const globalAssignment = assignments.some(
+    (assignment) => !assignment.siteId && !assignment.organizationId
+  )
+  if (globalAssignment || assignments.length === 0) {
+    // Sans affectation explicite, le profil historique de l'utilisateur
+    // constitue sa portée globale ; le grant ne crée pas cette portée.
+    return {
+      coversRequestedScope: true,
+      hasGlobalScope: true,
+      accessibleSiteIds: [],
+    }
+  }
+
+  if (siteId) {
+    for (const assignment of assignments) {
+      if (await assignmentCoversSite(ctx, assignment, siteId)) {
+        return {
+          coversRequestedScope: true,
+          hasGlobalScope: false,
+          accessibleSiteIds: [siteId],
+        }
+      }
+    }
+    return {
+      coversRequestedScope: false,
+      hasGlobalScope: false,
+      accessibleSiteIds: [],
+    }
+  }
+
+  const coveredSiteIds = new Set<Id<"sites">>()
+  for (const assignment of assignments) {
+    for (const coveredSiteId of await sitesCoveredByAssignment(
+      ctx,
+      assignment
+    )) {
+      coveredSiteIds.add(coveredSiteId)
+    }
+  }
+  const accessibleSiteIds = [...coveredSiteIds]
+  return {
+    coversRequestedScope: accessibleSiteIds.length > 0,
+    hasGlobalScope: false,
+    accessibleSiteIds,
+  }
+}
+
+/** Portée issue des rôles et affectations, indépendamment d'un grant direct. */
+export async function moduleRoleScope(
+  ctx: DatabaseCtx,
+  user: Doc<"users">,
+  moduleCode: ModuleCode
+): Promise<{
+  readonly hasGlobalScope: boolean
+  readonly accessibleSiteIds: readonly Id<"sites">[]
+}> {
+  if (user.role === "admin_it") {
+    return { hasGlobalScope: true, accessibleSiteIds: [] }
+  }
+  const access = await roleModuleAccessDecision(
+    ctx,
+    user,
+    moduleManifestEntry(moduleCode)
+  )
+  if (access.accessLevel !== null) {
+    return {
+      hasGlobalScope: access.hasGlobalScope,
+      accessibleSiteIds: access.accessibleSiteIds,
+    }
+  }
+  const directGrant = await latestModuleAccessGrant(ctx, user._id, moduleCode)
+  if (directGrant) {
+    const grantScope = await directGrantScopeDecision(ctx, user)
+    return {
+      hasGlobalScope: grantScope.hasGlobalScope,
+      accessibleSiteIds: grantScope.accessibleSiteIds,
+    }
+  }
+  return {
+    hasGlobalScope: access.hasGlobalScope,
+    accessibleSiteIds: access.accessibleSiteIds,
+  }
 }
 
 async function permissionDecision(
@@ -299,18 +538,57 @@ export async function evaluateModuleAccess(
   siteId?: Id<"sites">
 ): Promise<ModuleAccessDecision> {
   const module = moduleManifestEntry(moduleCode)
-  const permission = await permissionDecision(ctx, user, {
-    resource: module.resource,
-    permission: "consulter",
-    siteId,
-    at: Date.now(),
-    allowScopedLanding: siteId === undefined,
-  })
+  const grant =
+    user.role === "admin_it"
+      ? null
+      : await latestModuleAccessGrant(ctx, user._id, moduleCode)
+  const roleAccess =
+    user.role === "admin_it"
+      ? null
+      : await roleModuleAccessDecision(ctx, user, module, siteId)
+  const grantScope =
+    grant && roleAccess?.accessLevel === null
+      ? await directGrantScopeDecision(ctx, user, siteId)
+      : null
+  const accessLevel: ModuleAccessLevel | null =
+    user.role === "admin_it"
+      ? "admin"
+      : grant
+        ? (grant.accessLevel ?? null)
+        : (roleAccess?.accessLevel ?? null)
+  const accessSource: ModuleAccessSource =
+    user.role === "admin_it"
+      ? "system"
+      : grant
+        ? "grant"
+        : accessLevel
+          ? "role"
+          : null
+  const permissionSource: PermissionSource =
+    roleAccess?.permissionSource ?? null
+  const hasGlobalScope =
+    user.role === "admin_it"
+      ? true
+      : (grantScope?.hasGlobalScope ?? roleAccess?.hasGlobalScope ?? false)
+  const accessibleSiteIds =
+    user.role === "admin_it"
+      ? []
+      : (grantScope?.accessibleSiteIds ?? roleAccess?.accessibleSiteIds ?? [])
+  const scopeGranted =
+    user.role === "admin_it"
+      ? true
+      : grantScope
+        ? grantScope.coversRequestedScope
+        : (roleAccess?.accessLevel ?? null) !== null
   const activations =
-    siteId || permission.hasGlobalScope || !permission.granted
+    siteId ||
+    hasGlobalScope ||
+    !accessLevel ||
+    !scopeGranted ||
+    accessibleSiteIds.length === 0
       ? [await activationDecision(ctx, user._id, module, siteId)]
       : await Promise.all(
-          permission.accessibleSiteIds.map((accessibleSiteId) =>
+          accessibleSiteIds.map((accessibleSiteId) =>
             activationDecision(ctx, user._id, module, accessibleSiteId)
           )
         )
@@ -322,18 +600,18 @@ export async function evaluateModuleAccess(
       enabled: module.defaultEnabled,
       source: "default" as const,
     }
-  const enabledSiteIds = permission.hasGlobalScope
-    ? permission.accessibleSiteIds
-    : permission.accessibleSiteIds.filter(
-        (_site, index) => activations[index]?.enabled
-      )
+  const enabledSiteIds = hasGlobalScope
+    ? accessibleSiteIds
+    : accessibleSiteIds.filter((_site, index) => activations[index]?.enabled)
   return {
     enabled: activation.enabled,
-    permissionGranted: permission.granted,
-    canAccess: activation.enabled && permission.granted,
+    accessLevel,
+    accessSource,
+    permissionGranted: accessLevel !== null && scopeGranted,
+    canAccess: activation.enabled && accessLevel !== null && scopeGranted,
     activationSource: activation.source,
-    permissionSource: permission.source,
-    hasGlobalScope: permission.hasGlobalScope,
+    permissionSource,
+    hasGlobalScope,
     accessibleSiteIds: enabledSiteIds,
   }
 }
@@ -353,6 +631,43 @@ export async function assertCan(
   accessibleSiteIds: readonly Id<"sites">[]
 }> {
   const user = await requireUser(ctx)
+  const moduleAccess = await evaluateModuleAccess(
+    ctx,
+    user,
+    input.moduleCode,
+    input.siteId
+  )
+  const requiredModuleLevel: ModuleAccessLevel =
+    input.requiredLevel ??
+    (input.permission === "consulter" ? "lecture" : "utilisation")
+  if (
+    !hasModuleAccessLevel(moduleAccess.accessLevel, requiredModuleLevel) ||
+    !moduleAccess.permissionGranted
+  ) {
+    throw new Error(
+      input.permission === "consulter"
+        ? `Accès refusé : aucune affectation ni attribution n'accorde le module « ${input.moduleCode} »`
+        : `Accès refusé : aucune affectation ou attribution avec le niveau « ${moduleAccess.accessLevel ?? "aucun"} » ne permet pas l'action « ${input.permission} » sur le module « ${input.moduleCode} »`
+    )
+  }
+  if (!moduleAccess.enabled) {
+    throw new Error(`Module désactivé : ${input.moduleCode}`)
+  }
+
+  const module = moduleManifestEntry(input.moduleCode)
+  if (
+    moduleAccess.accessSource === "grant" &&
+    input.resource === module.resource
+  ) {
+    return {
+      user,
+      permissionSource: "moduleGrant",
+      activationSource: moduleAccess.activationSource,
+      hasGlobalScope: moduleAccess.hasGlobalScope,
+      accessibleSiteIds: moduleAccess.accessibleSiteIds,
+    }
+  }
+
   const permission = await permissionDecision(ctx, user, {
     resource: input.resource,
     permission: input.permission,
@@ -367,31 +682,15 @@ export async function assertCan(
     )
   }
 
-  const module = moduleManifestEntry(input.moduleCode)
-  const activationCandidates =
-    input.siteId || permission.hasGlobalScope
-      ? [await activationDecision(ctx, user._id, module, input.siteId)]
-      : await Promise.all(
-          permission.accessibleSiteIds.map((siteId) =>
-            activationDecision(ctx, user._id, module, siteId)
-          )
-        )
-  const activation =
-    activationCandidates.find((candidate) => candidate.enabled) ??
-    activationCandidates[0]
-  if (!activation?.enabled) {
-    throw new Error(`Module désactivé : ${input.moduleCode}`)
-  }
-
   return {
     user,
     permissionSource: permission.source,
-    activationSource: activation.source,
+    activationSource: moduleAccess.activationSource,
     hasGlobalScope: permission.hasGlobalScope,
     accessibleSiteIds: permission.hasGlobalScope
       ? permission.accessibleSiteIds
-      : permission.accessibleSiteIds.filter(
-          (_siteId, index) => activationCandidates[index]?.enabled
+      : permission.accessibleSiteIds.filter((permissionSiteId) =>
+          moduleAccess.accessibleSiteIds.includes(permissionSiteId)
         ),
   }
 }

@@ -71,6 +71,13 @@ export const moduleCodeValidator = v.union(
   v.literal("copilot")
 )
 
+/** Les trois niveaux métier exposés par le contrôle d'accès modulaire. */
+export const moduleAccessLevelValidator = v.union(
+  v.literal("lecture"),
+  v.literal("utilisation"),
+  v.literal("admin")
+)
+
 export const organizationTypeValidator = v.union(
   v.literal("entreprise"),
   v.literal("direction"),

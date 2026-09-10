@@ -48,6 +48,7 @@ import {
 } from "@/lib/portal-access"
 import { usePortalSession } from "./portal-guard"
 import { EnterpriseTopNav } from "./enterprise-nav"
+import { ModuleSidebarNavigation } from "./module-access-navigation"
 
 interface SellerShellProps {
   seller: SellerIdentity
@@ -208,40 +209,70 @@ export function SellerShell({
       <div className="flex min-w-0">
         <aside
           className={cn(
-            "fixed inset-y-18 left-0 z-20 flex w-72 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar p-4 text-sidebar-foreground transition-transform lg:sticky lg:top-18 lg:h-[calc(100dvh-4.5rem)] lg:translate-x-0",
-            menuOpen ? "translate-x-0" : "-translate-x-full"
+            "fixed inset-y-18 left-0 z-20 flex w-72 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar p-4 text-sidebar-foreground transition-[transform,visibility] lg:visible lg:sticky lg:top-18 lg:h-[calc(100dvh-4.5rem)] lg:translate-x-0",
+            menuOpen ? "visible translate-x-0" : "invisible -translate-x-full"
           )}
         >
-          <nav
-            aria-label={`Navigation du portail de ${portal}`}
-            className="grid gap-1.5"
-          >
-            {authorizedNavigation.map(({ href, label, icon: Icon }) => {
-              const active =
-                pathname === href ||
-                (href === "/vente" &&
-                  (pathname.startsWith("/vente/billet") ||
-                    pathname.startsWith("/vente/encaissement") ||
-                    pathname.startsWith("/vente/confirmation")))
-              const classes = cn(
-                "text-small flex min-h-11 items-center gap-3 rounded-md px-3 font-semibold",
-                active
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent"
-              )
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={classes}
-                  onClick={() => setMenuOpen(false)}
+          {(() => {
+            const sectionNavigation = (
+              <section
+                aria-label={
+                  portal === "gestion"
+                    ? "Rubriques de gestion"
+                    : "Rubriques de vente"
+                }
+              >
+                {portal === "gestion" ? (
+                  <h2 className="px-3 text-[10px] font-semibold tracking-widest text-sidebar-foreground/65 uppercase">
+                    Rubriques de gestion
+                  </h2>
+                ) : null}
+                <nav
+                  aria-label={`Navigation du portail de ${portal}`}
+                  className={cn("grid gap-1.5", portal === "gestion" && "mt-2")}
                 >
-                  <Icon className="size-5" />
-                  {label}
-                </Link>
-              )
-            })}
-          </nav>
+                  {authorizedNavigation.map(({ href, label, icon: Icon }) => {
+                    const active =
+                      pathname === href ||
+                      (href === "/vente" &&
+                        (pathname.startsWith("/vente/billet") ||
+                          pathname.startsWith("/vente/encaissement") ||
+                          pathname.startsWith("/vente/confirmation")))
+                    const classes = cn(
+                      "text-small flex min-h-11 items-center gap-3 rounded-md px-3 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-[#D39E00] focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
+                      active
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent"
+                    )
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        aria-current={active ? "page" : undefined}
+                        className={classes}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <Icon aria-hidden className="size-5" />
+                        {label}
+                      </Link>
+                    )
+                  })}
+                </nav>
+              </section>
+            )
+
+            return portal === "gestion" ? (
+              <ModuleSidebarNavigation
+                role={role}
+                activeModuleCode="voyageurs"
+                onNavigate={() => setMenuOpen(false)}
+              >
+                {sectionNavigation}
+              </ModuleSidebarNavigation>
+            ) : (
+              sectionNavigation
+            )
+          })()}
 
           <div className="mt-auto grid gap-3 border-t border-sidebar-border pt-4">
             <div className="flex items-center gap-3">

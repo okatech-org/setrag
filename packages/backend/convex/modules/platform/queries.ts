@@ -2,7 +2,7 @@ import { v } from "convex/values"
 
 import { query } from "../../_generated/server"
 import { requireUser } from "../../lib/auth"
-import { evaluateModuleAccess } from "./model"
+import { evaluateModuleAccess, latestModuleAccessGrant } from "./model"
 import {
   MODULE_MANIFEST,
   moduleManifestEntry,
@@ -47,5 +47,96 @@ export const listMyModules = query({
     return decisions
       .filter(({ access }) => access.canAccess)
       .map(({ code }) => code)
+  },
+})
+
+/** Décisions détaillées, dans l'ordre stable du manifeste partagé. */
+export const listMyModuleAccesses = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx)
+    return await Promise.all(
+      MODULE_MANIFEST.map(async (module) => ({
+        code: module.code,
+        label: module.label,
+        route: module.route,
+        resource: module.resource,
+        ...(await evaluateModuleAccess(ctx, user, module.code)),
+      }))
+    )
+  },
+})
+
+/**
+ * Matrice d'administration du DSI et des administrateurs délégués. Pour ces
+ * derniers, seuls les modules qu'ils administrent sont exposés.
+ */
+export const listModuleAccessAdministration = query({
+  args: {},
+  handler: async (ctx) => {
+    const actor = await requireUser(ctx)
+    const actorDecisions = await Promise.all(
+      MODULE_MANIFEST.map(async (module) => ({
+        module,
+        access: await evaluateModuleAccess(ctx, actor, module.code),
+      }))
+    )
+    const administeredModules = actorDecisions
+      .filter(
+        ({ access }) =>
+          actor.role === "admin_it" || access.accessLevel === "admin"
+      )
+      .map(({ module }) => module)
+    if (administeredModules.length === 0) {
+      throw new Error("Accès refusé : aucun module administrable.")
+    }
+    const userDocuments = await ctx.db.query("users").collect()
+    const users = userDocuments.map((user) => ({
+      userId: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      matricule: user.matricule,
+      role: user.role,
+      isActive: user.isActive,
+    }))
+    const cells = (
+      await Promise.all(
+        userDocuments.map(
+          async (user) =>
+            await Promise.all(
+              administeredModules.map(async (module) => {
+                const [access, direct] = await Promise.all([
+                  evaluateModuleAccess(ctx, user, module.code),
+                  latestModuleAccessGrant(ctx, user._id, module.code),
+                ])
+                return {
+                  userId: user._id,
+                  moduleCode: module.code,
+                  accessLevel: access.accessLevel,
+                  accessSource: access.accessSource,
+                  enabled: access.enabled,
+                  canAccess: access.canAccess,
+                  hasDirectGrant: direct !== null,
+                  directAccessLevel: direct?.accessLevel ?? null,
+                  ...(direct
+                    ? {
+                        directReason: direct.reason,
+                        directGrantedBy: direct.grantedBy,
+                        directUpdatedAt: direct.updatedAt,
+                      }
+                    : {}),
+                }
+              })
+            )
+        )
+      )
+    ).flat()
+
+    return {
+      modules: administeredModules.map((module) => ({ ...module })),
+      users,
+      cells,
+    }
   },
 })

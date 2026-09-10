@@ -3,9 +3,17 @@ import { v } from "convex/values"
 import { mutation } from "../../_generated/server"
 import type { MutationCtx } from "../../_generated/server"
 import type { Doc, Id } from "../../_generated/dataModel"
-import { audit, requirePermission } from "../../lib/auth"
+import { audit, requirePermission, requireUser } from "../../lib/auth"
+import {
+  hasModuleAccessLevel,
+  type ModuleAccessLevel,
+  type ModuleCode,
+} from "./catalog"
+import { currentPlatformEnvironment } from "./environment"
+import { evaluateModuleAccess, moduleRoleScope } from "./model"
 import {
   appRoleValidator,
+  moduleAccessLevelValidator,
   moduleCodeValidator,
   organizationTypeValidator,
   platformEnvironmentValidator,
@@ -302,7 +310,21 @@ export const setModuleActivation = mutation({
     correlationId: v.string(),
   },
   handler: async (ctx, args) => {
-    const actor = await requirePermission(ctx, "parametrage", "modifier")
+    const actor = await requireUser(ctx)
+    const actorAccess = await evaluateModuleAccess(
+      ctx,
+      actor,
+      args.moduleCode,
+      args.siteId
+    )
+    if (
+      actor.role !== "admin_it" &&
+      !hasModuleAccessLevel(actorAccess.accessLevel, "admin")
+    ) {
+      throw new Error(
+        `Accès refusé : le module « ${args.moduleCode} » exige le niveau « admin ».`
+      )
+    }
     const reason = requiredText(args.reason, "Le motif", 500)
     const correlationId = requiredText(
       args.correlationId,
@@ -361,5 +383,214 @@ export const setModuleActivation = mutation({
       metadata: { reason, correlationId },
     })
     return activationId
+  },
+})
+
+interface ModuleAccessChange {
+  readonly userId: Id<"users">
+  readonly moduleCode: ModuleCode
+  readonly accessLevel?: ModuleAccessLevel
+}
+
+async function assertModuleAdministrator(
+  ctx: MutationCtx,
+  actor: Doc<"users">,
+  moduleCode: ModuleCode
+): Promise<void> {
+  const actorAccess = await evaluateModuleAccess(ctx, actor, moduleCode)
+  if (
+    actor.role !== "admin_it" &&
+    !hasModuleAccessLevel(actorAccess.accessLevel, "admin")
+  ) {
+    throw new Error(
+      `Accès refusé : le module « ${moduleCode} » exige le niveau « admin ».`
+    )
+  }
+}
+
+async function applyModuleAccessChange(
+  ctx: MutationCtx,
+  actor: Doc<"users">,
+  target: Doc<"users">,
+  change: ModuleAccessChange,
+  reason: string
+): Promise<Id<"moduleAccessGrants">> {
+  const targetAccessBefore =
+    change.accessLevel === undefined
+      ? null
+      : await evaluateModuleAccess(ctx, target, change.moduleCode)
+  const existing = await ctx.db
+    .query("moduleAccessGrants")
+    .withIndex("by_user_module", (query) =>
+      query.eq("userId", change.userId).eq("moduleCode", change.moduleCode)
+    )
+    .order("desc")
+    .first()
+  const now = Date.now()
+  const values = {
+    userId: change.userId,
+    moduleCode: change.moduleCode,
+    accessLevel: change.accessLevel,
+    reason,
+    grantedBy: actor._id,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+  }
+  const grantId = existing
+    ? existing._id
+    : await ctx.db.insert("moduleAccessGrants", values)
+  if (existing) await ctx.db.patch(existing._id, values)
+
+  await audit(ctx, {
+    actorId: actor._id,
+    action: "plateforme.module.acces.attribuer",
+    entityTable: "moduleAccessGrants",
+    entityId: grantId,
+    permission: "modifier",
+    reason,
+    classification: "restreint",
+    before: existing,
+    after: values,
+    metadata: {
+      targetUserId: target._id,
+      moduleCode: change.moduleCode,
+      accessLevel: change.accessLevel ?? null,
+    },
+  })
+
+  /**
+   * Une attribution positive ne doit pas rester invisible à cause d'un
+   * module désactivé. L'activation créée est propre à l'utilisateur ; la
+   * portée de ses affectations organisation/site continue donc de borner
+   * les données accessibles. Un refus explicite ne réactive jamais rien.
+   */
+  if (change.accessLevel !== undefined && !targetAccessBefore?.enabled) {
+    const environment = currentPlatformEnvironment()
+    const targetScope = await moduleRoleScope(ctx, target, change.moduleCode)
+    const activationScopes: Array<{ siteId?: Id<"sites"> }> =
+      !targetScope.hasGlobalScope && targetScope.accessibleSiteIds.length > 0
+        ? targetScope.accessibleSiteIds.map((siteId) => ({ siteId }))
+        : [{}]
+    const activationCandidates = await ctx.db
+      .query("moduleActivations")
+      .withIndex("by_environment_module", (query) =>
+        query.eq("environment", environment).eq("moduleCode", change.moduleCode)
+      )
+      .collect()
+    for (const scope of activationScopes) {
+      const activation = activationCandidates.find(
+        (candidate) =>
+          candidate.userId === target._id && candidate.siteId === scope.siteId
+      )
+      const activationValues = {
+        moduleCode: change.moduleCode,
+        environment,
+        userId: target._id,
+        siteId: scope.siteId,
+        isEnabled: true,
+        reason: `Activation automatique : ${reason}`,
+        correlationId: `module-access-grant:${grantId}:${scope.siteId ?? "global"}`,
+        changedBy: actor._id,
+        updatedAt: now,
+      }
+      const activationId = activation
+        ? activation._id
+        : await ctx.db.insert("moduleActivations", activationValues)
+      if (activation) await ctx.db.patch(activation._id, activationValues)
+      await audit(ctx, {
+        actorId: actor._id,
+        action: "plateforme.module.activation.auto_attribution",
+        entityTable: "moduleActivations",
+        entityId: activationId,
+        permission: "modifier",
+        reason,
+        correlationId: activationValues.correlationId,
+        classification: "interne",
+        before: activation,
+        after: activationValues,
+        metadata: {
+          targetUserId: target._id,
+          moduleCode: change.moduleCode,
+          accessGrantId: grantId,
+          siteId: scope.siteId,
+        },
+      })
+    }
+  }
+  return grantId
+}
+
+/** Attribue, plafonne ou refuse explicitement l'accès à un module. */
+export const setModuleAccessLevel = mutation({
+  args: {
+    userId: v.id("users"),
+    moduleCode: moduleCodeValidator,
+    accessLevel: v.optional(moduleAccessLevelValidator),
+    reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requireUser(ctx)
+    const reason = requiredText(args.reason, "Le motif", 500)
+    await assertModuleAdministrator(ctx, actor, args.moduleCode)
+    const target = await ctx.db.get(args.userId)
+    if (!target) throw new Error("Utilisateur introuvable.")
+    return await applyModuleAccessChange(ctx, actor, target, args, reason)
+  },
+})
+
+/**
+ * Applique atomiquement jusqu'à cent changements. Toutes les autorisations et
+ * cibles sont validées avant la première écriture pour éviter une demi-matrice.
+ */
+export const setModuleAccessLevelsBatch = mutation({
+  args: {
+    changes: v.array(
+      v.object({
+        userId: v.id("users"),
+        moduleCode: moduleCodeValidator,
+        accessLevel: v.optional(moduleAccessLevelValidator),
+      })
+    ),
+    reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    if (args.changes.length < 1 || args.changes.length > 100) {
+      throw new Error("Le lot doit contenir entre 1 et 100 changements.")
+    }
+    const reason = requiredText(args.reason, "Le motif", 500)
+    const uniqueKeys = new Set(
+      args.changes.map(({ userId, moduleCode }) => `${userId}:${moduleCode}`)
+    )
+    if (uniqueKeys.size !== args.changes.length) {
+      throw new Error(
+        "Le lot contient plusieurs changements pour la même cellule."
+      )
+    }
+
+    const actor = await requireUser(ctx)
+    const moduleCodes = [
+      ...new Set(args.changes.map(({ moduleCode }) => moduleCode)),
+    ]
+    await Promise.all(
+      moduleCodes.map((moduleCode) =>
+        assertModuleAdministrator(ctx, actor, moduleCode)
+      )
+    )
+    const targets = await Promise.all(
+      args.changes.map(({ userId }) => ctx.db.get(userId))
+    )
+    if (targets.some((target) => target === null)) {
+      throw new Error("Utilisateur introuvable.")
+    }
+
+    const grantIds: Id<"moduleAccessGrants">[] = []
+    for (const [index, change] of args.changes.entries()) {
+      const target = targets[index]
+      if (!target) throw new Error("Utilisateur introuvable.")
+      grantIds.push(
+        await applyModuleAccessChange(ctx, actor, target, change, reason)
+      )
+    }
+    return { updated: grantIds.length, grantIds }
   },
 })

@@ -12,6 +12,11 @@ const INTERNAL_PERSONA_INVENTORY = [
   ["gestion", "Direction générale", "direction_generale"],
   ["audit", "Audit & risques", "audit_risques"],
   ["juridique", "Affaires juridiques", "juriste"],
+  [
+    "dsi",
+    "Administrateur système — Direction des Systèmes d’Information & Projets Métiers",
+    "admin_it",
+  ],
   ["cotraf", "Régulateur COTRAF", "regulateur_cotraf"],
   ["chef-gare", "Chef de gare", "chef_gare"],
   ["conducteur", "Conducteur de ligne", "conducteur_ligne"],
@@ -134,7 +139,7 @@ describe("Comptes de démonstration", () => {
     expect(rendus.map((c) => c.key)).toEqual(["controle"])
   })
 
-  it("dérive les 44 comptes du mot de passe partagé et du domaine par défaut", async () => {
+  it("dérive les 45 comptes du mot de passe partagé et du domaine par défaut", async () => {
     vi.stubEnv("DEMO_ACCOUNTS_ENABLED", "true")
     vi.stubEnv("DEMO_PERSONAS_PASSWORD", "shared-secret")
     vi.stubEnv("DEMO_PERSONAS_EMAIL_DOMAIN", "")
@@ -144,7 +149,7 @@ describe("Comptes de démonstration", () => {
     const t = convexTest(schema, modules)
 
     const accounts = await t.query(api.functions.demoAccounts.list, {})
-    expect(accounts).toHaveLength(44)
+    expect(accounts).toHaveLength(45)
     expect(accounts.every(({ password }) => password === "shared-secret")).toBe(
       true
     )
@@ -184,16 +189,16 @@ describe("Comptes de démonstration", () => {
 })
 
 describe("Catalogue des acteurs SETRAG", () => {
-  it("couvre explicitement 34 fonctions internes et 10 parties prenantes externes", () => {
-    expect(DEMO_PERSONAS).toHaveLength(44)
+  it("couvre explicitement 35 fonctions internes et 10 parties prenantes externes", () => {
+    expect(DEMO_PERSONAS).toHaveLength(45)
     const internes = DEMO_PERSONAS.filter(
       ({ actorType }) => actorType === "interne"
     )
-    expect(internes).toHaveLength(34)
+    expect(internes).toHaveLength(35)
     expect(internes.map(({ key, label, role }) => [key, label, role])).toEqual(
       INTERNAL_PERSONA_INVENTORY
     )
-    expect(new Set(internes.map(({ role }) => role)).size).toBe(34)
+    expect(new Set(internes.map(({ role }) => role)).size).toBe(35)
     const externes = DEMO_PERSONAS.filter(
       ({ actorType }) => actorType === "externe"
     )
@@ -204,10 +209,11 @@ describe("Catalogue des acteurs SETRAG", () => {
   })
 
   it("utilise des clés uniques, des routes connues et des modules valides", () => {
-    expect(new Set(DEMO_PERSONAS.map(({ key }) => key)).size).toBe(44)
+    expect(new Set(DEMO_PERSONAS.map(({ key }) => key)).size).toBe(45)
     const routes = new Set([
       ...MODULE_MANIFEST.map(({ route }) => route),
       "/vente",
+      "/administration",
     ])
     for (const profile of DEMO_PERSONAS) {
       expect(routes.has(profile.landingPath)).toBe(true)
@@ -275,5 +281,48 @@ describe("Catalogue des acteurs SETRAG", () => {
         .filter(({ isEnabled }) => isEnabled)
         .map(({ moduleCode }) => moduleCode)
     ).toEqual(["voyageurs"])
+  })
+
+  it("provisionne le persona DSI avec les dix modules activés", async () => {
+    vi.stubEnv("SETRAG_ENV", "test")
+    const t = convexTest(schema, modules)
+
+    const result = await t.mutation(
+      internal.seeds.demoAccounts.upsertPersonaProfile,
+      {
+        key: "dsi",
+        authId: "better-auth-demo-dsi",
+        email: "DSI@demo.setrag.ga",
+      }
+    )
+    expect(result).toMatchObject({
+      key: "dsi",
+      created: true,
+      createdActivations: 10,
+    })
+
+    const state = await t.run(async (ctx) => ({
+      user: await ctx.db.get(result.userId),
+      activations: await ctx.db
+        .query("moduleActivations")
+        .withIndex("by_environment_module_user", (query) =>
+          query
+            .eq("environment", "test")
+            .eq("moduleCode", "voyageurs")
+            .eq("userId", result.userId)
+        )
+        .collect(),
+      allActivations: await ctx.db.query("moduleActivations").collect(),
+    }))
+    expect(state.user).toMatchObject({
+      firstName: "Démo",
+      lastName: "DSI",
+      role: "admin_it",
+      identitySource: "local",
+      isActive: true,
+    })
+    expect(state.activations).toHaveLength(1)
+    expect(state.allActivations).toHaveLength(10)
+    expect(state.allActivations.every(({ isEnabled }) => isEnabled)).toBe(true)
   })
 })

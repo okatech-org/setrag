@@ -992,7 +992,12 @@ export const saveSettings = mutation({
 export const retryIntegrationFailures = mutation({
   args: {},
   handler: async (ctx) => {
-    const actor = await requirePermission(ctx, "integrations", "consulter")
+    const actor = await requirePermission(
+      ctx,
+      "integrations",
+      "consulter",
+      "utilisation"
+    )
     const failed = (await ctx.db.query("outboxEvents").collect()).filter(
       (event) => event.status === "echec"
     )

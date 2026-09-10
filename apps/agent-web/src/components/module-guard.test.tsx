@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { ModuleAccessBoundary, type ModuleAccess } from "./module-guard"
+import {
+  isLegacySafeModule,
+  ModuleAccessBoundary,
+  type ModuleAccess,
+} from "./module-guard"
 
 const ACCESS_BASE = {
   code: "fret",
@@ -13,6 +17,11 @@ const ACCESS_BASE = {
 } as const
 
 describe("garde de module", () => {
+  it("conserve le module Voyageurs pendant le déploiement progressif", () => {
+    expect(isLegacySafeModule("voyageurs")).toBe(true)
+    expect(isLegacySafeModule("finance")).toBe(false)
+  })
+
   it("n’affiche aucun enfant pendant la vérification", () => {
     render(
       <ModuleAccessBoundary access={undefined}>

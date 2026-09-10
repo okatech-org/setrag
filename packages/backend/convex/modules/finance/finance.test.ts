@@ -144,14 +144,25 @@ const getFinanceOverview = makeFunctionReference<
 >("modules/finance/queries:getFinanceOverview")
 
 async function seedActor(t: ReturnType<typeof convexTest>, authId: string) {
-  const userId = await t.run((ctx) =>
-    ctx.db.insert("users", {
+  const userId = await t.run(async (ctx) => {
+    const insertedUserId = await ctx.db.insert("users", {
       authId,
-      role: "admin_fonctionnel",
+      role: "vendeur_guichet",
       identitySource: "local",
       isActive: true,
     })
-  )
+    const now = Date.now()
+    await ctx.db.insert("moduleAccessGrants", {
+      userId: insertedUserId,
+      moduleCode: "finance",
+      accessLevel: "admin",
+      reason: "Administration Finance requise par le scénario de test",
+      grantedBy: insertedUserId,
+      createdAt: now,
+      updatedAt: now,
+    })
+    return insertedUserId
+  })
   return { userId, client: t.withIdentity({ subject: authId }) }
 }
 
@@ -322,6 +333,21 @@ describe("Socle Finance OHADA", () => {
       ],
       ...command("BATCH-CREATE"),
     }
+    await t.run(async (ctx) => {
+      const grant = await ctx.db
+        .query("moduleAccessGrants")
+        .withIndex("by_user_module", (query) =>
+          query
+            .eq("userId", configured.creator.userId)
+            .eq("moduleCode", "finance")
+        )
+        .unique()
+      if (!grant) throw new Error("Grant Finance du créateur introuvable")
+      await ctx.db.patch(grant._id, {
+        accessLevel: "utilisation",
+        updatedAt: Date.now(),
+      })
+    })
     const batch = await configured.creator.client.mutation(
       createJournalBatchDraft,
       batchArgs

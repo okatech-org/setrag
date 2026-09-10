@@ -7,7 +7,10 @@ import { api } from "@workspace/backend/generated"
 import type { ModuleCode } from "@workspace/backend/modules"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
 
-import { PLATFORM_MODULES_API_ENABLED } from "@/lib/platform-modules-runtime"
+import {
+  LEGACY_SAFE_MODULE_CODES,
+  PLATFORM_MODULES_API_ENABLED,
+} from "@/lib/platform-modules-runtime"
 
 const E2E_MODE =
   process.env.NODE_ENV !== "production" &&
@@ -16,6 +19,12 @@ const E2E_MODE =
 export type ModuleAccess = FunctionReturnType<
   typeof api.modules.platform.queries.getMyModuleAccess
 >
+
+export function isLegacySafeModule(moduleCode: ModuleCode) {
+  return (LEGACY_SAFE_MODULE_CODES as readonly ModuleCode[]).includes(
+    moduleCode
+  )
+}
 
 export function ModuleAccessBoundary({
   access,
@@ -74,6 +83,10 @@ export function ModuleGuard({
 
   if (E2E_MODE) return children
   if (!PLATFORM_MODULES_API_ENABLED) {
+    // Voyageurs existait avant l'API modulaire : sa garde serveur historique
+    // reste l'autorité pendant le déploiement progressif du nouveau backend.
+    if (isLegacySafeModule(moduleCode)) return children
+
     return (
       <main className="flex min-h-dvh items-center justify-center bg-canvas p-6">
         <div className="w-full max-w-xl">

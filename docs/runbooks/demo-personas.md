@@ -14,7 +14,7 @@ suivante vaut exactement `true` :
 DEMO_ACCOUNTS_ENABLED=true
 ```
 
-Pour les 44 profils de la cartographie SETRAG — 34 fonctions internes et 10
+Pour les 45 profils de la cartographie SETRAG — 35 fonctions internes et 10
 parties prenantes externes — configurer :
 
 ```text
@@ -26,6 +26,11 @@ DEMO_PERSONAS_EMAIL_DOMAIN=demo.setrag.ga
 défaut. Les adresses sont dérivées de la clé du profil, par exemple
 `atelier@demo.setrag.ga`. Le mot de passe partagé doit respecter la politique
 Better Auth et ne doit être réutilisé nulle part ailleurs.
+
+Le profil interne `dsi` représente l’**Administrateur système** rattaché à la
+**Direction des Systèmes d’Information & Projets Métiers**. Il ouvre l’espace
+`/administration`, sans conférer automatiquement des droits d’écriture métier
+sur les modules sensibles.
 
 Les trois couples historiques restent pris en charge :
 

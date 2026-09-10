@@ -1,28 +1,11 @@
 "use client"
 
-import {
-  Boxes,
-  Building2,
-  Construction,
-  FileText,
-  Landmark,
-  Radio,
-  ScrollText,
-  ShieldCheck,
-  Sparkles,
-  Ticket,
-  Train,
-  Users,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react"
+import { Building2, ScrollText, Settings2, Ticket, Train } from "lucide-react"
 import type { Route } from "next"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
-import { useQuery } from "@workspace/api/hooks"
-import { api } from "@workspace/backend/generated"
 import { MODULE_MANIFEST, type ModuleCode } from "@workspace/backend/modules"
 import {
   EXTERNAL_STAKEHOLDER_ROLES,
@@ -39,27 +22,15 @@ import {
   portalForRole,
 } from "@/lib/portal-access"
 import {
-  LEGACY_SAFE_MODULE_CODES,
-  PLATFORM_MODULES_API_ENABLED,
-} from "@/lib/platform-modules-runtime"
+  canAdministerModules,
+  MODULE_ICONS,
+  useModuleNavigationAccesses,
+} from "./module-access-navigation"
 import { usePortalSession } from "./portal-guard"
 
 const E2E_MODE =
   process.env.NODE_ENV !== "production" &&
   process.env.NEXT_PUBLIC_E2E_MODE === "1"
-
-const MODULE_ICONS: Record<ModuleCode, LucideIcon> = {
-  voyageurs: Ticket,
-  fret: Boxes,
-  cotraf: Radio,
-  gmao: Wrench,
-  infrastructure: Construction,
-  finance: Landmark,
-  rh: Users,
-  ged: FileText,
-  securite: ShieldCheck,
-  copilot: Sparkles,
-}
 
 const UTILITY_MODULES = [
   {
@@ -93,24 +64,19 @@ export function EnterpriseTopNav({ role }: { role?: AppRole }) {
     effectiveRole &&
     (EXTERNAL_STAKEHOLDER_ROLES as readonly AppRole[]).includes(effectiveRole)
   )
-  const liveModuleCodes = useQuery(
-    api.modules.platform.queries.listMyModules,
-    E2E_MODE || !PLATFORM_MODULES_API_ENABLED || !isManagementUser ? "skip" : {}
+  const { accesses: moduleAccesses, decisions: moduleAccessDecisions } =
+    useModuleNavigationAccesses(isManagementUser ? effectiveRole : undefined)
+  const mayAdministerModules = canAdministerModules(
+    effectiveRole,
+    moduleAccessDecisions
   )
-  const enabledModuleCodes = E2E_MODE
-    ? MODULE_MANIFEST.filter((module) => module.defaultEnabled).map(
-        (module) => module.code
-      )
-    : PLATFORM_MODULES_API_ENABLED
-      ? liveModuleCodes
-      : LEGACY_SAFE_MODULE_CODES
 
   const officialModules = useMemo(
     () =>
-      effectiveRole && isManagementUser && enabledModuleCodes !== undefined
-        ? officialModulesForCodes(enabledModuleCodes)
+      effectiveRole && isManagementUser
+        ? officialModulesForCodes(moduleAccesses.map(({ code }) => code))
         : [],
-    [effectiveRole, enabledModuleCodes, isManagementUser]
+    [effectiveRole, isManagementUser, moduleAccesses]
   )
   const utilityModules =
     effectiveRole && isManagementUser
@@ -139,15 +105,12 @@ export function EnterpriseTopNav({ role }: { role?: AppRole }) {
     return () => clearInterval(timer)
   }, [])
 
-  const navigationItems = [
-    ...officialModules.map((module) => ({
-      code: module.code,
-      label: module.label,
-      route: module.route,
-      icon: MODULE_ICONS[module.code],
-    })),
-    ...utilityModules,
-  ]
+  const navigationItems = officialModules.map((module) => ({
+    code: module.code,
+    label: module.label,
+    route: module.route,
+    icon: MODULE_ICONS[module.code],
+  }))
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-line bg-surface text-ink shadow-xs">
@@ -197,45 +160,101 @@ export function EnterpriseTopNav({ role }: { role?: AppRole }) {
       </div>
 
       {/* Les modules officiels restent masqués jusqu'au retour de l'API. */}
-      {navigationItems.length > 0 ? (
-        <div className="bg-surface-raised no-scrollbar flex overflow-x-auto px-2 py-1.5 lg:px-6">
-          <nav
-            aria-label="Modules d’entreprise"
-            className="flex min-w-max items-center gap-1.5"
-          >
-            {navigationItems.map((module) => {
-              const Icon = module.icon ?? Building2
-              const href = module.route as Route
-              const isActive =
-                (module.route === "/gestion" &&
-                  (pathname.startsWith("/gestion") ||
-                    pathname.startsWith("/vente"))) ||
-                (module.route !== "/gestion" &&
-                  pathname.startsWith(module.route))
+      {navigationItems.length > 0 ||
+      utilityModules.length > 0 ||
+      mayAdministerModules ? (
+        <div className="bg-surface-raised no-scrollbar flex items-center gap-2 overflow-x-auto px-2 py-1.5 lg:px-6">
+          {navigationItems.length > 0 ? (
+            <nav
+              aria-label="Sélecteur des modules métier"
+              className="flex min-w-max items-center gap-1.5"
+            >
+              {navigationItems.map((module) => {
+                const Icon = module.icon ?? Building2
+                const href = module.route as Route
+                const isActive =
+                  (module.route === "/gestion" &&
+                    (pathname.startsWith("/gestion") ||
+                      pathname.startsWith("/vente"))) ||
+                  (module.route !== "/gestion" &&
+                    pathname.startsWith(module.route))
 
-              return (
-                <Link
-                  key={module.code}
-                  href={href}
-                  className={cn(
-                    "flex min-h-11 items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                    isActive
-                      ? "bg-[#0F2C59] text-white shadow-xs"
-                      : "text-ink-muted hover:bg-canvas hover:text-ink"
-                  )}
-                >
-                  <Icon
-                    aria-hidden
+                return (
+                  <Link
+                    key={module.code}
+                    href={href}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "h-4 w-4",
-                      isActive ? "text-[#D39E00]" : "text-ink-subtle"
+                      "flex min-h-11 items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#D39E00] focus-visible:ring-offset-2",
+                      isActive
+                        ? "bg-[#0F2C59] text-white shadow-xs"
+                        : "text-ink-muted hover:bg-canvas hover:text-ink"
                     )}
-                  />
-                  <span>{module.label}</span>
-                </Link>
-              )
-            })}
-          </nav>
+                  >
+                    <Icon
+                      aria-hidden
+                      className={cn(
+                        "h-4 w-4",
+                        isActive ? "text-[#D39E00]" : "text-ink-subtle"
+                      )}
+                    />
+                    <span>{module.label}</span>
+                  </Link>
+                )
+              })}
+            </nav>
+          ) : null}
+
+          {utilityModules.length > 0 ? (
+            <nav
+              aria-label="Outils transverses"
+              className="flex min-w-max items-center border-l border-line pl-2"
+            >
+              {utilityModules.map((utility) => {
+                const Icon = utility.icon
+                const isActive = pathname.startsWith(utility.route)
+                return (
+                  <Link
+                    key={utility.code}
+                    href={utility.route as Route}
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "flex min-h-11 items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#D39E00] focus-visible:ring-offset-2",
+                      isActive
+                        ? "bg-[#0F2C59] text-white"
+                        : "text-ink-muted hover:bg-canvas hover:text-ink"
+                    )}
+                  >
+                    <Icon aria-hidden className="size-4" />
+                    {utility.label}
+                  </Link>
+                )
+              })}
+            </nav>
+          ) : null}
+
+          {mayAdministerModules ? (
+            <nav
+              aria-label="Administration système"
+              className="ml-auto flex min-w-max items-center border-l border-line pl-2"
+            >
+              <Link
+                href="/administration"
+                aria-current={
+                  pathname.startsWith("/administration") ? "page" : undefined
+                }
+                className={cn(
+                  "flex min-h-11 items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#D39E00] focus-visible:ring-offset-2",
+                  pathname.startsWith("/administration")
+                    ? "bg-[#0F2C59] text-white"
+                    : "text-ink-muted hover:bg-canvas hover:text-ink"
+                )}
+              >
+                <Settings2 aria-hidden className="size-4 text-[#D39E00]" />
+                Administration
+              </Link>
+            </nav>
+          ) : null}
         </div>
       ) : null}
     </header>
