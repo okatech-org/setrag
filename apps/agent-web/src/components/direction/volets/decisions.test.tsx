@@ -48,6 +48,14 @@ describe("Volet Décisions attendues", () => {
       })
     ).toBeInTheDocument()
     expect(screen.getAllByText("Non raccordée").length).toBeGreaterThan(0)
+    expect(
+      screen.getByRole("heading", {
+        name: "Dossier de recette de l’espace Direction générale",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Télécharger le dossier (.pdf)" })
+    ).toBeInTheDocument()
   })
 
   it("place un recul de chiffre d’affaires voyageurs parmi les signaux à arbitrer", () => {

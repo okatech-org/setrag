@@ -6,9 +6,10 @@ import type { ModuleCode } from "@workspace/backend/modules"
 
 import { useModuleNavigationAccesses } from "@/components/module-access-navigation"
 import { usePortalSession } from "@/components/portal-guard"
-import { asAppRole } from "@/lib/portal-access"
+import { asAppRole, canRole } from "@/lib/portal-access"
 
 import {
+  OCCUPANCY_READ_LIMIT,
   emptyExecutiveOverview,
   type ExecutiveOverviewDto,
   type ExecutiveSourceState,
@@ -70,6 +71,10 @@ export function useExecutiveCockpit({
   const loadCotraf = !E2E_MODE && hasVisibleModule("cotraf")
   const loadFinance = !E2E_MODE && hasVisibleModule("finance")
   const loadContinuity = !E2E_MODE && hasVisibleModule("securite")
+  // Le remplissage par desserte relève de la ressource `places` : il n'est lu
+  // que si la matrice l'accorde au rôle, jamais par simple visibilité module.
+  const loadOccupancy =
+    !E2E_MODE && hasVisibleModule("voyageurs") && canRole(role, "places")
   const periodArgs = { from: range.from, to: range.to }
 
   const stations = useQuery(
@@ -120,6 +125,14 @@ export function useExecutiveCockpit({
     api.modules.continuity.queries.getContinuitySummary,
     loadContinuity ? { policyLimit: 8 } : "skip"
   )
+  const occupancy = useQuery(
+    api.functions.reporting.occupancy,
+    loadOccupancy ? { ...periodArgs, limit: OCCUPANCY_READ_LIMIT } : "skip"
+  )
+  const safety = useQuery(
+    api.functions.control.networkSummary,
+    loadContinuity ? periodArgs : "skip"
+  )
 
   if (E2E_MODE) {
     return emptyExecutiveOverview({ preset, serviceDate, ...range })
@@ -169,6 +182,20 @@ export function useExecutiveCockpit({
     : health === undefined
       ? "loading"
       : "operational"
+  const occupancyState: ExecutiveSourceState = !loadOccupancy
+    ? inaccessible
+    : occupancy === undefined
+      ? "loading"
+      : occupancy.length > 0
+        ? "operational"
+        : "empty"
+  const safetyState: ExecutiveSourceState = !loadContinuity
+    ? inaccessible
+    : safety === undefined
+      ? "loading"
+      : safety.dataState === "restricted"
+        ? "unavailable"
+        : safety.dataState
 
   const freightActivity = freight?.kpis.find(
     ({ code }) => code === "operations_actives"
@@ -318,5 +345,21 @@ export function useExecutiveCockpit({
       route,
       accessLevel,
     })),
+    occupancy: {
+      state: occupancyState,
+      trips: (occupancy ?? []).map((trip) => ({
+        tripId: trip.tripId,
+        serviceDate: trip.serviceDate,
+        trainNumber: trip.trainNumber,
+        trainType: trip.trainType,
+        serviceClass: trip.serviceClass,
+        loadFactorPct: trip.loadFactorPct,
+        peakPct: trip.peakPct,
+        constrainedByPeak: trip.constrainedByPeak,
+        ticketCount: trip.ticketCount,
+        revenueTtc: trip.revenueTtc,
+      })),
+    },
+    safety: { state: safetyState, summary: safety },
   }
 }

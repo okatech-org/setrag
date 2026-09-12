@@ -98,4 +98,45 @@ describe("Volet Activité et exploitation", () => {
       screen.getAllByText("Synthétique · non officiel").length
     ).toBeGreaterThan(0)
   })
+  it("classe le remplissage par desserte et signale la saturation au tronçon de pointe", () => {
+    renderActivities({
+      ...baseOverview,
+      occupancy: {
+        state: "operational",
+        trips: [
+          {
+            tripId: "trip-1",
+            serviceDate: "2026-09-09",
+            trainNumber: "TR-201",
+            trainType: "EXPRESS",
+            serviceClass: "DEUXIEME",
+            loadFactorPct: 91.5,
+            peakPct: 100,
+            constrainedByPeak: false,
+            ticketCount: 240,
+            revenueTtc: 6_100_000,
+          },
+          {
+            tripId: "trip-2",
+            serviceDate: "2026-09-08",
+            trainNumber: "TR-202",
+            trainType: "OMNIBUS",
+            serviceClass: "PREMIERE",
+            loadFactorPct: 64,
+            peakPct: 97,
+            constrainedByPeak: true,
+            ticketCount: 90,
+            revenueTtc: 2_300_000,
+          },
+        ],
+      },
+    })
+
+    const table = screen.getByRole("table", {
+      name: "Remplissage par desserte, de la plus chargée à la moins chargée",
+    })
+    expect(table).toBeInTheDocument()
+    expect(screen.getByText("Saturée au tronçon de pointe")).toBeInTheDocument()
+    expect(screen.getByText("1re classe")).toBeInTheDocument()
+  })
 })

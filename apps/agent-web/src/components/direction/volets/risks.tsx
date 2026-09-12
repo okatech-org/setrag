@@ -18,6 +18,8 @@ import {
 import { Tag } from "@workspace/ui/components/tag"
 
 import { ContinuityPanel } from "../continuity-panel"
+import { periodLabel } from "../executive-period"
+import { MetricCard, MetricGrid } from "../metric-card"
 import { ProvenanceSummary, ProvenanceTag } from "../provenance"
 import type { ExecutiveVoletProps } from "./types"
 
@@ -48,6 +50,81 @@ function accessLevelLabel(level: ModuleAccessLevel | null): string {
   return level === null ? "Aucun" : moduleAccessLevelLabel(level)
 }
 
+const INCIDENT_CATEGORY_LABELS = [
+  ["securite", "Sécurité"],
+  ["technique", "Technique"],
+  ["comportement", "Comportement"],
+  ["medical", "Médical"],
+  ["autre", "Autre"],
+] as const
+
+const INCIDENT_SEVERITY_LABELS = [
+  ["critique", "Critique"],
+  ["important", "Important"],
+  ["information", "Information"],
+] as const
+
+const PENALTY_STATUS_LABELS = [
+  ["emis", "Émis"],
+  ["paye", "Payé"],
+  ["conteste", "Contesté"],
+  ["annule", "Annulé"],
+] as const
+
+const PENALTY_REASON_LABELS = [
+  ["sans_titre", "Sans titre"],
+  ["titre_invalide", "Titre invalide"],
+  ["classe_superieure", "Classe supérieure"],
+  ["autre", "Autre"],
+] as const
+
+/** Effectifs agrégés d'une dimension, avec montant quand il existe. */
+function CountTable({
+  caption,
+  header,
+  rows,
+}: {
+  caption: string
+  header: string
+  rows: readonly {
+    key: string
+    label: string
+    count: number
+    amountXaf?: number
+  }[]
+}) {
+  const withAmount = rows.some((row) => row.amountXaf !== undefined)
+  return (
+    <Table>
+      <TableCaption className="text-left">{caption}</TableCaption>
+      <TableHeader>
+        <TableRow>
+          <TableHead>{header}</TableHead>
+          <TableHead className="text-right">Nombre</TableHead>
+          {withAmount ? (
+            <TableHead className="text-right">Montant</TableHead>
+          ) : null}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.key}>
+            <TableCell>{row.label}</TableCell>
+            <TableCell className="text-right font-mono tabular-nums">
+              {NUMBER_FORMATTER.format(row.count)}
+            </TableCell>
+            {withAmount ? (
+              <TableCell className="text-right font-mono tabular-nums">
+                {NUMBER_FORMATTER.format(row.amountXaf ?? 0)} FCFA
+              </TableCell>
+            ) : null}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
 /** Source non accessible à ce compte — même traitement partout dans l'espace. */
 function UnavailableNotice({ description }: { description: string }) {
   return (
@@ -67,6 +144,8 @@ function UnavailableNotice({ description }: { description: string }) {
 export function RisksVolet({ data }: ExecutiveVoletProps) {
   const continuity = data.continuity
   const health = data.health
+  const safety = data.safety
+  const safetySummary = safety.summary
   const hasSecuriteModule = data.modules.some(
     (module) => module.code === "securite"
   )
@@ -186,16 +265,117 @@ export function RisksVolet({ data }: ExecutiveVoletProps) {
           <h2 id="risks-incidents-titre" className="text-h4">
             Incidents et procès-verbaux
           </h2>
-          <ProvenanceTag state="unavailable" />
+          <ProvenanceTag state={safety.state} />
         </div>
-        <p className="text-small text-ink-muted">
-          Les incidents à bord et les procès-verbaux ne sont pas accessibles à
-          ce compte (ressources incidents et proces_verbaux). L’attribution en
-          lecture est une décision DSI/SSI.
-        </p>
-        <Button asChild variant="secondary" className="w-fit">
-          <Link href="/administration">Voir mes habilitations</Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Tag tone="neutral">
+            {periodLabel(data.period.preset, data.period)}
+          </Tag>
+          <span className="text-caption text-ink-muted">
+            Synthèse agrégée et anonyme : les registres nominatifs (identités,
+            descriptions, photos) restent réservés aux fonctions de contrôle et
+            de sécurité.
+          </span>
+        </div>
+        {safety.state === "operational" && safetySummary ? (
+          <>
+            {safetySummary.truncated ? (
+              <p className="text-small rounded-md bg-warning-soft px-4 py-3 text-warning-ink">
+                Lecture plafonnée à 5 000 lignes par registre : les effectifs
+                affichés sont des minimums.
+              </p>
+            ) : null}
+            <MetricGrid
+              label="Incidents et procès-verbaux"
+              className="xl:grid-cols-4"
+            >
+              <MetricCard
+                label="Incidents signalés"
+                state={safety.state}
+                value={NUMBER_FORMATTER.format(safetySummary.incidents.total)}
+                supporting={`dont ${NUMBER_FORMATTER.format(safetySummary.incidents.open)} non résolus`}
+              />
+              <MetricCard
+                label="Critiques non résolus"
+                state={safety.state}
+                value={NUMBER_FORMATTER.format(
+                  safetySummary.incidents.criticalOpen
+                )}
+              />
+              <MetricCard
+                label="Procès-verbaux"
+                state={safety.state}
+                value={NUMBER_FORMATTER.format(safetySummary.penalties.total)}
+                supporting={`dont ${NUMBER_FORMATTER.format(safetySummary.penalties.byStatus.conteste.count)} contestés`}
+              />
+              <MetricCard
+                label="Montant des procès-verbaux"
+                state={safety.state}
+                value={NUMBER_FORMATTER.format(
+                  safetySummary.penalties.amountXaf
+                )}
+                unit="FCFA"
+                supporting={`hors annulations · ${NUMBER_FORMATTER.format(safetySummary.penalties.byStatus.paye.amountXaf)} FCFA payés`}
+              />
+            </MetricGrid>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <CountTable
+                caption="Incidents par catégorie"
+                header="Catégorie"
+                rows={INCIDENT_CATEGORY_LABELS.map(([key, label]) => ({
+                  key,
+                  label,
+                  count: safetySummary.incidents.byCategory[key],
+                }))}
+              />
+              <CountTable
+                caption="Incidents par gravité"
+                header="Gravité"
+                rows={INCIDENT_SEVERITY_LABELS.map(([key, label]) => ({
+                  key,
+                  label,
+                  count: safetySummary.incidents.bySeverity[key],
+                }))}
+              />
+              <CountTable
+                caption="Procès-verbaux par statut"
+                header="Statut"
+                rows={PENALTY_STATUS_LABELS.map(([key, label]) => ({
+                  key,
+                  label,
+                  count: safetySummary.penalties.byStatus[key].count,
+                  amountXaf: safetySummary.penalties.byStatus[key].amountXaf,
+                }))}
+              />
+              <CountTable
+                caption="Procès-verbaux par motif"
+                header="Motif"
+                rows={PENALTY_REASON_LABELS.map(([key, label]) => ({
+                  key,
+                  label,
+                  count: safetySummary.penalties.byReason[key],
+                }))}
+              />
+            </div>
+          </>
+        ) : safety.state === "empty" ? (
+          <EmptyState
+            title="Aucun incident ni procès-verbal enregistré sur la période"
+            description="Les signalements proviennent de l’application de contrôle à bord ; élargissez la période pour remonter plus loin."
+          />
+        ) : safety.state === "loading" ? (
+          <p role="status" className="text-small text-ink-muted">
+            Lecture de la synthèse en cours…
+          </p>
+        ) : (
+          <UnavailableNotice
+            description={
+              safetySummary?.scope === "restreint"
+                ? "Votre affectation est limitée à un site : la synthèse réseau n’est pas ouverte."
+                : "Votre habilitation ne couvre pas le module Sécurité. L’administration peut l’attribuer en lecture."
+            }
+          />
+        )}
       </section>
 
       <section
@@ -248,7 +428,9 @@ export function RisksVolet({ data }: ExecutiveVoletProps) {
         </Button>
       </section>
 
-      <ProvenanceSummary states={[continuity.state, health.state]} />
+      <ProvenanceSummary
+        states={[continuity.state, health.state, safety.state]}
+      />
     </div>
   )
 }

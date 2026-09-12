@@ -146,6 +146,82 @@ describe("Vue d’ensemble de la Direction générale", () => {
     ).toBeInTheDocument()
   })
 
+  it("ajoute le signal des incidents critiques et la saturation des dessertes en fin de liste", () => {
+    const data: ExecutiveOverviewDto = {
+      ...emptyOverview,
+      passenger: { state: "unavailable", series: [] },
+      safety: {
+        state: "operational",
+        summary: {
+          generatedAt: 0,
+          period: { from: "2026-08-12", to: "2026-09-10" },
+          scope: "reseau",
+          dataState: "operational",
+          truncated: false,
+          incidents: {
+            total: 2,
+            open: 2,
+            criticalOpen: 2,
+            bySeverity: { information: 0, important: 0, critique: 2 },
+            byCategory: {
+              securite: 2,
+              technique: 0,
+              comportement: 0,
+              medical: 0,
+              autre: 0,
+            },
+            byStatus: { ouvert: 2, en_cours: 0, resolu: 0 },
+          },
+          penalties: {
+            total: 0,
+            amountXaf: 0,
+            byStatus: {
+              emis: { count: 0, amountXaf: 0 },
+              paye: { count: 0, amountXaf: 0 },
+              conteste: { count: 0, amountXaf: 0 },
+              annule: { count: 0, amountXaf: 0 },
+            },
+            byReason: {
+              sans_titre: 0,
+              titre_invalide: 0,
+              classe_superieure: 0,
+              autre: 0,
+            },
+          },
+        },
+      },
+      occupancy: {
+        state: "operational",
+        trips: [
+          {
+            tripId: "trip-1",
+            serviceDate: "2026-09-09",
+            trainNumber: "TR-201",
+            trainType: "EXPRESS",
+            serviceClass: "DEUXIEME",
+            loadFactorPct: 62,
+            peakPct: 100,
+            constrainedByPeak: true,
+            ticketCount: 180,
+            revenueTtc: 4_200_000,
+          },
+        ],
+      },
+    }
+
+    expect(deriveExecutiveArbitrations(data).map(({ id }) => id)).toEqual([
+      "safety-critical-incidents",
+      "occupancy-peak",
+    ])
+    renderOverview(data)
+    expect(
+      screen.getByText("2 incidents critiques non résolus à bord")
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Sécurité à bord, 30 derniers jours/)
+    ).toBeInTheDocument()
+  })
+
   it("fournit une table comme alternative textuelle à la série", () => {
     renderOverview({
       ...emptyOverview,

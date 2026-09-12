@@ -1,5 +1,7 @@
 import Link from "next/link"
 
+import { DocumentButton } from "@/components/document-button"
+
 import {
   Table,
   TableBody,
@@ -132,6 +134,18 @@ function dataQualityItems(data: ExecutiveOverviewDto): DataQualityItem[] {
       subject: "la supervision technique",
       owner: "DSI",
     },
+    {
+      key: "safety",
+      state: data.safety.state,
+      subject: "la synthèse des incidents et procès-verbaux",
+      owner: "DSED",
+    },
+    {
+      key: "occupancy",
+      state: data.occupancy.state,
+      subject: "le remplissage par desserte",
+      owner: "DCFV",
+    },
   ]
 
   const dynamicItems = sources
@@ -245,6 +259,29 @@ export function DecisionsVolet({ data }: ExecutiveVoletProps) {
             Études, livre blanc et documents officiels
           </span>
         </Link>
+        <div className="grid gap-2 rounded-md border border-line p-4">
+          <h3 className="text-small font-semibold text-ink">
+            Dossier de recette de l’espace Direction générale
+          </h3>
+          <p className="text-caption text-ink-muted">
+            Scénarios à dérouler par volet, questions d’orientation à trancher
+            et grille de visa de la Direction générale.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <DocumentButton
+              file="RECETTE_ESPACE_DIRECTION_GENERALE.pdf"
+              variant="secondary"
+            >
+              Télécharger le dossier (.pdf)
+            </DocumentButton>
+            <DocumentButton
+              file="RECETTE_ESPACE_DIRECTION_GENERALE.md"
+              variant="ghost"
+            >
+              Version texte (.md)
+            </DocumentButton>
+          </div>
+        </div>
       </section>
 
       <section
@@ -331,6 +368,8 @@ export function DecisionsVolet({ data }: ExecutiveVoletProps) {
           data.finance.state,
           data.continuity.state,
           data.health.state,
+          data.safety.state,
+          data.occupancy.state,
         ]}
       />
     </div>

@@ -83,6 +83,27 @@ export function briefLines(data: ExecutiveOverviewDto): BriefLine[] {
     })
   }
 
+  const safety = data.safety
+  if (safety.state === "operational" && safety.summary) {
+    const { incidents, penalties } = safety.summary
+    lines.push({
+      id: "safety",
+      state: "operational",
+      text: `Sécurité à bord, ${presetLabel(data.period.preset).toLowerCase()} : ${pluralize(incidents.total, "incident signalé", "incidents signalés")}, dont ${pluralize(incidents.criticalOpen, "critique non résolu", "critiques non résolus")} ; ${pluralize(penalties.total, "procès-verbal", "procès-verbaux")}.`,
+    })
+  } else {
+    lines.push({
+      id: "safety",
+      state: safety.state,
+      text:
+        safety.state === "loading"
+          ? "Sécurité à bord : lecture de la synthèse…"
+          : safety.state === "empty"
+            ? "Sécurité à bord : aucun incident ni procès-verbal enregistré sur la période."
+            : "Sécurité à bord : synthèse non accessible à ce compte.",
+    })
+  }
+
   const passenger = data.passenger
   if (passenger.state === "operational") {
     lines.push({

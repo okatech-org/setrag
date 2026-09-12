@@ -18,6 +18,7 @@ import { formatTime } from "@/lib/format"
 
 import { BarSeries, BreakdownBars } from "../charts"
 import { DIRECTIONS } from "../direction-map"
+import { formatDay } from "../executive-period"
 import type {
   CotrafDashboard,
   ExecutiveOverviewDto,
@@ -236,6 +237,22 @@ function trainTypeLabel(trainType: string) {
       return trainType
   }
 }
+
+function serviceClassLabel(serviceClass: string) {
+  switch (serviceClass) {
+    case "DEUXIEME":
+      return "2e classe"
+    case "PREMIERE":
+      return "1re classe"
+    case "VIP":
+      return "VIP"
+    default:
+      return serviceClass
+  }
+}
+
+/** Nombre de dessertes affichées dans le classement du remplissage. */
+const OCCUPANCY_DISPLAY_LIMIT = 12
 
 function delayLabel(minutes: number) {
   return minutes > 0 ? `+${NUMBER_FORMATTER.format(minutes)} min` : "0 min"
@@ -821,6 +838,80 @@ export function ActivitiesVolet({
             state={data.passenger.state}
             tableCaption="Recettes nettes par produit"
           />
+
+          <div className="grid gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h4 className="text-small font-semibold text-ink">
+                Remplissage par desserte
+              </h4>
+              <ProvenanceTag state={data.occupancy.state} />
+            </div>
+            <DomainGate
+              state={data.occupancy.state}
+              unavailableTitle="Remplissage par desserte non accessible à ce compte"
+              emptyTitle="Aucune desserte clôturée sur la période."
+            >
+              <p className="text-caption text-ink-muted">
+                {`${OCCUPANCY_DISPLAY_LIMIT} dessertes les plus chargées sur ${NUMBER_FORMATTER.format(data.occupancy.trips.length)} lues, en sièges-kilomètres, par classe. Saturée : tronçon de pointe à 95 % ou plus pour un remplissage moyen inférieur à 80 %.`}
+              </p>
+              <Table>
+                <TableCaption className="sr-only">
+                  Remplissage par desserte, de la plus chargée à la moins
+                  chargée
+                </TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Train</TableHead>
+                    <TableHead>Classe</TableHead>
+                    <TableHead className="text-right">Remplissage</TableHead>
+                    <TableHead className="text-right">
+                      Tronçon de pointe
+                    </TableHead>
+                    <TableHead>Lecture</TableHead>
+                    <TableHead className="text-right">Billets</TableHead>
+                    <TableHead className="text-right">Recettes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.occupancy.trips
+                    .slice(0, OCCUPANCY_DISPLAY_LIMIT)
+                    .map((trip) => (
+                      <TableRow key={`${trip.tripId}-${trip.serviceClass}`}>
+                        <TableCell>{formatDay(trip.serviceDate)}</TableCell>
+                        <TableCell className="font-mono tabular-nums">
+                          {trip.trainNumber}
+                        </TableCell>
+                        <TableCell>
+                          {serviceClassLabel(trip.serviceClass)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono tabular-nums">
+                          {PERCENT_FORMATTER.format(trip.loadFactorPct)} %
+                        </TableCell>
+                        <TableCell className="text-right font-mono tabular-nums">
+                          {PERCENT_FORMATTER.format(trip.peakPct)} %
+                        </TableCell>
+                        <TableCell>
+                          {trip.constrainedByPeak ? (
+                            <Tag tone="warning">
+                              Saturée au tronçon de pointe
+                            </Tag>
+                          ) : (
+                            <span className="text-ink-muted">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono tabular-nums">
+                          {NUMBER_FORMATTER.format(trip.ticketCount)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono tabular-nums">
+                          {NUMBER_FORMATTER.format(trip.revenueTtc)} FCFA
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </DomainGate>
+          </div>
         </div>
       </section>
 

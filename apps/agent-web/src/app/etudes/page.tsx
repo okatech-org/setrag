@@ -1,10 +1,6 @@
 "use client"
 
-import {
-  Download,
-  FileCode,
-  Award,
-} from "lucide-react"
+import { Download, FileCode, Award } from "lucide-react"
 import { DocumentButton } from "@/components/document-button"
 import { EnterpriseShell } from "@/components/enterprise-layout"
 import { Card } from "@workspace/ui/components/card"
@@ -66,6 +62,15 @@ const DOCUMENTS = [
     pdfSize: "428 Ko",
   },
   {
+    num: "DG",
+    id: "RECETTE_ESPACE_DIRECTION_GENERALE",
+    title: "Dossier de recette — Espace Direction générale",
+    tag: "Recette DG",
+    desc: "Scénarios de recette des cinq volets, décisions déjà prises, questions d’orientation à trancher et grille de visa de la Direction générale.",
+    pages: "5 pages",
+    pdfSize: "305 Ko",
+  },
+  {
     num: "MASTER",
     id: "LIVRE_BLANC_SETRAG_SYSTEME_EXPLOITATION_INTEGRE",
     title: "LIVRE BLANC — Système d'Exploitation d'Entreprise Intégré SETRAG",
@@ -94,8 +99,10 @@ export default function EtudesPage() {
                   Dossier Stratégique Officiel · SETRAG 2026
                 </h2>
               </div>
-              <p className="text-sm text-white/80 max-w-2xl">
-                7 études exhaustives d’ingénierie des systèmes ferroviaires, d’analyse financière OHADA, de conformité juridique gabonaise et de gouvernance du Transgabonais.
+              <p className="max-w-2xl text-sm text-white/80">
+                7 études exhaustives d’ingénierie des systèmes ferroviaires,
+                d’analyse financière OHADA, de conformité juridique gabonaise et
+                de gouvernance du Transgabonais.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -127,27 +134,27 @@ export default function EtudesPage() {
                     variant="outline"
                     className={
                       doc.isMaster
-                        ? "border-[#D39E00] bg-[#D39E00] text-slate-900 font-bold"
-                        : "border-line bg-surface-raised text-ink-muted text-xs font-semibold"
+                        ? "border-[#D39E00] bg-[#D39E00] font-bold text-slate-900"
+                        : "bg-surface-raised border-line text-xs font-semibold text-ink-muted"
                     }
                   >
                     {doc.tag}
                   </Badge>
-                  <span className="font-mono text-xs text-ink-subtle">
+                  <span className="text-ink-subtle font-mono text-xs">
                     {doc.pages} · {doc.pdfSize}
                   </span>
                 </div>
 
-                <h3 className="text-base font-bold text-[#0F2C59] leading-snug">
+                <h3 className="text-base leading-snug font-bold text-[#0F2C59]">
                   {doc.title}
                 </h3>
 
-                <p className="text-xs text-ink-muted leading-relaxed">
+                <p className="text-xs leading-relaxed text-ink-muted">
                   {doc.desc}
                 </p>
               </div>
 
-              <div className="mt-5 border-t border-line/60 pt-4 flex items-center justify-between gap-2">
+              <div className="mt-5 flex items-center justify-between gap-2 border-t border-line/60 pt-4">
                 <DocumentButton
                   file={`${doc.id}.md`}
                   variant="secondary"

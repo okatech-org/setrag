@@ -21,13 +21,13 @@ métier du back-office ni leur ajouter de nouvelles ressources Convex.
 Les cinq volets suivent les questions d’un dirigeant, pas le catalogue des
 modules (`apps/agent-web/src/components/direction/executive-navigation.ts`) :
 
-| Code  | Route                  | Volet                     | Question |
-| ----- | ---------------------- | -------------------------- | -------- |
-| DG-01 | `/direction`            | Vue d’ensemble             | Où en est le réseau aujourd’hui, et qu’attend une décision ? |
-| DG-02 | `/direction/activites`  | Activité et exploitation   | Que produit l’entreprise, que fait-elle circuler ? |
-| DG-03 | `/direction/finances`   | Finances                   | Que rapporte-t-elle, où en est la conformité ? |
-| DG-04 | `/direction/risques`    | Risques et continuité      | Qu’est-ce qui menace la continuité et la concession ? |
-| DG-05 | `/direction/decisions`  | Décisions attendues        | Quels signaux, demandes et raccordements attendent une orientation ? |
+| Code  | Route                  | Volet                    | Question                                                             |
+| ----- | ---------------------- | ------------------------ | -------------------------------------------------------------------- |
+| DG-01 | `/direction`           | Vue d’ensemble           | Où en est le réseau aujourd’hui, et qu’attend une décision ?         |
+| DG-02 | `/direction/activites` | Activité et exploitation | Que produit l’entreprise, que fait-elle circuler ?                   |
+| DG-03 | `/direction/finances`  | Finances                 | Que rapporte-t-elle, où en est la conformité ?                       |
+| DG-04 | `/direction/risques`   | Risques et continuité    | Qu’est-ce qui menace la continuité et la concession ?                |
+| DG-05 | `/direction/decisions` | Décisions attendues      | Quels signaux, demandes et raccordements attendent une orientation ? |
 
 ## Habilitation
 
@@ -58,12 +58,12 @@ habituel, comme depuis son écran d’origine.
 ## Période de lecture
 
 Un sélecteur `?periode=` accepte quatre préréglages (`executive-period.ts`) :
-`30j` (défaut), `mois`, `trimestre`, `annee`. Il ne s’applique qu’aux
-sources voyageurs (chiffre d’affaires, billets, remplissage) : les autres
-domaines — Fret, COTRAF, Finance, Continuité, santé système — sont des
-instantanés horodatés (`freshnessAt`, `generatedAt`, `checkedAt`) qui
-ignorent ce réglage. La période par défaut ne s’écrit pas dans l’URL
-(`periodHref`).
+`30j` (défaut), `mois`, `trimestre`, `annee`. Il s’applique aux sources
+datées : voyageurs (chiffre d’affaires, billets, remplissage agrégé et par
+desserte), incidents et procès-verbaux. Les autres domaines — Fret, COTRAF,
+Finance, Continuité, santé système — sont des instantanés horodatés
+(`freshnessAt`, `generatedAt`, `checkedAt`) qui ignorent ce réglage. La
+période par défaut ne s’écrit pas dans l’URL (`periodHref`).
 
 ## Sources et hook `useExecutiveCockpit`
 
@@ -71,16 +71,18 @@ Tout passe par un unique hook,
 `apps/agent-web/src/components/direction/use-executive-cockpit.ts`, qui
 assemble le DTO `ExecutiveOverviewDto` :
 
-| Domaine       | Requête Convex                                                        | Gardé par |
-| ------------- | ----------------------------------------------------------------------| --------- |
-| Voyageurs     | `reporting.dashboard`, `dailySeries`, `byProduct/byChannel/byPointOfSale` | module `voyageurs` |
-| Santé système | `monitoring.health`                                                    | module `voyageurs` (même bascule) |
-| Fret          | `modules.fret.queries.dashboard`                                        | module `fret` |
-| COTRAF        | `modules.cotraf.queries.dashboard`                                      | module `cotraf` |
-| Finance       | `modules.finance.queries.getFinanceOverview`                            | module `finance` |
-| Continuité    | `modules.continuity.queries.getContinuitySummary`                       | module `securite` (pas de module `continuity` séparé) |
-| Dessertes du jour | `functions.trips.listByDate`                                        | source publique, toujours interrogée |
-| Gares         | `functions.referential.listStations`                                    | source publique, toujours interrogée |
+| Domaine                     | Requête Convex                                                            | Gardé par                                                 |
+| --------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Voyageurs                   | `reporting.dashboard`, `dailySeries`, `byProduct/byChannel/byPointOfSale` | module `voyageurs`                                        |
+| Santé système               | `monitoring.health`                                                       | module `voyageurs` (même bascule)                         |
+| Fret                        | `modules.fret.queries.dashboard`                                          | module `fret`                                             |
+| COTRAF                      | `modules.cotraf.queries.dashboard`                                        | module `cotraf`                                           |
+| Finance                     | `modules.finance.queries.getFinanceOverview`                              | module `finance`                                          |
+| Continuité                  | `modules.continuity.queries.getContinuitySummary`                         | module `securite` (pas de module `continuity` séparé)     |
+| Remplissage par desserte    | `functions.reporting.occupancy` (200 lignes au plus)                      | ressource `places`, lue seulement si la matrice l’accorde |
+| Incidents et procès-verbaux | `functions.control.networkSummary` (synthèse agrégée)                     | module `securite` et portée globale                       |
+| Dessertes du jour           | `functions.trips.listByDate`                                              | source publique, toujours interrogée                      |
+| Gares                       | `functions.referential.listStations`                                      | source publique, toujours interrogée                      |
 
 Un domaine gardé n’est interrogé que si `hasVisibleModule(code)` est vrai,
 via `useModuleNavigationAccesses(role)` : ce hook croise la matrice de
@@ -98,14 +100,14 @@ rien n’est inventé (états `empty` ou `unavailable` selon le champ).
 Chaque section du cockpit porte l’un des six `ExecutiveSourceState`
 (`executive-dto.ts`, `provenance.tsx`) :
 
-| État             | Libellé affiché             |
-| ---------------- | ---------------------------- |
-| `loading`         | Chargement                  |
-| `operational`     | Opérationnel                |
-| `synthetic_demo`  | Synthétique · non officiel  |
-| `empty`           | Aucune donnée               |
-| `unavailable`     | Non accessible               |
-| `not_connected`   | Non raccordé                 |
+| État             | Libellé affiché            |
+| ---------------- | -------------------------- |
+| `loading`        | Chargement                 |
+| `operational`    | Opérationnel               |
+| `synthetic_demo` | Synthétique · non officiel |
+| `empty`          | Aucune donnée              |
+| `unavailable`    | Non accessible             |
+| `not_connected`  | Non raccordé               |
 
 Rendu par `ProvenanceTag`, toujours avec le libellé — jamais la couleur
 seule. Une valeur `synthetic_demo` n’est jamais agrégée à une valeur
@@ -131,29 +133,29 @@ mieux, et le signale explicitement
 (`packages/backend/convex/seeds/referential.ts`). Convention à homologuer
 auprès de SETRAG avant tout usage tarifaire.
 
-## Ce que la Direction générale ne lit pas aujourd’hui
+## Ce que la Direction générale lit, et ce qu’elle ne lit pas
 
-La matrice de droits n’a pas été étendue pour cet espace :
-`direction_generale` n’a que la lecture des dix ressources module et de
-`rapports` (`packages/backend/convex/model/permissions.ts`). Restent donc
-hors de portée — état « Non accessible » partout où une provenance
-s’applique :
+Décision : [ADR-0019](adr/0019-direction-generale-syntheses-agregees.md).
+`direction_generale` lit les dix ressources module, `rapports` et `places`
+(`packages/backend/convex/model/permissions.ts`), sans aucune écriture.
 
-- `reporting.occupancy` (remplissage par desserte, exige `places`) et
-  `reporting.cashVariances` (écarts de caisse, exige `caisse`) ;
-- procès-verbaux et incidents (`control.listIncidents/listPenalties`,
-  ressource `incidents`) ;
-- comptabilité (`accounting.listExports`/`previewExport`, ressource
-  `journal_comptable`) ;
+- **Remplissage par desserte** : lu via `reporting.occupancy` (ressource
+  `places`). Données non nominatives, affichées dans « Activité et
+  exploitation ».
+- **Incidents et procès-verbaux** : lus en synthèse agrégée et anonyme via
+  `control.networkSummary` (effectifs, gravité, statuts, motifs, montants).
+  Les registres nominatifs (`listIncidents`, `listPenalties`, ressources
+  `incidents` et `proces_verbaux`) restent fermés : identités, descriptions et
+  photos ne sortent pas des fonctions de contrôle et de sécurité.
+
+Restent hors de portée, état « Non accessible » là où une provenance s’applique :
+
+- écarts de caisse (`reporting.cashVariances`, ressource `caisse`) ;
+- comptabilité voyageurs (`accounting.*`, ressource `journal_comptable`) ;
 - supervision des intégrations (`integrationHealth`, ressource
   `integrations`) ;
-- utilisateurs et paramétrage (`management.listUsers`/`getSettings`,
-  ressources `utilisateurs` et `parametrage`) ;
-- scellés du journal d’audit (`auditLogs.sealHash`/`sealedAt`), jamais
-  exposés par une requête accessible à ce rôle.
-
-Élargir ces droits est une décision DSI/SSI, pas un choix d’écran : la
-matrice reste la source unique de vérité et n’a pas été modifiée ici.
+- utilisateurs et paramétrage (`management.listUsers`/`getSettings`) ;
+- scellés du journal d’audit, réservés aux administrateurs.
 
 ## Ce qui n’existe pas encore
 
@@ -166,16 +168,25 @@ figurent dans `MODULE_MANIFEST` comme modules déclarés, mais aucun
 répertoire `packages/backend/convex/modules/{rh,gmao,infrastructure}`
 n’existe encore.
 
+## Recette
+
+Le dossier de recette destiné à la Direction générale est servi dans
+l’application (volet « Décisions attendues » et centre « Audit & documents ») :
+`apps/agent-web/documents/RECETTE_ESPACE_DIRECTION_GENERALE.md` et sa version
+PDF. Il liste les décisions déjà prises, les scénarios par volet, les questions
+d’orientation à trancher et la grille de visa. Toute modification de la source
+Markdown impose de régénérer le PDF.
+
 ## Suites à donner
 
-- `demoPersonas.ts` place encore `direction_generale` sur `/gestion`
-  (`landingPath`) : à corriger vers `/direction` au prochain déploiement
-  Convex autorisé.
+- Dérouler la recette avec la Direction générale et reporter ses réponses aux
+  questions d’orientation (chiffres de tête, cibles, priorités de
+  raccordement, diffusion, période par défaut, convention kilométrique).
+- Ajouter un marqueur de provenance à `dailyMetrics` et `tripMetrics` :
+  l’historique voyageurs généré s’affiche aujourd’hui « Opérationnel ».
 - `.tabular` est déclarée en couche `base` alors que l’échelle
-  typographique vit en couche `utilities` — source du bug du design system,
-  à migrer vers une déclaration `@utility`.
-- Étendre les droits de lecture de `direction_generale` (incidents,
-  procès-verbaux, places) reste possible après validation — voir ci-dessus.
+  typographique vit en couche `utilities` : à migrer vers une déclaration
+  `@utility`.
 - Voir tous les modules déclarés, y compris ceux pas encore activés par
   défaut, exige `NEXT_PUBLIC_PLATFORM_MODULES_API=1` ; la configuration de
   lancement `agent-web-platform` (`.claude/launch.json`) le pose déjà.

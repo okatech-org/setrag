@@ -313,6 +313,8 @@ export function OverviewVolet({
             data.service.state,
             data.cotraf.state,
             freight.state,
+            data.safety.state,
+            data.occupancy.state,
             data.finance.state,
             data.continuity.state,
             data.health.state,

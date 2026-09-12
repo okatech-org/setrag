@@ -33,6 +33,27 @@ export type ContinuitySummary = FunctionReturnType<
 export type HealthReport = FunctionReturnType<
   typeof api.functions.monitoring.health
 >
+export type SafetySummary = FunctionReturnType<
+  typeof api.functions.control.networkSummary
+>
+
+/** Remplissage d'une desserte par classe, en sièges-kilomètres (reporting). */
+export interface TripOccupancy {
+  tripId: string
+  serviceDate: string
+  trainNumber: string
+  trainType: string
+  serviceClass: string
+  loadFactorPct: number
+  peakPct: number
+  /** Règle du reporting : tronçon de pointe ≥ 95 % et moyenne < 80 %. */
+  constrainedByPeak: boolean
+  ticketCount: number
+  revenueTtc: number
+}
+
+/** Plafond de lecture du remplissage par desserte pour l'espace DG. */
+export const OCCUPANCY_READ_LIMIT = 200
 
 /** Tranche de chiffre d'affaires voyageurs (canal, produit, point de vente). */
 export interface RevenueSlice {
@@ -159,6 +180,16 @@ export interface ExecutiveOverviewDto {
   }
   /** Modules visibles pour ce compte, tels que servis par la plateforme. */
   modules: readonly ExecutiveModuleAccess[]
+  /** Remplissage par desserte (ressource `places`, données non nominatives). */
+  occupancy: {
+    state: ExecutiveSourceState
+    trips: readonly TripOccupancy[]
+  }
+  /** Synthèse agrégée et anonyme des incidents et procès-verbaux. */
+  safety: {
+    state: ExecutiveSourceState
+    summary?: SafetySummary
+  }
 }
 
 export interface ExecutiveArbitration {
@@ -171,6 +202,8 @@ export interface ExecutiveArbitration {
 }
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("fr-FR")
+/** Espace fine insécable (avant %, :, etc.). */
+const NNBSP = "\u202f"
 const PERCENT_FORMATTER = new Intl.NumberFormat("fr-FR", {
   maximumFractionDigits: 1,
 })
@@ -200,6 +233,8 @@ export function emptyExecutiveOverview(
     continuity: { state: "unavailable" },
     health: { state: "unavailable", findings: [] },
     modules: [],
+    occupancy: { state: "unavailable", trips: [] },
+    safety: { state: "unavailable" },
   }
 }
 
@@ -369,6 +404,40 @@ export function deriveExecutiveArbitrations(
         id: "trips-delays",
         label: `${pluralize(late.length + cancelled.length, "desserte voyageurs perturbée", "dessertes voyageurs perturbées")} aujourd’hui`,
         detail: `${pluralize(late.length, "retardée")} (retard maximal +${NUMBER_FORMATTER.format(maxDelay)} min), ${pluralize(cancelled.length, "annulée")}.`,
+        tone: "warning",
+        volet: "activities",
+      })
+    }
+  }
+
+  const safety = data.safety.summary
+  if (
+    data.safety.state === "operational" &&
+    safety &&
+    safety.incidents.criticalOpen > 0
+  ) {
+    arbitrations.push({
+      id: "safety-critical-incidents",
+      label: `${pluralize(safety.incidents.criticalOpen, "incident critique non résolu", "incidents critiques non résolus")} à bord`,
+      detail:
+        "Synthèse agrégée des signalements de la période ; le détail nominatif reste au registre des fonctions de contrôle et de sécurité.",
+      tone: "critical",
+      volet: "risks",
+    })
+  }
+
+  if (data.occupancy.state === "operational") {
+    const saturated = new Set(
+      data.occupancy.trips
+        .filter(({ constrainedByPeak }) => constrainedByPeak)
+        .map(({ tripId }) => tripId)
+    )
+    if (saturated.size > 0) {
+      const partial = data.occupancy.trips.length >= OCCUPANCY_READ_LIMIT
+      arbitrations.push({
+        id: "occupancy-peak",
+        label: `${pluralize(saturated.size, "desserte saturée", "dessertes saturées")} sur leur tronçon de pointe`,
+        detail: `Tronçon le plus chargé à 95${NNBSP}% ou plus pour un remplissage moyen inférieur à 80${NNBSP}% : des voyageurs sont refusés alors que des places restent libres ailleurs${partial ? " (lecture limitée aux dessertes les plus chargées)" : ""}.`,
         tone: "warning",
         volet: "activities",
       })
