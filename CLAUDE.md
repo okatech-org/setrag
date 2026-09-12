@@ -43,6 +43,9 @@ Convex packagé (`packages/backend`).
   serveur, et elle n'est effacée qu'à la déconnexion explicite
   (`seDeconnecter()`) ou en ligne — hors réseau, la session paraît absente sans
   l'être. Détails : [docs/billetterie-pwa.md](docs/billetterie-pwa.md).
+- **Direction générale** : espace de lecture consolidée sur `/direction`
+  (cinq volets, provenance à six états, aucune action métier). Détails :
+  [docs/direction-generale.md](docs/direction-generale.md).
 - **Design system** : le web suit **SETRAG** — voir [docs/design-system.md](docs/design-system.md)
   et la référence vivante sur `/design-system` (billetterie). Source de vérité
   des tokens : `packages/ui/src/styles/tokens.css`, copie du projet Claude

@@ -19,6 +19,26 @@
       "runtimeArgs": ["run", "--filter=controleur-web", "dev"],
       "port": 3002,
       "autoPort": false
+    },
+    {
+      "name": "agent-web",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "--filter=agent-web", "dev"],
+      "port": 3001,
+      "autoPort": false
+    },
+    {
+      "name": "agent-web-platform",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "NEXT_PUBLIC_PLATFORM_MODULES_API=1",
+        "bun",
+        "run",
+        "--filter=agent-web",
+        "dev"
+      ],
+      "port": 3001,
+      "autoPort": false
     }
   ]
 }
