@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowRight, BarChart3, Download, Plus, Search } from "lucide-react"
+import { ArrowRight, Download, Plus, Search } from "lucide-react"
 import Link from "next/link"
 import type { Route } from "next"
 import { useMemo, useState, type ReactNode } from "react"
@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 
+import { BarSeries } from "@/components/direction/charts"
 import { useOnlineStatus } from "@/hooks/use-online-status"
 import { asAppRole, canRole } from "@/lib/portal-access"
 import { PLATFORM_MODULES_API_ENABLED } from "@/lib/platform-modules-runtime"
@@ -84,6 +85,12 @@ const MANAGEMENT_SCOPE = {
   type: "siege",
 }
 
+const EXECUTIVE_MANAGEMENT_SCOPE = {
+  code: "DG",
+  name: "Direction générale · réseau entier",
+  type: "siege",
+}
+
 interface LiveSummary {
   revenue?: number
   tickets?: number
@@ -94,6 +101,8 @@ interface LiveSummary {
   exports?: number
   incidents?: number
   severity?: string
+  /** Série journalière réelle (journées clôturées), pour la vue d'ensemble. */
+  series?: readonly { date: string; netTtc: number; tickets: number }[]
 }
 
 export interface ManagementRowData {
@@ -105,72 +114,67 @@ export interface ManagementRowData {
 
 type ManagementRowInput = ManagementRowData | readonly string[]
 
-function KpiCard({
-  label,
-  value,
-  delta,
-}: {
-  label: string
-  value: string
-  delta: string
-}) {
+function KpiCard({ label, value }: { label: string; value: string }) {
   return (
     <Card className="min-w-0 gap-2 p-5">
-      <span className="tabular text-h3 min-w-0">{value}</span>
+      <span className="text-time min-w-0">{value}</span>
       <span className="text-small text-ink-muted">{label}</span>
-      <span className="text-caption text-success-ink">{delta}</span>
     </Card>
   )
 }
 
 function Overview({ live }: { live: LiveSummary }) {
-  const bars = [42, 55, 48, 68, 72, 64, 79, 62, 84, 76, 91, 86, 95, 88]
+  const noClosedDay =
+    live.revenue === undefined &&
+    live.tickets === undefined &&
+    live.occupancy === undefined
   return (
     <>
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Recette nette"
-          value={formatXaf(live.revenue ?? 184_650_000)}
-          delta="+8,4 % vs période précédente"
+          value={live.revenue === undefined ? "—" : formatXaf(live.revenue)}
         />
         <KpiCard
           label="Billets émis"
-          value={(live.tickets ?? 12_486).toLocaleString("fr-FR")}
-          delta="+5,1 %"
+          value={
+            live.tickets === undefined
+              ? "—"
+              : live.tickets.toLocaleString("fr-FR")
+          }
         />
         <KpiCard
           label="Remplissage moyen"
-          value={`${(live.occupancy ?? 71.4).toLocaleString("fr-FR")} %`}
-          delta="+3,2 points"
+          value={
+            live.occupancy === undefined
+              ? "—"
+              : `${live.occupancy.toLocaleString("fr-FR")} %`
+          }
         />
         <KpiCard
           label="Points suivis"
           value={String((live.stations ?? 24) + 12)}
-          delta="100 % connectés"
         />
       </div>
+      {noClosedDay ? (
+        <p className="text-small text-ink-muted">
+          Aucune journée clôturée sur la période
+        </p>
+      ) : null}
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
-        <Card className="p-5">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-mono-label text-ink-muted">
-              VENTES · 14 DERNIERS JOURS
-            </span>
-            <BarChart3 className="text-accent-ink" />
-          </div>
-          <div
-            className="flex h-48 items-end gap-2"
-            aria-label="Graphique des ventes sur 14 jours"
-          >
-            {bars.map((height, index) => (
-              <span
-                key={`${height}-${index}`}
-                className="flex-1 rounded-t-xs bg-accent-base"
-                style={{ height: `${height}%` }}
-                title={`Jour ${index + 1} : ${height}`}
-              />
-            ))}
-          </div>
-        </Card>
+        <BarSeries
+          title="Recettes par jour"
+          description="Chiffre d’affaires net des journées clôturées du mois."
+          series={live.series ?? []}
+          state={
+            live.series === undefined
+              ? "loading"
+              : live.series.length > 0
+                ? "operational"
+                : "empty"
+          }
+          tableCaption="Chiffre d’affaires net et billets par jour"
+        />
         <Card className="p-5">
           <span className="text-mono-label text-ink-muted">
             ÉTAT DU SYSTÈME
@@ -279,7 +283,11 @@ export function ManagementScreen({
   return (
     <SellerShell
       seller={identity}
-      pointOfSale={MANAGEMENT_SCOPE}
+      pointOfSale={
+        identity.role === "direction_generale"
+          ? EXECUTIVE_MANAGEMENT_SCOPE
+          : MANAGEMENT_SCOPE
+      }
       session={null}
       online={online}
       portal="gestion"
@@ -520,7 +528,13 @@ export function ManagementPageClient({
   >(null)
   const reporting = useQuery(
     api.functions.reporting.dashboard,
-    E2E_MODE || !may("rapports") || section !== "tableau-de-bord"
+    E2E_MODE || section !== "tableau-de-bord" || !may("rapports")
+      ? "skip"
+      : { from: monthStart, to: today }
+  )
+  const dailySeries = useQuery(
+    api.functions.reporting.dailySeries,
+    E2E_MODE || section !== "tableau-de-bord" || !may("rapports")
       ? "skip"
       : { from: monthStart, to: today }
   )
@@ -565,8 +579,8 @@ export function ManagementPageClient({
   const health = useQuery(
     api.functions.monitoring.health,
     E2E_MODE ||
-      !may("rapports") ||
-      (section !== "tableau-de-bord" && section !== "integrations")
+      (section !== "tableau-de-bord" && section !== "integrations") ||
+      !may("rapports")
       ? "skip"
       : {}
   )
@@ -695,6 +709,11 @@ export function ManagementPageClient({
           .length,
         incidents: (incidents?.length ?? 0) + (penalties?.length ?? 0),
         severity: health?.severity,
+        series: dailySeries?.map(({ date, netTtc, tickets }) => ({
+          date,
+          netTtc,
+          tickets,
+        })),
       }
   const liveRows: readonly ManagementRowInput[] | undefined = E2E_MODE
     ? undefined
@@ -911,77 +930,77 @@ export function ManagementPageClient({
     !canUseVoyageursModule
       ? undefined
       : section === "incidents" && may("proces_verbaux", "creer")
-      ? () => setDialog("penalty")
-      : section === "rapports" && may("rapports", "creer")
-        ? () => setDialog("schedule")
-        : section === "comptabilite" &&
-            may("journal_comptable", "creer") &&
-            may("journee_comptable")
-          ? () => setDialog("journal")
-          : section === "recettes" && may("journee_comptable")
-            ? () => setDialog("revenue")
-            : section === "livrets" && may("livrets_horaires", "creer")
-              ? async () => {
-                  if (!E2E_MODE) {
-                    await createBooklet({
-                      label: `Livret ${new Date().toLocaleDateString("fr-FR")}`,
-                      description:
-                        "Brouillon créé depuis le portail de gestion",
-                      validFrom: Date.now(),
-                      validUntil: Date.now() + 90 * 24 * 60 * 60 * 1000,
-                    })
-                  }
-                  return "Le brouillon du livret a été créé."
-                }
-              : section === "tableau-de-bord" && may("rapports", "creer")
+        ? () => setDialog("penalty")
+        : section === "rapports" && may("rapports", "creer")
+          ? () => setDialog("schedule")
+          : section === "comptabilite" &&
+              may("journal_comptable", "creer") &&
+              may("journee_comptable")
+            ? () => setDialog("journal")
+            : section === "recettes" && may("journee_comptable")
+              ? () => setDialog("revenue")
+              : section === "livrets" && may("livrets_horaires", "creer")
                 ? async () => {
-                    const exported = E2E_MODE
-                      ? {
-                          filename: `setrag-ventes-${monthStart}-${today}.csv`,
-                          rowCount: 1,
-                          content:
-                            "Date;Canal;Net TTC\n2026-07-27;Guichet;1246500",
-                        }
-                      : await convex.query(
-                          api.functions.reporting.exportDailyCsv,
-                          { from: monthStart, to: today }
-                        )
-                    downloadTextFile(exported.filename, exported.content)
-                    return `${exported.filename} téléchargé · ${exported.rowCount} ligne(s).`
+                    if (!E2E_MODE) {
+                      await createBooklet({
+                        label: `Livret ${new Date().toLocaleDateString("fr-FR")}`,
+                        description:
+                          "Brouillon créé depuis le portail de gestion",
+                        validFrom: Date.now(),
+                        validUntil: Date.now() + 90 * 24 * 60 * 60 * 1000,
+                      })
+                    }
+                    return "Le brouillon du livret a été créé."
                   }
-                : section === "tarifs" && may("tarifs", "creer")
-                  ? () => setDialog("fare")
-                  : section === "yield" && may("yield", "creer")
-                    ? () => setDialog("yield")
-                    : section === "points-de-vente" &&
-                        may("referentiel", "creer")
-                      ? () => setDialog("point-of-sale")
-                      : section === "voyageurs" && may("controles")
-                        ? () => setDialog("manifest")
-                        : section === "utilisateurs" &&
-                            may("utilisateurs", "modifier")
-                          ? async () => {
-                              const result = await synchronizeDirectory({})
-                              if (!result.synchronized) {
-                                throw new Error(result.message)
-                              }
-                              return result.message
-                            }
-                          : section === "parametrage" &&
-                              may("parametrage", "modifier")
-                            ? () => setDialog("settings")
-                            : section === "integrations" && may("integrations")
-                              ? async () => {
-                                  const result = await retryIntegrationFailures(
-                                    {}
-                                  )
-                                  return result.count === 0
-                                    ? "Aucun échec à relancer."
-                                    : result.requested
-                                      ? `${result.count} échec(s) transmis à l’administration IT pour reprise.`
-                                      : `${result.count} traitement(s) remis en file.`
+                : section === "tableau-de-bord" && may("rapports", "creer")
+                  ? async () => {
+                      const exported = E2E_MODE
+                        ? {
+                            filename: `setrag-ventes-${monthStart}-${today}.csv`,
+                            rowCount: 1,
+                            content:
+                              "Date;Canal;Net TTC\n2026-07-27;Guichet;1246500",
+                          }
+                        : await convex.query(
+                            api.functions.reporting.exportDailyCsv,
+                            { from: monthStart, to: today }
+                          )
+                      downloadTextFile(exported.filename, exported.content)
+                      return `${exported.filename} téléchargé · ${exported.rowCount} ligne(s).`
+                    }
+                  : section === "tarifs" && may("tarifs", "creer")
+                    ? () => setDialog("fare")
+                    : section === "yield" && may("yield", "creer")
+                      ? () => setDialog("yield")
+                      : section === "points-de-vente" &&
+                          may("referentiel", "creer")
+                        ? () => setDialog("point-of-sale")
+                        : section === "voyageurs" && may("controles")
+                          ? () => setDialog("manifest")
+                          : section === "utilisateurs" &&
+                              may("utilisateurs", "modifier")
+                            ? async () => {
+                                const result = await synchronizeDirectory({})
+                                if (!result.synchronized) {
+                                  throw new Error(result.message)
                                 }
-                              : undefined
+                                return result.message
+                              }
+                            : section === "parametrage" &&
+                                may("parametrage", "modifier")
+                              ? () => setDialog("settings")
+                              : section === "integrations" &&
+                                  may("integrations")
+                                ? async () => {
+                                    const result =
+                                      await retryIntegrationFailures({})
+                                    return result.count === 0
+                                      ? "Aucun échec à relancer."
+                                      : result.requested
+                                        ? `${result.count} échec(s) transmis à l’administration IT pour reprise.`
+                                        : `${result.count} traitement(s) remis en file.`
+                                  }
+                                : undefined
 
   async function submitPenalty(draft: PenaltyDraft) {
     if (E2E_MODE) return "PV-DEMO-0143"

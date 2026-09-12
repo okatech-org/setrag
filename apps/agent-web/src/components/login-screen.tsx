@@ -92,7 +92,15 @@ export function LoginScreen({
         email: account.email,
         password: account.password,
       })
-      if (account.landingPath) window.location.assign(account.landingPath)
+      // Le rôle prime sur le chemin servi par le backend : l'accueil d'un
+      // persona peut évoluer côté frontend sans attendre un déploiement Convex.
+      const role = asAppRole(account.role)
+      const landingPath = role
+        ? portalForRole(role) === "vente"
+          ? "/vente"
+          : defaultManagementPath(role)
+        : account.landingPath
+      if (landingPath) window.location.assign(landingPath)
     } catch {
       setMessage({
         tone: "danger",

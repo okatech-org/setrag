@@ -6,11 +6,11 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: {
-    default: "SETRAG — Portail de vente",
-    template: "%s · Vente SETRAG",
+    default: "SETRAG — Portail Agent",
+    template: "%s · Portail Agent SETRAG",
   },
   description:
-    "Portail SETRAG pour la vente au guichet, l’encaissement et le suivi des opérations.",
+    "Portail SETRAG : vente au guichet, back-office, modules d’entreprise et pilotage de la Direction générale.",
   icons: {
     icon: { url: "/setrag-logo.png", type: "image/png" },
     apple: "/setrag-logo.png",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#15704A",
+  themeColor: "#0F52A0",
   width: "device-width",
   initialScale: 1,
 }
@@ -29,7 +29,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body className="bg-background-muted min-h-dvh">
+      <body className="min-h-dvh bg-canvas">
         <Providers>
           {children}
           <Toaster position="bottom-right" richColors />

@@ -55,9 +55,18 @@ export const STAFF_WIDE_PATHS = ["/etudes"] as const
  */
 export const MODULE_ADMINISTRATION_PATH = "/administration" as const
 
+/**
+ * Espace de pilotage de la Direction générale : des rubriques de lecture
+ * consolidée, pas un module. Les données restent gardées côté serveur par les
+ * ressources module et `rapports/consulter` ; la liste des rôles n'est élargie
+ * qu'après validation SETRAG.
+ */
+export const EXECUTIVE_PATH = "/direction" as const
+export const EXECUTIVE_ROLES: readonly AppRole[] = ["direction_generale"]
+
 const PRIMARY_MANAGEMENT_PATHS: Partial<Record<AppRole, string>> = {
   admin_it: MODULE_ADMINISTRATION_PATH,
-  direction_generale: "/gestion",
+  direction_generale: EXECUTIVE_PATH,
   audit_risques: "/securite",
   juriste: "/bureautique",
   regulateur_cotraf: "/cotraf",
@@ -128,6 +137,9 @@ export function canAccessManagementPath(role: AppRole, pathname: string) {
   }
   if (STAFF_WIDE_PATHS.some((href) => matchesPath(href, pathname))) {
     return isInternalRole(role)
+  }
+  if (matchesPath(EXECUTIVE_PATH, pathname)) {
+    return EXECUTIVE_ROLES.includes(role)
   }
   const destination = [...MANAGEMENT_DESTINATIONS, ...ENTERPRISE_DESTINATIONS]
     .sort((left, right) => right.href.length - left.href.length)

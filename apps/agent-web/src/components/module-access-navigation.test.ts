@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   canAdministerModules,
   canPerformModuleActions,
+  canShowDecisionResources,
   fallbackModuleAccesses,
   visibleModuleAccesses,
   type ModuleNavigationAccess,
@@ -83,5 +84,12 @@ describe("navigation latérale des modules", () => {
         { accessLevel: "utilisation" },
       ])
     ).toBe(false)
+  })
+
+  it("réserve les ressources de décision aux rôles internes", () => {
+    expect(canShowDecisionResources("direction_generale")).toBe(true)
+    expect(canShowDecisionResources("admin_it")).toBe(true)
+    expect(canShowDecisionResources("representant_comilog")).toBe(false)
+    expect(canShowDecisionResources(undefined)).toBe(false)
   })
 })

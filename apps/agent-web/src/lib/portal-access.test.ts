@@ -10,6 +10,7 @@ import {
 
 import {
   ENTERPRISE_DESTINATIONS,
+  EXECUTIVE_PATH,
   MANAGEMENT_DESTINATIONS,
   MODULE_ADMINISTRATION_PATH,
   SELLER_ROLES,
@@ -166,6 +167,31 @@ describe("accès aux portails par profil", () => {
     ).toBe(false)
   })
 
+  it("réserve l’espace Direction générale au seul rôle exécutif", () => {
+    expect(canAccessManagementPath("direction_generale", EXECUTIVE_PATH)).toBe(
+      true
+    )
+    expect(
+      canAccessManagementPath(
+        "direction_generale",
+        `${EXECUTIVE_PATH}/finances`
+      )
+    ).toBe(true)
+    for (const role of [
+      "chef_vente",
+      "admin_it",
+      "audit_risques",
+      "representant_etat",
+      "voyageur",
+    ] as const) {
+      expect(canAccessManagementPath(role, EXECUTIVE_PATH), role).toBe(false)
+      expect(
+        canAccessManagementPath(role, `${EXECUTIVE_PATH}/risques`),
+        role
+      ).toBe(false)
+    }
+  })
+
   it("n’ouvre aucun module d’entreprise à un chemin inconnu", () => {
     for (const role of APP_ROLES) {
       expect(canAccessManagementPath(role, "/module-inconnu"), role).toBe(false)
@@ -189,7 +215,7 @@ describe("accès aux portails par profil", () => {
   it("oriente les acteurs vers leur espace métier primaire", () => {
     const expectedPaths: Partial<Record<AppRole, string>> = {
       admin_it: "/administration",
-      direction_generale: "/gestion",
+      direction_generale: "/direction",
       audit_risques: "/securite",
       juriste: "/bureautique",
       regulateur_cotraf: "/cotraf",

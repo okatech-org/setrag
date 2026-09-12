@@ -185,6 +185,7 @@ describe("structure du portail vendeur", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("Connecté au système central")).toBeInTheDocument()
     expect(screen.getByText("Contenu vendeur")).toBeInTheDocument()
+    expect(screen.getAllByRole("img", { name: "SETRAG" })).toHaveLength(1)
     expect(
       screen.queryByRole("link", { name: "Gestion" })
     ).not.toBeInTheDocument()

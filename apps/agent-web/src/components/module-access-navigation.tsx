@@ -6,6 +6,7 @@ import {
   FileText,
   Landmark,
   Radio,
+  ScrollText,
   ShieldCheck,
   Sparkles,
   Ticket,
@@ -22,15 +23,14 @@ import { useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import {
   MODULE_MANIFEST,
-  moduleAccessLevelLabel,
   type ModuleAccessLevel,
   type ModuleCode,
 } from "@workspace/backend/modules"
 import { can, type AppRole } from "@workspace/backend/permissions"
-import { Badge } from "@workspace/ui/components/badge"
 import { cn } from "@workspace/ui/lib/utils"
 
 import { PLATFORM_MODULES_API_ENABLED } from "@/lib/platform-modules-runtime"
+import { EXECUTIVE_PATH, canAccessManagementPath } from "@/lib/portal-access"
 
 const E2E_MODE =
   process.env.NODE_ENV !== "production" &&
@@ -110,9 +110,7 @@ export function canPerformModuleActions(
   level: ModuleAccessLevel | null | undefined,
   role?: AppRole
 ) {
-  return (
-    role !== "admin_it" && (level === "utilisation" || level === "admin")
-  )
+  return role !== "admin_it" && (level === "utilisation" || level === "admin")
 }
 
 export function canAdministerModules(
@@ -123,6 +121,15 @@ export function canAdministerModules(
     role === "admin_it" ||
     decisions.some(({ accessLevel }) => accessLevel === "admin")
   )
+}
+
+export function canShowDecisionResources(role: AppRole | undefined) {
+  return Boolean(role && canAccessManagementPath(role, "/etudes"))
+}
+
+/** L'espace Direction générale n'est proposé qu'aux rôles qui peuvent l'ouvrir. */
+export function canShowExecutiveSpace(role: AppRole | undefined) {
+  return Boolean(role && canAccessManagementPath(role, EXECUTIVE_PATH))
 }
 
 export function useModuleNavigationAccesses(role: AppRole | undefined) {
@@ -140,30 +147,6 @@ export function useModuleNavigationAccesses(role: AppRole | undefined) {
     decisions,
     loading: shouldUseApi && liveAccesses === undefined,
   }
-}
-
-export function ModuleAccessBadge({
-  level,
-  systemAdmin = false,
-  className,
-}: {
-  level: ModuleAccessLevel
-  systemAdmin?: boolean
-  className?: string
-}) {
-  return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "shrink-0 border-current/25 bg-current/10 text-[10px] leading-4 font-semibold text-inherit",
-        className
-      )}
-    >
-      {systemAdmin && level === "admin"
-        ? "Admin système"
-        : moduleAccessLevelLabel(level)}
-    </Badge>
-  )
 }
 
 function ModuleLinks({
@@ -188,7 +171,7 @@ function ModuleLinks({
         href={module.route as Route}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#D39E00] focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
+          "flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-warning focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
           active
             ? "bg-sidebar-primary text-sidebar-primary-foreground"
             : "text-sidebar-foreground hover:bg-sidebar-accent"
@@ -197,23 +180,64 @@ function ModuleLinks({
       >
         <Icon aria-hidden className="size-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">{module.label}</span>
-        {module.accessLevel ? (
-          <ModuleAccessBadge level={module.accessLevel} />
-        ) : null}
       </Link>
     )
   })
 }
 
+export function DecisionResourcesNavigation({
+  role,
+  onNavigate,
+}: {
+  role: AppRole | undefined
+  onNavigate?: () => void
+}) {
+  const pathname = usePathname()
+
+  if (!canShowDecisionResources(role)) return null
+
+  const active = pathname === "/etudes" || pathname.startsWith("/etudes/")
+
+  return (
+    <section aria-labelledby="decision-resources-heading" className="min-w-0">
+      <h2
+        id="decision-resources-heading"
+        className="px-3 text-[10px] font-semibold tracking-widest text-sidebar-foreground/65 uppercase"
+      >
+        Ressources de décision
+      </h2>
+      <nav aria-label="Ressources de décision" className="mt-2 grid gap-1">
+        <Link
+          href="/etudes"
+          aria-current={active ? "page" : undefined}
+          className={cn(
+            "flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-xs font-semibold transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-warning focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
+            active
+              ? "bg-sidebar-primary text-sidebar-primary-foreground"
+              : "text-sidebar-foreground hover:bg-sidebar-accent"
+          )}
+          onClick={onNavigate}
+        >
+          <ScrollText aria-hidden className="size-5 shrink-0" />
+          <span>Audit &amp; documents</span>
+        </Link>
+      </nav>
+    </section>
+  )
+}
+
 export function ModuleSidebarNavigation({
   role,
   activeModuleCode,
+  leading,
   children,
   onNavigate,
   className,
 }: {
   role: AppRole | undefined
-  activeModuleCode: ModuleCode
+  activeModuleCode?: ModuleCode
+  /** Rubriques d'un espace transverse, rendues avant « Mes modules ». */
+  leading?: ReactNode
   children?: ReactNode
   onNavigate?: () => void
   className?: string
@@ -223,47 +247,40 @@ export function ModuleSidebarNavigation({
   const activeModule = MODULE_MANIFEST.find(
     (module) => module.code === activeModuleCode
   )
-  const activeAccess = accesses.find(
-    (access) => access.code === activeModuleCode
-  )
 
   return (
     <div className={cn("grid content-start gap-5", className)}>
-      <section
-        aria-labelledby="active-module-heading"
-        className="rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3"
-      >
-        <p className="text-[10px] font-semibold tracking-widest text-sidebar-foreground/65 uppercase">
-          Module actif
-        </p>
-        <div className="mt-2 flex items-center gap-2">
-          {activeModule ? (
+      {activeModule ? (
+        <section
+          aria-labelledby="active-module-heading"
+          className="rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3"
+        >
+          <p className="text-[10px] font-semibold tracking-widest text-sidebar-foreground/65 uppercase">
+            Module actif
+          </p>
+          <div className="mt-2 flex items-center gap-2">
             <span className="rounded-md bg-sidebar-primary/15 p-2 text-sidebar-primary-foreground">
               {(() => {
                 const Icon = MODULE_ICONS[activeModule.code]
                 return <Icon aria-hidden className="size-5" />
               })()}
             </span>
-          ) : null}
-          <div className="min-w-0 flex-1">
-            <h2
-              id="active-module-heading"
-              className="truncate text-sm font-bold text-sidebar-foreground"
-            >
-              Module {activeModule?.label ?? "métier"}
-            </h2>
-            <p className="text-[11px] text-sidebar-foreground/65">
-              Espace opérationnel
-            </p>
+            <div className="min-w-0 flex-1">
+              <h2
+                id="active-module-heading"
+                className="truncate text-sm font-bold text-sidebar-foreground"
+              >
+                Module {activeModule.label}
+              </h2>
+              <p className="text-[11px] text-sidebar-foreground/65">
+                Espace opérationnel
+              </p>
+            </div>
           </div>
-          {activeAccess?.accessLevel ? (
-            <ModuleAccessBadge
-              level={activeAccess.accessLevel}
-              systemAdmin={role === "admin_it"}
-            />
-          ) : null}
-        </div>
-      </section>
+        </section>
+      ) : null}
+
+      {leading}
 
       <section aria-labelledby="my-modules-heading" className="min-w-0">
         <h2
@@ -295,6 +312,8 @@ export function ModuleSidebarNavigation({
       </section>
 
       {children}
+
+      <DecisionResourcesNavigation role={role} onNavigate={onNavigate} />
     </div>
   )
 }
