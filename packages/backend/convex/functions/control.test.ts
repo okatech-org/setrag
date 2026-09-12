@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { api, internal } from "../_generated/api"
 import type { Id } from "../_generated/dataModel"
 import schema from "../schema"
@@ -1196,5 +1196,205 @@ describe("Conflits", () => {
     // Le contrôle reste en conflit : seul le superviseur peut le clore.
     const apres = await t.run(async (c) => c.db.get(scanId))
     expect(apres?.conflict).toBe(true)
+  })
+})
+
+describe("Synthèse agrégée des incidents et procès-verbaux", () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  const MARS_2026 = { from: "2026-03-01", to: "2026-03-31" }
+  const EN_MARS = Date.parse("2026-03-15T10:00:00Z")
+  const EN_AVRIL = Date.parse("2026-04-02T10:00:00Z")
+
+  async function fixture(t: ReturnType<typeof convexTest>) {
+    const net = await seedTrip(t)
+    const { userId: reporterId } = await asAgent(t, "controleur_train", net.pos)
+    await t.run(async (ctx) => {
+      await ctx.db.insert("moduleActivations", {
+        moduleCode: "securite",
+        environment: "test",
+        isEnabled: true,
+        reason: "Synthèse des contrôles",
+        correlationId: `securite-${reporterId}`,
+        changedBy: reporterId,
+        updatedAt: Date.now(),
+      })
+      const incident = {
+        reporterId,
+        tripId: net.tripId,
+        photoStorageIds: [],
+        offline: false,
+      }
+      await ctx.db.insert("incidents", {
+        ...incident,
+        category: "securite",
+        severity: "critique",
+        status: "ouvert",
+        description: "Obstacle signalé par Jean MOUSSAVOU",
+        reportedAt: EN_MARS,
+        clientId: "inc-1",
+      })
+      await ctx.db.insert("incidents", {
+        ...incident,
+        category: "medical",
+        severity: "important",
+        status: "en_cours",
+        description: "Malaise voyageur voiture 4",
+        reportedAt: EN_MARS,
+        clientId: "inc-2",
+      })
+      await ctx.db.insert("incidents", {
+        ...incident,
+        category: "technique",
+        severity: "information",
+        status: "resolu",
+        description: "Climatisation hors service",
+        reportedAt: EN_AVRIL,
+        clientId: "inc-hors-periode",
+      })
+      const penalty = {
+        agentId: reporterId,
+        tripId: net.tripId,
+        offline: false,
+        offender: {
+          lastName: "NDONG",
+          firstName: "Paul",
+          documentNumber: "GA-123456",
+          declined: false,
+        },
+      }
+      await ctx.db.insert("procesVerbaux", {
+        ...penalty,
+        number: "PV-1",
+        reason: "sans_titre",
+        amountXaf: 10_000,
+        status: "paye",
+        issuedAt: EN_MARS,
+        clientId: "pv-1",
+      })
+      await ctx.db.insert("procesVerbaux", {
+        ...penalty,
+        number: "PV-2",
+        reason: "classe_superieure",
+        amountXaf: 3_000,
+        status: "annule",
+        issuedAt: EN_MARS,
+        clientId: "pv-2",
+      })
+      await ctx.db.insert("procesVerbaux", {
+        ...penalty,
+        number: "PV-3",
+        reason: "sans_titre",
+        amountXaf: 7_000,
+        status: "emis",
+        issuedAt: EN_AVRIL,
+        clientId: "pv-hors-periode",
+      })
+    })
+    return { net, reporterId }
+  }
+
+  it("résume la période pour la Direction générale sans aucune donnée nominative", async () => {
+    vi.stubEnv("SETRAG_ENV", "test")
+    const t = convexTest(schema, modules)
+    const { net } = await fixture(t)
+    const { ctx } = await asAgent(t, "direction_generale", net.pos, "-dg")
+
+    const summary = await ctx.query(
+      api.functions.control.networkSummary,
+      MARS_2026
+    )
+
+    expect(summary.scope).toBe("reseau")
+    expect(summary.dataState).toBe("operational")
+    expect(summary.truncated).toBe(false)
+    expect(summary.incidents.total).toBe(2)
+    expect(summary.incidents.criticalOpen).toBe(1)
+    expect(summary.incidents.byCategory.medical).toBe(1)
+    expect(summary.penalties.total).toBe(2)
+    expect(summary.penalties.amountXaf).toBe(10_000)
+    expect(summary.penalties.byStatus.annule).toEqual({
+      count: 1,
+      amountXaf: 3_000,
+    })
+
+    const serialized = JSON.stringify(summary)
+    for (const personal of [
+      "MOUSSAVOU",
+      "Malaise",
+      "NDONG",
+      "GA-123456",
+      "voiture 4",
+      String(net.tripId),
+    ]) {
+      expect(serialized).not.toContain(personal)
+    }
+  })
+
+  it("refuse un rôle qui ne lit pas le module Sécurité", async () => {
+    vi.stubEnv("SETRAG_ENV", "test")
+    const t = convexTest(schema, modules)
+    const { net } = await fixture(t)
+    const { ctx } = await asAgent(t, "vendeur_guichet", net.pos, "-vente")
+
+    await expect(
+      ctx.query(api.functions.control.networkSummary, MARS_2026)
+    ).rejects.toThrow(/Accès refusé/)
+  })
+
+  it("ferme la vue réseau à une affectation limitée à un site", async () => {
+    vi.stubEnv("SETRAG_ENV", "test")
+    const t = convexTest(schema, modules)
+    const { net, reporterId } = await fixture(t)
+    const { ctx, userId } = await asAgent(
+      t,
+      "vendeur_guichet",
+      net.pos,
+      "-site"
+    )
+    await t.run(async (db) => {
+      const now = Date.now()
+      const organizationId = await db.db.insert("organizations", {
+        code: "ORG-BOO-SECURITE",
+        name: "Sécurité Booué",
+        type: "direction",
+        isActive: true,
+        createdBy: reporterId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      const siteId = await db.db.insert("sites", {
+        code: "BOO",
+        name: "Booué",
+        type: "gare",
+        organizationId,
+        stationId: net.boo,
+        isActive: true,
+        createdBy: reporterId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      await db.db.insert("userAssignments", {
+        userId,
+        role: "inspecteur_securite",
+        organizationId,
+        siteId,
+        validFrom: now - 1_000,
+        isActive: true,
+        createdBy: reporterId,
+        createdAt: now,
+        updatedAt: now,
+      })
+    })
+
+    const summary = await ctx.query(
+      api.functions.control.networkSummary,
+      MARS_2026
+    )
+
+    expect(summary.scope).toBe("restreint")
+    expect(summary.dataState).toBe("restricted")
+    expect(summary.incidents.total).toBe(0)
+    expect(summary.penalties.total).toBe(0)
   })
 })

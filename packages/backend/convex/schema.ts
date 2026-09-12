@@ -1039,7 +1039,9 @@ export default defineSchema({
     .index("by_trip", ["tripId"])
     .index("by_agent", ["agentId"])
     .index("by_status", ["status"])
-    .index("by_client_id", ["clientId"]),
+    .index("by_client_id", ["clientId"])
+    // Lecture par période pour la synthèse agrégée (`control.networkSummary`).
+    .index("by_issued_at", ["issuedAt"]),
 
   incidents: defineTable({
     reporterId: v.id("users"),
@@ -1074,7 +1076,9 @@ export default defineSchema({
     .index("by_trip", ["tripId"])
     .index("by_status", ["status"])
     .index("by_severity", ["severity"])
-    .index("by_client_id", ["clientId"]),
+    .index("by_client_id", ["clientId"])
+    // Lecture par période pour la synthèse agrégée (`control.networkSummary`).
+    .index("by_reported_at", ["reportedAt"]),
 
   /* ══════════════════ Interopérabilité & conformité ═════════════════════ */
 

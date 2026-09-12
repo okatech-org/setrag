@@ -63,6 +63,7 @@ import type * as model_approval from "../model/approval.js";
 import type * as model_aztec from "../model/aztec.js";
 import type * as model_barcode from "../model/barcode.js";
 import type * as model_calendar from "../model/calendar.js";
+import type * as model_controlSummary from "../model/controlSummary.js";
 import type * as model_demoPersonas from "../model/demoPersonas.js";
 import type * as model_fares from "../model/fares.js";
 import type * as model_inventory from "../model/inventory.js";
@@ -178,6 +179,7 @@ declare const fullApi: ApiFromModules<{
   "model/aztec": typeof model_aztec;
   "model/barcode": typeof model_barcode;
   "model/calendar": typeof model_calendar;
+  "model/controlSummary": typeof model_controlSummary;
   "model/demoPersonas": typeof model_demoPersonas;
   "model/fares": typeof model_fares;
   "model/inventory": typeof model_inventory;

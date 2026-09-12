@@ -214,6 +214,8 @@ describe("Catalogue des acteurs SETRAG", () => {
       ...MODULE_MANIFEST.map(({ route }) => route),
       "/vente",
       "/administration",
+      // Espace de pilotage de la Direction générale (agent-web, EXECUTIVE_PATH).
+      "/direction",
     ])
     for (const profile of DEMO_PERSONAS) {
       expect(routes.has(profile.landingPath)).toBe(true)

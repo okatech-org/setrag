@@ -294,14 +294,26 @@ describe("Droits opérationnels par métier", () => {
     }
   })
 
-  it("limite la Direction générale à la consultation des rapports", () => {
-    expect(permissionsFor("direction_generale", "rapports")).toEqual([
-      "consulter",
-    ])
-    for (const permission of PERMISSIONS) {
-      expect(can("direction_generale", "rapports", permission)).toBe(
-        permission === "consulter"
-      )
+  it("limite la Direction générale à la consultation des rapports et des places", () => {
+    for (const resource of ["rapports", "places"] as const) {
+      expect(permissionsFor("direction_generale", resource)).toEqual([
+        "consulter",
+      ])
+      for (const permission of PERMISSIONS) {
+        expect(can("direction_generale", resource, permission)).toBe(
+          permission === "consulter"
+        )
+      }
+    }
+    // Les registres nominatifs restent fermés : seule leur synthèse est lue.
+    for (const resource of [
+      "incidents",
+      "proces_verbaux",
+      "controles",
+      "donnees_voyageurs",
+      "caisse",
+    ] as const) {
+      expect(permissionsFor("direction_generale", resource)).toEqual([])
     }
 
     expect(permissionsFor("admin_it", "rapports")).toEqual(["consulter"])

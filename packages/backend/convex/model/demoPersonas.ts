@@ -51,7 +51,7 @@ export const DEMO_PERSONAS = [
     actorType: "interne",
     group: "gouvernance",
     role: "direction_generale",
-    landingPath: "/gestion",
+    landingPath: "/direction",
     moduleCodes: [
       "voyageurs",
       "fret",

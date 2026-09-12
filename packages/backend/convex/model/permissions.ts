@@ -360,10 +360,17 @@ const MATRIX: Readonly<Record<AppRole, ResourceGrants>> = {
     journal_comptable: READ,
   },
 
-  /* Gouvernance : vision transverse, sans écriture opérationnelle. */
+  /*
+   * Gouvernance : vision transverse, sans écriture opérationnelle.
+   * `places` ouvre le remplissage par desserte et les blocages (réquisitions
+   * de l'État, délégations), données non nominatives. Les registres
+   * `incidents` et `proces_verbaux` restent fermés : la Direction générale
+   * en lit la synthèse agrégée et anonyme (`control.networkSummary`).
+   */
   direction_generale: {
     ...moduleGrants(MODULE_RESOURCES),
     rapports: READ,
+    places: READ,
   },
   audit_risques: moduleGrants(
     ["finance", "ged", "securite", "copilot"],
