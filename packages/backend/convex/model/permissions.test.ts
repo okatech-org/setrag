@@ -294,6 +294,22 @@ describe("Droits opérationnels par métier", () => {
     }
   })
 
+  it("limite la Direction générale à la consultation des rapports", () => {
+    expect(permissionsFor("direction_generale", "rapports")).toEqual([
+      "consulter",
+    ])
+    for (const permission of PERMISSIONS) {
+      expect(can("direction_generale", "rapports", permission)).toBe(
+        permission === "consulter"
+      )
+    }
+
+    expect(permissionsFor("admin_it", "rapports")).toEqual(["consulter"])
+    for (const role of EXTERNAL_STAKEHOLDER_ROLES) {
+      expect(permissionsFor(role, "rapports")).toEqual([])
+    }
+  })
+
   it("maintient toutes les parties prenantes externes en lecture seule", () => {
     for (const role of EXTERNAL_STAKEHOLDER_ROLES) {
       expect(accessibleResources(role).length).toBeGreaterThan(0)

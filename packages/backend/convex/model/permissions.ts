@@ -361,7 +361,10 @@ const MATRIX: Readonly<Record<AppRole, ResourceGrants>> = {
   },
 
   /* Gouvernance : vision transverse, sans écriture opérationnelle. */
-  direction_generale: moduleGrants(MODULE_RESOURCES),
+  direction_generale: {
+    ...moduleGrants(MODULE_RESOURCES),
+    rapports: READ,
+  },
   audit_risques: moduleGrants(
     ["finance", "ged", "securite", "copilot"],
     ["securite"]

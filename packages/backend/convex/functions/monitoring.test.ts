@@ -26,7 +26,7 @@ async function asAgent(t: ReturnType<typeof convexTest>, role: AppRole) {
       role,
       identitySource: "annuaire",
       isActive: true,
-    }),
+    })
   )
   return t.withIdentity({ subject: authId })
 }
@@ -44,6 +44,18 @@ describe("Bilan de santé", () => {
     expect(bilan.checkedAt).toBeGreaterThan(0)
   })
 
+  it("reste consultable par la Direction générale", async () => {
+    const t = convexTest(schema, modules)
+    const ctx = await asAgent(t, "direction_generale")
+
+    const bilan = await ctx.query(api.functions.monitoring.health, {})
+
+    expect(bilan.checkedAt).toBeGreaterThan(0)
+    expect(bilan.findings.map((finding) => finding.code)).toEqual([
+      "cle_de_demonstration",
+    ])
+  })
+
   it("remonte un déversement comptable enlisé", async () => {
     const t = convexTest(schema, modules)
     await t.run(async (c) =>
@@ -54,7 +66,7 @@ describe("Bilan de santé", () => {
         status: "en_attente",
         attempts: 0,
         createdAt: Date.now() - 40 * HEURE,
-      }),
+      })
     )
     const ctx = await asAgent(t, "responsable_kpi")
 
@@ -149,7 +161,7 @@ describe("Bilan de santé", () => {
     const t = convexTest(schema, modules)
     const ctx = await asAgent(t, "voyageur")
     await expect(
-      ctx.query(api.functions.monitoring.health, {}),
+      ctx.query(api.functions.monitoring.health, {})
     ).rejects.toThrow(/Accès refusé/)
   })
 })
@@ -175,7 +187,7 @@ describe("Contrôle planifié", () => {
         attempts: 5,
         lastError: "SAGE injoignable",
         createdAt: Date.now() - 2 * HEURE,
-      }),
+      })
     )
 
     const r = await t.mutation(internal.functions.monitoring.runHealthCheck, {})
@@ -207,7 +219,7 @@ describe("Détail d'une file bloquée", () => {
 
     const bloqués = await ctx.query(
       api.functions.monitoring.stuckOutboxEvents,
-      {},
+      {}
     )
     expect(bloqués.map((e) => e.entityId)).toEqual([
       "jour-40",
@@ -228,11 +240,11 @@ describe("Détail d'une file bloquée", () => {
         attempts: 1,
         createdAt: Date.now() - 100 * HEURE,
         sentAt: Date.now(),
-      }),
+      })
     )
     const ctx = await asAgent(t, "comptable")
     expect(
-      await ctx.query(api.functions.monitoring.stuckOutboxEvents, {}),
+      await ctx.query(api.functions.monitoring.stuckOutboxEvents, {})
     ).toEqual([])
   })
 })
