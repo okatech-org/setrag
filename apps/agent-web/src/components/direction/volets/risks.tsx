@@ -95,8 +95,10 @@ function CountTable({
 }) {
   const withAmount = rows.some((row) => row.amountXaf !== undefined)
   return (
-    <Table>
-      <TableCaption className="text-left">{caption}</TableCaption>
+    <Table className="caption-top">
+      <TableCaption className="mt-0 mb-2 text-left font-semibold text-ink">
+        {caption}
+      </TableCaption>
       <TableHeader>
         <TableRow>
           <TableHead>{header}</TableHead>
