@@ -32,7 +32,7 @@ const E2E_MODE =
   process.env.NEXT_PUBLIC_E2E_MODE === "1"
 const PUBLIC_TICKETING_URL =
   process.env.NEXT_PUBLIC_TICKETING_URL ??
-  "https://setrag-billetterie-web.vercel.app"
+  "https://setrag-billetterie-two.vercel.app"
 
 type Profile = NonNullable<
   FunctionReturnType<typeof api.functions.customers.me>

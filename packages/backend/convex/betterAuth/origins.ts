@@ -10,8 +10,9 @@ type AuthEnvironment = {
  * d'autres domaines sans remplacer cette liste minimale.
  */
 export const SETRAG_WEB_ORIGINS = [
-  "https://setrag-billetterie-web.vercel.app",
-  "https://setrag-agent-web.vercel.app",
+  "https://setrag-billetterie-two.vercel.app",
+  "https://setrag-agent.vercel.app",
+  "https://setrag-controlleur.vercel.app",
 ] as const
 
 const LOCAL_WEB_ORIGINS = [

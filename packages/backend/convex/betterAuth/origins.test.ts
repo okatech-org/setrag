@@ -7,7 +7,7 @@ import {
 } from "./origins"
 
 describe("origines de confiance Better Auth", () => {
-  it("autorise toujours les deux applications web de production", () => {
+  it("autorise toujours les trois applications web de production", () => {
     expect(trustedWebOrigins({})).toEqual([...SETRAG_WEB_ORIGINS])
   })
 
@@ -15,7 +15,7 @@ describe("origines de confiance Better Auth", () => {
     expect(
       trustedWebOrigins({
         TRUSTED_ORIGINS:
-          "https://partenaire.example, https://setrag-agent-web.vercel.app",
+          "https://partenaire.example, https://setrag-agent.vercel.app",
       })
     ).toEqual([...SETRAG_WEB_ORIGINS, "https://partenaire.example"])
   })

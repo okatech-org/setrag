@@ -171,7 +171,8 @@ export function Accueil() {
     return [Math.min(de.kilometerPoint, a.kilometerPoint), Math.max(de.kilometerPoint, a.kilometerPoint)]
   }, [gares, trajet])
 
-  const intermediaires = gares ? gares.length - 2 : null
+  // Les deux terminus exclus ; sans réseau chargé (base vide), on ne dit rien.
+  const intermediaires = gares && gares.length > 2 ? gares.length - 2 : null
 
   return (
     <>

@@ -362,7 +362,7 @@ export function LoginPageClient() {
     } else {
       window.location.replace(
         process.env.NEXT_PUBLIC_TICKETING_URL ??
-          "https://setrag-billetterie-web.vercel.app"
+          "https://setrag-billetterie-two.vercel.app"
       )
     }
   }, [isAuthenticated, isLoading, profile, router])

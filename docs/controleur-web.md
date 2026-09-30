@@ -262,7 +262,7 @@ l'ouverture de session est refusée par CORS avant même d'atteindre le mot de
 passe :
 
 ```bash
-cd packages/backend && bunx convex env set --prod TRUSTED_ORIGINS "https://setrag-billetterie-web.vercel.app,https://setrag-agent-web.vercel.app,https://<url-du-controleur>"
+cd packages/backend && bunx convex env set --prod TRUSTED_ORIGINS "https://setrag-billetterie-two.vercel.app,https://setrag-agent.vercel.app,https://setrag-controlleur.vercel.app"
 ```
 
 ### Le piège du plan Hobby
