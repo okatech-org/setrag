@@ -20,12 +20,12 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "has": [{ "type": "host", "value": { "pre": "agent." } }],
+      "has": [{ "type": "host", "value": { "pre": "agent" } }],
       "destination": { "service": "agent-web" }
     },
     {
       "source": "/(.*)",
-      "has": [{ "type": "host", "value": { "pre": "controle." } }],
+      "has": [{ "type": "host", "value": { "pre": "controle" } }],
       "destination": { "service": "controleur-web" }
     },
     {
