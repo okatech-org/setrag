@@ -140,7 +140,9 @@ describe("Vérification locale d'un titre", () => {
     // Deux circulations d'un même train peuvent coexister le même jour : le
     // motif doit nommer celle qui est embarquée, sinon l'agent voit « mauvaise
     // desserte » sur un titre qui est bien celui de son train.
-    expect(r.reason).toContain("TR-201")
+    // Avec le nom du billet, pas le code interne « TR-201 ».
+    expect(r.reason).toContain("l'Express 201")
+    expect(r.reason).not.toContain("TR-201")
     expect(r.reason).toMatch(/manifeste/i)
   })
 

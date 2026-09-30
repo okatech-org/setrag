@@ -45,6 +45,11 @@ export function toEmbarkedManifest(
       arrivalAt: s.arrivalAt,
       departureAt: s.departureAt,
     })),
+    // Un serveur plus ancien ne l'envoie pas : l'écran se rabat alors sur les
+    // voitures des titres (`compositionDe`).
+    composition: (
+      header as { composition?: ManifestHeader["composition"] }
+    ).composition?.map((coach) => ({ ...coach, seats: [...coach.seats] })),
     fare: header.fare,
     penalties: [...header.penalties],
     signing: header.signing,

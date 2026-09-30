@@ -24,6 +24,8 @@ import {
   type TicketPayload,
 } from "@workspace/backend/barcode"
 
+import { jour } from "../format"
+import { leTrain } from "../train"
 import type {
   EmbarkedManifest,
   EmbarkedSubscription,
@@ -160,7 +162,7 @@ export function verifyLocally(
       // devant un titre qu'il croit — à raison — être celui de son train.
       reason:
         scope === "mauvaise_desserte"
-          ? `Ce titre vaut pour une autre circulation que ${ctx.manifest.trainNumber} du ${formatDay(ctx.manifest.departureAt)} embarquée ici. Vérifiez que le manifeste téléchargé est celui de votre train.`
+          ? `Ce titre vaut pour une autre circulation que ${leTrain(ctx.manifest)} du ${formatDay(ctx.manifest.departureAt)} embarqué ici. Vérifiez que le manifeste téléchargé est celui de votre train.`
           : SCOPE_REASONS[scope],
       payload,
       ticket: ctx.ticket,
@@ -277,11 +279,9 @@ function firstValidScan(scans?: LocalScan[]): LocalScan | undefined {
     .sort((a, b) => a.scannedAt - b.scannedAt)[0]
 }
 
+/** « 30/09 », à l'heure de Libreville quel que soit le fuseau du terminal. */
 function formatDay(ms: number): string {
-  return new Date(ms).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-  })
+  return jour(ms)
 }
 
 /**
@@ -302,38 +302,4 @@ export function toScanResult(verdict: Verdict): ScanResult {
     default:
       return verdict
   }
-}
-
-/** Libellé affiché en tête de l'écran de verdict. */
-export const VERDICT_LABELS: Record<Verdict, string> = {
-  valide: "Valide",
-  abonnement: "Abonnement valide",
-  contrefait: "Signature invalide",
-  illisible: "Code illisible",
-  cle_hors_service: "Clé hors service",
-  mauvaise_desserte: "Mauvaise desserte",
-  hors_segment: "Hors segment",
-  expire: "Expiré",
-  annule: "Titre annulé",
-  rembourse: "Titre remboursé",
-  deja_controle: "Déjà contrôlé",
-  non_paye: "Non payé",
-  inconnu: "Statut inconnu",
-}
-
-/** Tonalité d'affichage — jamais seule porteuse de l'information. */
-export function verdictTone(
-  verdict: Verdict
-): "success" | "warning" | "danger" {
-  if (verdict === "valide" || verdict === "abonnement") return "success"
-  if (verdict === "deja_controle" || verdict === "inconnu") return "warning"
-  return "danger"
-}
-
-/** Ce que le terminal affirme au vu du seul code, sans manifeste. */
-export function verdictSource(result: VerificationResult): string {
-  if (result.payload === null) return "Lecture du code"
-  return result.fromManifest
-    ? "Manifeste embarqué"
-    : "Signature vérifiée localement"
 }

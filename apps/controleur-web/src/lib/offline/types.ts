@@ -65,6 +65,21 @@ export const QUEUE_PRIORITY: Record<QueueKind, number> = {
   scan: 3,
 }
 
+/**
+ * Place d'un incident dans la file, selon sa gravité.
+ *
+ * Seul l'incident critique passe en tête. Un incident important part après
+ * les procès-verbaux mais avant les ventes et les contrôles ; une simple
+ * information part avec le reste, après les contrôles. Les rangs
+ * intermédiaires sont fractionnaires pour ne pas renuméroter les écritures
+ * déjà en file sur les terminaux en service.
+ */
+export const INCIDENT_PRIORITY: Record<LocalIncident["severity"], number> = {
+  critique: 0,
+  important: 1.5,
+  information: 3.5,
+}
+
 export interface QueueEntry {
   /** Identifiant client de l'écriture métier — clé d'idempotence. */
   id: string
@@ -142,6 +157,19 @@ export interface PenaltyScaleRow {
   amountXaf: number
 }
 
+/** Une voiture de la composition du train, avec son plan de places. */
+export interface EmbarkedCoach {
+  /** Repère du référentiel : « V4 ». */
+  label: string
+  serviceClass: string
+  position: number
+  rowCount: number
+  columnCount: number
+  seatCount: number
+  standingCapacity: number
+  seats: Array<{ label: string; row: number; column: number }>
+}
+
 /** En-tête du manifeste : tout sauf les titres, qui arrivent par lots. */
 export interface EmbarkedManifest {
   tripId: string
@@ -154,6 +182,12 @@ export interface EmbarkedManifest {
   destinationName: string
   segmentCount: number
   stops: EmbarkedStop[]
+  /**
+   * Composition du train, dans l'ordre de la rame. Absente d'un manifeste
+   * téléchargé avant son ajout : l'écran se rabat alors sur les voitures des
+   * titres embarqués.
+   */
+  composition?: EmbarkedCoach[]
   fare: EmbarkedFare | null
   penalties: PenaltyScaleRow[]
   signing: { publicKey: string; keyVersion: number; isDemoKey: boolean }
@@ -235,6 +269,14 @@ export interface LocalPenalty {
   amountXaf: number
   paidOnBoard: boolean
   signature: "signe" | "refuse" | "aucune"
+  /**
+   * Tracé de la signature, en image PNG (URL de données), et son heure.
+   *
+   * Conservés sur le terminal seulement : le serveur n'a pas encore de champ
+   * pour les recevoir. Le procès-verbal, lui, existe dès son enregistrement.
+   */
+  signatureImage?: string
+  signedAt?: number
   issuedAt: number
   offline: boolean
   /** Numéro provisoire, opposable à bord avant toute synchronisation. */
@@ -277,8 +319,18 @@ export interface TerminalSettings {
    * à un agent qui vient précisément d'en choisir une.
    */
   activeTripLabel?: string
+  /** Voiture contrôlée, au repère du référentiel (« V4 »). */
   coachLabel: string
+  /**
+   * Rang (`sequence`) de la dernière gare atteinte — la base du verdict
+   * « hors segment ». Il avance quand l'agent confirme la gare proposée par
+   * l'horaire embarqué.
+   */
   currentStopIndex: number
+  /** Heure à laquelle l'agent a confirmé la dernière gare atteinte. */
+  currentStopConfirmedAt?: number
+  /** Heure de la dernière confirmation d'envoi par le serveur. */
+  lastSyncAt?: number
   torch: boolean
   deviceId: string
   /** Empreinte du code court de verrouillage, jamais le code lui-même. */
