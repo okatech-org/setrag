@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 
 import { SigneRuban, type SigneEtat } from "@workspace/ui/marque"
 
-import { Regles, Section } from "./elements"
+import { Regles, Section, SousTitre } from "./elements"
 
 const ETATS: { etat: SigneEtat; titre: string; texte: string }[] = [
   { etat: "repos", titre: "Repos", texte: "Bouton flottant, avatar des réponses. Rien ne bouge." },
@@ -36,7 +36,7 @@ export function SectionAssistant() {
   return (
     <Section
       id="ruban"
-      numero="09"
+      numero="10"
       titre="Ruban, l'assistant"
       intro="SETRAG pose la voie, Ruban roule dessus. Son signe est le ruban lui-même, posé en S, sans les rails : reconnaissable au premier coup d'œil, et toujours à sa place dans l'identité. Ruban répond aux questions, cherche un train, réserve et fait payer dans la conversation, sur le site, dans l'app et bientôt sur WhatsApp et Telegram."
     >
@@ -79,6 +79,103 @@ export function SectionAssistant() {
           </p>
         </div>
       </div>
+      <p className="text-small text-ink-muted">
+        Le nom et la voix restent à valider avec SETRAG. Ruban n’a ni visage ni âge et ne se présente jamais comme une personne. Son signe reprend
+        le tracé du S, sans les rails ni l’orange du logo.
+      </p>
+      <SousTitre>Placement et façon de parler</SousTitre>
+      <Regles
+        oui={{
+          titre: "À faire",
+          items: [
+            "Web : bouton en bas à droite, à 24 px des bords. Mobile : au-dessus de la barre d’onglets ; un appui long ouvre la voix.",
+            "Masquer le bouton pendant le paiement, sur le billet plein écran et quand le clavier est ouvert.",
+            "Dire l’heure, le prix ou le quai, puis ce que cela change. Deux phrases, puis une carte ; détailler sur demande.",
+            "Citer la source d’une information de trafic et dire quand l’information manque. Vouvoyer le voyageur.",
+          ],
+        }}
+        non={{
+          titre: "À éviter",
+          items: [
+            "Animer le bouton au repos, le faire rebondir ou le colorer en bleu SETRAG.",
+            "Remplacer le signe par une bulle de discussion ou des étincelles.",
+            "Plaisanter sur un retard ou ajouter des émojis à une réponse.",
+          ],
+        }}
+      />
+      <SousTitre>La conversation et ses cartes</SousTitre>
+      <div className="grid gap-3 md:grid-cols-2">
+        {[
+          ["Fenêtre web", "400 × 640 px, ancrée au bouton. Elle connaît la page et le trajet consultés ; la page /assistant donne accès à l’historique."],
+          ["Feuille mobile", "Elle s’ouvre au-dessus de la page, puis peut occuper tout l’écran. Le fil et les actions restent les mêmes."],
+          ["Cartes d’action", "Trajets, récapitulatif, paiement, billet ou modification : les composants de l’app dans le fil. Trois trajets au plus, deux boutons par carte."],
+          ["Après une action", "La carte traitée se replie en une ligne de résumé. Seule la dernière carte du fil reste active."],
+        ].map(([titre, texte]) => (
+          <div key={titre} className="rounded-lg border border-line bg-surface p-4">
+            <h4 className="font-semibold">{titre}</h4>
+            <p className="mt-1 text-small text-ink-muted">{texte}</p>
+          </div>
+        ))}
+      </div>
+      <SousTitre>La voix</SousTitre>
+      <p className="text-small text-ink-muted">
+        Le micro du champ dicte un message ; le bouton au signe lance la conversation orale. Tout ce que Ruban dit s’écrit aussi à l’écran,
+        avec les mêmes cartes que dans le fil écrit.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          ["Écoute", "Les mots s’écrivent pendant que le voyageur parle. Une pause de 1 s termine la phrase."],
+          ["Recherche", "Ruban annonce ce qu’il cherche. Pas plus de 3 s sans indication."],
+          ["Réponse", "Trois phrases au plus ; les heures se disent en toutes lettres. Le texte suit à l’écran."],
+          ["Interruption", "Le voyageur peut parler pendant la réponse : Ruban s’arrête et écoute."],
+        ].map(([titre, texte]) => (
+          <div key={titre} className="rounded-lg border border-line bg-surface p-4">
+            <h4 className="font-semibold">{titre}</h4>
+            <p className="mt-1 text-small text-ink-muted">{texte}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-small text-ink-muted">
+        Une réservation, une modification ou une annulation se confirme par un toucher ou par un « oui » après la relecture du récapitulatif.
+        Le paiement Mobile Money se valide sur le téléphone. Aucun code secret, code SMS ou numéro de carte n’est demandé à voix haute.
+      </p>
+      <SousTitre>Actions et confirmation</SousTitre>
+      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+        <table className="w-full min-w-[560px] text-left text-small">
+          <thead className="bg-surface-sunk"><tr><th className="p-3">Action</th><th className="p-3">Ce qui la déclenche</th></tr></thead>
+          <tbody className="divide-y divide-line">
+            {[
+              ["Chercher, répondre, suivre", "La question du voyageur."],
+              ["Tenir des places", "Le choix d’un trajet ; les places se libèrent après 15 min."],
+              ["Payer en Mobile Money", "Le bouton « Payer », puis la validation sur le téléphone."],
+              ["Payer par carte", "Un formulaire sécurisé ouvert hors du fil."],
+              ["Modifier", "La confirmation sur la carte avant / après."],
+              ["Annuler, rembourser", "Un bouton qui nomme le billet concerné."],
+            ].map(([action, declencheur]) => <tr key={action}><th scope="row" className="p-3 font-medium">{action}</th><td className="p-3 text-ink-muted">{declencheur}</td></tr>)}
+          </tbody>
+        </table>
+      </div>
+      <SousTitre>Le mouvement de Ruban</SousTitre>
+      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+        <table className="w-full min-w-[620px] text-left text-small">
+          <thead className="bg-surface-sunk"><tr><th className="p-3">Moment</th><th className="p-3">Mouvement</th><th className="p-3">Durée</th></tr></thead>
+          <tbody className="divide-y divide-line">
+            {[
+              ["Ouverture", "Montée depuis le bouton, sans rebond ; voile en fondu", "320 ms"],
+              ["Première ouverture", "Le signe se trace une fois", "700 ms"],
+              ["Réflexion", "Une rame parcourt le S après 400 ms d’attente", "1 600 ms, boucle"],
+              ["Réponse", "Le texte s’écrit ; la carte monte de 6 px", "14 mots/s · 200 ms"],
+              ["Écoute et parole", "L’épaisseur du ruban suit la voix", "Lissage 80 ms"],
+              ["Carte traitée", "Elle se replie en une ligne", "200 ms"],
+              ["Alerte", "Un point jaune apparaît, sans rebond", "200 ms"],
+            ].map(([moment, mouvement, duree]) => <tr key={moment}><th scope="row" className="p-3 font-medium">{moment}</th><td className="p-3 text-ink-muted">{mouvement}</td><td className="tabular p-3">{duree}</td></tr>)}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-small text-ink-muted">
+        Ruban utilise les mêmes fonctions et la même session que l’interface. Une action sensible passe par un brouillon, puis par la
+        confirmation du voyageur ; elle est inscrite au journal d’audit.
+      </p>
       <Regles
         oui={{
           titre: "Ce que fait Ruban",

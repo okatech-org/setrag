@@ -9,7 +9,7 @@ import { ToastBar } from "@workspace/ui/components/inline-message"
 import { LigneArrets } from "@workspace/ui/components/ligne-arrets"
 import { NavRuban } from "@workspace/ui/components/indicateur"
 import { Stepper } from "@workspace/ui/components/stepper"
-import { Chargeur } from "@workspace/ui/components/voie"
+import { Chargeur, Voie } from "@workspace/ui/components/voie"
 import { BandeauTrafic } from "@workspace/ui/voyage/bandeau-trafic"
 import { Billet } from "@workspace/ui/voyage/billet"
 import { CarteTrajet } from "@workspace/ui/voyage/carte-trajet"
@@ -41,6 +41,17 @@ const ARRETS = [
   { nom: "Lastourville", heure: "15:50", majeur: true },
 ]
 
+const LOTTIE = [
+  ["logo-anime", "3,3 s", "Démarrage de l’app"],
+  ["logo-anime-negatif", "3,3 s", "Démarrage en thème sombre"],
+  ["logo-anime-compact", "3,3 s", "Petits écrans, sans signature"],
+  ["symbole-anime", "2,8 s", "Formats carrés et vidéos courtes"],
+  ["chargement-voie", "1,6 s · boucle", "Attente longue sur mobile"],
+  ["chargement-s", "2,2 s · boucle", "Premier chargement plein écran"],
+  ["ruban-apparition", "700 ms", "Première ouverture de Ruban"],
+  ["ruban-reflexion", "1,6 s · boucle", "Réflexion de Ruban"],
+] as const
+
 function Rejouer({ onClick }: { onClick: () => void }) {
   return (
     <Button variant="ghost" size="sm" onClick={onClick}>
@@ -63,6 +74,7 @@ export function SectionMouvement() {
   const [messages, setMessages] = useState(0)
   const [feuille, setFeuille] = useState(false)
   const [logo, setLogo] = useState(0)
+  const [actualiser, setActualiser] = useState(0)
 
   const payer = () => {
     setEnCours(true)
@@ -80,6 +92,19 @@ export function SectionMouvement() {
       titre="Le mouvement"
       intro="Des animations qu'on ne remarque pas. Une seule chose bouge à la fois ; la réponse au doigt est immédiate ; l'information s'affiche tout de suite, l'animation l'accompagne sans la retenir ; les boucles sont réservées aux attentes réelles, toujours avec une phrase."
     >
+      <div className="grid gap-3 sm:grid-cols-2">
+        {[
+          ["Une chose à la fois", "Si le ruban glisse, le contenu attend ou se contente d’un fondu."],
+          ["Au doigt, tout de suite", "Une pression répond en 90 ms ; l’écran reste utilisable pendant toute l’animation."],
+          ["L’information d’abord", "Le prix, l’heure et le statut s’affichent sans attendre la fin du mouvement."],
+          ["Une boucle pour attendre", "La rame tourne seulement pendant une attente réelle, avec une phrase qui dit ce qu’on attend."],
+        ].map(([titre, texte]) => (
+          <div key={titre} className="rounded-lg border border-line bg-surface p-4">
+            <h3 className="font-semibold">{titre}</h3>
+            <p className="mt-1 text-small text-ink-muted">{texte}</p>
+          </div>
+        ))}
+      </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="overflow-hidden rounded-lg border border-line bg-surface">
           <h3 className="border-b border-line px-5 py-3 text-[15px] font-bold">Durées</h3>
@@ -343,6 +368,21 @@ export function SectionMouvement() {
           }
         />
         <Demo
+          scene={
+            <div key={actualiser} className="grid w-full max-w-[280px] justify-items-center gap-4 rounded-md border border-line bg-surface p-6">
+              <div className="relative w-full animate-[st-monte_620ms_var(--ease)_both]">
+                <Voie etat={actualiser > 0 ? "attente" : "vide"} className="w-full flex-none" />
+              </div>
+              <span className="text-small text-ink-muted">Tirez pour actualiser</span>
+            </div>
+          }
+          fiche={
+            <Fiche titre="Tirer pour actualiser" regles={[["Geste", "la voie suit le doigt, sans durée imposée"], ["Après le geste", "rame de 1 600 ms jusqu’à la réponse"]]}>
+              Le ruban prend le relais pendant l’actualisation. <Rejouer onClick={() => setActualiser((n) => n + 1)} />
+            </Fiche>
+          }
+        />
+        <Demo
           sceneClassName="bg-[var(--c-surface)]"
           scene={<LogoAnime variante="compact" rejouer={logo} className="w-full max-w-[300px]" />}
           fiche={
@@ -353,7 +393,40 @@ export function SectionMouvement() {
         />
       </div>
 
+      <SousTitre>Fichiers Lottie</SousTitre>
+      <p className="text-small text-ink-muted">
+        Ces fichiers reprennent la géométrie du logo et du signe. Les calques du logo sont nommés (traverses, rails, ruban, mot,
+        signature) pour adapter leur couleur dans l’app mobile. Les animations de chargement ne tournent que pendant une attente.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {LOTTIE.map(([nom, duree, usage]) => (
+          <div key={nom} className="flex min-w-0 items-start justify-between gap-3 rounded-lg border border-line bg-surface p-4">
+            <div className="min-w-0">
+              <h3 className="break-all font-mono text-[13px] font-semibold">{nom}</h3>
+              <p className="mt-1 text-small text-ink-muted">{usage}</p>
+              <p className="tabular mt-1 text-caption">{duree}</p>
+            </div>
+            <a href={`/charte/lottie/${nom}.json`} download className="shrink-0 text-small font-semibold text-accent-ink underline underline-offset-2">JSON</a>
+          </div>
+        ))}
+      </div>
+
       <SousTitre>Moins d’animations</SousTitre>
+      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+        <table className="w-full min-w-[570px] text-left text-small">
+          <thead className="bg-surface-sunk"><tr><th className="p-3">Animation</th><th className="p-3">Si le système réduit les animations</th></tr></thead>
+          <tbody className="divide-y divide-line">
+            {[
+              ["Logo animé", "Image finale affichée directement"],
+              ["Ruban : onglets, jours, trajet, étapes", "Il apparaît à sa place, en fondu de 120 ms"],
+              ["Rame et bouton en attente", "Ruban fixe au milieu de la voie ; la phrase reste"],
+              ["Billet émis", "Découpe remplie d’emblée ; vibration légère conservée"],
+              ["Résultats, bandeau, toast, feuille", "Fondu seul, sans déplacement"],
+              ["Rame du suivi", "Elle passe directement à sa nouvelle position"],
+            ].map(([animation, reduite]) => <tr key={animation}><th scope="row" className="p-3 font-medium">{animation}</th><td className="p-3 text-ink-muted">{reduite}</td></tr>)}
+          </tbody>
+        </table>
+      </div>
       <Regles
         oui={{
           titre: "Ce qui reste",
@@ -371,6 +444,18 @@ export function SectionMouvement() {
             "Le mouvement de la feuille : elle apparaît en fondu.",
           ],
         }}
+      />
+      <SousTitre>Mise en œuvre</SousTitre>
+      <div className="grid gap-3 md:grid-cols-3">
+        {[
+          ["Web", "Animer transform et opacity ; utiliser la propriété --p pour le remplissage du ruban. Charger le logo animé à la demande."],
+          ["Mobile", "Reanimated suit la courbe de glissement, Lottie joue le logo et les attentes, une vibration légère suit l’émission du billet."],
+          ["Hors de l’app", "Widgets et activités en direct n’ont pas d’animation propre. Le système anime le changement de valeur publié."],
+        ].map(([titre, texte]) => <div key={titre} className="rounded-lg border border-line bg-surface p-4"><h3 className="font-semibold">{titre}</h3><p className="mt-1 text-small text-ink-muted">{texte}</p></div>)}
+      </div>
+      <Regles
+        oui={{ titre: "Toujours", items: ["Animer transform et opacity à 60 images par seconde.", "Laisser l’écran utilisable pendant l’animation.", "Vérifier le mode « moins d’animations » avant une livraison."] }}
+        non={{ titre: "Jamais", items: ["Rebond, élastique ou secousse sur une erreur.", "Parallaxe, animation au défilement ou confettis.", "Roue qui tourne : l’attente est montrée par la voie."] }}
       />
     </Section>
   )

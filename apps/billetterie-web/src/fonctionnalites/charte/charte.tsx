@@ -19,6 +19,7 @@ import {
   SectionVoie,
 } from "./section-marque"
 import { SectionMouvement } from "./section-mouvement"
+import { SectionWidgets } from "./section-widgets"
 
 const SOMMAIRE = [
   ["concept", "Le concept"],
@@ -29,6 +30,7 @@ const SOMMAIRE = [
   ["voie", "La voie et le ruban"],
   ["mouvement", "Le mouvement"],
   ["composants", "Les composants"],
+  ["widgets", "Widgets & Live"],
   ["ruban", "Ruban, l'assistant"],
   ["ton", "Le ton"],
 ] as const
@@ -115,6 +117,7 @@ export function Charte() {
           <SectionVoie />
           <SectionMouvement />
           <SectionComposants />
+          <SectionWidgets />
           <SectionAssistant />
           <SectionTon />
         </div>

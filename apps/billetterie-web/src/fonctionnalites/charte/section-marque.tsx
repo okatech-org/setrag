@@ -479,7 +479,7 @@ export function SectionTon() {
   return (
     <Section
       id="ton"
-      numero="10"
+      numero="11"
       titre="Le ton"
       intro="Ce qu'on écrit compte autant que ce qu'on montre. Des phrases courtes, un fait, puis ce que ça change pour le voyageur."
     >

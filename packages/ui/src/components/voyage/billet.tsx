@@ -68,7 +68,7 @@ export function Billet({
   return (
     <article
       data-etat={etat}
-      className={cn("rounded-lg shadow-md", className)}
+      className={cn("overflow-hidden rounded-lg shadow-md", className)}
       // Le fond des encoches se résout ici, dans le thème de la page, avant
       // que l'intérieur ne passe en sombre.
       style={{ ...style, "--fond-decoupe": fondDecoupe } as React.CSSProperties}

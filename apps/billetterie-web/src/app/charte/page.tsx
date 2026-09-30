@@ -5,7 +5,7 @@ import { Charte } from "@/fonctionnalites/charte/charte"
 
 export const metadata: Metadata = {
   title: "Charte graphique",
-  description: "La charte graphique SETRAG : le logo, la voie et le ruban, les couleurs, le mouvement et tous les composants de la billetterie.",
+  description: "La charte graphique SETRAG : marque, mouvement, composants, widgets, activité en direct, Wallet et Ruban, l’assistant.",
 }
 
 export default function PageCharte() {
