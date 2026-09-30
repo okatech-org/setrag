@@ -110,7 +110,7 @@ async function loadPrintData(
     // sur le droit aux duplicatas, le contrôle reste celui du voyageur.
     if (!options.permissionsInternes) throw new Error("Titre introuvable")
     // Peut lever : c'est bien le comportement voulu pour un tiers.
-    assertPermission(user, "duplicatas", "consulter")
+    await assertPermission(ctx, user, "duplicatas", "consulter")
   }
 
   const trip = await ctx.db.get(ticket.tripId)

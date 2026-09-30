@@ -35,6 +35,14 @@ crons.daily(
   {}
 )
 
+/** Scelle chaque jour la fenêtre d'audit UTC entièrement révolue. */
+crons.daily(
+  "seal previous audit day",
+  { hourUTC: 0, minuteUTC: 30 },
+  internal.modules.platform.audit.sealPreviousUtcDay,
+  {}
+)
+
 /**
  * Libère les réservations en ligne dont le délai de règlement est écoulé.
  * Sans ce cron, une réservation abandonnée immobiliserait la place jusqu'au

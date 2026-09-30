@@ -283,6 +283,50 @@ cd packages/backend && bun run ressources   # policesDonnees.ts, walletImages.ts
 cd apps/billetterie-web && bun run icones   # public/marque/setrag-logo.png (e-mails)
 ```
 
+## Tableaux de bord
+
+Règles posées en construisant l’espace Direction générale
+(`apps/agent-web/src/components/direction/`), à reprendre pour tout futur
+écran de pilotage.
+
+- **Chiffres de tête.** Le chiffre seul en `text-time` (IBM Plex Mono,
+  25 px) ; l’unité va à part, sur un `text-mono-label`. **Ne jamais combiner
+  `.tabular` à `text-h*`, `text-small` ou `text-caption`** : `.tabular` est
+  déclarée en couche `base`, alors que les utilitaires de l’échelle
+  typographique sont des raccourcis `font: …` posés en couche `utilities` —
+  ce raccourci réinitialise la famille de police, et la combinaison retombe
+  en Schibsted Grotesk au lieu d’IBM Plex Mono. Dans une cellule de tableau,
+  la valeur reste `font-mono tabular-nums`.
+- **Largeur d’une cellule de chiffre.** « 12 345 678 FCFA » à 25 px mono
+  occupe environ 225 px, quand une cellule de grille à quatre colonnes sur
+  1280 px n’en fait que 156. Le chiffre seul tient dans la cellule ;
+  l’unité part sur un `span` séparé. Grille par défaut `md:grid-cols-2`,
+  quatre colonnes seulement à partir de `2xl`.
+- **Provenance.** Chaque valeur porte l’un des six états
+  `ExecutiveSourceState` — Chargement, Opérationnel, Synthétique · non
+  officiel, Aucune donnée, Non accessible, Non raccordé — rendus par
+  `ProvenanceTag` (`apps/agent-web/src/components/direction/provenance.tsx`).
+  Un mot par état, jamais la teinte seule ; une valeur synthétique n’est
+  jamais agrégée à une valeur opérationnelle.
+- **Graphiques.** HTML/SVG maison, jamais de librairie de graphiques —
+  `recharts` reste installé mais inutilisé. Une série se rend en barres CSS,
+  couleur unique `bg-accent-base`, sans palette. Chaque graphique est doublé
+  d’une table alternative repliée dans un `<details>`
+  (« Voir le tableau : … »), avec un `<caption>`. `--c-warning` ne porte
+  jamais seul un trait ou un contour : les contours passent par
+  `warning-ink`.
+- **Grilles et points de rupture.** `sm` 480 · `md` 768 · `lg` 1024
+  (bascule tiroir / carte latérale) · `xl` 1280 (passage à deux colonnes) ·
+  `2xl` 1536. Contenu borné à `max-w-7xl`. Le tri des variantes se fait en
+  CSS (`sm:`, `md:`…), jamais par une mesure de largeur en JavaScript.
+  `ink-faint` reste réservé au texte ≥ 18 px.
+- **Interdits repérés dans le dépôt.** `bg-surface-raised`, `bg-danger-base`,
+  `text-ink-subtle`, `bg-background-muted` : ces classes n’existent pas dans
+  `tokens.css`/`globals.css`, malgré leur présence dans plusieurs pages.
+  Aucune couleur hexadécimale en dur. Sur le focus, `outline-none` combiné à
+  `ring-2` n’apporte rien : l’anneau global de 3 px (`:focus-visible`)
+  suffit déjà.
+
 ## Faire évoluer la charte
 
 Les composants shadcn s'ajoutent depuis `packages/ui` et héritent des tokens

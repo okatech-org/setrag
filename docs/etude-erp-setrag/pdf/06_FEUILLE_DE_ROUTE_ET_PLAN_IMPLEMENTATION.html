@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Feuille de Route & Plan d'Implémentation</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 20mm 15mm 20mm 15mm;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.55;
+    font-size: 11pt;
+    background: #ffffff;
+    margin: 0;
+    padding: 0;
+  }
+  .header-bar {
+    border-bottom: 2px solid #0f2c59;
+    padding-bottom: 8px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-logo {
+    font-size: 16pt;
+    font-weight: 800;
+    color: #0f2c59;
+    letter-spacing: 1px;
+  }
+  .header-meta {
+    font-size: 9pt;
+    color: #64748b;
+    text-align: right;
+  }
+  .doc-h1 {
+    color: #0f2c59;
+    font-size: 19pt;
+    border-bottom: 2px solid #d39e00;
+    padding-bottom: 10px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    font-weight: 700;
+  }
+  .doc-h2 {
+    color: #1e3a8a;
+    font-size: 14pt;
+    margin-top: 25px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    border-left: 4px solid #d39e00;
+    padding-left: 10px;
+  }
+  .doc-h3 {
+    color: #0f2c59;
+    font-size: 12pt;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .doc-h4 {
+    color: #334155;
+    font-size: 11pt;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .paragraph {
+    margin: 6px 0;
+    text-align: justify;
+  }
+  .list-item, .num-item {
+    margin: 4px 0 4px 20px;
+  }
+  .doc-hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 25px 0;
+  }
+  .spacer {
+    height: 6px;
+  }
+  .table-container {
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+  th {
+    background-color: #0f2c59;
+    color: #ffffff;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid #0f2c59;
+  }
+  td {
+    padding: 7px 10px;
+    border: 1px solid #cbd5e1;
+    vertical-align: top;
+  }
+  tr:nth-child(even) {
+    background-color: #f8fafc;
+  }
+  .code-block {
+    background: #0f172a;
+    color: #f1f5f9;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 8.5pt;
+    margin: 15px 0;
+    overflow-x: auto;
+    border-left: 4px solid #d39e00;
+  }
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+  strong {
+    color: #0f172a;
+  }
+  .footer {
+    margin-top: 40px;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 10px;
+    font-size: 8pt;
+    color: #64748b;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+  <div class="header-bar">
+    <div class="header-logo">SETRAG · TRANSGABONAIS</div>
+    <div class="header-meta">
+      <strong>RÉPUBLIQUE GABONAISE</strong><br>
+      Direction des Systèmes d'Information & Projets Métiers
+    </div>
+  </div>
+  
+  <h1 class='doc-h1'>Document 06 — Feuille de Route Stratégique, Plan d'Implémentation & Continuité d'Activité (PCA/PRA)</h1>
+<div class='spacer'></div>
+<p class='paragraph'><strong>Projet :</strong> SETRAG Enterprise Operating System (SI Intégré Ferroviaire)  </p>
+<p class='paragraph'><strong>Entité :</strong> Société d'Exploitation du Transgabonais (SETRAG) — République Gabonaise  </p>
+<p class='paragraph'><strong>Référence :</strong> ROADMAP-IMPL-SET-2026-V1.0  </p>
+<p class='paragraph'><strong>Date d'étude :</strong> Septembre 2026  </p>
+<p class='paragraph'><strong>Expertise :</strong> Direction de Projet SI, Urbanisation & Conduite du Changement  </p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>1. Calendrier Prévisionnel et Phasage de Déploiement</h2>
+<div class='spacer'></div>
+<p class='paragraph'>Le déploiement d'un Système d'Exploitation d'Entreprise couvrant 648 km de ligne, des flux industriels de 7 millions de tonnes de manganèse et plus de 1 500 collaborateurs exige une approche par paliers progressifs (<em>iterative milestones</em>) pour éviter toute rupture d'exploitation.</p>
+<div class='spacer'></div>
+<div class='code-block'><pre>
+                          FEUILLE DE ROUTE STRATÉGIQUE (PHASES 1 À 4)
+===================================================================================================
+ [PHASE 1 : MOIS 1-4]   SOCLE MODULAIRE, CONSOLIDATION VOYAGEURS &amp; BUREAUTIQUE D&#x27;ENTREPRISE
+                        - Nouvelle barre de navigation de niveau entreprise (Module Switcher)
+                        - Déploiement de la GED, du Parapheur Électronique et de la Messagerie Interne
+                        - Raccordement temps réel des 89 guichets existants
+
+ [PHASE 2 : MOIS 5-8]   FRET INDUSTRIEL (MANGANÈSE / BOIS) &amp; FINANCES OHADA / FISCALITÉ DGI
+                        - Gestion des expéditions COMILOG (Moanda-Owendo) et pesage dynamique
+                        - Gestion de la filière bois vers Nkok et des conteneurs portuaires
+                        - Comptabilité générale SYSCOHADA révisé et déclarations TVA/CSS DGI
+
+ [PHASE 3 : MOIS 9-14]  EXPLOITATION COTRAF, GMAO DU MATÉRIEL ROULANT &amp; RH / PAIE GABON
+                        - Graphique numérique de circulation espace-temps en voie unique
+                        - GMAO des locomotives et wagons (ateliers d&#x27;Owendo et Booué)
+                        - Moteur de paie gabonais (IRPP, TCS, CNSS, CNAMGS) et roulements 3x8
+
+ [PHASE 4 : MOIS 15-20] INFRASTRUCTURES PRN, SÉCURITÉ ARTF &amp; IA MÉTIER (SETRAG COPILOT)
+                        - Cartographie kilométrique du PRN (traverses béton, géométrie de voie)
+                        - Registre réglementaire de sécurité ARTF et gestion environnementale Lopé
+                        - IA d&#x27;optimisation des croisements ferroviaires et maintenance prédictive
+===================================================================================================
+</pre></div>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>2. Architecture Technique et Traitement des Données</h2>
+<div class='spacer'></div>
+<p class='paragraph'>L'infrastructure repose sur le monorepo unifié existant, étendu pour répondre aux exigences industrielles :</p>
+<li class='list-item'><strong>Frontend Applicatif :</strong> Next.js 16 avec React 19 et Turbopack. L'interface utilise le Design System SETRAG (Tailwind 4, composants Radix/shadcn).</li>
+<li class='list-item'><strong>Moteur de Données & Transactionnel :</strong> Convex 1.42. Offre des transactions ACID instantanées pour les stocks de places, les assignations de sillons et les réservations de fret.</li>
+<li class='list-item'><strong>Réseau Déconnecté (Edge Offline-First) :</strong> Pour les 15 gares isolées et les chantiers de voie en forêt équatoriale, utilisation de Service Workers PWA et de réplication locale IndexedDB (technologie validée sur <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>controleur-web</code>).</li>
+<li class='list-item'><strong>Passerelles d'Interconnexion Industrielle :</strong></li>
+<p class='paragraph'>  - Connecteurs ponts-bascules (Moanda et Owendo) via WebSockets sécurisés.</p>
+<p class='paragraph'>  - Interface bancaire et Mobile Money (Airtel Money B2B, Moov Money B2B, GIMAC/BEAC).</p>
+<p class='paragraph'>  - Passerelle EDI avec les douanes (SYDONIA World) et la DGI (télé-déclaration e-tax).</p>
+<p class='paragraph'>  - Connecteur bilatéral avec le progiciel financier SAGE X3 V12 de la SETRAG.</p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>3. Matrice des Responsabilités (RACI) de la Gouvernance Projet</h2>
+<div class='spacer'></div>
+<div class='table-container'><table>
+<thead><tr><th>Phase / Livrable</th><th>Direction Générale (DG)</th><th>DSI / Prestataire OkaTech</th><th>Direction Métier Concerne</th><th>ARTF / Ministère</th></tr></thead><tbody>
+<tr><td><strong>Cadrage & Validation Architecturale</strong></td><td><strong>A</strong> (Approbateur)</td><td><strong>R</strong> (Réalisateur)</td><td><strong>C</strong> (Consulté)</td><td><strong>I</strong> (Informé)</td></tr>
+<tr><td><strong>Phase 1 : Bureautique & GED</strong></td><td><strong>I</strong></td><td><strong>R</strong></td><td><strong>C</strong> (Secrétariat & Services)</td><td><strong>I</strong></td></tr>
+<tr><td><strong>Phase 2 : Fret Minier & Bois</strong></td><td><strong>A</strong></td><td><strong>R</strong></td><td><strong>C</strong> (DCFV & COMILOG)</td><td><strong>I</strong></td></tr>
+<tr><td><strong>Phase 2 : Finances & Fiscalité</strong></td><td><strong>A</strong></td><td><strong>R</strong></td><td><strong>C</strong> (DFC / Fiscalistes)</td><td><strong>C</strong> (DGI Gabon)</td></tr>
+<tr><td><strong>Phase 3 : COTRAF & GMAO</strong></td><td><strong>A</strong></td><td><strong>R</strong></td><td><strong>C</strong> (DEF / DMAT)</td><td><strong>C</strong> (ARTF)</td></tr>
+<tr><td><strong>Phase 3 : RH & Paie Gabonaise</strong></td><td><strong>A</strong></td><td><strong>R</strong></td><td><strong>C</strong> (DRH / Partenaires Sociaux)</td><td><strong>I</strong> (CNSS/CNAMGS)</td></tr>
+<tr><td><strong>Phase 4 : IA & Infrastructures PRN</strong></td><td><strong>A</strong></td><td><strong>R</strong></td><td><strong>C</strong> (DINFRA / Bailleurs AFD)</td><td><strong>I</strong></td></tr>
+</tbody></table></div>
+<div class='spacer'></div>
+<p class='paragraph'><em>(Légende : R = Responsable de réalisation, A = Approbateur final, C = Consulté, I = Informé)</em></p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>4. Plan de Continuité d'Activité (PCA) et Plan de Reprise d'Activité (PRA)</h2>
+<div class='spacer'></div>
+<p class='paragraph'>Le Transgabonais étant l'unique voie d'approvisionnement ferroviaire de la nation, toute indisponibilité du système supérieur à 2 heures a des conséquences critiques sur l'exportation du manganèse et le ravitaillement des provinces.</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>4.1 Dispositif de Haute Disponibilité (PCA)</h3>
+<li class='list-item'><strong>Hébergement Hybride Résilient :</strong> Déploiement des services web et de la base Convex sur une infrastructure Cloud certifiée Tier III+ à haute redondance, doublée d'un réplica miroir sur site au datacenter du siège de la SETRAG à Owendo.</li>
+<li class='list-item'><strong>Réseau Télécoms Dédié :</strong> Exploitation prioritaire de la fibre optique privée de la SETRAG longeant la voie ferrée de PK 0 à PK 648, avec basculement automatique sur liaison satellitaire (Starlink / VSAT) en cas de rupture de câble par engin de chantier ou intempérie.</li>
+<li class='list-item'><strong>Autonomie des Postes Locaux :</strong> Chaque gare dispose d'une instance de cache local lui permettant d'émettre des billets et d'enregistrer des passages de trains pendant 72 heures sans connexion au serveur central.</li>
+<div class='spacer'></div>
+<h3 class='doc-h3'>4.2 Procédure de Reprise d'Activité après Sinistre (PRA)</h3>
+<li class='list-item'><strong>RPO (Recovery Point Objective) :</strong> Zéro perte de données transactionnelles (RPO < 1 seconde grâce aux journaux de mutations WAL synchronisés).</li>
+<li class='list-item'><strong>RTO (Recovery Time Objective) :</strong> Reprise nominale des opérations en moins de 15 minutes en cas de sinistre majeur sur le serveur primaire.</li>
+<li class='list-item'><strong>Plan de Secours Papier (Mode Dégradé Rétrograde) :</strong> Maintien en gare des carnets de secours à souche papier pré-imprimés et numérotés pour la billetterie et le fret, avec protocole de saisie de rattrapage dès rétablissement du réseau.</li>
+  
+  <div class="footer">
+    <div>Projet : SETRAG Enterprise Operating System — Document Officiel d'Ingénierie</div>
+    <div>Confidentiel · Tous droits réservés OkaTech / SETRAG 2026</div>
+  </div>
+</body>
+</html>

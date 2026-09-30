@@ -11,21 +11,27 @@ pour qui le maintiendra.
 Un ADR ne se réécrit pas quand la décision change : on en ajoute un nouveau
 qui remplace le précédent, et l'ancien passe en `remplacé par`.
 
-| # | Décision | Statut |
-|---|---|---|
-| [0001](0001-convex-comme-socle.md) | Convex comme socle applicatif | accepté |
-| [0002](0002-logique-metier-pure-isolee.md) | Logique métier pure isolée dans `convex/model/` | accepté |
-| [0003](0003-inventaire-par-masques-de-bits.md) | Inventaire des places par masques de bits sur les segments | accepté |
-| [0004](0004-vente-en-une-mutation.md) | Toute la vente dans une seule mutation | accepté |
-| [0005](0005-matrice-de-droits-declarative.md) | Matrice de droits déclarative plutôt que rôles en dur | accepté |
-| [0006](0006-authentification-decouplee.md) | Identité lue via `ctx.auth`, découplée de Better Auth | accepté |
-| [0007](0007-titre-autoporteur-signe.md) | Titre auto-porteur signé Ed25519, CBOR canonique, sans compression | accepté |
-| [0008](0008-rasterisation-aztec-maison.md) | Rastérisation du symbole Aztec écrite à la main | accepté |
-| [0009](0009-pdf-en-action-hors-transaction.md) | Le billet PDF est produit par une action, hors de la vente | accepté |
-| [0010](0010-strategie-de-test-a-deux-etages.md) | Stratégie de test à deux étages : `convex-test` et backend réel | accepté |
-| [0011](0011-dates-de-service-en-arithmetique-fixe.md) | Dates de service en arithmétique fixe UTC+1 | accepté |
-| [0012](0012-tarification-conforme-au-cdc.md) | La tarification suit le CDC, pas les pratiques du secteur | accepté |
-| [0013](0013-comptabilite-en-outbox.md) | Interface comptable SAGE X3 en outbox | accepté |
+| #                                                                 | Décision                                                                | Statut               |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------- |
+| [0001](0001-convex-comme-socle.md)                                | Convex comme socle applicatif                                           | accepté              |
+| [0002](0002-logique-metier-pure-isolee.md)                        | Logique métier pure isolée dans `convex/model/`                         | accepté              |
+| [0003](0003-inventaire-par-masques-de-bits.md)                    | Inventaire des places par masques de bits sur les segments              | accepté              |
+| [0004](0004-vente-en-une-mutation.md)                             | Toute la vente dans une seule mutation                                  | accepté              |
+| [0005](0005-matrice-de-droits-declarative.md)                     | Matrice de droits déclarative plutôt que rôles en dur                   | accepté              |
+| [0006](0006-authentification-decouplee.md)                        | Identité lue via `ctx.auth`, découplée de Better Auth                   | accepté              |
+| [0007](0007-titre-autoporteur-signe.md)                           | Titre auto-porteur signé Ed25519, CBOR canonique, sans compression      | accepté              |
+| [0008](0008-rasterisation-aztec-maison.md)                        | Rastérisation du symbole Aztec écrite à la main                         | accepté              |
+| [0009](0009-pdf-en-action-hors-transaction.md)                    | Le billet PDF est produit par une action, hors de la vente              | accepté              |
+| [0010](0010-strategie-de-test-a-deux-etages.md)                   | Stratégie de test à deux étages : `convex-test` et backend réel         | accepté              |
+| [0011](0011-dates-de-service-en-arithmetique-fixe.md)             | Dates de service en arithmétique fixe UTC+1                             | accepté              |
+| [0012](0012-tarification-conforme-au-cdc.md)                      | La tarification suit le CDC, pas les pratiques du secteur               | accepté              |
+| [0013](0013-comptabilite-en-outbox.md)                            | Interface comptable SAGE X3 en outbox                                   | accepté              |
+| [0014](0014-monolithe-modulaire-et-frontiere-de-surete-cotraf.md) | Monolithe modulaire et frontière de sûreté COTRAF                       | accepté sous réserve |
+| [0015](0015-outbox-plateforme-et-scellement-audit.md)             | Outbox plateforme versionnée et scellement de l’audit                   | accepté sous réserve |
+| [0016](0016-documents-versionnes-et-approbations-generiques.md)   | Documents versionnés et approbations génériques                         | accepté sous réserve |
+| [0017](0017-pca-pra-objectifs-et-preuves.md)                      | Objectifs PCA/PRA et preuves d’exercice                                 | accepté sous réserve |
+| [0018](0018-finance-ohada-et-regles-fiscales-versionnees.md)      | Finance OHADA et règles fiscales versionnées                            | accepté sous réserve |
+| [0019](0019-direction-generale-syntheses-agregees.md)             | Direction générale : synthèses agrégées plutôt que registres nominatifs | accepté sous réserve |
 
 ## Fils conducteurs
 

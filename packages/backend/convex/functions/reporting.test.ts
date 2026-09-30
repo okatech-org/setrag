@@ -23,7 +23,7 @@ async function asUser(t: ReturnType<typeof convexTest>, role: AppRole) {
       role,
       identitySource: "annuaire",
       isActive: true,
-    }),
+    })
   )
   return t.withIdentity({ subject: authId })
 }
@@ -52,7 +52,7 @@ async function seedDay(
     ttc: number
     tickets?: number
     status?: "confirmee" | "en_attente_paiement" | "expiree"
-  }>,
+  }>
 ) {
   return await t.run(async (ctx) => {
     // Un titre référence une desserte et des gares réelles : les identifiants
@@ -194,7 +194,7 @@ describe("Cumuls journaliers", () => {
     expect(r.buckets).toBe(2)
 
     const lignes = await t.run(async (c) =>
-      c.db.query("dailyMetrics").collect(),
+      c.db.query("dailyMetrics").collect()
     )
     const guichet = lignes.find((l) => l.channel === "guichet")!
     expect(guichet.salesCount).toBe(1)
@@ -222,7 +222,7 @@ describe("Cumuls journaliers", () => {
       accountingDayId: dayId,
     })
     const lignes = await t.run(async (c) =>
-      c.db.query("dailyMetrics").collect(),
+      c.db.query("dailyMetrics").collect()
     )
     // Une réservation non réglée n'a rien produit : elle ne doit pas gonfler
     // le chiffre d'affaires.
@@ -241,12 +241,12 @@ describe("Cumuls journaliers", () => {
     })
     const second = await t.mutation(
       internal.functions.rollup.rollupAccountingDay,
-      { accountingDayId: dayId },
+      { accountingDayId: dayId }
     )
     expect(second.replaced).toBe(1)
 
     const lignes = await t.run(async (c) =>
-      c.db.query("dailyMetrics").collect(),
+      c.db.query("dailyMetrics").collect()
     )
     expect(lignes).toHaveLength(1)
     expect(lignes[0]!.grossTtc).toBe(4_000)
@@ -263,14 +263,16 @@ describe("Cumuls journaliers", () => {
 
     const r = await t.mutation(
       internal.functions.rollup.backfillDailyMetrics,
-      {},
+      {}
     )
     await drainScheduler(t)
     // La reprise planifie une mutation par journée : boucler dans une seule
     // transaction ferait sauter le plafond de lectures dès la dixième.
     expect(r.scheduled).toBe(2)
 
-    const lignes = await t.run(async (c) => c.db.query("dailyMetrics").collect())
+    const lignes = await t.run(async (c) =>
+      c.db.query("dailyMetrics").collect()
+    )
     expect(lignes.map((l) => l.date).sort()).toEqual([
       "2026-06-04",
       "2026-06-05",
@@ -315,6 +317,18 @@ describe("Tableau de bord", () => {
     expect(b.revenue.variation.pct).toBeNull()
   })
 
+  it("reste consultable par la Direction générale", async () => {
+    const t = convexTest(schema, modules)
+    const ctx = await asUser(t, "direction_generale")
+    const b = await ctx.query(api.functions.reporting.dashboard, {
+      from: "2026-01-01",
+      to: "2026-01-31",
+    })
+
+    expect(b.hasData).toBe(false)
+    expect(b.period.days).toBe(31)
+  })
+
   it("est refusé à un rôle sans droit sur les rapports", async () => {
     const t = convexTest(schema, modules)
     const ctx = await asUser(t, "vendeur_guichet")
@@ -322,7 +336,7 @@ describe("Tableau de bord", () => {
       ctx.query(api.functions.reporting.dashboard, {
         from: "2026-06-01",
         to: "2026-06-30",
-      }),
+      })
     ).rejects.toThrow(/Accès refusé/)
   })
 })
@@ -364,7 +378,10 @@ describe("Ventilations", () => {
   it("nomme les points de vente au lieu d'afficher leur identifiant", async () => {
     const t = convexTest(schema, modules)
     const ctx = await fixture(t)
-    const parts = await ctx.query(api.functions.reporting.byPointOfSale, période)
+    const parts = await ctx.query(
+      api.functions.reporting.byPointOfSale,
+      période
+    )
     expect(parts[0]!.label).toContain("PV-2026-06-10")
   })
 
@@ -418,7 +435,7 @@ describe("Export CSV", () => {
       ctx.query(api.functions.reporting.exportDailyCsv, {
         from: "2026-06-12",
         to: "2026-06-12",
-      }),
+      })
     ).rejects.toThrow(/Accès refusé/)
   })
 })

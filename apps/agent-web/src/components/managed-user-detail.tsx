@@ -12,24 +12,9 @@ import { Field, Input, SelectNative } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
 
 import { asAppRole, canRole } from "@/lib/portal-access"
+import { ROLE_LABELS, ROLES } from "@/lib/roles"
 import { ManagementDetailShell } from "./management-detail-shell"
 import { usePortalSession } from "./portal-guard"
-
-const ROLES = [
-  ["voyageur", "Voyageur"],
-  ["vendeur_guichet", "Vendeur guichet"],
-  ["vendeur_agence", "Vendeur agence"],
-  ["taxateur", "Taxateur"],
-  ["controleur_train", "Contrôleur train"],
-  ["controleur_recettes", "Contrôleur recettes"],
-  ["chef_gare", "Chef de gare"],
-  ["comptable", "Comptable"],
-  ["responsable_kpi", "Responsable KPI"],
-  ["admin_fonctionnel", "Administrateur fonctionnel"],
-  ["admin_it", "Administrateur technique"],
-] as const
-
-const ROLE_LABELS = Object.fromEntries(ROLES)
 
 export function ManagedUserDetail({ userId }: { userId: string }) {
   const session = usePortalSession()

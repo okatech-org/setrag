@@ -11,8 +11,6 @@ import {
   FileWarning,
   Gauge,
   Landmark,
-  LogOut,
-  Menu,
   Network,
   Percent,
   Receipt,
@@ -26,10 +24,9 @@ import {
   WifiOff,
   X,
 } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ReactNode, useEffect, useState } from "react"
+import { ReactNode, useState } from "react"
 
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -40,13 +37,18 @@ import type {
   PointOfSaleSummary,
   SellerIdentity,
 } from "@/lib/agent-data"
-import { formatTime, initials, sellerDisplayName } from "@/lib/format"
+import { formatTime } from "@/lib/format"
 import {
   asAppRole,
   canAccessManagementPath,
   canAccessSalePath,
 } from "@/lib/portal-access"
 import { usePortalSession } from "./portal-guard"
+import { EnterpriseHeader, enterpriseSidebarClassName } from "./enterprise-nav"
+import {
+  DecisionResourcesNavigation,
+  ModuleSidebarNavigation,
+} from "./module-access-navigation"
 
 interface SellerShellProps {
   seller: SellerIdentity
@@ -113,7 +115,6 @@ export function SellerShell({
   children,
 }: SellerShellProps) {
   const pathname = usePathname()
-  const [clock, setClock] = useState<Date | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const portalSession = usePortalSession()
   const role = asAppRole(seller.role)
@@ -128,118 +129,112 @@ export function SellerShell({
     : navigation
   const effectiveSignOut = portalSession?.signOut ?? onSignOut
 
-  useEffect(() => {
-    const update = () => setClock(new Date())
-    update()
-    const timer = window.setInterval(update, 30_000)
-    return () => window.clearInterval(timer)
-  }, [])
-
   return (
-    <div className="min-h-dvh bg-canvas">
-      <header className="sticky top-0 z-30 flex h-18 items-center gap-3 border-b border-line bg-surface px-4 shadow-sm lg:px-6">
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="lg:hidden"
-          aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((current) => !current)}
-        >
-          {menuOpen ? <X /> : <Menu />}
-        </Button>
+    <div className="flex min-h-dvh flex-col bg-canvas">
+      <EnterpriseHeader
+        space={portal === "vente" ? "Vente" : "Gestion"}
+        scope={pointOfSale.name}
+        user={{
+          firstName: seller.firstName,
+          lastName: seller.lastName,
+          matricule: seller.matricule,
+          role,
+        }}
+        menu={{
+          open: menuOpen,
+          controls: "seller-navigation-sidebar",
+          onToggle: () => setMenuOpen((current) => !current),
+        }}
+        onSignOut={effectiveSignOut}
+        signingOut={portalSession?.signingOut}
+      />
 
-        <Image
-          src="/setrag-logo.png"
-          alt="SETRAG"
-          width={118}
-          height={42}
-          priority
-          className="h-10 w-auto"
-        />
-
-        <div
-          className="ml-3 hidden items-center rounded-pill bg-surface-sunk p-1 md:flex"
-          aria-label="Espace actif"
-        >
-          <span className="text-small rounded-pill bg-ink px-4 py-2 font-semibold text-ink-inverse">
-            {portal === "vente" ? "Vente" : "Gestion"}
-          </span>
-        </div>
-
-        <div className="ml-auto hidden min-w-0 text-right md:block">
-          <p className="text-small truncate font-semibold">
-            {pointOfSale.name}
-          </p>
-          <p className="text-caption text-ink-muted">
-            {sellerDisplayName(seller.firstName, seller.lastName)}
-            {seller.matricule ? ` · ${seller.matricule}` : ""}
-          </p>
-        </div>
-
-        <div className="hidden h-8 w-px bg-line sm:block" />
-        <span className="tabular text-small hidden min-w-12 text-center font-semibold sm:block">
-          {clock ? formatTime(clock) : "--:--"}
-        </span>
-
-        <div
-          className="text-small flex size-10 items-center justify-center rounded-full bg-accent-soft font-bold text-accent-ink"
-          aria-label={`Agent ${sellerDisplayName(seller.firstName, seller.lastName)}`}
-        >
-          {initials(seller.firstName, seller.lastName)}
-        </div>
-
-        {effectiveSignOut ? (
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label="Se déconnecter"
-            onClick={effectiveSignOut}
-          >
-            <LogOut />
-          </Button>
-        ) : null}
-      </header>
-
-      <div className="flex min-w-0">
+      <div className="flex min-w-0 flex-1 lg:gap-6 lg:px-6">
         <aside
-          className={cn(
-            "fixed inset-y-18 left-0 z-20 flex w-72 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar p-4 text-sidebar-foreground transition-transform lg:sticky lg:top-18 lg:h-[calc(100dvh-4.5rem)] lg:translate-x-0",
-            menuOpen ? "translate-x-0" : "-translate-x-full"
-          )}
+          id="seller-navigation-sidebar"
+          aria-label="Navigation latérale"
+          className={enterpriseSidebarClassName(menuOpen)}
         >
-          <nav
-            aria-label={`Navigation du portail de ${portal}`}
-            className="grid gap-1.5"
-          >
-            {authorizedNavigation.map(({ href, label, icon: Icon }) => {
-              const active =
-                pathname === href ||
-                (href === "/vente" &&
-                  (pathname.startsWith("/vente/billet") ||
-                    pathname.startsWith("/vente/encaissement") ||
-                    pathname.startsWith("/vente/confirmation")))
-              const classes = cn(
-                "text-small flex min-h-11 items-center gap-3 rounded-md px-3 font-semibold",
-                active
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent"
-              )
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={classes}
-                  onClick={() => setMenuOpen(false)}
+          <div className="mb-4 flex min-h-11 items-center justify-between lg:hidden">
+            <span className="text-xs font-bold tracking-widest uppercase">
+              Navigation
+            </span>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="Fermer la navigation"
+              onClick={() => setMenuOpen(false)}
+            >
+              <X />
+            </Button>
+          </div>
+          {(() => {
+            const sectionNavigation = (
+              <section
+                aria-label={
+                  portal === "gestion"
+                    ? "Rubriques de gestion"
+                    : "Rubriques de vente"
+                }
+              >
+                {portal === "gestion" ? (
+                  <h2 className="px-3 text-[10px] font-semibold tracking-widest text-sidebar-foreground/65 uppercase">
+                    Rubriques de gestion
+                  </h2>
+                ) : null}
+                <nav
+                  aria-label={`Navigation du portail de ${portal}`}
+                  className={cn("grid gap-1.5", portal === "gestion" && "mt-2")}
                 >
-                  <Icon className="size-5" />
-                  {label}
-                </Link>
-              )
-            })}
-          </nav>
+                  {authorizedNavigation.map(({ href, label, icon: Icon }) => {
+                    const active =
+                      pathname === href ||
+                      (href === "/vente" &&
+                        (pathname.startsWith("/vente/billet") ||
+                          pathname.startsWith("/vente/encaissement") ||
+                          pathname.startsWith("/vente/confirmation")))
+                    const classes = cn(
+                      "text-small flex min-h-11 items-center gap-3 rounded-md px-3 font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-warning focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
+                      active
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent"
+                    )
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        aria-current={active ? "page" : undefined}
+                        className={classes}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <Icon aria-hidden className="size-5" />
+                        {label}
+                      </Link>
+                    )
+                  })}
+                </nav>
+              </section>
+            )
+
+            return portal === "gestion" ? (
+              <ModuleSidebarNavigation
+                role={role}
+                activeModuleCode="voyageurs"
+                onNavigate={() => setMenuOpen(false)}
+              >
+                {sectionNavigation}
+              </ModuleSidebarNavigation>
+            ) : (
+              <div className="grid gap-5">
+                {sectionNavigation}
+                <DecisionResourcesNavigation
+                  role={role}
+                  onNavigate={() => setMenuOpen(false)}
+                />
+              </div>
+            )
+          })()}
 
           <div className="mt-auto grid gap-3 border-t border-sidebar-border pt-4">
             <div className="flex items-center gap-3">
@@ -279,12 +274,12 @@ export function SellerShell({
           <button
             type="button"
             aria-label="Fermer le menu"
-            className="fixed inset-0 top-18 z-10 bg-ink/30 lg:hidden"
+            className="fixed inset-0 z-40 bg-ink/30 lg:hidden"
             onClick={() => setMenuOpen(false)}
           />
         ) : null}
 
-        <main className="w-full min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main className="w-full min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-4">
           {children}
         </main>
       </div>

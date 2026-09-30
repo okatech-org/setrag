@@ -1,8 +1,14 @@
-import { internalMutation } from "../_generated/server"
+import { v } from "convex/values"
+import { internal } from "../_generated/api"
+import { internalAction, internalMutation } from "../_generated/server"
 import type { Doc } from "../_generated/dataModel"
 import type { MutationCtx } from "../_generated/server"
+import { createAuth } from "../betterAuth/auth"
 import { performCounterSale } from "../functions/sales"
 import { toServiceDate } from "../model/calendar"
+import { configuredDemoAccounts, DEMO_PERSONAS } from "../model/demoPersonas"
+import { MODULE_CODES } from "../modules/platform/catalog"
+import { currentPlatformEnvironment } from "../modules/platform/environment"
 
 const PASSENGERS = [
   ["Ariane", "MBADINGA", "F"],
@@ -14,6 +20,205 @@ const PASSENGERS = [
   ["Chantal", "MOUSSAVOU", "F"],
   ["Félix", "MBOUMBA", "M"],
 ] as const
+
+/**
+ * Crée ou réaligne le profil applicatif d'une identité Better Auth de démo.
+ * Les arguments métier sont dérivés du catalogue côté mutation afin qu'une
+ * action interne ne puisse pas injecter un rôle ou des modules arbitraires.
+ */
+export const upsertPersonaProfile = internalMutation({
+  args: {
+    key: v.string(),
+    authId: v.string(),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const profile = DEMO_PERSONAS.find(({ key }) => key === args.key)
+    if (!profile)
+      throw new Error(`Profil de démonstration inconnu : ${args.key}`)
+
+    const email = args.email.trim().toLowerCase()
+    const byEmail = await ctx.db
+      .query("users")
+      .withIndex("by_email", (query) => query.eq("email", email))
+      .unique()
+    const byAuthId = await ctx.db
+      .query("users")
+      .withIndex("by_authId", (query) => query.eq("authId", args.authId))
+      .unique()
+    if (byEmail && byAuthId && byEmail._id !== byAuthId._id) {
+      throw new Error(
+        `Collision de profils de démonstration pour ${email} (${args.authId}).`
+      )
+    }
+
+    const existing = byEmail ?? byAuthId
+    const demoPointOfSale =
+      profile.key === "agent" && !existing?.pointOfSaleId
+        ? await ctx.db
+            .query("pointsOfSale")
+            .withIndex("by_code", (query) => query.eq("code", "OWE-PV"))
+            .unique()
+        : null
+    const userValues = {
+      authId: args.authId,
+      email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      role: profile.role,
+      identitySource: "local" as const,
+      isActive: true,
+      ...(existing?.pointOfSaleId
+        ? { pointOfSaleId: existing.pointOfSaleId }
+        : demoPointOfSale
+          ? { pointOfSaleId: demoPointOfSale._id }
+          : {}),
+    }
+    const userId = existing
+      ? existing._id
+      : await ctx.db.insert("users", userValues)
+    if (existing) await ctx.db.patch(existing._id, userValues)
+
+    const environment = currentPlatformEnvironment()
+    const updatedAt = Date.now()
+    let createdActivations = 0
+    let updatedActivations = 0
+    for (const moduleCode of MODULE_CODES) {
+      const candidates = await ctx.db
+        .query("moduleActivations")
+        .withIndex("by_environment_module", (query) =>
+          query.eq("environment", environment).eq("moduleCode", moduleCode)
+        )
+        .collect()
+      const activation = candidates.find(
+        (candidate) =>
+          candidate.userId === userId && candidate.siteId === undefined
+      )
+      const values = {
+        moduleCode,
+        environment,
+        userId,
+        isEnabled: profile.moduleCodes.includes(moduleCode),
+        reason: "Provisionnement du profil de démonstration",
+        correlationId: `demo-persona:${profile.key}`,
+        changedBy: userId,
+        updatedAt,
+      }
+      if (activation) {
+        await ctx.db.patch(activation._id, values)
+        updatedActivations += 1
+      } else {
+        await ctx.db.insert("moduleActivations", values)
+        createdActivations += 1
+      }
+    }
+
+    return {
+      key: profile.key,
+      userId,
+      created: !existing,
+      createdActivations,
+      updatedActivations,
+    }
+  },
+})
+
+/**
+ * Provisionne toutes les identités de démo actuellement configurées.
+ *
+ * Better Auth demeure la source des identifiants. Une inscription dupliquée
+ * est suivie d'une connexion, qui valide que le mot de passe configuré est
+ * bien celui du compte existant avant toute habilitation applicative.
+ */
+export const provisionPersonas = internalAction({
+  args: {},
+  handler: async (
+    ctx
+  ): Promise<{
+    configured: number
+    createdAuthAccounts: number
+    existingAuthAccounts: number
+    profiles: Array<{
+      key: string
+      created: boolean
+      createdActivations: number
+      updatedActivations: number
+    }>
+  }> => {
+    if (process.env.DEMO_ACCOUNTS_ENABLED !== "true") {
+      throw new Error(
+        "Provisionnement refusé : DEMO_ACCOUNTS_ENABLED doit valoir true."
+      )
+    }
+
+    const accounts = configuredDemoAccounts(process.env)
+    if (accounts.length === 0) {
+      throw new Error(
+        "Aucun compte de démonstration configuré : renseignez les variables legacy ou DEMO_PERSONAS_PASSWORD."
+      )
+    }
+
+    const auth = createAuth(ctx)
+    let createdAuthAccounts = 0
+    let existingAuthAccounts = 0
+    const profiles: Array<{
+      key: string
+      created: boolean
+      createdActivations: number
+      updatedActivations: number
+    }> = []
+
+    for (const account of accounts) {
+      let authUser: { id: string }
+      try {
+        const signedUp = await auth.api.signUpEmail({
+          body: {
+            email: account.email,
+            password: account.password,
+            name: `${account.firstName} ${account.lastName}`,
+          },
+        })
+        authUser = signedUp.user
+        createdAuthAccounts += 1
+      } catch (signupError) {
+        try {
+          const signedIn = await auth.api.signInEmail({
+            body: { email: account.email, password: account.password },
+          })
+          authUser = signedIn.user
+          existingAuthAccounts += 1
+        } catch (signinError) {
+          throw new Error(
+            `Compte Better Auth impossible à créer ou valider : ${account.email}. ` +
+              `Inscription : ${String(signupError)}. Connexion : ${String(signinError)}`
+          )
+        }
+      }
+
+      const result = await ctx.runMutation(
+        internal.seeds.demoAccounts.upsertPersonaProfile,
+        {
+          key: account.key,
+          authId: authUser.id,
+          email: account.email,
+        }
+      )
+      profiles.push({
+        key: result.key,
+        created: result.created,
+        createdActivations: result.createdActivations,
+        updatedActivations: result.updatedActivations,
+      })
+    }
+
+    return {
+      configured: accounts.length,
+      createdAuthAccounts,
+      existingAuthAccounts,
+      profiles,
+    }
+  },
+})
 
 /**
  * Rattache une caisse et une activité crédible au véritable compte Better
@@ -29,8 +234,14 @@ export const provision = internalMutation({
       )
     }
 
-    const email = process.env.DEMO_AGENT_EMAIL?.trim().toLowerCase()
-    if (!email) throw new Error("DEMO_AGENT_EMAIL est absent.")
+    const email = configuredDemoAccounts(process.env).find(
+      ({ key }) => key === "agent"
+    )?.email
+    if (!email) {
+      throw new Error(
+        "Compte agent absent : configurez le couple DEMO_AGENT_* ou DEMO_PERSONAS_PASSWORD."
+      )
+    }
 
     const agent = await ctx.db
       .query("users")

@@ -2,6 +2,14 @@ import { v } from "convex/values"
 import { mutation, query, type QueryCtx } from "../_generated/server"
 import type { Doc, Id } from "../_generated/dataModel"
 import { audit, requirePermission } from "../lib/auth"
+import {
+  emptyIncidentSummary,
+  emptyPenaltySummary,
+  servicePeriodBounds,
+  summarizeIncidents,
+  summarizePenalties,
+} from "../model/controlSummary"
+import { assertCan } from "../modules/platform/model"
 import { scanResult, serviceClass } from "../schema"
 import { performSale } from "./sales"
 import { segmentMask } from "../model/inventory"
@@ -1245,6 +1253,92 @@ export const getIncident = query({
       station,
       resolver,
       photoUrls: photoUrls.filter((url): url is string => Boolean(url)),
+    }
+  },
+})
+
+/* ─────────────────────── Synthèse agrégée réseau ──────────────────────── */
+
+/** Plafond de lecture d'une synthèse ; au-delà, le résultat se déclare tronqué. */
+const NETWORK_SUMMARY_READ_LIMIT = 5_000
+
+/**
+ * Synthèse agrégée et anonyme des incidents et procès-verbaux d'une période.
+ *
+ * Elle sert la lecture de pilotage sans ouvrir les registres nominatifs :
+ * seuls des effectifs et des montants sortent, jamais une identité, une
+ * description, une photo, une desserte ou une gare. La lecture du module
+ * Sécurité suffit ; les registres restent gardés par leurs permissions fines
+ * `incidents` et `proces_verbaux`. Une vue réseau exige une portée globale :
+ * une affectation limitée à un site reçoit un résultat restreint, sans lecture.
+ */
+export const networkSummary = query({
+  args: { from: v.string(), to: v.string() },
+  handler: async (ctx, args) => {
+    const access = await assertCan(ctx, {
+      moduleCode: "securite",
+      resource: "securite",
+      permission: "consulter",
+      allowScopedLanding: true,
+    })
+    const { start, endExclusive } = servicePeriodBounds(args.from, args.to)
+    const base = {
+      generatedAt: Date.now(),
+      period: { from: args.from, to: args.to },
+    }
+
+    if (!access.hasGlobalScope) {
+      return {
+        ...base,
+        scope: "restreint" as const,
+        dataState: "restricted" as const,
+        truncated: false,
+        incidents: emptyIncidentSummary(),
+        penalties: emptyPenaltySummary(),
+      }
+    }
+
+    const [incidentRows, penaltyRows] = await Promise.all([
+      ctx.db
+        .query("incidents")
+        .withIndex("by_reported_at", (q) =>
+          q.gte("reportedAt", start).lt("reportedAt", endExclusive)
+        )
+        .take(NETWORK_SUMMARY_READ_LIMIT + 1),
+      ctx.db
+        .query("procesVerbaux")
+        .withIndex("by_issued_at", (q) =>
+          q.gte("issuedAt", start).lt("issuedAt", endExclusive)
+        )
+        .take(NETWORK_SUMMARY_READ_LIMIT + 1),
+    ])
+    const incidents = summarizeIncidents(
+      incidentRows
+        .slice(0, NETWORK_SUMMARY_READ_LIMIT)
+        .map(({ category, severity, status }) => ({
+          category,
+          severity,
+          status,
+        }))
+    )
+    const penalties = summarizePenalties(
+      penaltyRows
+        .slice(0, NETWORK_SUMMARY_READ_LIMIT)
+        .map(({ reason, status, amountXaf }) => ({ reason, status, amountXaf }))
+    )
+
+    return {
+      ...base,
+      scope: "reseau" as const,
+      dataState:
+        incidents.total + penalties.total === 0
+          ? ("empty" as const)
+          : ("operational" as const),
+      truncated:
+        incidentRows.length > NETWORK_SUMMARY_READ_LIMIT ||
+        penaltyRows.length > NETWORK_SUMMARY_READ_LIMIT,
+      incidents,
+      penalties,
     }
   },
 })

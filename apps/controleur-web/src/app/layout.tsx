@@ -13,6 +13,13 @@ export const metadata: Metadata = {
   description:
     "Application de contrôle à bord du Transgabonais : vérification des titres, régularisation, procès-verbaux et signalements, y compris hors réseau.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     title: "Contrôle SETRAG",

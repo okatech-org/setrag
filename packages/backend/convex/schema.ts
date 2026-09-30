@@ -1,5 +1,11 @@
 import { defineSchema, defineTable } from "convex/server"
 import { v } from "convex/values"
+import { continuityTables } from "./modules/continuity/tables"
+import { cotrafTables } from "./modules/cotraf/tables"
+import { financeTables } from "./modules/finance/tables"
+import { fretTables } from "./modules/fret/tables"
+import { platformTables } from "./modules/platform/tables"
+import { appRoleValidator } from "./modules/platform/validators"
 
 /**
  * Schéma du système billettique unifié SETRAG.
@@ -33,19 +39,7 @@ export const serviceClass = v.union(
  * Rôles applicatifs. Les rôles internes sont dérivés des groupes de
  * l'annuaire ERAMET ; `voyageur` est le seul rôle client.
  */
-export const role = v.union(
-  v.literal("voyageur"),
-  v.literal("vendeur_guichet"),
-  v.literal("vendeur_agence"),
-  v.literal("taxateur"),
-  v.literal("controleur_train"),
-  v.literal("controleur_recettes"),
-  v.literal("chef_gare"),
-  v.literal("comptable"),
-  v.literal("responsable_kpi"),
-  v.literal("admin_fonctionnel"),
-  v.literal("admin_it")
-)
+export const role = appRoleValidator
 
 /** Canal de vente — détermine le circuit d'encaissement et les contrôles. */
 export const saleChannel = v.union(
@@ -260,6 +254,12 @@ const fareTrace = v.object({
 })
 
 export default defineSchema({
+  ...platformTables,
+  ...financeTables,
+  ...continuityTables,
+  ...fretTables,
+  ...cotrafTables,
+
   /* ══════════════════ Identités & habilitations ═════════════════════════ */
 
   /**
@@ -1105,7 +1105,9 @@ export default defineSchema({
     .index("by_trip", ["tripId"])
     .index("by_agent", ["agentId"])
     .index("by_status", ["status"])
-    .index("by_client_id", ["clientId"]),
+    .index("by_client_id", ["clientId"])
+    // Lecture par période pour la synthèse agrégée (`control.networkSummary`).
+    .index("by_issued_at", ["issuedAt"]),
 
   incidents: defineTable({
     reporterId: v.id("users"),
@@ -1140,7 +1142,9 @@ export default defineSchema({
     .index("by_trip", ["tripId"])
     .index("by_status", ["status"])
     .index("by_severity", ["severity"])
-    .index("by_client_id", ["clientId"]),
+    .index("by_client_id", ["clientId"])
+    // Lecture par période pour la synthèse agrégée (`control.networkSummary`).
+    .index("by_reported_at", ["reportedAt"]),
 
   /* ══════════════════ Interopérabilité & conformité ═════════════════════ */
 
@@ -1616,21 +1620,68 @@ export default defineSchema({
 
   auditLogs: defineTable({
     actorId: v.optional(v.id("users")),
+    assignmentId: v.optional(v.id("userAssignments")),
     action: v.string(),
     entityTable: v.string(),
     entityId: v.string(),
+    permission: v.optional(
+      v.union(
+        v.literal("consulter"),
+        v.literal("creer"),
+        v.literal("modifier"),
+        v.literal("supprimer"),
+        v.literal("valider")
+      )
+    ),
+    reason: v.optional(v.string()),
+    result: v.optional(
+      v.union(v.literal("succes"), v.literal("refus"), v.literal("echec"))
+    ),
+    correlationId: v.optional(v.string()),
+    causationId: v.optional(v.string()),
+    classification: v.optional(
+      v.union(
+        v.literal("public"),
+        v.literal("interne"),
+        v.literal("confidentiel"),
+        v.literal("restreint")
+      )
+    ),
     /** Valeurs avant et après, pour les modifications de paramétrage. */
     before: v.optional(v.string()),
     after: v.optional(v.string()),
     metadata: v.optional(v.string()),
+    context: v.optional(v.string()),
     ipAddress: v.optional(v.string()),
     deviceId: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_actor", ["actorId"])
+    .index("by_assignment", ["assignmentId"])
     .index("by_entity", ["entityTable", "entityId"])
     .index("by_action", ["action"])
+    .index("by_correlation", ["correlationId"])
+    .index("by_result_createdAt", ["result", "createdAt"])
     .index("by_createdAt", ["createdAt"]),
+
+  /**
+   * Empreintes chaînées du journal d'audit.
+   *
+   * Ce scellement détecte une altération dans la base applicative, sans se
+   * substituer à l'archivage WORM externe prévu pour la production.
+   */
+  auditSeals: defineTable({
+    windowStart: v.number(),
+    windowEnd: v.number(),
+    logCount: v.number(),
+    logsHash: v.string(),
+    previousSealHash: v.optional(v.string()),
+    sealHash: v.string(),
+    algorithm: v.literal("sha256"),
+    sealedAt: v.number(),
+  })
+    .index("by_window", ["windowStart", "windowEnd"])
+    .index("by_window_end", ["windowEnd"]),
 
   /** Rapports récurrents demandés depuis le back-office de gestion. */
   reportSchedules: defineTable({

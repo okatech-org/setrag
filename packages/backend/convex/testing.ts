@@ -28,13 +28,36 @@ function assertTestMode(): void {
   if (process.env.IS_TEST !== "true") {
     throw new Error(
       "Fonction réservée aux tests : la variable IS_TEST n'est pas active " +
-        "sur ce déploiement.",
+        "sur ce déploiement."
     )
   }
 }
 
 /** Toutes les tables applicatives, dans l'ordre de purge. */
 const TABLES = [
+  "financeMutationReceipts",
+  "financeJournalLines",
+  "financeJournalBatches",
+  "financeTaxRules",
+  "financeTaxRuleSets",
+  "financeAccounts",
+  "financeChartVersions",
+  "continuityExercises",
+  "continuityPolicies",
+  "approvalSteps",
+  "approvalInstances",
+  "documentVersions",
+  "documentRecords",
+  "integrationReceipts",
+  "integrationEvents",
+  "integrationEndpoints",
+  "auditSeals",
+  "moduleAccessGrants",
+  "moduleActivations",
+  "userAssignments",
+  "positions",
+  "sites",
+  "organizations",
   "messagingOutbox",
   "messagingApprovals",
   "messagingEvents",

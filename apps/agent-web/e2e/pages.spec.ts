@@ -353,6 +353,11 @@ const managementPages = [
   ["/gestion/utilisateurs", "Utilisateurs & habilitations"],
   ["/gestion/parametrage", "Paramétrage"],
   ["/gestion/integrations", "Intégrations & supervision"],
+  ["/direction", "Vue d’ensemble"],
+  ["/direction/activites", "Activité et exploitation"],
+  ["/direction/finances", "Finances"],
+  ["/direction/risques", "Risques et continuité"],
+  ["/direction/decisions", "Décisions attendues"],
 ] as const
 
 for (const [path, heading] of managementPages) {

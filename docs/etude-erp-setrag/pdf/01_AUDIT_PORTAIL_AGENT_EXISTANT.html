@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Audit Exhaustif du Portail Agent</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 20mm 15mm 20mm 15mm;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.55;
+    font-size: 11pt;
+    background: #ffffff;
+    margin: 0;
+    padding: 0;
+  }
+  .header-bar {
+    border-bottom: 2px solid #0f2c59;
+    padding-bottom: 8px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-logo {
+    font-size: 16pt;
+    font-weight: 800;
+    color: #0f2c59;
+    letter-spacing: 1px;
+  }
+  .header-meta {
+    font-size: 9pt;
+    color: #64748b;
+    text-align: right;
+  }
+  .doc-h1 {
+    color: #0f2c59;
+    font-size: 19pt;
+    border-bottom: 2px solid #d39e00;
+    padding-bottom: 10px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    font-weight: 700;
+  }
+  .doc-h2 {
+    color: #1e3a8a;
+    font-size: 14pt;
+    margin-top: 25px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    border-left: 4px solid #d39e00;
+    padding-left: 10px;
+  }
+  .doc-h3 {
+    color: #0f2c59;
+    font-size: 12pt;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .doc-h4 {
+    color: #334155;
+    font-size: 11pt;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .paragraph {
+    margin: 6px 0;
+    text-align: justify;
+  }
+  .list-item, .num-item {
+    margin: 4px 0 4px 20px;
+  }
+  .doc-hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 25px 0;
+  }
+  .spacer {
+    height: 6px;
+  }
+  .table-container {
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+  th {
+    background-color: #0f2c59;
+    color: #ffffff;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid #0f2c59;
+  }
+  td {
+    padding: 7px 10px;
+    border: 1px solid #cbd5e1;
+    vertical-align: top;
+  }
+  tr:nth-child(even) {
+    background-color: #f8fafc;
+  }
+  .code-block {
+    background: #0f172a;
+    color: #f1f5f9;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 8.5pt;
+    margin: 15px 0;
+    overflow-x: auto;
+    border-left: 4px solid #d39e00;
+  }
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+  strong {
+    color: #0f172a;
+  }
+  .footer {
+    margin-top: 40px;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 10px;
+    font-size: 8pt;
+    color: #64748b;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+  <div class="header-bar">
+    <div class="header-logo">SETRAG · TRANSGABONAIS</div>
+    <div class="header-meta">
+      <strong>RÉPUBLIQUE GABONAISE</strong><br>
+      Direction des Systèmes d'Information & Projets Métiers
+    </div>
+  </div>
+  
+  <h1 class='doc-h1'>Document 01 — Audit Exhaustif du Portail Agent Existant (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>agent-web</code>) & Analyse des Écarts (Gap Analysis)</h1>
+<div class='spacer'></div>
+<p class='paragraph'><strong>Projet :</strong> SETRAG Enterprise Operating System (SI Intégré Ferroviaire)  </p>
+<p class='paragraph'><strong>Entité :</strong> Société d'Exploitation du Transgabonais (SETRAG) — République Gabonaise  </p>
+<p class='paragraph'><strong>Référence :</strong> AUDIT-SET-2026-V1.0  </p>
+<p class='paragraph'><strong>Date d'audit :</strong> Septembre 2026  </p>
+<p class='paragraph'><strong>Auditeur :</strong> OkaTech Consulting / Division Ingénierie des Systèmes Complexes  </p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>1. Contexte et Périmètre de l'Audit</h2>
+<div class='spacer'></div>
+<p class='paragraph'>L'application <strong><code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>agent-web</code></strong> (accessible en local sur le port <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>3001</code> et déployée sur Vercel) a été conçue comme le portail d'exploitation et de vente au guichet de la SETRAG. Elle s'inscrit dans le cadre initial du remplacement de l'ancien système d'exploitation billettique <strong>MOBIPASS</strong>.</p>
+<div class='spacer'></div>
+<p class='paragraph'>Le présent audit a pour vocation d'analyser en profondeur l'architecture, le code source, les fonctionnalités et la couverture opérationnelle de cette application, afin de déterminer les écarts structurels à combler pour la transformer en un véritable <strong>Système d'Exploitation d'Entreprise (ERP Intégré)</strong> couvrant l'intégralité des activités de la SETRAG.</p>
+<div class='spacer'></div>
+<div class='code-block'><pre>
++-------------------------------------------------------------------------------+
+|                       PORTAIL AGENT SETRAG (agent-web)                       |
+|                                                                               |
+|   +--------------------------+  +-----------------------------------------+   |
+|   |    FRONT-OFFICE GUICHET  |  |       BACK-OFFICE GESTION &amp; YIELD       |   |
+|   |                          |  |                                         |   |
+|   |  - Caisse &amp; Encaissement |  |  - Gestion Voyageurs &amp; Billets          |   |
+|   |  - Émission Billets      |  |  - Grilles Tarifaires &amp; Yield           |   |
+|   |  - Colis Express         |  |  - Contingentement des Places           |   |
+|   |  - Bagages Excédentaires |  |  - Points de Vente &amp; Livrets            |   |
+|   |  - Prestations Spéciales |  |  - Matériel Roulant (Rames Voyageurs)   |   |
+|   |  - Ventes Manuelles      |  |  - Incidents &amp; Procès-Verbaux (PV)      |   |
+|   |  - Opérations Après-Vente|  |  - Rapports de Vente &amp; Pré-comptabilité |   |
+|   +--------------------------+  +-----------------------------------------+   |
+|                                                                               |
+|   Socle Technique : Next.js 16 (Turbopack) | Convex 1.42 | Better Auth 1.6    |
+|   Design System   : Tailwind CSS 4 | Tokens SETRAG | Radix UI / shadcn        |
++-------------------------------------------------------------------------------+
+</pre></div>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>2. Inventaire Fonctionnel Détaillé de l'Existant</h2>
+<div class='spacer'></div>
+<p class='paragraph'>L'analyse de l'arborescence des routes (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>apps/agent-web/src/app</code>) et des modèles de données révèle deux espaces fonctionnels distincts :</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.1 Espace « Vente » (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/vente</code>) — Front-Office Guichet</h3>
+<div class='spacer'></div>
+<p class='paragraph'>Cet espace est dédié aux guichetiers et agents de gare pour les opérations directes avec les usagers :</p>
+<li class='num-item'><strong>1.</strong> <strong>Gestion de Caisse (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/vente/caisse</code>) :</strong></li>
+<p class='paragraph'>   - Ouverture de caisse avec contrôle du fonds de roulement initial.</p>
+<p class='paragraph'>   - Suivi en temps réel des encaissements par mode de paiement (espèces FCFA, Airtel Money, Moov Money, cartes bancaires).</p>
+<p class='paragraph'>   - Arrêté de caisse, calcul des écarts théoriques/réels et clôture sécurisée.</p>
+<li class='num-item'><strong>2.</strong> <strong>Encaissement & Émission de Billets (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/vente/billet</code>, <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/vente/encaissement</code>) :</strong></li>
+<p class='paragraph'>   - Sélection du parcours sur la ligne Owendo–Franceville (25 gares).</p>
+<p class='paragraph'>   - Choix de la classe (VIP, 1re Classe, 2e Classe) et du régime de train (Express, Omnibus).</p>
+<p class='paragraph'>   - Affectation de place assise nominative avec blocage transactionnel anti-survente dans Convex.</p>
+<p class='paragraph'>   - Application automatique des réductions statutaires (enfants, militaires, familles nombreuses).</p>
+<p class='paragraph'>   - Impression du titre de transport avec identifiant sécurisé et QR Code signé cryptographiquement.</p>
+<li class='num-item'><strong>3.</strong> <strong>Services Complémentaires Voyageurs :</strong></li>
+<p class='paragraph'>   - <strong>Colis Express (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/vente/colis</code>) :</strong> Prise en charge des expéditions de messagerie rapide entre gares, pesée, tarification au kilogramme et édition de bordereaux d'expédition.</p>
+<p class='paragraph'>   - <strong>Excédents Bagages (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/vente/bagage</code>) :</strong> Enregistrement des bagages hors franchise, calcul de la surtaxe au kilo et étiquetage bagage.</p>
+<p class='paragraph'>   - <strong>Prestations Spéciales (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/vente/prestation-speciale</code>) :</strong> Réservation d'espaces spécifiques (Train Auto Accompagné - TAA, transport mortuaire/funéraire avec respect des réquisitions légales).</p>
+<p class='paragraph'>   - <strong>Ventes Manuelles de Secours (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/vente/ventes-manuelles</code>) :</strong> Enregistrement a posteriori des ventes sur carnets à souche papier en cas de rupture de connectivité en gare de brousse, avec réconciliation différée.</p>
+<li class='num-item'><strong>4.</strong> <strong>Opérations Après-Vente (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/vente/operations</code>) :</strong></li>
+<p class='paragraph'>   - Échange de billet, modification de date/classe selon les conditions générales de vente (CGV).</p>
+<p class='paragraph'>   - Annulation et remboursement avec calcul des pénalités selon le délai avant départ.</p>
+<div class='spacer'></div>
+<h3 class='doc-h3'>2.2 Espace « Gestion » (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion</code>) — Back-Office & Exploitation Voyageurs</h3>
+<div class='spacer'></div>
+<p class='paragraph'>Cet espace s'adresse aux chefs de gare, superviseurs d'exploitation et administrateurs réseau :</p>
+<li class='num-item'><strong>1.</strong> <strong>Gestion Clientèle & Billets (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion/voyageurs</code>) :</strong> Consultation de l'historique des réservations, recherche multicritères par identifiant voyageur, téléphone ou numéro de billet.</li>
+<li class='num-item'><strong>2.</strong> <strong>Plan de Transport & Rames (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion/trains</code>) :</strong> Configuration des compositions de trains voyageurs (locomotive, fourgon à bagages, voitures VIP/1re/2e classe, voiture-bar).</li>
+<li class='num-item'><strong>3.</strong> <strong>Gestion des Capacités & Contingents (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion/places</code>) :</strong> Blocage de quotas de places pour les réquisitions de l'État, les délégations officielles, les militaires ou la maintenance.</li>
+<li class='num-item'><strong>4.</strong> <strong>Grilles Tarifaires & Yield Management (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion/tarifs</code>, <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion/yield</code>) :</strong></li>
+<p class='paragraph'>   - Matrice kilométrique de base entre les 25 gares.</p>
+<p class='paragraph'>   - Règles de modulation dynamique des tarifs selon le taux de remplissage de la rame et la courbe de réservation.</p>
+<li class='num-item'><strong>5.</strong> <strong>Réseau de Vente & Postes (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion/points-de-vente</code>, <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion/livrets</code>) :</strong></li>
+<p class='paragraph'>   - Déclaration et habilitation des 89 guichets répartis sur le territoire gabonais.</p>
+<p class='paragraph'>   - Gestion de l'approvisionnement et du suivi des livrets de billets sécurisés.</p>
+<li class='num-item'><strong>6.</strong> <strong>Incidents & Police Ferroviaire (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion/incidents</code>, <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion/incidents/proces-verbaux</code>) :</strong></li>
+<p class='paragraph'>   - Centralisation des rapports d'incidents voyageurs (retards, avaries techniques, malaises à bord).</p>
+<p class='paragraph'>   - Traitement et recouvrement des procès-verbaux (PV) d'infraction émis par les contrôleurs à bord (défaut de titre, incivilités).</p>
+<li class='num-item'><strong>7.</strong> <strong>Reporting & Clôtures Périodiques (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>/gestion/rapports</code>) :</strong></li>
+<p class='paragraph'>   - Synthèses journalières et mensuelles des ventes par gare, par train et par agent.</p>
+<p class='paragraph'>   - Génération de l'état comptable <strong>V65</strong> destiné à l'exportation vers le progiciel financier central.</p>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>3. Forces de l'Architecture Technique Actuelle</h2>
+<div class='spacer'></div>
+<p class='paragraph'>L'audit met en évidence des choix technologiques modernes et particulièrement robustes :</p>
+<li class='list-item'><strong>Framework Frontend :</strong> Next.js 16 avec Turbopack et React 19, offrant des temps de réponse instantanés (< 300 ms au démarrage).</li>
+<li class='list-item'><strong>Architecture de Données :</strong> Convex 1.42 agissant comme base réactive temps réel avec moteur transactionnel ACID. Cela élimine structurellement la survente de places (mutation unique de décrémentation des stocks et de création de réservation).</li>
+<li class='list-item'><strong>Authentification & Sécurité :</strong> Better Auth 1.6 intégrant la gestion des sessions, le contrôle d'accès basé sur les rôles (RBAC : Guichetier, Chef de gare, Contrôleur, Administrateur) et la traçabilité via <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>audit()</code>.</li>
+<li class='list-item'><strong>Design System SETRAG :</strong> Conforme aux spécifications graphiques officielles (Tailwind CSS 4, tokens oklch portés en sRGB, boutons d'action >= 44 px, accessibilité contrastée, support des chiffres tabulaires pour les horaires).</li>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>4. Analyse des Écarts (Gap Analysis) : Les Manques Vers le SI Intégré</h2>
+<div class='spacer'></div>
+<p class='paragraph'>Si <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>agent-web</code> remplit remarquablement sa mission de billetterie, il ne couvre qu'une fraction minime (environ 15 %) des opérations réelles de la SETRAG. Pour devenir le <strong>Système d'Exploitation Global</strong>, les lacunes majeures suivantes ont été relevées :</p>
+<div class='spacer'></div>
+<div class='table-container'><table>
+<thead><tr><th>Domaine Métier SETRAG</th><th>État dans <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>agent-web</code> Actuel</th><th>Réalité Opérationnelle SETRAG & Exigences Cibles</th><th>Criticité de l'Écart</th></tr></thead><tbody>
+<tr><td><strong>Fret Minier (Manganèse)</strong></td><td><strong>Inexistant</strong></td><td>Cœur économique de la SETRAG (~70 % des revenus). Convois lourds de 84 à 100+ wagons pour la COMILOG, pesage essieux à Moanda et Owendo, interfaces Port Minéralier.</td><td><strong>Bloquant / Majeur</strong></td></tr>
+<tr><td><strong>Fret Forestier (Bois/Grumes)</strong></td><td><strong>Inexistant</strong></td><td>Transport de grumes et bois débité depuis l'intérieur vers Nkok et Owendo. Suivi des cubages, wagons plats/ranchers, bordereaux de traçabilité Eaux & Forêts.</td><td><strong>Bloquant / Majeur</strong></td></tr>
+<tr><td><strong>Fret Général & Hydrocarbures</strong></td><td><strong>Inexistant</strong></td><td>Wagons citernes (PetroGabon/Total), conteneurs maritimes (GSEZ/OPRAG), marchandises pondéreuses (ciment). Lettres de voiture ferroviaires, facturation tonnage/km.</td><td><strong>Bloquant / Majeur</strong></td></tr>
+<tr><td><strong>Régulation du Trafic (COTRAF)</strong></td><td><strong>Inexistant</strong></td><td>Poste de commande centralisé supervisant la voie unique (648 km). Gestion des cantons, bulletins de circulation, évitements et croisements en gares.</td><td><strong>Bloquant / Majeur</strong></td></tr>
+<tr><td><strong>Maintenance & GMAO Matériel</strong></td><td>Limité à la composition des rames voyageurs</td><td>Gestion des révisions des locomotives (General Electric / EMD), maintenance des wagons trémies, suivi des essieux, des bogies et des stocks d'ateliers (Owendo/Booué).</td><td><strong>Majeur</strong></td></tr>
+<tr><td><strong>Infrastructure & Travaux (PRN)</strong></td><td><strong>Inexistant</strong></td><td>Programme de Remise à Niveau de la voie (remplacement traverses bois par béton, géométrie, ballast, ouvrages d'art, caténaires/signalisation).</td><td><strong>Majeur</strong></td></tr>
+<tr><td><strong>Finances & Comptabilité OHADA</strong></td><td>Simple export V65 vers SAGE X3</td><td>Comptabilité générale SYSCOHADA révisé intégrée (classes 1 à 9), trésorerie, déclarations fiscales DGI Gabon (TVA 18%, CSS 1%, retenues à la source).</td><td><strong>Bloquant / Majeur</strong></td></tr>
+<tr><td><strong>Ressources Humaines & Paie</strong></td><td>Simple table utilisateurs avec rôles</td><td>Gestion de plus de 1 500 agents cheminots, convention collective, roulements complexes 3x8, paie gabonaise (IRPP, TCS, cotisations CNSS et CNAMGS).</td><td><strong>Majeur</strong></td></tr>
+<tr><td><strong>Bureautique & GED Entreprise</strong></td><td><strong>Inexistant</strong></td><td>Gestion électronique des documents, archivage probatoire, parapheur électronique de validation des ordres de mission/dépenses, messagerie et visio internes.</td><td><strong>Moyen / Structurant</strong></td></tr>
+<tr><td><strong>Intelligence Artificielle Métier</strong></td><td>Présente uniquement en back-office pour assistants vocaux voyageurs</td><td>IA d'optimisation des sillons en voie unique, maintenance prédictive sur données de capteurs, assistant juridique et réglementaire (OHADA / Gabon).</td><td><strong>Différenciant / Stratégique</strong></td></tr>
+</tbody></table></div>
+<div class='spacer'></div>
+<hr class='doc-hr'/>
+<div class='spacer'></div>
+<h2 class='doc-h2'>5. Recommandations Architecturales d'Évolution</h2>
+<div class='spacer'></div>
+<p class='paragraph'>Pour transformer <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>agent-web</code> sans perturber le fonctionnement de la billetterie existante, nous recommandons une architecture modulaire en <strong>Plateforme Unifiée Multi-Métiers</strong> :</p>
+<div class='spacer'></div>
+<li class='num-item'><strong>1.</strong> <strong>Adoption d'une Topbar de Navigation de Niveau Entreprise :</strong></li>
+<p class='paragraph'>   Intégrer un sélecteur de modules supérieur permettant de basculer instantanément entre les grands domaines fonctionnels :</p>
+<p class='paragraph'>   - 🎫 Billetterie & Voyageurs (Module actuel)</p>
+<p class='paragraph'>   - 🚂 Fret & Logistique Marchandises</p>
+<p class='paragraph'>   - 🚦 Exploitation & Régulation COTRAF</p>
+<p class='paragraph'>   - 🔧 Matériel Roulant & GMAO</p>
+<p class='paragraph'>   - 💼 Affaires Financières & OHADA</p>
+<p class='paragraph'>   - 👥 Ressources Humaines & Paie Gabon</p>
+<p class='paragraph'>   - 📁 Bureautique & Collaboration Unifiée</p>
+<p class='paragraph'>   - 🤖 IA Métier & Décisionnel (SETRAG Copilot)</p>
+<li class='num-item'><strong>2.</strong> <strong>Modélisation d'un Schéma de Données Étendu dans Convex :</strong></li>
+<p class='paragraph'>   Compléter le schéma Convex (<code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>packages/backend/convex/schema.ts</code>) avec des tables dédiées aux convois de fret, aux fiches matériels, aux comptes comptables SYSCOHADA, aux dossiers salariés et aux documents administratifs.</p>
+<li class='num-item'><strong>3.</strong> <strong>Maintien du Régime Déconnecté pour les Postes de Ligne :</strong></li>
+<p class='paragraph'>   Étendre l'architecture hors-ligne (mise en œuvre avec succès sur <code style='background:#f1f5f9;padding:2px 4px;border-radius:3px;font-size:9pt;'>controleur-web</code>) aux gares et ateliers isolés du Haut-Ogooué et de l'Ogooué-Lolo pour les modules de maintenance et de pointage RH.</p>
+  
+  <div class="footer">
+    <div>Projet : SETRAG Enterprise Operating System — Document Officiel d'Ingénierie</div>
+    <div>Confidentiel · Tous droits réservés OkaTech / SETRAG 2026</div>
+  </div>
+</body>
+</html>
