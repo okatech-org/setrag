@@ -57,8 +57,17 @@ export function Cases<T extends string>({
           (v) => Boolean(options.find((o) => o.valeur === v)?.desactivee)
         )
       }
-      className={cn("grid gap-1.5", className)}
-      style={{ gridTemplateColumns: `repeat(${colonnes}, minmax(0, 1fr))` }}
+      // Les puces prennent la largeur de leur mot et passent à la ligne :
+      // « Comportement » ne tient pas dans un tiers d'écran.
+      className={cn(
+        variante === "puces" ? "flex flex-wrap gap-1.5" : "grid gap-1.5",
+        className
+      )}
+      style={
+        variante === "puces"
+          ? undefined
+          : { gridTemplateColumns: `repeat(${colonnes}, minmax(0, 1fr))` }
+      }
     >
       {options.map((option) => {
         const choisie = option.valeur === valeur
@@ -72,13 +81,20 @@ export function Cases<T extends string>({
             aria-label={option.nom}
             data-valeur={option.valeur}
             disabled={option.desactivee}
-            tabIndex={choisie || (valeur === undefined && option === options[0]) ? 0 : -1}
+            tabIndex={
+              choisie || (valeur === undefined && option === options[0])
+                ? 0
+                : -1
+            }
             onClick={() => onChange(option.valeur)}
             className={cn(
               "flex items-center justify-center gap-1.5 rounded-md border bg-surface px-1.5 text-center transition-colors duration-[var(--dur-fast)] disabled:opacity-45",
               variante === "puces"
-                ? "min-h-11 text-[13px] font-semibold"
-                : cn(serre ? "min-h-12 text-[15px]" : "min-h-[52px] text-[16px]", "font-bold"),
+                ? "min-h-11 grow basis-[28%] px-3 text-[13px] font-semibold"
+                : cn(
+                    serre ? "min-h-12 text-[15px]" : "min-h-[52px] text-[16px]",
+                    "font-bold"
+                  ),
               choisie
                 ? "border-accent-base bg-accent-soft text-accent-ink shadow-[inset_0_0_0_1px_var(--c-accent)]"
                 : "border-line-strong text-ink"
@@ -87,11 +103,18 @@ export function Cases<T extends string>({
             {variante === "puces" && Icone ? (
               <Icone
                 aria-hidden
-                className={cn("size-4 shrink-0", choisie ? "text-accent-ink" : "text-ink-muted")}
+                className={cn(
+                  "size-4 shrink-0",
+                  choisie ? "text-accent-ink" : "text-ink-muted"
+                )}
               />
             ) : (
               choisie && (
-                <svg viewBox="0 0 12 12" aria-hidden className="size-3.5 shrink-0">
+                <svg
+                  viewBox="0 0 12 12"
+                  aria-hidden
+                  className="size-3.5 shrink-0"
+                >
                   <path
                     d="M2 6.4 4.8 9 10 3.2"
                     fill="none"
