@@ -101,7 +101,10 @@ export function GardeSession({ children }: { children: ReactNode }) {
   const role = asAppRole(profil?.user?.role)
 
   useEffect(() => {
-    const minuteur = window.setTimeout(() => setAttendu(true), ATTENTE_SERVEUR_MS)
+    const minuteur = window.setTimeout(
+      () => setAttendu(true),
+      ATTENTE_SERVEUR_MS
+    )
     return () => window.clearTimeout(minuteur)
   }, [])
 
@@ -129,7 +132,10 @@ export function GardeSession({ children }: { children: ReactNode }) {
    * garde effective de l'appareil.
    */
   const repriseHorsLigne =
-    ready && attendu && Boolean(locale) && (!isAuthenticated || profil === undefined)
+    ready &&
+    attendu &&
+    Boolean(locale) &&
+    (!isAuthenticated || profil === undefined)
 
   useEffect(() => {
     if (fermeture || isLoading || !ready) return
@@ -214,13 +220,21 @@ export function GardeSession({ children }: { children: ReactNode }) {
   if (!canControl(role)) {
     return (
       <Attente>
-        <h1 className="text-[22px] font-bold">Application réservée au contrôle à bord</h1>
-        <p className="max-w-sm text-small text-ink-muted">
-          Le rôle « {profil.user.role} » n&apos;autorise pas l&apos;enregistrement
-          de contrôles. Rapprochez-vous de votre chef de gare si vous devez
-          contrôler à bord.
+        <h1 className="text-[22px] font-bold">
+          Application réservée au contrôle à bord
+        </h1>
+        <p className="text-small max-w-sm text-ink-muted">
+          Le rôle « {profil.user.role} » n&apos;autorise pas
+          l&apos;enregistrement de contrôles. Rapprochez-vous de votre chef de
+          gare si vous devez contrôler à bord.
         </p>
-        <Button variant="secondary" size="lg" block className={TERRAIN} onClick={() => void fermer()}>
+        <Button
+          variant="secondary"
+          size="lg"
+          block
+          className={TERRAIN}
+          onClick={() => void fermer()}
+        >
           Changer de compte
         </Button>
       </Attente>

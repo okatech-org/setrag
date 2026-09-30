@@ -10,7 +10,11 @@ import {
 } from "@/lib/offline/db"
 import { clientId, nowMs } from "@/lib/offline/ids"
 import type { EmbarkedManifest, LocalScan } from "@/lib/offline/types"
-import { toScanResult, verifyLocally, type VerificationResult } from "@/lib/offline/verify"
+import {
+  toScanResult,
+  verifyLocally,
+  type VerificationResult,
+} from "@/lib/offline/verify"
 
 import { useTerminal } from "../terminal/contexte-terminal"
 
@@ -107,7 +111,12 @@ export function useControle() {
       if (!manifest) {
         throw new Error("Aucun manifeste embarqué : téléchargez-le d'abord.")
       }
-      return await inspecterCode(code, manifest, settings.currentStopIndex, options)
+      return await inspecterCode(
+        code,
+        manifest,
+        settings.currentStopIndex,
+        options
+      )
     },
     [manifest, settings.currentStopIndex]
   )

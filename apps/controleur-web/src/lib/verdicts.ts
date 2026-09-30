@@ -114,9 +114,19 @@ export function suitesDuVerdict(verdict: Verdict): SuitesVerdict {
   switch (verdict) {
     case "valide":
     case "abonnement":
-      return { principale: "valider", secondaires: [], discretes: ["fermer"], retourAuto: true }
+      return {
+        principale: "valider",
+        secondaires: [],
+        discretes: ["fermer"],
+        retourAuto: true,
+      }
     case "deja_controle":
-      return { principale: "continuer", secondaires: [], discretes: ["fermer"], retourAuto: false }
+      return {
+        principale: "continuer",
+        secondaires: [],
+        discretes: ["fermer"],
+        retourAuto: false,
+      }
     case "inconnu":
       return {
         principale: "regulariser",
@@ -125,19 +135,44 @@ export function suitesDuVerdict(verdict: Verdict): SuitesVerdict {
         retourAuto: false,
       }
     case "cle_hors_service":
-      return { principale: "chercher", secondaires: ["signaler"], discretes: ["fermer"], retourAuto: false }
+      return {
+        principale: "chercher",
+        secondaires: ["signaler"],
+        discretes: ["fermer"],
+        retourAuto: false,
+      }
     case "hors_segment":
-      return { principale: "regulariser", secondaires: ["pv"], discretes: ["fermer"], retourAuto: false }
+      return {
+        principale: "regulariser",
+        secondaires: ["pv"],
+        discretes: ["fermer"],
+        retourAuto: false,
+      }
     case "mauvaise_desserte":
     case "expire":
-      return { principale: "vendre", secondaires: ["pv"], discretes: ["fermer"], retourAuto: false }
+      return {
+        principale: "vendre",
+        secondaires: ["pv"],
+        discretes: ["fermer"],
+        retourAuto: false,
+      }
     case "annule":
     case "rembourse":
     case "non_paye":
     case "contrefait":
-      return { principale: "pv", secondaires: ["vendre"], discretes: ["fermer"], retourAuto: false }
+      return {
+        principale: "pv",
+        secondaires: ["vendre"],
+        discretes: ["fermer"],
+        retourAuto: false,
+      }
     case "illisible":
-      return { principale: "rescanner", secondaires: ["saisir", "chercher"], discretes: [], retourAuto: false }
+      return {
+        principale: "rescanner",
+        secondaires: ["saisir", "chercher"],
+        discretes: [],
+        retourAuto: false,
+      }
   }
 }
 
@@ -154,9 +189,13 @@ export function enregistreLeControle(verdict: Verdict, suite: Suite): boolean {
 }
 
 /** Ce sur quoi le verdict s'appuie, écrit au-dessus du mot. */
-export function sourceDuVerdict(result: Pick<VerificationResult, "payload" | "fromManifest">): string {
+export function sourceDuVerdict(
+  result: Pick<VerificationResult, "payload" | "fromManifest">
+): string {
   if (result.payload === null) return "Lecture du code"
-  return result.fromManifest ? "Manifeste embarqué" : "Signature vérifiée localement"
+  return result.fromManifest
+    ? "Manifeste embarqué"
+    : "Signature vérifiée localement"
 }
 
 /** Une note de retour sonore : fréquence (Hz), durée et silence après (ms). */
@@ -172,7 +211,10 @@ export interface Note {
  * « Abonnement valide » vibre comme « Valide » : c'est la même famille. La
  * lecture impossible ne vibre ni ne sonne — rien n'est reproché.
  */
-export const RETOUR_PHYSIQUE: Record<Famille, { vibration: number[] | null; notes: Note[] }> = {
+export const RETOUR_PHYSIQUE: Record<
+  Famille,
+  { vibration: number[] | null; notes: Note[] }
+> = {
   accepte: { vibration: [40], notes: [{ frequence: 1320, duree: 90 }] },
   vigilance: {
     vibration: [40, 60, 40],

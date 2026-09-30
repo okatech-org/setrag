@@ -11,11 +11,30 @@ import { cn } from "@workspace/ui/lib/utils"
 
 export type TonMessage = "info" | "ok" | "alerte" | "danger"
 
-const TONS: Record<TonMessage, { classes: string; titre: string; icone: LucideIcon }> = {
-  info: { classes: "border-l-info bg-info-soft", titre: "text-info-ink", icone: InfoIcon },
-  ok: { classes: "border-l-success bg-success-soft", titre: "text-success-ink", icone: CircleCheckIcon },
-  alerte: { classes: "border-l-warning bg-warning-soft", titre: "text-warning-ink", icone: TriangleAlertIcon },
-  danger: { classes: "border-l-danger bg-danger-soft", titre: "text-danger-ink", icone: CircleAlertIcon },
+const TONS: Record<
+  TonMessage,
+  { classes: string; titre: string; icone: LucideIcon }
+> = {
+  info: {
+    classes: "border-l-info bg-info-soft",
+    titre: "text-info-ink",
+    icone: InfoIcon,
+  },
+  ok: {
+    classes: "border-l-success bg-success-soft",
+    titre: "text-success-ink",
+    icone: CircleCheckIcon,
+  },
+  alerte: {
+    classes: "border-l-warning bg-warning-soft",
+    titre: "text-warning-ink",
+    icone: TriangleAlertIcon,
+  },
+  danger: {
+    classes: "border-l-danger bg-danger-soft",
+    titre: "text-danger-ink",
+    icone: CircleAlertIcon,
+  },
 }
 
 /**

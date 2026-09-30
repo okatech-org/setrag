@@ -56,7 +56,11 @@ export function CartesChoix<T extends string>({
             aria-checked={choisie}
             aria-label={option.nom}
             data-valeur={option.valeur}
-            tabIndex={choisie || (valeur === undefined && option === options[0]) ? 0 : -1}
+            tabIndex={
+              choisie || (valeur === undefined && option === options[0])
+                ? 0
+                : -1
+            }
             onClick={() => onChange(option.valeur)}
             className={cn(
               "grid min-h-[52px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-md border bg-surface px-3.5 py-2.5 text-left transition-colors duration-[var(--dur-fast)]",
@@ -69,17 +73,23 @@ export function CartesChoix<T extends string>({
               aria-hidden
               className={cn(
                 "row-span-2 size-[22px] rounded-pill transition-[border-width] duration-[var(--dur-fast)]",
-                choisie ? "border-[7px] border-accent-base" : "border-2 border-line-strong"
+                choisie
+                  ? "border-[7px] border-accent-base"
+                  : "border-2 border-line-strong"
               )}
             />
-            <span className="text-[15px] leading-snug font-bold">{option.titre}</span>
+            <span className="text-[15px] leading-snug font-bold">
+              {option.titre}
+            </span>
             {option.sousTitre && (
               <span className="col-start-2 text-[12.5px] leading-snug font-medium text-ink-muted">
                 {option.sousTitre}
               </span>
             )}
             {option.fin && (
-              <span className="col-start-3 row-span-2 row-start-1 justify-self-end">{option.fin}</span>
+              <span className="col-start-3 row-span-2 row-start-1 justify-self-end">
+                {option.fin}
+              </span>
             )}
           </button>
         )

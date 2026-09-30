@@ -52,16 +52,29 @@ export function FeuilleSession({
     >
       <div className="grid gap-3 pb-2">
         <Liste>
-          <Ligne libelle="Matricule" fin={<span className="tabular text-ink">{matricule}</span>} />
+          <Ligne
+            libelle="Matricule"
+            fin={<span className="tabular text-ink">{matricule}</span>}
+          />
           <Ligne libelle="Rôle" fin={role ? (ROLES[role] ?? role) : "—"} />
           <Ligne
             libelle="Session ouverte"
-            fin={<span className="tabular">{ouverteLe ? jourHeure(ouverteLe) : "—"}</span>}
+            fin={
+              <span className="tabular">
+                {ouverteLe ? jourHeure(ouverteLe) : "—"}
+              </span>
+            }
           />
-          <Ligne libelle="Terminal" fin={<span className="tabular">{settings.deviceId}</span>} />
+          <Ligne
+            libelle="Terminal"
+            fin={<span className="tabular">{settings.deviceId}</span>}
+          />
         </Liste>
         {queue.total > 0 && (
-          <Message ton="alerte" titre={`${queue.total} écritures attendent l'envoi.`}>
+          <Message
+            ton="alerte"
+            titre={`${queue.total} écritures attendent l'envoi.`}
+          >
             Elles restent sur ce terminal et partiront à la prochaine session
             ouverte avec du réseau.
           </Message>

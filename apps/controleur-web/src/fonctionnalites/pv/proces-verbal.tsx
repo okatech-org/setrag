@@ -19,7 +19,11 @@ import { Message } from "@/composants/message"
 import { Bas, BarreApp, Corps, Note } from "@/coquille/ecran"
 import { humanError } from "@/lib/errors"
 import { jourHeure, montant, montantCourt } from "@/lib/format"
-import { commitOperation, getTicketByNumber, patchRecord } from "@/lib/offline/db"
+import {
+  commitOperation,
+  getTicketByNumber,
+  patchRecord,
+} from "@/lib/offline/db"
 import { quoteOnboard } from "@/lib/offline/fares"
 import { clientId, localNumber, nowMs } from "@/lib/offline/ids"
 import type { LocalPenalty, PenaltyScaleRow } from "@/lib/offline/types"
@@ -49,15 +53,22 @@ function EnvoiDuPv({ pv }: { pv: LocalPenalty }) {
   return (
     <>
       <div className="flex flex-wrap items-center gap-1.5">
-        <PastilleEnvoi etat={lu?.state ?? pv.state} className="h-[30px] text-[13px]" />
+        <PastilleEnvoi
+          etat={lu?.state ?? pv.state}
+          className="h-[30px] text-[13px]"
+        />
         {lu?.serverNumber && (
           <span className="text-[12.5px] font-medium text-ink-muted">
-            Numéro définitif <span className="tabular text-ink">{lu.serverNumber}</span>
+            Numéro définitif{" "}
+            <span className="tabular text-ink">{lu.serverNumber}</span>
           </span>
         )}
       </div>
       {!lu?.serverNumber && (
-        <Note>Numéro définitif attribué à la synchronisation, dans la numérotation continue du réseau.</Note>
+        <Note>
+          Numéro définitif attribué à la synchronisation, dans la numérotation
+          continue du réseau.
+        </Note>
       )}
     </>
   )
@@ -103,7 +114,8 @@ export function ProcesVerbal() {
     if (!manifest || !reference) return
     let annule = false
     void getTicketByNumber(manifest.tripId, reference).then((trouve) => {
-      if (!annule && trouve) setNom(`${trouve.passenger.lastName} ${trouve.passenger.firstName}`)
+      if (!annule && trouve)
+        setNom(`${trouve.passenger.lastName} ${trouve.passenger.firstName}`)
     })
     return () => {
       annule = true
@@ -129,7 +141,10 @@ export function ProcesVerbal() {
         serviceClass: "DEUXIEME",
       })
       const de = arretDeRang(manifest, settings.currentStopIndex)
-      return { devis, libelle: `${de?.name ?? "?"} → ${terminus.name} · ${devis.distanceKm} km` }
+      return {
+        devis,
+        libelle: `${de?.name ?? "?"} → ${terminus.name} · ${devis.distanceKm} km`,
+      }
     } catch {
       return null
     }
@@ -165,7 +180,9 @@ export function ProcesVerbal() {
     if (!manifest) return
     setEnCours(true)
     try {
-      const ticket = reference ? await getTicketByNumber(manifest.tripId, reference) : undefined
+      const ticket = reference
+        ? await getTicketByNumber(manifest.tripId, reference)
+        : undefined
       const pv: LocalPenalty = {
         clientId: clientId("pv"),
         tripId: manifest.tripId,
@@ -210,7 +227,8 @@ export function ProcesVerbal() {
   async function terminer() {
     if (dresse) {
       await patchRecord("penalty", dresse.clientId, {
-        signature: signature === "refuse" ? "refuse" : trace ? "signe" : "aucune",
+        signature:
+          signature === "refuse" ? "refuse" : trace ? "signe" : "aucune",
         signatureImage: signature === "signe" ? trace?.image : undefined,
         signedAt: signature === "signe" ? trace?.a : undefined,
       }).catch(() => {})
@@ -218,38 +236,57 @@ export function ProcesVerbal() {
     router.push("/scan")
   }
 
-  const etapes = <Stepper steps={[{ label: "Motif" }, { label: "Montant" }, { label: "Signature" }]} current={etape} />
+  const etapes = (
+    <Stepper
+      steps={[{ label: "Motif" }, { label: "Montant" }, { label: "Signature" }]}
+      current={etape}
+    />
+  )
 
   if (etape === 2 && dresse) {
     const identite = dresse.offender.declined
       ? "Identité refusée — consignée comme telle"
-      : [dresse.offender.lastName, dresse.offender.documentNumber].filter(Boolean).join(" · ") ||
-        "Identité non déclarée"
+      : [dresse.offender.lastName, dresse.offender.documentNumber]
+          .filter(Boolean)
+          .join(" · ") || "Identité non déclarée"
     return (
       <>
         <BarreApp titre="Procès-verbal" sousTitre={sousTitre} />
         <Corps>
           {etapes}
-          <Message ton="ok" titre={`Procès-verbal enregistré — n° ${dresse.localNumber}`}>
+          <Message
+            ton="ok"
+            titre={`Procès-verbal enregistré — n° ${dresse.localNumber}`}
+          >
             Le procès-verbal existe même s&apos;il n&apos;est pas encore parti.
           </Message>
           {!dresse.paidOnBoard && (
-            <Message ton="alerte" titre="Paiement différé — recouvrement à la descente.">
+            <Message
+              ton="alerte"
+              titre="Paiement différé — recouvrement à la descente."
+            >
               Rien n&apos;a été encaissé à bord.
             </Message>
           )}
           <div className="grid gap-1 rounded-md bg-surface-sunk px-3.5 py-3 text-[13px] font-medium text-ink-muted">
             <b className="text-[15px] font-bold text-ink">{identite}</b>
             <span>
-              {ligne?.label} · {sousTitre} · <span className="tabular text-ink">{jourHeure(dresse.issuedAt)}</span>
+              {ligne?.label} · {sousTitre} ·{" "}
+              <span className="tabular text-ink">
+                {jourHeure(dresse.issuedAt)}
+              </span>
             </span>
             <span className="font-mono text-ink">
               Amende {montant(dresse.fineXaf)}
-              {dresse.legXaf > 0 && ` + trajet ${montant(dresse.legXaf)}`} = {montant(dresse.amountXaf)}
+              {dresse.legXaf > 0 &&
+                ` + trajet ${montant(dresse.legXaf)}`} ={" "}
+              {montant(dresse.amountXaf)}
             </span>
           </div>
           <div className="grid gap-1.5">
-            <p className="text-[13px] font-medium">Signature du contrevenant — facultative</p>
+            <p className="text-[13px] font-medium">
+              Signature du contrevenant — facultative
+            </p>
             <ZoneSignature
               signeeA={trace?.a}
               inactive={signature === "refuse"}
@@ -268,7 +305,12 @@ export function ProcesVerbal() {
           <EnvoiDuPv pv={dresse} />
         </Corps>
         <Bas>
-          <Button size="lg" block className={TERRAIN} onClick={() => void terminer()}>
+          <Button
+            size="lg"
+            block
+            className={TERRAIN}
+            onClick={() => void terminer()}
+          >
             Terminer
           </Button>
         </Bas>
@@ -279,7 +321,11 @@ export function ProcesVerbal() {
   return (
     <>
       {etape === 1 ? (
-        <BarreApp titre="Procès-verbal" sousTitre={sousTitre} onRetour={() => setEtape(0)} />
+        <BarreApp
+          titre="Procès-verbal"
+          sousTitre={sousTitre}
+          onRetour={() => setEtape(0)}
+        />
       ) : (
         <BarreApp titre="Procès-verbal" sousTitre={sousTitre} retour="/scan" />
       )}
@@ -295,15 +341,28 @@ export function ProcesVerbal() {
                 valeur: r.reason,
                 nom: `${r.label}, ${montant(r.amountXaf)}`,
                 titre: r.label,
-                fin: <span className="font-mono text-[15px] font-bold tabular-nums">{montantCourt(r.amountXaf)}</span>,
+                fin: (
+                  <span className="font-mono text-[15px] font-bold tabular-nums">
+                    {montantCourt(r.amountXaf)}
+                  </span>
+                ),
               }))}
             />
             <p className="flex items-start gap-1.5 text-[12px] font-medium text-warning-ink">
-              <TriangleAlertIcon aria-hidden className="mt-px size-3.5 shrink-0" />
-              Barème provisoire du système, en FCFA : montants à arrêter par la direction commerciale.
+              <TriangleAlertIcon
+                aria-hidden
+                className="mt-px size-3.5 shrink-0"
+              />
+              Barème provisoire du système, en FCFA : montants à arrêter par la
+              direction commerciale.
             </p>
             <Field label="Nom déclaré" htmlFor="pv-nom">
-              <Input value={nom} disabled={refus} placeholder="NOM Prénom" onChange={(e) => setNom(e.target.value)} />
+              <Input
+                value={nom}
+                disabled={refus}
+                placeholder="NOM Prénom"
+                onChange={(e) => setNom(e.target.value)}
+              />
             </Field>
             <Field label="Pièce présentée" htmlFor="pv-piece">
               <Input
@@ -329,12 +388,18 @@ export function ProcesVerbal() {
               onCheckedChange={(coche) => setRefus(coche === true)}
             />
             <Note>
-              L&apos;identité est déclarée par le contrevenant, non vérifiée par le
-              terminal : elle est consignée comme telle.
+              L&apos;identité est déclarée par le contrevenant, non vérifiée par
+              le terminal : elle est consignée comme telle.
             </Note>
           </Corps>
           <Bas>
-            <Button size="lg" block className={TERRAIN} disabled={!ligne} onClick={() => setEtape(1)}>
+            <Button
+              size="lg"
+              block
+              className={TERRAIN}
+              disabled={!ligne}
+              onClick={() => setEtape(1)}
+            >
               Continuer
             </Button>
           </Bas>
@@ -376,15 +441,24 @@ export function ProcesVerbal() {
                 onChange={(v) => setImmediat(v === "immediat")}
               />
               <Note>
-                {immediat ? "Immédiat : en espèces, à bord." : "Différé : recouvrement à la descente, rien n'est encaissé à bord."}
+                {immediat
+                  ? "Immédiat : en espèces, à bord."
+                  : "Différé : recouvrement à la descente, rien n'est encaissé à bord."}
               </Note>
             </div>
             <div className="flex items-baseline justify-between gap-3 rounded-md bg-accent-soft px-3.5 py-3 text-[14px] font-semibold text-accent-ink">
               <span>Total à percevoir</span>
-              <b className="font-mono text-[24px] font-bold whitespace-nowrap tabular-nums">{montant(total)}</b>
+              <b className="font-mono text-[24px] font-bold whitespace-nowrap tabular-nums">
+                {montant(total)}
+              </b>
             </div>
             <Field label="Observations (facultatif)" htmlFor="pv-observations">
-              <Textarea rows={2} className="min-h-0" value={observations} onChange={(e) => setObservations(e.target.value)} />
+              <Textarea
+                rows={2}
+                className="min-h-0"
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+              />
             </Field>
           </Corps>
           <Bas>

@@ -26,7 +26,10 @@ import { Bas, Corps } from "@/coquille/ecran"
 import { humanError } from "@/lib/errors"
 import { classeLongue, heure, jour } from "@/lib/format"
 import { freshness } from "@/lib/offline/manifest"
-import type { EmbarkedManifest, Verdict as VerdictLocal } from "@/lib/offline/types"
+import type {
+  EmbarkedManifest,
+  Verdict as VerdictLocal,
+} from "@/lib/offline/types"
 import { arretDeRang } from "@/lib/position"
 import { preferences } from "@/lib/preferences"
 import { retourDuVerdict } from "@/lib/retour"
@@ -56,7 +59,12 @@ const FOND: Record<Famille, string> = {
 }
 
 /** Un titre dont le trajet n'est plus acquis : la voie du billet est vide. */
-const TRAJET_PERDU: VerdictLocal[] = ["annule", "rembourse", "non_paye", "expire"]
+const TRAJET_PERDU: VerdictLocal[] = [
+  "annule",
+  "rembourse",
+  "non_paye",
+  "expire",
+]
 
 /**
  * Le verdict, en plein écran. Il s'écrit en toutes lettres, en tête, avec sa
@@ -87,16 +95,22 @@ export function Verdict({
   // Le retour physique accompagne l'apparition du verdict — vibration, et son
   // si l'agent ne l'a pas coupé.
   useEffect(() => {
-    retourDuVerdict(FAMILLE_DU_VERDICT[resultat.verdict], { son: preferences().son })
+    retourDuVerdict(FAMILLE_DU_VERDICT[resultat.verdict], {
+      son: preferences().son,
+    })
   }, [resultat])
 
   async function agir(suite: Suite) {
     if (enCours) return
     setAuto(false)
-    const ref = resultat.ticket?.number ?? resultat.subscription?.cardNumber ?? resultat.payload?.ref
+    const ref =
+      resultat.ticket?.number ??
+      resultat.subscription?.cardNumber ??
+      resultat.payload?.ref
     setEnCours(suite)
     try {
-      if (enregistreLeControle(resultat.verdict, suite)) await enregistrer(resultat)
+      if (enregistreLeControle(resultat.verdict, suite))
+        await enregistrer(resultat)
       const params = new URLSearchParams()
       if (ref) params.set("titre", ref)
       params.set("motif", resultat.verdict)
@@ -120,7 +134,11 @@ export function Verdict({
           router.push(`/pv?${params.toString()}` as Route)
           return
         case "chercher":
-          router.push((ref ? `/recherche?ref=${encodeURIComponent(ref)}` : "/recherche") as Route)
+          router.push(
+            (ref
+              ? `/recherche?ref=${encodeURIComponent(ref)}`
+              : "/recherche") as Route
+          )
           return
         case "signaler": {
           const signalement = new URLSearchParams({
@@ -141,7 +159,10 @@ export function Verdict({
   // Toucher l'écran annule le retour.
   useEffect(() => {
     if (!auto) return
-    const minuteur = window.setTimeout(() => void agir("valider"), RETOUR_AUTO_MS)
+    const minuteur = window.setTimeout(
+      () => void agir("valider"),
+      RETOUR_AUTO_MS
+    )
     return () => window.clearTimeout(minuteur)
     // `agir` se recrée à chaque rendu ; seul l'état du retour compte ici.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,7 +171,10 @@ export function Verdict({
   if (!manifest) return null
 
   return (
-    <div className="flex flex-1 flex-col" onPointerDownCapture={() => setAuto(false)}>
+    <div
+      className="flex flex-1 flex-col"
+      onPointerDownCapture={() => setAuto(false)}
+    >
       <header
         aria-live="assertive"
         className={cn(
@@ -166,12 +190,18 @@ export function Verdict({
           {LIBELLE_VERDICT[resultat.verdict]}
         </h1>
         {famille !== "accepte" && resultat.reason && (
-          <p className="col-span-2 mt-2.5 text-[15px] leading-[1.4] font-semibold">{resultat.reason}</p>
+          <p className="col-span-2 mt-2.5 text-[15px] leading-[1.4] font-semibold">
+            {resultat.reason}
+          </p>
         )}
       </header>
 
       <Corps className="pt-4">
-        <Contenu resultat={resultat} manifest={manifest} gareCourante={settings.currentStopIndex} />
+        <Contenu
+          resultat={resultat}
+          manifest={manifest}
+          gareCourante={settings.currentStopIndex}
+        />
       </Corps>
 
       <Bas>
@@ -186,10 +216,14 @@ export function Verdict({
           {LIBELLE_SUITE[suites.principale]}
         </Button>
         {suites.retourAuto && (
-          <p className="text-center text-[12.5px] font-medium text-ink-muted" aria-live="polite">
+          <p
+            className="text-center text-[12.5px] font-medium text-ink-muted"
+            aria-live="polite"
+          >
             {auto ? (
               <>
-                Retour au viseur dans <span className="tabular text-ink">1,5</span>
+                Retour au viseur dans{" "}
+                <span className="tabular text-ink">1,5</span>
                 {" "}s · touchez l&apos;écran pour rester
               </>
             ) : (
@@ -291,14 +325,20 @@ function Contenu({
   return (
     <>
       {ticket ? (
-        <BilletTitre manifest={manifest} ticket={ticket} trajetAcquis={!TRAJET_PERDU.includes(verdict)} />
+        <BilletTitre
+          manifest={manifest}
+          ticket={ticket}
+          trajetAcquis={!TRAJET_PERDU.includes(verdict)}
+        />
       ) : subscription ? (
         <CarteTitre titre={`Abonnement ${subscription.cardNumber}`}>
           <p>
-            {classeLongue(subscription.serviceClass)} · abonnement {subscription.kind}
+            {classeLongue(subscription.serviceClass)} · abonnement{" "}
+            {subscription.kind}
           </p>
           <p>
-            Valable du <span className="tabular">{jour(subscription.validFrom)}</span> au{" "}
+            Valable du{" "}
+            <span className="tabular">{jour(subscription.validFrom)}</span> au{" "}
             <span className="tabular">{jour(subscription.validUntil)}</span>
           </p>
         </CarteTitre>
@@ -361,7 +401,12 @@ function Contenu({
       </Pastilles>
 
       {verdict === "hors_segment" && payload && (
-        <Portee manifest={manifest} gareCourante={gareCourante} de={payload.from} a={payload.to} />
+        <Portee
+          manifest={manifest}
+          gareCourante={gareCourante}
+          de={payload.from}
+          a={payload.to}
+        />
       )}
 
       {resultat.fromManifest && (
@@ -394,7 +439,9 @@ function Portee({
     <p className="flex items-start gap-2 text-[13px] font-semibold text-danger-ink">
       <MapPinIcon aria-hidden className="mt-px size-4 shrink-0" />
       <span>
-        Train {ici ? `après ${ici.name} (PK ${ici.kilometerPoint})` : "en route"} · titre valable{" "}
+        Train{" "}
+        {ici ? `après ${ici.name} (PK ${ici.kilometerPoint})` : "en route"} ·
+        titre valable{" "}
         {avant
           ? `à partir de ${debut?.name ?? "?"} (PK ${debut?.kilometerPoint ?? "?"})`
           : `jusqu'à ${fin?.name ?? "?"} (PK ${fin?.kilometerPoint ?? "?"})`}

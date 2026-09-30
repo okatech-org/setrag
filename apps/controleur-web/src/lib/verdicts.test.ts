@@ -37,12 +37,15 @@ describe("Les treize verdicts", () => {
     expect(TABLE.map(([v]) => v).sort()).toEqual([...TOUS].sort())
   })
 
-  it.each(TABLE)("%s : famille %s, primaire « %s »", (verdict, famille, principale, secondaires) => {
-    expect(FAMILLE_DU_VERDICT[verdict]).toBe(famille)
-    const suites = suitesDuVerdict(verdict)
-    expect(suites.principale).toBe(principale)
-    expect(suites.secondaires).toEqual(secondaires)
-  })
+  it.each(TABLE)(
+    "%s : famille %s, primaire « %s »",
+    (verdict, famille, principale, secondaires) => {
+      expect(FAMILLE_DU_VERDICT[verdict]).toBe(famille)
+      const suites = suitesDuVerdict(verdict)
+      expect(suites.principale).toBe(principale)
+      expect(suites.secondaires).toEqual(secondaires)
+    }
+  )
 
   it("ne propose jamais deux fois la même action, et un seul primaire", () => {
     for (const verdict of TOUS) {

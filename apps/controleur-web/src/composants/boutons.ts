@@ -4,7 +4,8 @@
  * vise en marchant, parfois avec des gants. Le libellé passe à la ligne
  * plutôt que d'être tronqué.
  */
-export const TERRAIN = "h-auto min-h-14 py-2 text-[16px] leading-tight whitespace-normal text-center"
+export const TERRAIN =
+  "h-auto min-h-14 py-2 text-[16px] leading-tight whitespace-normal text-center"
 
 /**
  * Bouton inactif qui dit pourquoi : il reste lisible (pas d'opacité réduite),

@@ -35,7 +35,12 @@ interface Onglet {
 export const ONGLETS: Onglet[] = [
   { href: "/tournee", libelle: "Tournée", icone: HouseIcon },
   { href: "/scan", libelle: "Scanner", icone: ScanLineIcon },
-  { href: "/historique", libelle: "Historique", icone: ListOrderedIcon, compte: true },
+  {
+    href: "/historique",
+    libelle: "Historique",
+    icone: ListOrderedIcon,
+    compte: true,
+  },
   { href: "/incident", libelle: "Incident", icone: TriangleAlertIcon },
 ]
 
@@ -57,7 +62,12 @@ export function Onglets() {
       aria-label="Onglets"
       className="pb-safe sticky bottom-0 z-30 border-t border-line bg-surface"
     >
-      <NavRuban actif={courant} cote="haut" largeur={44} className="grid grid-cols-4">
+      <NavRuban
+        actif={courant}
+        cote="haut"
+        largeur={44}
+        className="grid grid-cols-4"
+      >
         {ONGLETS.map(({ href, libelle, icone: Icone, compte }) => {
           const actif = href === courant
           const enAttente = compte ? queue.total : 0
@@ -73,7 +83,11 @@ export function Onglets() {
                 actif ? "text-accent-ink" : "text-ink-muted"
               )}
             >
-              <Icone className="size-6" strokeWidth={actif ? 2.2 : 1.8} aria-hidden />
+              <Icone
+                className="size-6"
+                strokeWidth={actif ? 2.2 : 1.8}
+                aria-hidden
+              />
               {libelle}
               {enAttente > 0 && (
                 <span

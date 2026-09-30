@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { listScans, listTickets } from "@/lib/offline/db"
-import type { EmbarkedManifest, EmbarkedTicket, LocalScan } from "@/lib/offline/types"
+import type {
+  EmbarkedManifest,
+  EmbarkedTicket,
+  LocalScan,
+} from "@/lib/offline/types"
 import { progressionParVoiture, titresControles } from "@/lib/tournee"
 import { compositionDe } from "@/lib/train"
 

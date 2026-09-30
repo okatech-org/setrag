@@ -29,8 +29,18 @@ import { Progression } from "@/composants/progression"
 import { Bas, BarreApp, Corps, Note, TitreSection } from "@/coquille/ecran"
 import { humanError } from "@/lib/errors"
 import { heure, montant } from "@/lib/format"
-import { listPending, listSales, listScans, purgeLocalData } from "@/lib/offline/db"
-import type { LocalSale, LocalScan, QueueEntry, QueueKind } from "@/lib/offline/types"
+import {
+  listPending,
+  listSales,
+  listScans,
+  purgeLocalData,
+} from "@/lib/offline/db"
+import type {
+  LocalSale,
+  LocalScan,
+  QueueEntry,
+  QueueKind,
+} from "@/lib/offline/types"
 import { nomDuTrain } from "@/lib/train"
 import { FAMILLE_DU_VERDICT, LIBELLE_VERDICT } from "@/lib/verdicts"
 
@@ -69,8 +79,17 @@ const GROUPE_EN_COURS: Record<string, QueueKind> = {
  * n'offre aucun geste d'édition : un contrôle enregistré ne se réécrit pas.
  */
 export function Historique() {
-  const { manifest, queue, online, authenticated, syncing, progress, syncNow, refresh, settings } =
-    useTerminal()
+  const {
+    manifest,
+    queue,
+    online,
+    authenticated,
+    syncing,
+    progress,
+    syncNow,
+    refresh,
+    settings,
+  } = useTerminal()
   const pret = online && authenticated
   const [vue, setVue] = useState<Vue>("file")
   const [scans, setScans] = useState<LocalScan[]>([])
@@ -78,7 +97,10 @@ export function Historique() {
   const [echecs, setEchecs] = useState<QueueEntry[]>([])
   const [purge, setPurge] = useState(false)
   const [purgeEnCours, setPurgeEnCours] = useState(false)
-  const conflits = useQuery(api.functions.control.listConflicts, pret ? {} : "skip")
+  const conflits = useQuery(
+    api.functions.control.listConflicts,
+    pret ? {} : "skip"
+  )
 
   const tripId = manifest?.tripId
 
@@ -101,7 +123,10 @@ export function Historique() {
   }, [tripId, queue.total, queue.failed, syncing])
 
   const envoyes =
-    queue.byKind.scan.sent + queue.byKind.sale.sent + queue.byKind.penalty.sent + queue.byKind.incident.sent
+    queue.byKind.scan.sent +
+    queue.byKind.sale.sent +
+    queue.byKind.penalty.sent +
+    queue.byKind.incident.sent
   const toutEnvoye = queue.total === 0 && envoyes > 0
   const enConflit = conflits?.length ?? 0
 
@@ -125,7 +150,9 @@ export function Historique() {
         grandTitre="Historique"
         actions={
           manifest && (
-            <span className="px-2 font-mono text-[14px] font-semibold text-ink-muted">{nomDuTrain(manifest)}</span>
+            <span className="px-2 font-mono text-[14px] font-semibold text-ink-muted">
+              {nomDuTrain(manifest)}
+            </span>
           )
         }
       />
@@ -145,7 +172,11 @@ export function Historique() {
         {vue === "file" ? (
           <>
             {toutEnvoye && (
-              <Message ton="ok" icone={CheckCheckIcon} titre={`Tournée synchronisée — ${envoyes} éléments confirmés.`}>
+              <Message
+                ton="ok"
+                icone={CheckCheckIcon}
+                titre={`Tournée synchronisée — ${envoyes} éléments confirmés.`}
+              >
                 La purge des données locales est maintenant possible.
               </Message>
             )}
@@ -161,21 +192,23 @@ export function Historique() {
 
             {!toutEnvoye && (
               <FileEnvoi
-                enCours={syncing && progress ? GROUPE_EN_COURS[progress.label] : undefined}
+                enCours={
+                  syncing && progress
+                    ? GROUPE_EN_COURS[progress.label]
+                    : undefined
+                }
                 critique={queue.criticalPending > 0}
               />
             )}
 
             {!toutEnvoye && (
               <Note>
-                Ordre d&apos;envoi : incidents critiques, procès-verbaux, ventes,
-                contrôles. Les ventes partent une par une.
+                Ordre d&apos;envoi : incidents critiques, procès-verbaux,
+                ventes, contrôles. Les ventes partent une par une.
               </Note>
             )}
 
-            {queue.total > 0 && !syncing && (
-              <EtatReseau total={queue.total} />
-            )}
+            {queue.total > 0 && !syncing && <EtatReseau total={queue.total} />}
 
             {echecs.length > 0 && (
               <>
@@ -183,17 +216,24 @@ export function Historique() {
                   ton="danger"
                   titre={`${echecs.length} éléments en échec — conservés localement.`}
                 >
-                  Rien n&apos;est supprimé après un échec. L&apos;identifiant client
-                  de chaque écriture garantit l&apos;absence de doublon à la reprise.
+                  Rien n&apos;est supprimé après un échec. L&apos;identifiant
+                  client de chaque écriture garantit l&apos;absence de doublon à
+                  la reprise.
                 </Message>
                 <Journal>
                   {echecs.slice(0, 8).map((entree) => (
                     <LigneJournal
                       key={entree.id}
-                      heure={entree.lastAttemptAt ? heure(entree.lastAttemptAt) : "—"}
+                      heure={
+                        entree.lastAttemptAt ? heure(entree.lastAttemptAt) : "—"
+                      }
                       qui={LIBELLE_NATURE[entree.kind]}
                       reference={`${entree.lastError ?? "motif inconnu"} · ${entree.attempts} tentative(s)`}
-                      etat={<Etat icone={CircleAlertIcon} classe="text-danger-ink">échec</Etat>}
+                      etat={
+                        <Etat icone={CircleAlertIcon} classe="text-danger-ink">
+                          échec
+                        </Etat>
+                      }
                     />
                   ))}
                 </Journal>
@@ -203,13 +243,20 @@ export function Historique() {
             {ventes.length > 0 && <VentesABord ventes={ventes} />}
 
             {enConflit > 0 && (
-              <Message ton="alerte" titre={`${enConflit} titre${enConflit > 1 ? "s" : ""} en conflit.`}>
-                Un même titre a été contrôlé sur deux terminaux. L&apos;arbitrage est humain.
+              <Message
+                ton="alerte"
+                titre={`${enConflit} titre${enConflit > 1 ? "s" : ""} en conflit.`}
+              >
+                Un même titre a été contrôlé sur deux terminaux.
+                L&apos;arbitrage est humain.
               </Message>
             )}
           </>
         ) : (
-          <JournalControles scans={scans} derniereSynchro={settings.lastSyncAt} />
+          <JournalControles
+            scans={scans}
+            derniereSynchro={settings.lastSyncAt}
+          />
         )}
       </Corps>
 
@@ -234,7 +281,9 @@ export function Historique() {
             </Button>
           ) : enConflit > 0 ? (
             <Button size="lg" block className={TERRAIN} asChild>
-              <Link href="/conflits">{enConflit > 1 ? "Voir les conflits" : "Voir le conflit"}</Link>
+              <Link href="/conflits">
+                {enConflit > 1 ? "Voir les conflits" : "Voir le conflit"}
+              </Link>
             </Button>
           ) : null}
           {enConflit === 0 && (
@@ -243,7 +292,13 @@ export function Historique() {
             </Button>
           )}
           {toutEnvoye && (
-            <Button variant="danger" size="lg" block className={TERRAIN} onClick={() => setPurge(true)}>
+            <Button
+              variant="danger"
+              size="lg"
+              block
+              className={TERRAIN}
+              onClick={() => setPurge(true)}
+            >
               Purger les données locales
             </Button>
           )}
@@ -274,9 +329,10 @@ export function Historique() {
           </div>
         }
       >
-        <p className="pb-3 text-small text-ink-muted">
+        <p className="text-small pb-3 text-ink-muted">
           Manifeste, titres, contrôles, ventes, procès-verbaux et photos sont
-          effacés du terminal. Les réglages et le code de reprise sont conservés.
+          effacés du terminal. Les réglages et le code de reprise sont
+          conservés.
         </p>
       </Feuille>
     </>
@@ -293,7 +349,12 @@ function Etat({
   children: React.ReactNode
 }) {
   return (
-    <span className={cn("inline-flex items-center gap-[5px] text-[12.5px] font-semibold", classe)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-[5px] text-[12.5px] font-semibold",
+        classe
+      )}
+    >
       <Icone aria-hidden className="size-[15px]" />
       {children}
     </span>
@@ -301,7 +362,13 @@ function Etat({
 }
 
 /** La file, nature par nature, dans l'ordre d'envoi. */
-function FileEnvoi({ enCours, critique }: { enCours?: QueueKind; critique: boolean }) {
+function FileEnvoi({
+  enCours,
+  critique,
+}: {
+  enCours?: QueueKind
+  critique: boolean
+}) {
   const { queue } = useTerminal()
   return (
     <table className="w-full overflow-hidden rounded-md border border-line bg-surface text-[13.5px] font-medium">
@@ -329,7 +396,9 @@ function FileEnvoi({ enCours, critique }: { enCours?: QueueKind; critique: boole
               <th scope="row" className="px-3 text-left font-medium">
                 {libelle}
               </th>
-              <td className="px-3 text-right font-mono font-semibold tabular-nums">{total}</td>
+              <td className="px-3 text-right font-mono font-semibold tabular-nums">
+                {total}
+              </td>
               <td className="w-[124px] px-3">
                 {total === 0 ? (
                   // Une ligne vide n'a rien « envoyé » : le dire serait un faux
@@ -377,15 +446,19 @@ function EtatReseau({ total }: { total: number }) {
         icone={CloudOffIcon}
         titre="Aucun réseau — l'envoi partira automatiquement dès le retour du signal."
       >
-        C&apos;est le cas nominal en pleine voie : rien n&apos;est perdu, tout est
-        écrit dans la base du terminal.
+        C&apos;est le cas nominal en pleine voie : rien n&apos;est perdu, tout
+        est écrit dans la base du terminal.
       </Message>
     )
   }
   if (!authenticated) {
     return (
-      <Message ton="alerte" titre="Session non reconnue — l'envoi reprendra dès qu'elle sera rétablie.">
-        Rien n&apos;est perdu : les écritures attendent dans la base du terminal.
+      <Message
+        ton="alerte"
+        titre="Session non reconnue — l'envoi reprendra dès qu'elle sera rétablie."
+      >
+        Rien n&apos;est perdu : les écritures attendent dans la base du
+        terminal.
       </Message>
     )
   }
@@ -393,7 +466,8 @@ function EtatReseau({ total }: { total: number }) {
     <Note>
       Envoi automatique : {total} élément{total > 1 ? "s" : ""} en attente de
       confirmation. Aucune action n&apos;est requise : l&apos;application les
-      transmet et réessaie seule. Le bouton ne sert qu&apos;à forcer une reprise.
+      transmet et réessaie seule. Le bouton ne sert qu&apos;à forcer une
+      reprise.
     </Note>
   )
 }
@@ -404,7 +478,9 @@ function EtatReseau({ total }: { total: number }) {
  * serveur a recalculé un autre prix, les deux montants s'affichent.
  */
 function VentesABord({ ventes }: { ventes: LocalSale[] }) {
-  const ecart = ventes.some((v) => v.serverXaf !== undefined && v.serverXaf !== v.quotedXaf)
+  const ecart = ventes.some(
+    (v) => v.serverXaf !== undefined && v.serverXaf !== v.quotedXaf
+  )
   return (
     <>
       <TitreSection className="mt-1">Ventes à bord</TitreSection>
@@ -421,12 +497,15 @@ function VentesABord({ ventes }: { ventes: LocalSale[] }) {
             }
             etat={
               <span className="grid justify-items-end">
-                <span className="font-mono text-[13px] font-bold tabular-nums">{montant(vente.quotedXaf)}</span>
-                {vente.serverXaf !== undefined && vente.serverXaf !== vente.quotedXaf && (
-                  <span className="font-mono text-[11.5px] font-semibold text-warning-ink tabular-nums">
-                    facturé {montant(vente.serverXaf)}
-                  </span>
-                )}
+                <span className="font-mono text-[13px] font-bold tabular-nums">
+                  {montant(vente.quotedXaf)}
+                </span>
+                {vente.serverXaf !== undefined &&
+                  vente.serverXaf !== vente.quotedXaf && (
+                    <span className="font-mono text-[11.5px] font-semibold text-warning-ink tabular-nums">
+                      facturé {montant(vente.serverXaf)}
+                    </span>
+                  )}
               </span>
             }
           />
@@ -435,7 +514,8 @@ function VentesABord({ ventes }: { ventes: LocalSale[] }) {
       {ecart && (
         <Message ton="alerte" titre="Écart de tarification.">
           Un montant recalculé par le système diffère de celui encaissé à bord.
-          Signalez-le à votre caisse : l&apos;écart doit être justifié, pas absorbé.
+          Signalez-le à votre caisse : l&apos;écart doit être justifié, pas
+          absorbé.
         </Message>
       )}
     </>
@@ -456,7 +536,13 @@ function quiDuControle(scan: LocalScan): string {
  * Le journal des contrôles : ce qui attend l'envoi, puis ce que le système a
  * confirmé. Aucune ligne n'offre de modification ni de suppression.
  */
-function JournalControles({ scans, derniereSynchro }: { scans: LocalScan[]; derniereSynchro?: number }) {
+function JournalControles({
+  scans,
+  derniereSynchro,
+}: {
+  scans: LocalScan[]
+  derniereSynchro?: number
+}) {
   if (scans.length === 0) {
     return <Note>Aucun contrôle enregistré sur cette tournée.</Note>
   }
@@ -468,7 +554,11 @@ function JournalControles({ scans, derniereSynchro }: { scans: LocalScan[]; dern
       heure={heure(scan.scannedAt)}
       qui={quiDuControle(scan)}
       reference={scan.ticketNumber ?? "—"}
-      etat={<TagVerdict famille={FAMILLE_DU_VERDICT[scan.verdict]}>{LIBELLE_VERDICT[scan.verdict]}</TagVerdict>}
+      etat={
+        <TagVerdict famille={FAMILLE_DU_VERDICT[scan.verdict]}>
+          {LIBELLE_VERDICT[scan.verdict]}
+        </TagVerdict>
+      }
     />
   )
   return (
@@ -477,7 +567,8 @@ function JournalControles({ scans, derniereSynchro }: { scans: LocalScan[]; dern
         {enAttente.map(ligne)}
         {confirmes.length > 0 && (
           <SeparateurJournal icone={CheckCheckIcon}>
-            Confirmés{derniereSynchro ? ` à ${heure(derniereSynchro)}` : ""} · {confirmes.length} contrôle
+            Confirmés{derniereSynchro ? ` à ${heure(derniereSynchro)}` : ""} ·{" "}
+            {confirmes.length} contrôle
             {confirmes.length > 1 ? "s" : ""}
           </SeparateurJournal>
         )}

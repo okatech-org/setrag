@@ -29,8 +29,12 @@ describe("Thème de nuit", () => {
   it("laisse l'agent forcer le clair ou le sombre", () => {
     const nuit = a("00:34")
     expect(themeVoulu({ ...PREFERENCES_PAR_DEFAUT }, nuit)).toBe("dark")
-    expect(themeVoulu({ ...PREFERENCES_PAR_DEFAUT, theme: "clair" }, nuit)).toBe("light")
-    expect(themeVoulu({ ...PREFERENCES_PAR_DEFAUT, theme: "sombre" }, a("12:00"))).toBe("dark")
+    expect(
+      themeVoulu({ ...PREFERENCES_PAR_DEFAUT, theme: "clair" }, nuit)
+    ).toBe("light")
+    expect(
+      themeVoulu({ ...PREFERENCES_PAR_DEFAUT, theme: "sombre" }, a("12:00"))
+    ).toBe("dark")
   })
 })
 
@@ -56,19 +60,29 @@ describe("Réglages persistants", () => {
   })
 
   it("rejette une heure mal formée et garde la valeur par défaut", async () => {
-    localStorage.setItem(CLE_PREFERENCES, JSON.stringify({ nuitDebut: "25:00", son: false }))
+    localStorage.setItem(
+      CLE_PREFERENCES,
+      JSON.stringify({ nuitDebut: "25:00", son: false })
+    )
     const { preferences } = await import("./preferences")
-    expect(preferences()).toMatchObject({ nuitDebut: "18:30", son: false, theme: "auto" })
+    expect(preferences()).toMatchObject({
+      nuitDebut: "18:30",
+      son: false,
+      theme: "auto",
+    })
   })
 
   it("enregistre une modification et prévient les abonnés", async () => {
-    const { abonnerPreferences, modifierPreferences, preferences } = await import("./preferences")
+    const { abonnerPreferences, modifierPreferences, preferences } =
+      await import("./preferences")
     const rappel = vi.fn()
     const fin = abonnerPreferences(rappel)
     modifierPreferences({ contraste: true })
     expect(rappel).toHaveBeenCalledOnce()
     expect(preferences().contraste).toBe(true)
-    expect(JSON.parse(localStorage.getItem(CLE_PREFERENCES)!)).toMatchObject({ contraste: true })
+    expect(JSON.parse(localStorage.getItem(CLE_PREFERENCES)!)).toMatchObject({
+      contraste: true,
+    })
     fin()
   })
 })

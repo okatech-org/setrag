@@ -92,7 +92,11 @@ function Bandeau({ etat, href }: { etat: EtatBandeau; href?: "/historique" }) {
   return (
     <div className="pt-safe sticky top-0 z-40 bg-surface-sunk" role="status">
       {href ? (
-        <Link href={href} className={classes} aria-label={`${libelle(etat)} — ouvrir la file d'envoi`}>
+        <Link
+          href={href}
+          className={classes}
+          aria-label={`${libelle(etat)} — ouvrir la file d'envoi`}
+        >
           {contenu}
         </Link>
       ) : (
@@ -105,7 +109,9 @@ function Bandeau({ etat, href }: { etat: EtatBandeau; href?: "/historique" }) {
 function libelle(etat: EtatBandeau): string {
   return [
     etat.titre,
-    etat.compte !== undefined ? `${etat.compte} ${etat.detail ?? ""}`.trim() : etat.detail,
+    etat.compte !== undefined
+      ? `${etat.compte} ${etat.detail ?? ""}`.trim()
+      : etat.detail,
     etat.ton === "echec" ? "nouvel essai automatique" : etat.fin,
   ]
     .filter(Boolean)
@@ -145,7 +151,11 @@ export function BandeauConnexion() {
       etat={
         online
           ? { ton: "en-ligne", titre: "En ligne", detail: "session à ouvrir" }
-          : { ton: "hors-ligne", titre: "Hors ligne", detail: "réseau requis pour ouvrir la session" }
+          : {
+              ton: "hors-ligne",
+              titre: "Hors ligne",
+              detail: "réseau requis pour ouvrir la session",
+            }
       }
     />
   )

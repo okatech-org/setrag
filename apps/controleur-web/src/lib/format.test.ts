@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import { classeCourte, dateCourte, heure, jourHeure, montant, taux } from "./format"
+import {
+  classeCourte,
+  dateCourte,
+  heure,
+  jourHeure,
+  montant,
+  taux,
+} from "./format"
 import { memeVoiture, nomTrain, numeroVoiture } from "./train"
 
 describe("Mots et chiffres du terminal", () => {

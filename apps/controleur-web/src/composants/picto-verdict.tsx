@@ -5,16 +5,27 @@ import { cn } from "@workspace/ui/lib/utils"
 
 import type { Famille } from "@/lib/verdicts"
 
-const OCTOGONE = "20.5,4.3 43.5,4.3 59.7,20.5 59.7,43.5 43.5,59.7 20.5,59.7 4.3,43.5 4.3,20.5"
+const OCTOGONE =
+  "20.5,4.3 43.5,4.3 59.7,20.5 59.7,43.5 43.5,59.7 20.5,59.7 4.3,43.5 4.3,20.5"
 
 /**
  * La forme d'une famille de verdict : cercle et coche (accepté), triangle et
  * point d'exclamation (à vérifier), octogone et croix (refusé), cadre en
  * tirets (lecture impossible). Elle se lit sans la couleur.
  */
-export function PictoVerdict({ famille, className }: { famille: Famille; className?: string }) {
+export function PictoVerdict({
+  famille,
+  className,
+}: {
+  famille: Famille
+  className?: string
+}) {
   return (
-    <svg viewBox="0 0 64 64" aria-hidden className={cn("shrink-0 overflow-visible", className)}>
+    <svg
+      viewBox="0 0 64 64"
+      aria-hidden
+      className={cn("shrink-0 overflow-visible", className)}
+    >
       {famille === "accepte" && (
         <>
           <circle cx="32" cy="32" r="29" className="fill-success" />
@@ -74,7 +85,13 @@ export function PictoVerdict({ famille, className }: { famille: Famille; classNa
             strokeDasharray="8 6"
             className="stroke-ink-muted"
           />
-          <path d="M17 32h30" fill="none" strokeWidth="5" strokeLinecap="round" className="stroke-ink-muted" />
+          <path
+            d="M17 32h30"
+            fill="none"
+            strokeWidth="5"
+            strokeLinecap="round"
+            className="stroke-ink-muted"
+          />
         </>
       )}
     </svg>

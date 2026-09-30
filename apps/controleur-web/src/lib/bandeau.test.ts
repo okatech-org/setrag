@@ -28,7 +28,12 @@ describe("Bandeau de service", () => {
   })
 
   it("hors ligne, le nombre à envoyer, sans alarme", () => {
-    expect(etatDuBandeau(entree({ online: false, queue: { total: 7, failed: 0 } }), MAINTENANT)).toMatchObject({
+    expect(
+      etatDuBandeau(
+        entree({ online: false, queue: { total: 7, failed: 0 } }),
+        MAINTENANT
+      )
+    ).toMatchObject({
       ton: "hors-ligne",
       titre: "Hors ligne",
       compte: 7,
@@ -40,26 +45,55 @@ describe("Bandeau de service", () => {
   it("pendant l'envoi : l'avancement et le lot", () => {
     expect(
       etatDuBandeau(
-        entree({ syncing: true, progress: { sent: 2, total: 9, batch: 3, batchCount: 4 } }),
+        entree({
+          syncing: true,
+          progress: { sent: 2, total: 9, batch: 3, batchCount: 4 },
+        }),
         MAINTENANT
       )
-    ).toMatchObject({ ton: "envoi", titre: "Envoi", detail: "2 sur 9", fin: "lot 3 sur 4" })
+    ).toMatchObject({
+      ton: "envoi",
+      titre: "Envoi",
+      detail: "2 sur 9",
+      fin: "lot 3 sur 4",
+    })
   })
 
   it("réseau sans session : la reprise sera automatique", () => {
     expect(
-      etatDuBandeau(entree({ authenticated: false, queue: { total: 7, failed: 0 } }), MAINTENANT)
-    ).toMatchObject({ ton: "session", titre: "Session non reconnue", compte: 7, fin: "reprise auto." })
+      etatDuBandeau(
+        entree({ authenticated: false, queue: { total: 7, failed: 0 } }),
+        MAINTENANT
+      )
+    ).toMatchObject({
+      ton: "session",
+      titre: "Session non reconnue",
+      compte: 7,
+      fin: "reprise auto.",
+    })
   })
 
   it("en échec : rien n'est perdu, le prochain essai est annoncé", () => {
     expect(
-      etatDuBandeau(entree({ queue: { total: 2, failed: 2 }, nextRetryAt: MAINTENANT + 29_200 }), MAINTENANT)
-    ).toMatchObject({ ton: "echec", titre: "2 en échec", detail: "conservés", fin: "nouvel essai 30 s" })
+      etatDuBandeau(
+        entree({
+          queue: { total: 2, failed: 2 },
+          nextRetryAt: MAINTENANT + 29_200,
+        }),
+        MAINTENANT
+      )
+    ).toMatchObject({
+      ton: "echec",
+      titre: "2 en échec",
+      detail: "conservés",
+      fin: "nouvel essai 30 s",
+    })
   })
 
   it("avant toute synchronisation, ne prétend pas que tout est envoyé", () => {
-    expect(etatDuBandeau(entree({ lastSyncAt: undefined }), MAINTENANT)).toMatchObject({
+    expect(
+      etatDuBandeau(entree({ lastSyncAt: undefined }), MAINTENANT)
+    ).toMatchObject({
       detail: "rien à envoyer",
       fin: undefined,
     })

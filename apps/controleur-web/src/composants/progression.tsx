@@ -28,7 +28,10 @@ export function Progression({
       aria-valuemax={total}
       aria-valuenow={fait}
       aria-label={typeof titre === "string" ? titre : undefined}
-      className={cn("grid gap-1.5 rounded-md border border-line bg-surface px-3.5 py-3", className)}
+      className={cn(
+        "grid gap-1.5 rounded-md border border-line bg-surface px-3.5 py-3",
+        className
+      )}
     >
       <div className="flex items-baseline justify-between gap-3 text-[15px] font-bold">
         <span>{titre}</span>
@@ -37,7 +40,11 @@ export function Progression({
         </span>
       </div>
       <Voie rempli={part} className="w-full flex-none" />
-      {note && <small className="text-[12.5px] font-medium text-ink-muted">{note}</small>}
+      {note && (
+        <small className="text-[12.5px] font-medium text-ink-muted">
+          {note}
+        </small>
+      )}
     </div>
   )
 }

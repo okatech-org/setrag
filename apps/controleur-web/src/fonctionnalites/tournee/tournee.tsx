@@ -33,18 +33,30 @@ import { humanError } from "@/lib/errors"
 import { classeCourte, dateCourte, FUSEAU, heure } from "@/lib/format"
 import { freshness, isStale } from "@/lib/offline/manifest"
 import type { EmbarkedManifest } from "@/lib/offline/types"
-import { arretDeRang, arretsOrdonnes, heurePassage, progressionA } from "@/lib/position"
+import {
+  arretDeRang,
+  arretsOrdonnes,
+  heurePassage,
+  progressionA,
+} from "@/lib/position"
 import type { EtatVoiture } from "@/lib/tournee"
 import { memeVoiture, nomDuTrain, numeroVoiture } from "@/lib/train"
 
-import { FeuilleAffichage, resumeAffichage } from "../reglages/feuille-affichage"
+import {
+  FeuilleAffichage,
+  resumeAffichage,
+} from "../reglages/feuille-affichage"
 import { FeuilleSession } from "../reglages/feuille-session"
 import { useSessionControle } from "../session/garde-session"
 import { useVerrouillage } from "../session/verrouillage"
 import { useTerminal } from "../terminal/contexte-terminal"
 import { ChoixDesserte, libelleDesserte, type Desserte } from "./dessertes"
 import { useDonneesTournee } from "./donnees-tournee"
-import { FeuilleGareAtteinte, libelleGare, usePropositionGare } from "./gare-atteinte"
+import {
+  FeuilleGareAtteinte,
+  libelleGare,
+  usePropositionGare,
+} from "./gare-atteinte"
 
 /**
  * La tournée — l'écran d'accueil. Il répond à trois questions, dans cet
@@ -112,7 +124,9 @@ function PriseDeService() {
       <Corps>
         <div className="grid gap-1 rounded-md border-[1.5px] border-dashed border-line-strong px-4 py-3.5">
           <b className="text-[16px] font-bold">
-            {settings.activeTripId ? "Manifeste non téléchargé" : "Aucune desserte embarquée"}
+            {settings.activeTripId
+              ? "Manifeste non téléchargé"
+              : "Aucune desserte embarquée"}
           </b>
           <p className="text-small text-ink-muted">
             {settings.activeTripId
@@ -146,7 +160,8 @@ function PriseDeService() {
 
 function EcranTournee({ manifest }: { manifest: EmbarkedManifest }) {
   const router = useRouter()
-  const { settings, queue, setActiveTrip, online, authenticated } = useTerminal()
+  const { settings, queue, setActiveTrip, online, authenticated } =
+    useTerminal()
   const { profil, matricule } = useSessionControle()
   const donnees = useDonneesTournee(manifest)
   const prefs = usePreferences()
@@ -165,7 +180,10 @@ function EcranTournee({ manifest }: { manifest: EmbarkedManifest }) {
       <BarreApp logo actions={<ActionsBarre />} />
       <Corps>
         {perime && (
-          <Message ton="alerte" titre={`Données périmées — manifeste ${freshness(manifest, maintenant ?? undefined)}.`}>
+          <Message
+            ton="alerte"
+            titre={`Données périmées — manifeste ${freshness(manifest, maintenant ?? undefined)}.`}
+          >
             Les annulations et remboursements survenus depuis ne sont pas connus
             du terminal.
           </Message>
@@ -195,7 +213,10 @@ function EcranTournee({ manifest }: { manifest: EmbarkedManifest }) {
           </>
         )}
 
-        <Caisse rattache={Boolean(profil?.user.pointOfSaleId)} matricule={matricule} />
+        <Caisse
+          rattache={Boolean(profil?.user.pointOfSaleId)}
+          matricule={matricule}
+        />
 
         <Liste>
           <Ligne
@@ -229,7 +250,9 @@ function EcranTournee({ manifest }: { manifest: EmbarkedManifest }) {
       </Corps>
       <Bas avecOnglets>
         <Button size="lg" block className={TERRAIN} asChild>
-          <Link href="/scan">{commence ? "Reprendre le contrôle" : "Commencer le contrôle"}</Link>
+          <Link href="/scan">
+            {commence ? "Reprendre le contrôle" : "Commencer le contrôle"}
+          </Link>
         </Button>
       </Bas>
 
@@ -249,19 +272,29 @@ function EcranTournee({ manifest }: { manifest: EmbarkedManifest }) {
             size="lg"
             block
             className={cn(TERRAIN, INACTIF_EXPLIQUE)}
-            disabled={!nouvelle || nouvelle.id === manifest.tripId || !online || !authenticated}
+            disabled={
+              !nouvelle ||
+              nouvelle.id === manifest.tripId ||
+              !online ||
+              !authenticated
+            }
             onClick={() => {
               if (!nouvelle) return
-              void setActiveTrip(nouvelle.id, libelleDesserte(nouvelle)).then(() =>
-                router.push("/manifeste?telecharger=1" as Route)
+              void setActiveTrip(nouvelle.id, libelleDesserte(nouvelle)).then(
+                () => router.push("/manifeste?telecharger=1" as Route)
               )
             }}
           >
-            {!online ? "Téléchargement impossible sans réseau" : "Embarquer cette desserte"}
+            {!online
+              ? "Téléchargement impossible sans réseau"
+              : "Embarquer cette desserte"}
           </Button>
         }
       >
-        <ChoixDesserte valeur={nouvelle?.id ?? manifest.tripId} onChange={setNouvelle} />
+        <ChoixDesserte
+          valeur={nouvelle?.id ?? manifest.tripId}
+          onChange={setNouvelle}
+        />
       </Feuille>
     </>
   )
@@ -288,27 +321,36 @@ function CarteDesserte({
   const passage = ici ? heurePassage(ici) : undefined
   const aQuai = ici?.sequence === premier?.sequence
   const aller = (premier?.kilometerPoint ?? 0) <= (dernier?.kilometerPoint ?? 0)
-  const longueur = Math.abs((dernier?.kilometerPoint ?? 0) - (premier?.kilometerPoint ?? 0))
+  const longueur = Math.abs(
+    (dernier?.kilometerPoint ?? 0) - (premier?.kilometerPoint ?? 0)
+  )
   const arrivee = dernier ? heurePassage(dernier) : manifest.arrivalAt
   const lendemain =
     arrivee !== undefined &&
-    new Intl.DateTimeFormat("en-CA", { timeZone: FUSEAU }).format(arrivee) !== manifest.serviceDate
+    new Intl.DateTimeFormat("en-CA", { timeZone: FUSEAU }).format(arrivee) !==
+      manifest.serviceDate
 
   return (
     <section className="grid gap-3 rounded-md border border-line bg-surface p-4">
       <p className="text-[13px] font-semibold text-ink-muted">
-        <b className="text-[15px] font-bold text-ink">{nomDuTrain(manifest)}</b> ·{" "}
-        {dateCourte(manifest.serviceDate)} · <span className="tabular">{arrets.length}</span> gares
+        <b className="text-[15px] font-bold text-ink">{nomDuTrain(manifest)}</b>{" "}
+        · {dateCourte(manifest.serviceDate)} ·{" "}
+        <span className="tabular">{arrets.length}</span> gares
       </p>
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
         <div>
           <b className="block font-mono text-[22px] leading-none font-semibold tabular-nums">
             {heure(manifest.departureAt)}
           </b>
-          <span className="mt-1.5 block text-[12.5px] font-medium text-ink-muted">{manifest.originName}</span>
+          <span className="mt-1.5 block text-[12.5px] font-medium text-ink-muted">
+            {manifest.originName}
+          </span>
         </div>
         <div className="grid justify-items-center gap-1.5">
-          <Voie rempli={progressionA(manifest, ici?.sequence ?? 0)} className="w-full flex-none" />
+          <Voie
+            rempli={progressionA(manifest, ici?.sequence ?? 0)}
+            className="w-full flex-none"
+          />
           {ici && (
             <small className="font-mono text-[12px] whitespace-nowrap text-ink-muted">
               PK {ici.kilometerPoint}
@@ -325,7 +367,9 @@ function CarteDesserte({
               </sup>
             )}
           </b>
-          <span className="mt-1.5 block text-[12.5px] font-medium text-ink-muted">{manifest.destinationName}</span>
+          <span className="mt-1.5 block text-[12.5px] font-medium text-ink-muted">
+            {manifest.destinationName}
+          </span>
         </div>
       </div>
 
@@ -334,12 +378,14 @@ function CarteDesserte({
           <p className="flex items-start gap-2 text-[13.5px] font-medium text-info-ink">
             <MapPinIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
             <span>
-              Position confirmée : {libelleGare(ici, aQuai)}. D&apos;après l&apos;horaire, le
-              train a passé <b>{proposition.name}</b>
+              Position confirmée : {libelleGare(ici, aQuai)}. D&apos;après
+              l&apos;horaire, le train a passé <b>{proposition.name}</b>
               {heurePassage(proposition) !== undefined && (
                 <>
                   {" à "}
-                  <span className="tabular">{heure(heurePassage(proposition)!)}</span>
+                  <span className="tabular">
+                    {heure(heurePassage(proposition)!)}
+                  </span>
                 </>
               )}
               .
@@ -380,11 +426,15 @@ function Rame({ voitures, ici }: { voitures: EtatVoiture[]; ici: string }) {
   return (
     <div
       className="grid gap-[5px]"
-      style={{ gridTemplateColumns: `repeat(${voitures.length}, minmax(0, 1fr))` }}
+      style={{
+        gridTemplateColumns: `repeat(${voitures.length}, minmax(0, 1fr))`,
+      }}
     >
       {voitures.map(({ voiture, titres, controles }) => {
         const estIci = memeVoiture(voiture.label, ici)
-        const classe = voiture.serviceClass ? classeCourte(voiture.serviceClass) : ""
+        const classe = voiture.serviceClass
+          ? classeCourte(voiture.serviceClass)
+          : ""
         return (
           <Link
             key={voiture.label}
@@ -392,9 +442,15 @@ function Rame({ voitures, ici }: { voitures: EtatVoiture[]; ici: string }) {
             aria-label={`Voiture ${numeroVoiture(voiture.label)}${classe ? `, ${classe}` : ""}${estIci ? ", voiture contrôlée" : ""} : ${titres > 0 ? `${controles} titres contrôlés sur ${titres}` : "aucun titre"}`}
             className={cn(
               "rame-voiture relative grid min-h-16 content-start justify-items-center gap-px overflow-hidden rounded-[10px_10px_6px_6px] border bg-surface px-0.5 pt-[7px] pb-3",
-              estIci ? "border-accent-base shadow-[inset_0_0_0_1px_var(--c-accent)]" : "border-line"
+              estIci
+                ? "border-accent-base shadow-[inset_0_0_0_1px_var(--c-accent)]"
+                : "border-line"
             )}
-            style={{ "--p": titres > 0 ? controles / titres : 0 } as React.CSSProperties}
+            style={
+              {
+                "--p": titres > 0 ? controles / titres : 0,
+              } as React.CSSProperties
+            }
           >
             <b className="text-[14px] font-bold">{voiture.label}</b>
             <small className="text-[10.5px] font-medium whitespace-nowrap text-ink-muted">
@@ -402,7 +458,11 @@ function Rame({ voitures, ici }: { voitures: EtatVoiture[]; ici: string }) {
               {estIci && " · ici"}
             </small>
             <span className="mt-0.5 font-mono text-[12px] font-semibold tabular-nums">
-              {titres > 0 ? `${controles}/${titres}` : <span className="text-ink-muted">—</span>}
+              {titres > 0 ? (
+                `${controles}/${titres}`
+              ) : (
+                <span className="text-ink-muted">—</span>
+              )}
             </span>
           </Link>
         )
@@ -416,7 +476,13 @@ function Rame({ voitures, ici }: { voitures: EtatVoiture[]; ici: string }) {
  * exigent une, et une caisse appartient à un point de vente. Vérifiée quand
  * le serveur répond ; hors réseau, rien n'est affirmé.
  */
-function Caisse({ rattache, matricule }: { rattache: boolean; matricule: string }) {
+function Caisse({
+  rattache,
+  matricule,
+}: {
+  rattache: boolean
+  matricule: string
+}) {
   const { online, authenticated } = useTerminal()
   const pret = online && authenticated
   const caisse = useQuery(api.functions.cash.mySession, pret ? {} : "skip")

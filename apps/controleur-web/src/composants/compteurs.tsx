@@ -37,17 +37,23 @@ function Compteur({
     <div
       className={cn(
         "grid gap-0.5 rounded-md border px-3 py-2.5",
-        attente ? "border-transparent bg-warning-soft text-warning-ink" : "border-line bg-surface"
+        attente
+          ? "border-transparent bg-warning-soft text-warning-ink"
+          : "border-line bg-surface"
       )}
     >
-      <b className="font-mono text-[26px] leading-[1.05] font-semibold tabular-nums">{valeur}</b>
+      <b className="font-mono text-[26px] leading-[1.05] font-semibold tabular-nums">
+        {valeur}
+      </b>
       <span
         className={cn(
           "flex items-center gap-1 text-[12.5px] font-medium",
           attente ? "text-warning-ink" : "text-ink-muted"
         )}
       >
-        {libelle === "à envoyer" && <CloudUploadIcon aria-hidden className="size-3.5" />}
+        {libelle === "à envoyer" && (
+          <CloudUploadIcon aria-hidden className="size-3.5" />
+        )}
         {libelle}
       </span>
     </div>

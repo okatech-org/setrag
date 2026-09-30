@@ -80,23 +80,31 @@ export function openDb(): Promise<IDBDatabase> {
         s.createIndex("by_card", "cardNumber")
       }
       if (!db.objectStoreNames.contains(STORES.scans)) {
-        const s = db.createObjectStore(STORES.scans, { keyPath: "clientScanId" })
+        const s = db.createObjectStore(STORES.scans, {
+          keyPath: "clientScanId",
+        })
         s.createIndex("by_trip", "tripId")
         s.createIndex("by_ticket", "ticketNumber")
         s.createIndex("by_state", "state")
       }
       if (!db.objectStoreNames.contains(STORES.sales)) {
-        const s = db.createObjectStore(STORES.sales, { keyPath: "clientSaleId" })
+        const s = db.createObjectStore(STORES.sales, {
+          keyPath: "clientSaleId",
+        })
         s.createIndex("by_trip", "tripId")
         s.createIndex("by_state", "state")
       }
       if (!db.objectStoreNames.contains(STORES.penalties)) {
-        const s = db.createObjectStore(STORES.penalties, { keyPath: "clientId" })
+        const s = db.createObjectStore(STORES.penalties, {
+          keyPath: "clientId",
+        })
         s.createIndex("by_trip", "tripId")
         s.createIndex("by_state", "state")
       }
       if (!db.objectStoreNames.contains(STORES.incidents)) {
-        const s = db.createObjectStore(STORES.incidents, { keyPath: "clientId" })
+        const s = db.createObjectStore(STORES.incidents, {
+          keyPath: "clientId",
+        })
         s.createIndex("by_state", "state")
       }
       if (!db.objectStoreNames.contains(STORES.photos)) {
@@ -230,7 +238,9 @@ export async function putTicketBatch(
     store.put(stored)
   }
   const manifests = tx.objectStore(STORES.manifests)
-  const current = await wrap<EmbarkedManifest | undefined>(manifests.get(tripId))
+  const current = await wrap<EmbarkedManifest | undefined>(
+    manifests.get(tripId)
+  )
   let total = 0
   if (current) {
     // Le compte se déduit des clés écrites, pas d'un cumul : un lot rejoué
@@ -462,7 +472,9 @@ export async function scansForTicket(
   ticketNumber: string
 ): Promise<LocalScan[]> {
   return await withStore(STORES.scans, "readonly", (s) =>
-    wrap<LocalScan[]>(s.index("by_ticket").getAll(IDBKeyRange.only(ticketNumber)))
+    wrap<LocalScan[]>(
+      s.index("by_ticket").getAll(IDBKeyRange.only(ticketNumber))
+    )
   )
 }
 

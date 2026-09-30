@@ -42,7 +42,11 @@ import { memeVoiture, nomDuTrain, numeroVoiture, voitureDe } from "@/lib/train"
 
 import { useTerminal } from "../terminal/contexte-terminal"
 import { useDonneesTournee } from "../tournee/donnees-tournee"
-import { FeuilleGareAtteinte, libelleGare, usePropositionGare } from "../tournee/gare-atteinte"
+import {
+  FeuilleGareAtteinte,
+  libelleGare,
+  usePropositionGare,
+} from "../tournee/gare-atteinte"
 import { useControle, type ResultatControle } from "./controle"
 import { Verdict } from "./verdict"
 
@@ -77,7 +81,9 @@ export function Controle() {
       />
     )
   }
-  return <Viseur onResultat={setResultat} saisie={saisie} onSaisie={setSaisie} />
+  return (
+    <Viseur onResultat={setResultat} saisie={saisie} onSaisie={setSaisie} />
+  )
 }
 
 function SansManifeste() {
@@ -87,7 +93,7 @@ function SansManifeste() {
       <Corps className="justify-center text-center">
         <CameraOffIcon aria-hidden className="mx-auto size-8 text-ink-muted" />
         <h1 className="text-[19px] font-bold">Aucun manifeste embarqué</h1>
-        <p className="mx-auto max-w-[32ch] text-small text-ink-muted">
+        <p className="text-small mx-auto max-w-[32ch] text-ink-muted">
           Choisissez une desserte et téléchargez son manifeste avant de
           contrôler : la vérification des titres en dépend.
         </p>
@@ -247,10 +253,12 @@ function Viseur({
         <div className="min-w-0">
           <h1 className="truncate text-[18px] font-bold">
             Voiture {numero}
-            {voiture?.serviceClass && ` · ${classeLongue(voiture.serviceClass)}`}
+            {voiture?.serviceClass &&
+              ` · ${classeLongue(voiture.serviceClass)}`}
           </h1>
           <p className="truncate text-[13px] font-medium text-ink-muted">
-            {nomDuTrain(manifest)} · {libelleGare(ici, ici?.sequence === premiere)}
+            {nomDuTrain(manifest)} ·{" "}
+            {libelleGare(ici, ici?.sequence === premiere)}
           </p>
         </div>
       </div>
@@ -270,7 +278,10 @@ function Viseur({
             </button>
           )}
           {(incomplet || perime) && (
-            <Tag tone="warning" className="h-auto min-h-[30px] py-1 text-[13px] whitespace-normal">
+            <Tag
+              tone="warning"
+              className="h-auto min-h-[30px] py-1 text-[13px] whitespace-normal"
+            >
               {incomplet
                 ? `Manifeste incomplet — ${manifest.downloadedCount} titres sur ${manifest.ticketCount}`
                 : "Manifeste périmé — statuts fins inconnus"}
@@ -287,7 +298,7 @@ function Viseur({
           <div className="absolute inset-0 grid content-center justify-items-center gap-2.5 p-5 text-center">
             <CameraOffIcon aria-hidden className="size-[30px] text-ink-muted" />
             <h2 className="text-[19px] font-bold">Caméra indisponible</h2>
-            <p className="max-w-[30ch] text-small text-ink-muted">
+            <p className="text-small max-w-[30ch] text-ink-muted">
               {panne.message} {panne.remedy}
             </p>
           </div>
@@ -300,7 +311,10 @@ function Viseur({
               aria-label="Image de la caméra"
               className="absolute inset-0 size-full object-cover"
             />
-            <div aria-hidden className="pointer-events-none absolute top-[44%] left-1/2 size-[196px] -translate-x-1/2 -translate-y-1/2">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute top-[44%] left-1/2 size-[196px] -translate-x-1/2 -translate-y-1/2"
+            >
               <i className="absolute top-0 left-0 size-[34px] rounded-tl-[14px] border-t-[5px] border-l-[5px] border-accent-on-ink" />
               <i className="absolute top-0 right-0 size-[34px] rounded-tr-[14px] border-t-[5px] border-r-[5px] border-accent-on-ink" />
               <i className="absolute bottom-0 left-0 size-[34px] rounded-bl-[14px] border-b-[5px] border-l-[5px] border-accent-on-ink" />
@@ -310,7 +324,11 @@ function Viseur({
               <p>Présentez le code Aztec dans le cadre</p>
               {/* Une rame passe tant que la caméra attend un code : l'attente
                   réelle, le seul mouvement de l'écran. */}
-              <Voie etat="attente" fond="encre" className="w-[150px] flex-none" />
+              <Voie
+                etat="attente"
+                fond="encre"
+                className="w-[150px] flex-none"
+              />
             </div>
           </>
         )}
@@ -340,7 +358,13 @@ function Viseur({
           >
             Saisir un code à la main
           </Button>
-          <Button variant="secondary" size="lg" block className={TERRAIN} asChild>
+          <Button
+            variant="secondary"
+            size="lg"
+            block
+            className={TERRAIN}
+            asChild
+          >
             <Link href="/recherche">Chercher dans le manifeste</Link>
           </Button>
         </Bas>
@@ -381,7 +405,12 @@ function Viseur({
               onClick={() => setChoixVoiture(true)}
               nom={`Voiture ${numero} — changer de voiture`}
             />
-            <Commande icone={SearchIcon} libelle="Chercher" href="/recherche" nom="Chercher dans le manifeste" />
+            <Commande
+              icone={SearchIcon}
+              libelle="Chercher"
+              href="/recherche"
+              nom="Chercher dans le manifeste"
+            />
             <Commande
               icone={KeyboardIcon}
               libelle="Saisir"
@@ -427,7 +456,10 @@ function Viseur({
                       {v.standingCapacity > 0 && (
                         <>
                           {" · "}
-                          <span className="tabular">{v.standingCapacity}</span> debout
+                          <span className="tabular">
+                            {v.standingCapacity}
+                          </span>{" "}
+                          debout
                         </>
                       )}
                       {" · "}
@@ -436,11 +468,13 @@ function Viseur({
                   <span className="tabular">{titres}</span> titres
                 </>
               ),
-              fin: memeVoiture(v.label, settings.coachLabel) ? <Tag tone="accent">ici</Tag> : undefined,
+              fin: memeVoiture(v.label, settings.coachLabel) ? (
+                <Tag tone="accent">ici</Tag>
+              ) : undefined,
             }))}
           />
         ) : (
-          <p className="pb-4 text-small text-ink-muted">
+          <p className="text-small pb-4 text-ink-muted">
             Le manifeste embarqué ne porte pas la composition du train :
             mettez-le à jour en gare.
           </p>
@@ -476,7 +510,13 @@ function Commande({
   )
   const contenu = (
     <>
-      <Icone aria-hidden className={cn("size-[22px]", active ? "text-ink-inverse" : "text-accent-ink")} />
+      <Icone
+        aria-hidden
+        className={cn(
+          "size-[22px]",
+          active ? "text-ink-inverse" : "text-accent-ink"
+        )}
+      />
       <span className="max-w-full truncate">{libelle}</span>
     </>
   )
@@ -529,7 +569,13 @@ function FeuilleSaisie({
       titre="Saisir le code du titre"
       description="Recopiez la chaîne imprimée sous le code, en commençant par SETRAG1:."
       pied={
-        <Button size="lg" block className={TERRAIN} disabled={!code.trim()} onClick={valider}>
+        <Button
+          size="lg"
+          block
+          className={TERRAIN}
+          disabled={!code.trim()}
+          onClick={valider}
+        >
           Vérifier le code
         </Button>
       }
@@ -541,7 +587,11 @@ function FeuilleSaisie({
           valider()
         }}
       >
-        <Field label="Code du titre" htmlFor="code-titre" hint="La signature est vérifiée sur ce terminal, sans réseau.">
+        <Field
+          label="Code du titre"
+          htmlFor="code-titre"
+          hint="La signature est vérifiée sur ce terminal, sans réseau."
+        >
           <Textarea
             autoFocus
             rows={4}

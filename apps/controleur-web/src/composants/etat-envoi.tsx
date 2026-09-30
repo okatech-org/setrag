@@ -14,7 +14,10 @@ import type { QueueKind, SyncState } from "@/lib/offline/types"
  * est écrit « en attente d'envoi » l'est vraiment, et devient « envoyé »
  * quand le serveur a confirmé.
  */
-export function useEtatEnvoi<T extends { state: SyncState }>(nature: QueueKind, id: string | undefined) {
+export function useEtatEnvoi<T extends { state: SyncState }>(
+  nature: QueueKind,
+  id: string | undefined
+) {
   const { queue } = useTerminal()
   const [enregistrement, setEnregistrement] = useState<T | undefined>(undefined)
   useEffect(() => {
@@ -31,7 +34,13 @@ export function useEtatEnvoi<T extends { state: SyncState }>(nature: QueueKind, 
 }
 
 /** Pastille d'état d'envoi : un mot et une icône, jamais la teinte seule. */
-export function PastilleEnvoi({ etat, className }: { etat: SyncState | undefined; className?: string }) {
+export function PastilleEnvoi({
+  etat,
+  className,
+}: {
+  etat: SyncState | undefined
+  className?: string
+}) {
   if (etat === "sent") {
     return (
       <Tag tone="success" className={className}>

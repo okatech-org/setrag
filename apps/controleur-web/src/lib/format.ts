@@ -77,7 +77,9 @@ export function dateCourte(serviceDate: string): string {
 
 /** « d'Owendo Virié », « de Booué » : l'élision devant une voyelle ou un h muet. */
 export function deGare(nom: string): string {
-  return /^[aeiouyhàâäéèêëîïôöùûüAEIOUYHÀÂÄÉÈÊËÎÏÔÖÙÛÜ]/.test(nom) ? `d'${nom}` : `de ${nom}`
+  return /^[aeiouyhàâäéèêëîïôöùûüAEIOUYHÀÂÄÉÈÊËÎÏÔÖÙÛÜ]/.test(nom)
+    ? `d'${nom}`
+    : `de ${nom}`
 }
 
 const CLASSES: Record<string, { court: string; long: string }> = {

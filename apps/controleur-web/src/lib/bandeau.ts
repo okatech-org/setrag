@@ -9,7 +9,8 @@
 
 import { heure } from "./format"
 
-export type TonBandeau = "en-ligne" | "hors-ligne" | "envoi" | "session" | "echec"
+export type TonBandeau =
+  "en-ligne" | "hors-ligne" | "envoi" | "session" | "echec"
 
 export interface EtatBandeau {
   ton: TonBandeau
@@ -27,14 +28,22 @@ export interface EntreeBandeau {
   online: boolean
   authenticated: boolean
   syncing: boolean
-  progress: { sent: number; total: number; batch: number; batchCount: number } | null
+  progress: {
+    sent: number
+    total: number
+    batch: number
+    batchCount: number
+  } | null
   queue: { total: number; failed: number }
   lastSyncAt?: number
   /** Prochaine reprise automatique après un échec. */
   nextRetryAt?: number | null
 }
 
-export function etatDuBandeau(e: EntreeBandeau, maintenant: number): EtatBandeau {
+export function etatDuBandeau(
+  e: EntreeBandeau,
+  maintenant: number
+): EtatBandeau {
   const synchro = e.lastSyncAt ? `synchro ${heure(e.lastSyncAt)}` : undefined
 
   if (e.syncing && e.progress) {
@@ -47,16 +56,38 @@ export function etatDuBandeau(e: EntreeBandeau, maintenant: number): EtatBandeau
   }
   if (!e.online) {
     return e.queue.total > 0
-      ? { ton: "hors-ligne", titre: "Hors ligne", compte: e.queue.total, detail: "à envoyer", fin: synchro }
-      : { ton: "hors-ligne", titre: "Hors ligne", detail: "rien à envoyer", fin: synchro }
+      ? {
+          ton: "hors-ligne",
+          titre: "Hors ligne",
+          compte: e.queue.total,
+          detail: "à envoyer",
+          fin: synchro,
+        }
+      : {
+          ton: "hors-ligne",
+          titre: "Hors ligne",
+          detail: "rien à envoyer",
+          fin: synchro,
+        }
   }
   if (!e.authenticated) {
     return e.queue.total > 0
-      ? { ton: "session", titre: "Session non reconnue", compte: e.queue.total, fin: "reprise auto." }
-      : { ton: "session", titre: "Session non reconnue", detail: "rien à envoyer" }
+      ? {
+          ton: "session",
+          titre: "Session non reconnue",
+          compte: e.queue.total,
+          fin: "reprise auto.",
+        }
+      : {
+          ton: "session",
+          titre: "Session non reconnue",
+          detail: "rien à envoyer",
+        }
   }
   if (e.queue.failed > 0) {
-    const secondes = e.nextRetryAt ? Math.ceil((e.nextRetryAt - maintenant) / 1000) : undefined
+    const secondes = e.nextRetryAt
+      ? Math.ceil((e.nextRetryAt - maintenant) / 1000)
+      : undefined
     return {
       ton: "echec",
       titre: `${e.queue.failed} en échec`,
@@ -70,7 +101,13 @@ export function etatDuBandeau(e: EntreeBandeau, maintenant: number): EtatBandeau
     }
   }
   if (e.queue.total > 0) {
-    return { ton: "en-ligne", titre: "En ligne", compte: e.queue.total, detail: "à envoyer", fin: synchro }
+    return {
+      ton: "en-ligne",
+      titre: "En ligne",
+      compte: e.queue.total,
+      detail: "à envoyer",
+      fin: synchro,
+    }
   }
   return {
     ton: "en-ligne",

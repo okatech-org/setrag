@@ -45,12 +45,20 @@ const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/
 function lire(): Preferences {
   if (typeof localStorage === "undefined") return PREFERENCES_PAR_DEFAUT
   try {
-    const brut = JSON.parse(localStorage.getItem(CLE_PREFERENCES) ?? "{}") as Partial<Preferences>
+    const brut = JSON.parse(
+      localStorage.getItem(CLE_PREFERENCES) ?? "{}"
+    ) as Partial<Preferences>
     return {
-      theme: brut.theme === "clair" || brut.theme === "sombre" ? brut.theme : "auto",
-      nuitDebut: HEURE.test(brut.nuitDebut ?? "") ? brut.nuitDebut! : PREFERENCES_PAR_DEFAUT.nuitDebut,
-      nuitFin: HEURE.test(brut.nuitFin ?? "") ? brut.nuitFin! : PREFERENCES_PAR_DEFAUT.nuitFin,
-      son: typeof brut.son === "boolean" ? brut.son : PREFERENCES_PAR_DEFAUT.son,
+      theme:
+        brut.theme === "clair" || brut.theme === "sombre" ? brut.theme : "auto",
+      nuitDebut: HEURE.test(brut.nuitDebut ?? "")
+        ? brut.nuitDebut!
+        : PREFERENCES_PAR_DEFAUT.nuitDebut,
+      nuitFin: HEURE.test(brut.nuitFin ?? "")
+        ? brut.nuitFin!
+        : PREFERENCES_PAR_DEFAUT.nuitFin,
+      son:
+        typeof brut.son === "boolean" ? brut.son : PREFERENCES_PAR_DEFAUT.son,
       contraste: brut.contraste === true,
     }
   } catch {
@@ -122,7 +130,10 @@ export function estNuit(instant: number, debut: string, fin: string): boolean {
 }
 
 /** Thème à appliquer, à l'instant dit. */
-export function themeVoulu(prefs: Preferences, instant: number): "light" | "dark" {
+export function themeVoulu(
+  prefs: Preferences,
+  instant: number
+): "light" | "dark" {
   if (prefs.theme === "clair") return "light"
   if (prefs.theme === "sombre") return "dark"
   return estNuit(instant, prefs.nuitDebut, prefs.nuitFin) ? "dark" : "light"

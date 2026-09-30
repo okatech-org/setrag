@@ -64,7 +64,10 @@ export function avancementPropose(
  * (0 → 1). L'Omnibus 202 roule vers Owendo : ses PK décroissent, d'où la
  * valeur absolue.
  */
-export function progressionA(manifest: EmbarkedManifest, sequence: number): number {
+export function progressionA(
+  manifest: EmbarkedManifest,
+  sequence: number
+): number {
   const arrets = arretsOrdonnes(manifest)
   const premier = arrets[0]
   const dernier = arrets[arrets.length - 1]

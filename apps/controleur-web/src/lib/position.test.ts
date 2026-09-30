@@ -6,7 +6,12 @@ import { avancementPropose, gareProposee, progressionA } from "./position"
 const H = 60 * 60 * 1000
 const DEPART = Date.parse("2026-09-30T07:00:00Z")
 
-function arret(sequence: number, name: string, km: number, decalage?: number): EmbarkedStop {
+function arret(
+  sequence: number,
+  name: string,
+  km: number,
+  decalage?: number
+): EmbarkedStop {
   return {
     sequence,
     stationId: `s${sequence}`,

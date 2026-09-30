@@ -88,7 +88,10 @@ export function Connexion() {
    * démonstration : ils empruntent EXACTEMENT le même chemin, seule la
    * saisie leur est épargnée.
    */
-  async function ouvrirSession(identifiants: { email: string; password: string }) {
+  async function ouvrirSession(identifiants: {
+    email: string
+    password: string
+  }) {
     const resultat = await authClient.signIn.email(identifiants)
     if (resultat.error) throw new Error(messageAuth(resultat.error))
     // Un envoi de code qui échoue est signalé tel quel : pas question de
@@ -114,7 +117,9 @@ export function Connexion() {
     })
     if (resultat.error) throw new Error(messageAuth(resultat.error))
     if (resultat.data?.success === false) {
-      throw new Error("Code refusé. Vérifiez l'heure du terminal, puis réessayez.")
+      throw new Error(
+        "Code refusé. Vérifiez l'heure du terminal, puis réessayez."
+      )
     }
   }
 
@@ -127,7 +132,10 @@ export function Connexion() {
       setEtape("code")
       setAvis(`Code envoyé à ${email}. Il est valable 10 minutes.`)
     } catch (cause) {
-      setErreur((cause as Error).message || "Identifiants refusés. Vérifiez votre compte de service.")
+      setErreur(
+        (cause as Error).message ||
+          "Identifiants refusés. Vérifiez votre compte de service."
+      )
     } finally {
       setEnCours(false)
     }
@@ -138,7 +146,11 @@ export function Connexion() {
    * le serveur ; sur un déploiement de développement, le code est relevé
    * automatiquement. Ailleurs, on s'arrête à l'étape du code.
    */
-  async function entrerDemo(compte: { key: string; email: string; password: string }) {
+  async function entrerDemo(compte: {
+    key: string
+    email: string
+    password: string
+  }) {
     setErreur(null)
     setAvis(null)
     setDemoEnCours(compte.key)
@@ -148,7 +160,9 @@ export function Connexion() {
       await ouvrirSession({ email: compte.email, password: compte.password })
       if (!devStatus?.developmentEnabled) {
         setEtape("code")
-        setAvis(`Code envoyé à ${compte.email}. Saisissez-le pour ouvrir la session.`)
+        setAvis(
+          `Code envoyé à ${compte.email}. Saisissez-le pour ouvrir la session.`
+        )
         return
       }
       const trouve = await relever({ identifier: compte.email })
@@ -160,7 +174,10 @@ export function Connexion() {
       await verifierCode(compte.email, trouve.code)
       router.replace("/tournee")
     } catch (cause) {
-      setErreur((cause as Error).message || "Connexion au compte de démonstration impossible.")
+      setErreur(
+        (cause as Error).message ||
+          "Connexion au compte de démonstration impossible."
+      )
     } finally {
       setDemoEnCours("")
     }
@@ -174,7 +191,10 @@ export function Connexion() {
       await verifierCode(email, code)
       router.replace("/tournee")
     } catch (cause) {
-      setErreur((cause as Error).message || "Code refusé. Vérifiez que l'heure du terminal est correcte.")
+      setErreur(
+        (cause as Error).message ||
+          "Code refusé. Vérifiez que l'heure du terminal est correcte."
+      )
       setCode("")
     } finally {
       setEnCours(false)
@@ -217,7 +237,11 @@ export function Connexion() {
               </p>
             </div>
             <Stepper
-              steps={[{ label: "Identifiant" }, { label: "Code" }, { label: "Session" }]}
+              steps={[
+                { label: "Identifiant" },
+                { label: "Code" },
+                { label: "Session" },
+              ]}
               current={0}
             />
             {horsReseau}
@@ -330,7 +354,10 @@ export function Connexion() {
                 label="Code de vérification à six chiffres"
               />
               {erreur && (
-                <p role="alert" className="text-[13px] font-semibold text-danger-ink">
+                <p
+                  role="alert"
+                  className="text-[13px] font-semibold text-danger-ink"
+                >
                   {erreur}
                 </p>
               )}
@@ -362,7 +389,13 @@ export function Connexion() {
               Revenir à l&apos;identifiant
             </Button>
             {devStatus?.developmentEnabled && (
-              <Button type="button" variant="ghost" size="sm" block onClick={() => void releverCode()}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                block
+                onClick={() => void releverCode()}
+              >
                 Afficher le code (déploiement de développement)
               </Button>
             )}

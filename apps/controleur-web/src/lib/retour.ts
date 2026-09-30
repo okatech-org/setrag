@@ -17,7 +17,8 @@ function audio(): AudioContext | null {
   if (typeof window === "undefined") return null
   const Ctor =
     window.AudioContext ??
-    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    (window as unknown as { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext
   if (!Ctor) return null
   contexte ??= new Ctor()
   return contexte
@@ -55,7 +56,10 @@ function jouer(famille: Famille): void {
 }
 
 /** Vibration et son d'un verdict, selon sa famille et le réglage du son. */
-export function retourDuVerdict(famille: Famille, options: { son: boolean }): void {
+export function retourDuVerdict(
+  famille: Famille,
+  options: { son: boolean }
+): void {
   const { vibration } = RETOUR_PHYSIQUE[famille]
   if (vibration && typeof navigator !== "undefined" && "vibrate" in navigator) {
     navigator.vibrate(vibration)

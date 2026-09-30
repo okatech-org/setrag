@@ -18,7 +18,10 @@ import { leTrain } from "@/lib/train"
 import { useTerminal } from "../terminal/contexte-terminal"
 
 /** « après Booué », ou « au départ d'Owendo Virié » tant que le train est à quai. */
-export function libelleGare(arret: EmbarkedStop | undefined, premiere: boolean): string {
+export function libelleGare(
+  arret: EmbarkedStop | undefined,
+  premiere: boolean
+): string {
   if (!arret) return "position inconnue"
   return premiere ? `au départ ${deGare(arret.name)}` : `après ${arret.name}`
 }
@@ -51,11 +54,14 @@ export function FeuilleGareAtteinte({
 
   const arrets = arretsOrdonnes(manifest)
   const premiere = arrets[0]?.sequence
-  const proposee = maintenant === null ? undefined : gareProposee(manifest, maintenant)
+  const proposee =
+    maintenant === null ? undefined : gareProposee(manifest, maintenant)
   const passage = proposee ? heurePassage(proposee) : undefined
   const courante = arretDeRang(manifest, settings.currentStopIndex)
   const designee =
-    proposee && proposee.sequence > settings.currentStopIndex ? proposee : courante
+    proposee && proposee.sequence > settings.currentStopIndex
+      ? proposee
+      : courante
 
   return (
     <ChoixGare
@@ -69,10 +75,14 @@ export function FeuilleGareAtteinte({
       }
       arrets={arrets}
       valeur={designee?.sequence}
-      confirmer={(arret) => `Confirmer : ${libelleGare(arret, arret.sequence === premiere)}`}
+      confirmer={(arret) =>
+        `Confirmer : ${libelleGare(arret, arret.sequence === premiere)}`
+      }
       onChoisir={(arret) => {
         void confirmStop(arret.sequence).then(() =>
-          toast.success(`Position confirmée : ${libelleGare(arret, arret.sequence === premiere)}.`)
+          toast.success(
+            `Position confirmée : ${libelleGare(arret, arret.sequence === premiere)}.`
+          )
         )
       }}
     />

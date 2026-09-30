@@ -17,7 +17,11 @@ export function resumeAffichage(prefs: Preferences): string {
       : prefs.theme === "sombre"
         ? "Toujours sombre"
         : "Toujours clair"
-  return [theme, prefs.son ? "son activé" : "son coupé", prefs.contraste && "contraste renforcé"]
+  return [
+    theme,
+    prefs.son ? "son activé" : "son coupé",
+    prefs.contraste && "contraste renforcé",
+  ]
     .filter(Boolean)
     .join(" · ")
 }
@@ -62,7 +66,8 @@ export function FeuilleAffichage({
                   className="tabular"
                   value={prefs.nuitDebut}
                   onChange={(event) =>
-                    event.target.value && modifierPreferences({ nuitDebut: event.target.value })
+                    event.target.value &&
+                    modifierPreferences({ nuitDebut: event.target.value })
                   }
                 />
               </Field>
@@ -72,7 +77,8 @@ export function FeuilleAffichage({
                   className="tabular"
                   value={prefs.nuitFin}
                   onChange={(event) =>
-                    event.target.value && modifierPreferences({ nuitFin: event.target.value })
+                    event.target.value &&
+                    modifierPreferences({ nuitFin: event.target.value })
                   }
                 />
               </Field>
@@ -88,7 +94,10 @@ export function FeuilleAffichage({
               onChange={(theme) => modifierPreferences({ theme })}
             />
           )}
-          <Note>Heures de Libreville. De nuit, l&apos;écran émet moins de lumière et consomme moins.</Note>
+          <Note>
+            Heures de Libreville. De nuit, l&apos;écran émet moins de lumière et
+            consomme moins.
+          </Note>
         </section>
 
         <section className="grid gap-1">
@@ -98,8 +107,9 @@ export function FeuilleAffichage({
             onCheckedChange={(son) => modifierPreferences({ son })}
           />
           <Note>
-            Un bip aigu pour un titre accepté, deux pour « à vérifier », un son grave
-            pour un refus, rien pour un code illisible. La vibration reste.
+            Un bip aigu pour un titre accepté, deux pour « à vérifier », un son
+            grave pour un refus, rien pour un code illisible. La vibration
+            reste.
           </Note>
         </section>
 
@@ -109,7 +119,10 @@ export function FeuilleAffichage({
             checked={prefs.contraste}
             onCheckedChange={(contraste) => modifierPreferences({ contraste })}
           />
-          <Note>Pour le plein soleil : bordures pleines, textes secondaires passés en encre.</Note>
+          <Note>
+            Pour le plein soleil : bordures pleines, textes secondaires passés
+            en encre.
+          </Note>
         </section>
       </div>
     </Feuille>

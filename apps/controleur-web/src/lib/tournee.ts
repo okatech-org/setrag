@@ -20,7 +20,10 @@ import { FAMILLE_DU_VERDICT } from "./verdicts"
  * n'est pas le voyageur légitime qui a été refusé.
  */
 function concerneLeTitre(scan: LocalScan): boolean {
-  return FAMILLE_DU_VERDICT[scan.verdict] !== "lecture" && scan.verdict !== "contrefait"
+  return (
+    FAMILLE_DU_VERDICT[scan.verdict] !== "lecture" &&
+    scan.verdict !== "contrefait"
+  )
 }
 
 /** Clé d'un titre contrôlé : numéro de billet, ou carte d'abonnement. */
@@ -100,12 +103,16 @@ export function dernierControle(
 }
 
 /** État d'un titre, tel que le plan et la liste le montrent. */
-export function etatDuTitre(ticket: EmbarkedTicket, scans: LocalScan[]): EtatPlace {
+export function etatDuTitre(
+  ticket: EmbarkedTicket,
+  scans: LocalScan[]
+): EtatPlace {
   const dernier = dernierControle(scans, ticket.number)
   if (dernier) {
     const famille = FAMILLE_DU_VERDICT[dernier.verdict]
     if (famille === "refus") return "refus"
-    if (famille === "accepte" || dernier.verdict === "deja_controle") return "controle"
+    if (famille === "accepte" || dernier.verdict === "deja_controle")
+      return "controle"
     return "titre"
   }
   if (ticket.status === "utilise") return "controle"
@@ -135,7 +142,8 @@ export function planDeVoiture(
 ): Place[] {
   const parPlace = new Map<string, EmbarkedTicket>()
   for (const ticket of tickets) {
-    if (!ticket.seatLabel || !memeVoiture(ticket.coachLabel, voiture.label)) continue
+    if (!ticket.seatLabel || !memeVoiture(ticket.coachLabel, voiture.label))
+      continue
     const occupant = parPlace.get(ticket.seatLabel)
     // Deux titres sur une même place (segments successifs) : on garde celui
     // qui est en cours.

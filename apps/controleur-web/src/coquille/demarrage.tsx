@@ -25,7 +25,8 @@ const DOIT_JOUER: boolean =
     ? false
     : (() => {
         try {
-          if (!installee() || window.sessionStorage.getItem(CLE_JOUE)) return false
+          if (!installee() || window.sessionStorage.getItem(CLE_JOUE))
+            return false
           window.sessionStorage.setItem(CLE_JOUE, "1")
           if (window.localStorage.getItem(CLE_EN_TOURNEE)) return false
           return !window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -42,7 +43,11 @@ const sAbonner = () => () => {}
  * l'agent au-delà de 4 s.
  */
 export function Demarrage() {
-  const joue = useSyncExternalStore(sAbonner, () => DOIT_JOUER, () => false)
+  const joue = useSyncExternalStore(
+    sAbonner,
+    () => DOIT_JOUER,
+    () => false
+  )
   const [etat, setEtat] = useState<"visible" | "sortie" | "absent">("visible")
   const sombre =
     typeof document !== "undefined" &&

@@ -54,9 +54,17 @@ export function BarreApp({
         className
       )}
     >
-      {logo && <Logo variante="compact" title="SETRAG — Contrôle à bord" className="h-[30px]" />}
+      {logo && (
+        <Logo
+          variante="compact"
+          title="SETRAG — Contrôle à bord"
+          className="h-[30px]"
+        />
+      )}
       {grandTitre && (
-        <h1 className="text-[24px] leading-tight font-bold tracking-[-0.01em]">{grandTitre}</h1>
+        <h1 className="text-[24px] leading-tight font-bold tracking-[-0.01em]">
+          {grandTitre}
+        </h1>
       )}
       {retour && (
         <Link href={retour} aria-label="Retour" className={bouton}>
@@ -64,19 +72,30 @@ export function BarreApp({
         </Link>
       )}
       {!retour && onRetour && (
-        <button type="button" onClick={onRetour} aria-label="Retour" className={bouton}>
+        <button
+          type="button"
+          onClick={onRetour}
+          aria-label="Retour"
+          className={bouton}
+        >
           <ChevronLeftIcon className="size-6" aria-hidden />
         </button>
       )}
       {titre && (
         <div className="min-w-0 flex-1 py-1">
-          <h1 className="truncate text-[16px] leading-tight font-bold">{titre}</h1>
+          <h1 className="truncate text-[16px] leading-tight font-bold">
+            {titre}
+          </h1>
           {sousTitre && (
-            <p className="truncate text-[12.5px] font-medium text-ink-muted">{sousTitre}</p>
+            <p className="truncate text-[12.5px] font-medium text-ink-muted">
+              {sousTitre}
+            </p>
           )}
         </div>
       )}
-      {actions && <div className="ml-auto flex items-center gap-0.5">{actions}</div>}
+      {actions && (
+        <div className="ml-auto flex items-center gap-0.5">{actions}</div>
+      )}
     </header>
   )
 }
@@ -129,7 +148,9 @@ export function Bas({
       )}
       style={
         avecOnglets
-          ? { bottom: `calc(${HAUTEUR_ONGLETS}px + env(safe-area-inset-bottom, 0px))` }
+          ? {
+              bottom: `calc(${HAUTEUR_ONGLETS}px + env(safe-area-inset-bottom, 0px))`,
+            }
           : undefined
       }
     >
@@ -156,12 +177,31 @@ export function TitreSection({
       )}
     >
       {children}
-      {fin && <span className="text-[12px] font-medium tracking-normal normal-case">{fin}</span>}
+      {fin && (
+        <span className="text-[12px] font-medium tracking-normal normal-case">
+          {fin}
+        </span>
+      )}
     </h2>
   )
 }
 
 /** Note de bas de bloc, en gris : d'où vient une donnée, ce qu'elle vaut. */
-export function Note({ children, className }: { children: ReactNode; className?: string }) {
-  return <p className={cn("text-[12.5px] leading-[1.45] font-medium text-ink-muted", className)}>{children}</p>
+export function Note({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <p
+      className={cn(
+        "text-[12.5px] leading-[1.45] font-medium text-ink-muted",
+        className
+      )}
+    >
+      {children}
+    </p>
+  )
 }

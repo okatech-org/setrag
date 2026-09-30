@@ -141,7 +141,10 @@ export async function downloadManifest(
 }
 
 /** Âge des données embarquées, en clair — jamais un horodatage brut. */
-export function freshness(manifest: EmbarkedManifest, now = Date.now()): string {
+export function freshness(
+  manifest: EmbarkedManifest,
+  now = Date.now()
+): string {
   const minutes = Math.max(0, Math.round((now - manifest.updatedAt) / 60_000))
   if (minutes < 1) return "à l'instant"
   if (minutes < 60) return `il y a ${minutes} min`

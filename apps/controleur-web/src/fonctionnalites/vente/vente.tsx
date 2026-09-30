@@ -19,11 +19,23 @@ import { ChampSelection, ChoixGare } from "@/composants/choix-gare"
 import { Message } from "@/composants/message"
 import { Bas, BarreApp, Corps } from "@/coquille/ecran"
 import { humanError } from "@/lib/errors"
-import { classeCourte, classeLongue, dateCourte, heure, montant, montantCourt, taux } from "@/lib/format"
+import {
+  classeCourte,
+  classeLongue,
+  dateCourte,
+  heure,
+  montant,
+  montantCourt,
+  taux,
+} from "@/lib/format"
 import { commitOperation, getTicketByNumber } from "@/lib/offline/db"
 import { availableClasses, quoteOnboard } from "@/lib/offline/fares"
 import { clientId, localNumber, nowMs } from "@/lib/offline/ids"
-import type { EmbarkedStop, EmbarkedTicket, LocalSale } from "@/lib/offline/types"
+import type {
+  EmbarkedStop,
+  EmbarkedTicket,
+  LocalSale,
+} from "@/lib/offline/types"
 import { arretDeRang, arretsOrdonnes } from "@/lib/position"
 import { nomDuTrain, numeroVoiture } from "@/lib/train"
 
@@ -48,7 +60,10 @@ const BILLETS_COURANTS = [5_000, 10_000, 15_000, 20_000]
 export function VenteABord() {
   const parametres = useSearchParams()
   const { manifest, settings, refresh, ready } = useTerminal()
-  const arrets = useMemo(() => (manifest ? arretsOrdonnes(manifest) : []), [manifest])
+  const arrets = useMemo(
+    () => (manifest ? arretsOrdonnes(manifest) : []),
+    [manifest]
+  )
   const terminus = arrets[arrets.length - 1]
 
   const [etape, setEtape] = useState<Etape>(0)
@@ -77,7 +92,11 @@ export function VenteABord() {
     void getTicketByNumber(manifest.tripId, reference).then((trouve) => {
       if (annule || !trouve) return
       setTitre(trouve)
-      if (trouve.serviceClass === "DEUXIEME" || trouve.serviceClass === "PREMIERE" || trouve.serviceClass === "VIP") {
+      if (
+        trouve.serviceClass === "DEUXIEME" ||
+        trouve.serviceClass === "PREMIERE" ||
+        trouve.serviceClass === "VIP"
+      ) {
         setClasse(trouve.serviceClass)
       }
       setNom(trouve.passenger.lastName)
@@ -91,13 +110,21 @@ export function VenteABord() {
 
   const depart = departChoisi ?? settings.currentStopIndex
   const arrivee = destination ?? terminus?.sequence
-  const classes = useMemo(() => (manifest ? availableClasses(manifest) : []), [manifest])
+  const classes = useMemo(
+    () => (manifest ? availableClasses(manifest) : []),
+    [manifest]
+  )
 
   const calcul = useMemo(() => {
-    if (!manifest || arrivee === undefined) return { devis: null, erreur: "Aucun manifeste embarqué." }
+    if (!manifest || arrivee === undefined)
+      return { devis: null, erreur: "Aucun manifeste embarqué." }
     try {
       return {
-        devis: quoteOnboard(manifest, { fromSequence: depart, toSequence: arrivee, serviceClass: classe }),
+        devis: quoteOnboard(manifest, {
+          fromSequence: depart,
+          toSequence: arrivee,
+          serviceClass: classe,
+        }),
         erreur: null,
       }
     } catch (error) {
@@ -129,7 +156,8 @@ export function VenteABord() {
   }
 
   const gareDepart = arretDeRang(manifest, depart)
-  const gareArrivee = arrivee !== undefined ? arretDeRang(manifest, arrivee) : undefined
+  const gareArrivee =
+    arrivee !== undefined ? arretDeRang(manifest, arrivee) : undefined
   const voiture = numeroVoiture(settings.coachLabel)
   const sousTitre = `${nomDuTrain(manifest)} · voiture ${voiture}${titre ? ` · titre de ${titre.passenger.lastName} ${titre.passenger.firstName}` : ""}`
 
@@ -178,16 +206,36 @@ export function VenteABord() {
     }
   }
 
-  const etapes = <Stepper steps={[{ label: "Trajet" }, { label: "Encaissement" }, { label: "Titre" }]} current={etape} />
+  const etapes = (
+    <Stepper
+      steps={[
+        { label: "Trajet" },
+        { label: "Encaissement" },
+        { label: "Titre" },
+      ]}
+      current={etape}
+    />
+  )
 
   if (etape === 2 && vendu) {
-    return <TitreRemis vente={vendu} depart={gareDepart} arrivee={gareArrivee} etapes={etapes} />
+    return (
+      <TitreRemis
+        vente={vendu}
+        depart={gareDepart}
+        arrivee={gareArrivee}
+        etapes={etapes}
+      />
+    )
   }
 
   return (
     <>
       {etape === 1 ? (
-        <BarreApp titre="Vente à bord" sousTitre={sousTitre} onRetour={() => setEtape(0)} />
+        <BarreApp
+          titre="Vente à bord"
+          sousTitre={sousTitre}
+          onRetour={() => setEtape(0)}
+        />
       ) : (
         <BarreApp titre="Vente à bord" sousTitre={sousTitre} retour="/scan" />
       )}
@@ -195,7 +243,14 @@ export function VenteABord() {
         <>
           <Corps>
             {etapes}
-            <Field label="Départ du trajet restant" hint={depart === settings.currentStopIndex ? "Dernière gare atteinte." : undefined}>
+            <Field
+              label="Départ du trajet restant"
+              hint={
+                depart === settings.currentStopIndex
+                  ? "Dernière gare atteinte."
+                  : undefined
+              }
+            >
               <ChampSelection
                 valeur={gareDepart?.name ?? "—"}
                 complement={gareDepart && `PK ${gareDepart.kilometerPoint}`}
@@ -210,12 +265,13 @@ export function VenteABord() {
               />
             </Field>
             <div className="grid gap-1.5">
-              <p className="text-[13px] font-medium">
-                Classe
-              </p>
+              <p className="text-[13px] font-medium">Classe</p>
               <Cases
                 label="Classe"
-                options={(classes.length ? classes : (["DEUXIEME"] as Classe[])).map((c) => ({
+                options={(classes.length
+                  ? classes
+                  : (["DEUXIEME"] as Classe[])
+                ).map((c) => ({
                   valeur: c,
                   libelle: classeCourte(c),
                   nom: classeLongue(c),
@@ -233,15 +289,24 @@ export function VenteABord() {
               devis && (
                 <div className="grid gap-1 rounded-md border border-line bg-surface px-3.5 py-3">
                   <small className="font-mono text-[12.5px] font-medium text-ink-muted">
-                    {devis.distanceKm} km · {taux(devis.ratePerKm)} FCFA/km · {manifest.fare?.label}
+                    {devis.distanceKm} km · {taux(devis.ratePerKm)} FCFA/km ·{" "}
+                    {manifest.fare?.label}
                   </small>
-                  <b className="font-mono text-[30px] leading-[1.1] font-bold tabular-nums">{montant(devis.ttc)}</b>
+                  <b className="font-mono text-[30px] leading-[1.1] font-bold tabular-nums">
+                    {montant(devis.ttc)}
+                  </b>
                 </div>
               )
             )}
           </Corps>
           <Bas>
-            <Button size="lg" block className={TERRAIN} disabled={!devis} onClick={() => setEtape(1)}>
+            <Button
+              size="lg"
+              block
+              className={TERRAIN}
+              disabled={!devis}
+              onClick={() => setEtape(1)}
+            >
               {devis ? `Encaisser ${montant(devis.ttc)}` : "Encaisser"}
             </Button>
           </Bas>
@@ -252,10 +317,13 @@ export function VenteABord() {
             description="En principe, la dernière gare atteinte."
             arrets={arrets}
             valeur={depart}
-            exclue={(arret) => terminus !== undefined && arret.sequence >= terminus.sequence}
+            exclue={(arret) =>
+              terminus !== undefined && arret.sequence >= terminus.sequence
+            }
             onChoisir={(arret) => {
               setDepart(arret.sequence)
-              if (arrivee !== undefined && arrivee <= arret.sequence) setDestination(undefined)
+              if (arrivee !== undefined && arrivee <= arret.sequence)
+                setDestination(undefined)
             }}
           />
           <ChoixGare
@@ -280,7 +348,9 @@ export function VenteABord() {
                     {gareDepart?.name} → {gareArrivee?.name}
                   </small>
                 </span>
-                <b className="font-mono text-[24px] font-bold whitespace-nowrap tabular-nums">{montant(devis.ttc)}</b>
+                <b className="font-mono text-[24px] font-bold whitespace-nowrap tabular-nums">
+                  {montant(devis.ttc)}
+                </b>
               </div>
               <div className="grid gap-1">
                 <p className="text-[13px] font-medium">Mode de paiement</p>
@@ -303,7 +373,10 @@ export function VenteABord() {
               ) : (
                 <>
                   <div className="grid gap-1.5">
-                    <label htmlFor="remis" className="text-[13px] leading-snug font-medium">
+                    <label
+                      htmlFor="remis"
+                      className="text-[13px] leading-snug font-medium"
+                    >
                       Montant remis
                     </label>
                     <div className="relative">
@@ -314,7 +387,9 @@ export function VenteABord() {
                         className="pr-16 font-mono tabular-nums"
                         value={remis ? montantCourt(valeurRemise) : ""}
                         placeholder="0"
-                        onChange={(event) => setRemis(event.target.value.replace(/\D/g, ""))}
+                        onChange={(event) =>
+                          setRemis(event.target.value.replace(/\D/g, ""))
+                        }
                       />
                       <span
                         aria-hidden
@@ -324,7 +399,11 @@ export function VenteABord() {
                       </span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Billets courants">
+                  <div
+                    className="grid grid-cols-4 gap-1.5"
+                    role="group"
+                    aria-label="Billets courants"
+                  >
                     {BILLETS_COURANTS.map((billet) => (
                       <button
                         key={billet}
@@ -346,12 +425,18 @@ export function VenteABord() {
                     role="status"
                     className={cn(
                       "flex items-baseline justify-between gap-3 rounded-md px-3.5 py-2.5 text-[14px] font-semibold",
-                      rendu < 0 ? "bg-danger-soft text-danger-ink" : "bg-surface-sunk"
+                      rendu < 0
+                        ? "bg-danger-soft text-danger-ink"
+                        : "bg-surface-sunk"
                     )}
                   >
-                    <span>{rendu < 0 ? "Montant insuffisant" : "À rendre"}</span>
+                    <span>
+                      {rendu < 0 ? "Montant insuffisant" : "À rendre"}
+                    </span>
                     <b className="font-mono text-[22px] font-bold tabular-nums">
-                      {rendu < 0 ? `il manque ${montant(-rendu)}` : montant(rendu)}
+                      {rendu < 0
+                        ? `il manque ${montant(-rendu)}`
+                        : montant(rendu)}
                     </b>
                   </div>
                 </>
@@ -363,22 +448,38 @@ export function VenteABord() {
                   onClick={() => setIdentite((ouvert) => !ouvert)}
                   className="flex min-h-12 w-full items-center gap-2 px-3.5 text-left text-[14px] font-semibold"
                 >
-                  <UserIcon aria-hidden className="size-[18px] text-ink-muted" />
+                  <UserIcon
+                    aria-hidden
+                    className="size-[18px] text-ink-muted"
+                  />
                   <span>
-                    Identité du voyageur <small className="font-medium text-ink-muted">· facultative</small>
+                    Identité du voyageur{" "}
+                    <small className="font-medium text-ink-muted">
+                      · facultative
+                    </small>
                   </span>
                   <ChevronDownIcon
                     aria-hidden
-                    className={cn("ml-auto size-[18px] text-ink-muted transition-transform", identite && "rotate-180")}
+                    className={cn(
+                      "ml-auto size-[18px] text-ink-muted transition-transform",
+                      identite && "rotate-180"
+                    )}
                   />
                 </button>
                 {identite && (
                   <div className="grid gap-3 border-t border-line p-3.5">
                     <Field label="Nom" htmlFor="vente-nom">
-                      <Input value={nom} autoCapitalize="characters" onChange={(e) => setNom(e.target.value)} />
+                      <Input
+                        value={nom}
+                        autoCapitalize="characters"
+                        onChange={(e) => setNom(e.target.value)}
+                      />
                     </Field>
                     <Field label="Prénom" htmlFor="vente-prenom">
-                      <Input value={prenom} onChange={(e) => setPrenom(e.target.value)} />
+                      <Input
+                        value={prenom}
+                        onChange={(e) => setPrenom(e.target.value)}
+                      />
                     </Field>
                     <Cases
                       label="Sexe"
@@ -390,8 +491,17 @@ export function VenteABord() {
                       onChange={setSexe}
                       serre
                     />
-                    <Field label="Téléphone" htmlFor="vente-telephone" hint="Pour l'envoi de la référence définitive.">
-                      <Input inputMode="tel" placeholder="+241 …" value={telephone} onChange={(e) => setTelephone(e.target.value)} />
+                    <Field
+                      label="Téléphone"
+                      htmlFor="vente-telephone"
+                      hint="Pour l'envoi de la référence définitive."
+                    >
+                      <Input
+                        inputMode="tel"
+                        placeholder="+241 …"
+                        value={telephone}
+                        onChange={(e) => setTelephone(e.target.value)}
+                      />
                     </Field>
                   </div>
                 )}
@@ -444,7 +554,10 @@ function TitreRemis({
   const heureArrivee = arrivee?.arrivalAt ?? arrivee?.departureAt
   return (
     <>
-      <BarreApp titre="Titre remis" sousTitre={`${nomDuTrain(manifest)} · ${vente.originName} → ${vente.destinationName}`} />
+      <BarreApp
+        titre="Titre remis"
+        sousTitre={`${nomDuTrain(manifest)} · ${vente.originName} → ${vente.destinationName}`}
+      />
       <Corps>
         {etapes}
         {vente.method === "especes" ? (
@@ -460,8 +573,14 @@ function TitreRemis({
         <Billet
           emis
           train={`${nomDuTrain(manifest)} · ${dateCourte(manifest.serviceDate)}`}
-          depart={{ heure: heureDepart !== undefined ? heure(heureDepart) : "--:--", gare: vente.originName }}
-          arrivee={{ heure: heureArrivee !== undefined ? heure(heureArrivee) : "--:--", gare: vente.destinationName }}
+          depart={{
+            heure: heureDepart !== undefined ? heure(heureDepart) : "--:--",
+            gare: vente.originName,
+          }}
+          arrivee={{
+            heure: heureArrivee !== undefined ? heure(heureArrivee) : "--:--",
+            gare: vente.destinationName,
+          }}
           milieu={`${vente.distanceKm} km`}
           cases={[
             { libelle: "Classe", valeur: classeCourte(vente.serviceClass) },
@@ -470,24 +589,32 @@ function TitreRemis({
           fondDecoupe="var(--c-canvas)"
         >
           <div className="grid justify-items-center gap-1 rounded-md border-[1.5px] border-dashed border-line-strong p-3 text-center">
-            <b className="font-mono text-[22px] font-semibold tracking-[0.02em] text-ink">{vente.localRef}</b>
+            <b className="font-mono text-[22px] font-semibold tracking-[0.02em] text-ink">
+              {vente.localRef}
+            </b>
             <small className="text-[11.5px] leading-[1.4] font-medium text-ink-muted">
-              Référence provisoire : numéro définitif et code Aztec à la synchronisation.
+              Référence provisoire : numéro définitif et code Aztec à la
+              synchronisation.
             </small>
           </div>
         </Billet>
         <div className="flex flex-wrap items-center gap-1.5">
-          <PastilleEnvoi etat={lu?.state ?? vente.state} className="h-[30px] text-[13px]" />
+          <PastilleEnvoi
+            etat={lu?.state ?? vente.state}
+            className="h-[30px] text-[13px]"
+          />
           {lu?.serverSaleNumber && (
             <span className="text-[12.5px] font-medium text-ink-muted">
-              Numéro définitif <span className="tabular text-ink">{lu.serverSaleNumber}</span>
+              Numéro définitif{" "}
+              <span className="tabular text-ink">{lu.serverSaleNumber}</span>
             </span>
           )}
         </div>
         {lu?.serverXaf !== undefined && lu.serverXaf !== vente.quotedXaf && (
           <Message ton="alerte" titre="Écart de tarification.">
-            Le système a facturé {montant(lu.serverXaf)} pour {montant(vente.quotedXaf)} encaissés
-            à bord. Signalez-le à votre caisse : l&apos;écart doit être justifié.
+            Le système a facturé {montant(lu.serverXaf)} pour{" "}
+            {montant(vente.quotedXaf)} encaissés à bord. Signalez-le à votre
+            caisse : l&apos;écart doit être justifié.
           </Message>
         )}
       </Corps>

@@ -24,7 +24,11 @@ import { Progression } from "@/composants/progression"
 import { Bas, BarreApp, Corps, Note } from "@/coquille/ecran"
 import { humanError } from "@/lib/errors"
 import { listTickets } from "@/lib/offline/db"
-import { downloadManifest, freshness, type DownloadProgress } from "@/lib/offline/manifest"
+import {
+  downloadManifest,
+  freshness,
+  type DownloadProgress,
+} from "@/lib/offline/manifest"
 import type { TerminalSettings } from "@/lib/offline/types"
 import { memeVoiture } from "@/lib/train"
 import { nomDuTrain } from "@/lib/train"
@@ -43,7 +47,8 @@ export function DonneesEmbarquees() {
   const convex = useConvex()
   const router = useRouter()
   const parametres = useSearchParams()
-  const { manifest, online, authenticated, refresh, settings, updateSettings } = useTerminal()
+  const { manifest, online, authenticated, refresh, settings, updateSettings } =
+    useTerminal()
   // Le manifeste vient du serveur : réseau ET session reconnue.
   const pret = online && authenticated
   const [progres, setProgres] = useState<DownloadProgress | null>(null)
@@ -117,16 +122,23 @@ export function DonneesEmbarquees() {
     return () => window.clearTimeout(minuteur)
   }, [auto, pret, router, telecharger, tripId])
 
-  const fait = enCours && progres ? progres.received : (embarque?.downloadedCount ?? 0)
-  const total = enCours && progres ? progres.total : (embarque?.ticketCount ?? 0)
+  const fait =
+    enCours && progres ? progres.received : (embarque?.downloadedCount ?? 0)
+  const total =
+    enCours && progres ? progres.total : (embarque?.ticketCount ?? 0)
   const lot = progres?.batch
   const nomDesserte = embarque
     ? `${nomDuTrain(embarque)} · ${embarque.originName} → ${embarque.destinationName}`
-    : (settings.activeTripLabel ?? (tripId ? "Desserte choisie" : "Aucune desserte choisie"))
+    : (settings.activeTripLabel ??
+      (tripId ? "Desserte choisie" : "Aucune desserte choisie"))
 
   return (
     <>
-      <BarreApp retour="/tournee" titre="Données embarquées" sousTitre={nomDesserte} />
+      <BarreApp
+        retour="/tournee"
+        titre="Données embarquées"
+        sousTitre={nomDesserte}
+      />
       <Corps>
         {!tripId && (
           <Message ton="alerte" titre="Aucune desserte choisie.">
@@ -135,8 +147,9 @@ export function DonneesEmbarquees() {
         )}
         {echec && (
           <Message ton="danger" titre="Téléchargement interrompu.">
-            {echec} — {embarque?.downloadedCount ?? 0} titres sur {embarque?.ticketCount ?? 0}{" "}
-            sont embarqués. La reprise repartira du dernier lot confirmé.
+            {echec} — {embarque?.downloadedCount ?? 0} titres sur{" "}
+            {embarque?.ticketCount ?? 0} sont embarqués. La reprise repartira du
+            dernier lot confirmé.
           </Message>
         )}
         {embarque?.complete && !enCours && !echec && (
@@ -185,7 +198,11 @@ export function DonneesEmbarquees() {
               <Ligne
                 icone={KeyRoundIcon}
                 libelle="Clé publique de signature"
-                fin={<span className="tabular">Ed25519 · v{embarque.signing.keyVersion}</span>}
+                fin={
+                  <span className="tabular">
+                    Ed25519 · v{embarque.signing.keyVersion}
+                  </span>
+                }
               />
               <Ligne
                 icone={RouteIcon}
@@ -194,7 +211,8 @@ export function DonneesEmbarquees() {
                 fin={
                   embarque.fare ? (
                     <span>
-                      <span className="tabular">{embarque.stops.length}</span> gares
+                      <span className="tabular">{embarque.stops.length}</span>{" "}
+                      gares
                     </span>
                   ) : (
                     "absent"
@@ -206,7 +224,8 @@ export function DonneesEmbarquees() {
                 libelle="Barème des amendes"
                 fin={
                   <span>
-                    <span className="tabular">{embarque.penalties.length}</span> motifs
+                    <span className="tabular">{embarque.penalties.length}</span>{" "}
+                    motifs
                   </span>
                 }
               />
@@ -216,7 +235,10 @@ export function DonneesEmbarquees() {
                 fin={
                   embarque.composition?.length ? (
                     <span>
-                      <span className="tabular">{embarque.composition.length}</span> voitures
+                      <span className="tabular">
+                        {embarque.composition.length}
+                      </span>{" "}
+                      voitures
                     </span>
                   ) : (
                     "à mettre à jour"
@@ -234,8 +256,8 @@ export function DonneesEmbarquees() {
             )}
             {!embarque.fare && (
               <Message ton="alerte" titre="Aucun barème kilométrique embarqué.">
-                La vente à bord sera refusée : le terminal ne peut pas annoncer un
-                prix qu&apos;il ne sait pas calculer.
+                La vente à bord sera refusée : le terminal ne peut pas annoncer
+                un prix qu&apos;il ne sait pas calculer.
               </Message>
             )}
             <Note>
@@ -248,7 +270,13 @@ export function DonneesEmbarquees() {
       <Bas>
         {enCours ? (
           <>
-            <Button size="lg" block className={TERRAIN} loading loadingLabel="Téléchargement…">
+            <Button
+              size="lg"
+              block
+              className={TERRAIN}
+              loading
+              loadingLabel="Téléchargement…"
+            >
               Téléchargement…
             </Button>
             <Button
@@ -267,7 +295,9 @@ export function DonneesEmbarquees() {
           <>
             <Button size="lg" block className={TERRAIN} asChild>
               <Link href="/scan">
-                {embarque.complete ? "Commencer le contrôle" : "Contrôler avec ce qui est embarqué"}
+                {embarque.complete
+                  ? "Commencer le contrôle"
+                  : "Contrôler avec ce qui est embarqué"}
               </Link>
             </Button>
             <Button
@@ -292,7 +322,9 @@ export function DonneesEmbarquees() {
             disabled={!pret || !tripId}
             onClick={() => void telecharger()}
           >
-            {!pret ? "Téléchargement impossible sans réseau" : "Télécharger le manifeste"}
+            {!pret
+              ? "Téléchargement impossible sans réseau"
+              : "Télécharger le manifeste"}
           </Button>
         )}
       </Bas>
@@ -313,10 +345,18 @@ async function choisirVoitureParDefaut(
   const titres = await listTickets(tripId)
   const parVoiture = new Map<string, number>()
   for (const titre of titres) {
-    if (!titre.coachLabel || (titre.status !== "valide" && titre.status !== "utilise")) continue
-    parVoiture.set(titre.coachLabel, (parVoiture.get(titre.coachLabel) ?? 0) + 1)
+    if (
+      !titre.coachLabel ||
+      (titre.status !== "valide" && titre.status !== "utilise")
+    )
+      continue
+    parVoiture.set(
+      titre.coachLabel,
+      (parVoiture.get(titre.coachLabel) ?? 0) + 1
+    )
   }
-  if ([...parVoiture.keys()].some((repere) => memeVoiture(repere, courante))) return
+  if ([...parVoiture.keys()].some((repere) => memeVoiture(repere, courante)))
+    return
   const [meilleure] = [...parVoiture.entries()].sort((a, b) => b[1] - a[1])
   if (meilleure) await modifier({ coachLabel: meilleure[0] })
 }

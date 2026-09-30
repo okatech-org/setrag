@@ -225,12 +225,13 @@ export function verifyLocally(
     }
   }
 
-  const parStatut: Partial<Record<string, { verdict: Verdict; reason: string }>> =
-    {
-      annule: { verdict: "annule", reason: "Titre annulé" },
-      rembourse: { verdict: "rembourse", reason: "Titre remboursé" },
-      en_attente: { verdict: "non_paye", reason: "Titre non réglé" },
-    }
+  const parStatut: Partial<
+    Record<string, { verdict: Verdict; reason: string }>
+  > = {
+    annule: { verdict: "annule", reason: "Titre annulé" },
+    rembourse: { verdict: "rembourse", reason: "Titre remboursé" },
+    en_attente: { verdict: "non_paye", reason: "Titre non réglé" },
+  }
   const refus = parStatut[ticket.status]
   if (refus) {
     return {
@@ -263,15 +264,23 @@ export function verifyLocally(
     }
   }
 
-  return { verdict: "valide", reason: null, payload, ticket, fromManifest: false }
+  return {
+    verdict: "valide",
+    reason: null,
+    payload,
+    ticket,
+    fromManifest: false,
+  }
 }
 
-const SCOPE_REASONS: Record<"mauvaise_desserte" | "hors_segment" | "expire", string> =
-  {
-    mauvaise_desserte: "Ce titre vaut pour une autre desserte",
-    hors_segment: "Le voyageur circule au-delà du parcours payé",
-    expire: "Titre expiré",
-  }
+const SCOPE_REASONS: Record<
+  "mauvaise_desserte" | "hors_segment" | "expire",
+  string
+> = {
+  mauvaise_desserte: "Ce titre vaut pour une autre desserte",
+  hors_segment: "Le voyageur circule au-delà du parcours payé",
+  expire: "Titre expiré",
+}
 
 function firstValidScan(scans?: LocalScan[]): LocalScan | undefined {
   return scans

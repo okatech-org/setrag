@@ -84,7 +84,8 @@ export function ZoneSignature({
         }}
         onPointerUp={() => {
           dernier.current = null
-          if (trace.current && toile.current) onSigner(toile.current.toDataURL("image/png"))
+          if (trace.current && toile.current)
+            onSigner(toile.current.toDataURL("image/png"))
         }}
       />
       <small className="pointer-events-none absolute bottom-1.5 left-3 text-[11px] font-medium text-ink-muted">

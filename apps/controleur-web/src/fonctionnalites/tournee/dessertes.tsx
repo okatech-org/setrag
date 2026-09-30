@@ -16,7 +16,9 @@ import { nomTrain } from "@/lib/train"
 
 import { useTerminal } from "../terminal/contexte-terminal"
 
-export type Desserte = FunctionReturnType<typeof api.functions.control.assignedTrips>[number]
+export type Desserte = FunctionReturnType<
+  typeof api.functions.control.assignedTrips
+>[number]
 
 /** « Express 201 · Owendo Virié → Franceville » : ce que l'agent a choisi. */
 export function libelleDesserte(desserte: Desserte): string {
@@ -28,7 +30,10 @@ export function useDessertes() {
   const { online, authenticated } = useTerminal()
   // `online` ne suffit pas : sans session reconnue, la requête serait refusée.
   const pret = online && authenticated
-  const dessertes = useQuery(api.functions.control.assignedTrips, pret ? { limit: 8 } : "skip")
+  const dessertes = useQuery(
+    api.functions.control.assignedTrips,
+    pret ? { limit: 8 } : "skip"
+  )
   return { pret, dessertes }
 }
 
@@ -59,7 +64,9 @@ export function ChoixDesserte({
       const cle = `${d.trainNumber}|${d.departureAt}`
       vus.set(cle, (vus.get(cle) ?? 0) + 1)
     }
-    return new Set([...vus.entries()].filter(([, n]) => n > 1).map(([cle]) => cle))
+    return new Set(
+      [...vus.entries()].filter(([, n]) => n > 1).map(([cle]) => cle)
+    )
   }, [dessertes])
 
   if (!pret) {
@@ -73,16 +80,24 @@ export function ChoixDesserte({
   }
   if (dessertes === undefined) return <SkeletonLines />
   if (dessertes.length === 0) {
-    return <Note>Aucune desserte dans la fenêtre de service (les 12 dernières heures et les 3 prochains jours).</Note>
+    return (
+      <Note>
+        Aucune desserte dans la fenêtre de service (les 12 dernières heures et
+        les 3 prochains jours).
+      </Note>
+    )
   }
 
   return (
     <div className="grid gap-2">
       {homonymes.size > 0 && (
-        <Message ton="alerte" titre="Deux circulations portent le même numéro et la même heure.">
+        <Message
+          ton="alerte"
+          titre="Deux circulations portent le même numéro et la même heure."
+        >
           Elles viennent de livrets horaires qui se chevauchent : un titre vendu
-          sur l&apos;une sera refusé sur l&apos;autre. Choisissez celle qui porte
-          des titres, et signalez le doublon à l&apos;exploitation.
+          sur l&apos;une sera refusé sur l&apos;autre. Choisissez celle qui
+          porte des titres, et signalez le doublon à l&apos;exploitation.
         </Message>
       )}
       <CartesChoix
@@ -100,7 +115,10 @@ export function ChoixDesserte({
             nom: `${nom}, départ ${heure(d.departureAt)} le ${dateCourte(d.serviceDate)}, ${d.origin} vers ${d.destination}, ${d.expectedPassengers} titres`,
             titre: (
               <>
-                {nom} · <span className="tabular font-semibold">{heure(d.departureAt)}</span>
+                {nom} ·{" "}
+                <span className="tabular font-semibold">
+                  {heure(d.departureAt)}
+                </span>
               </>
             ),
             sousTitre: (

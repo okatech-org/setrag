@@ -40,7 +40,10 @@ export function useApparenceCourante(): Apparence {
  * Déclare l'apparence de l'écran courant, pour la durée de son affichage.
  * L'écran qui s'en va rend l'apparence par défaut.
  */
-export function useApparence({ sombre = false, sansOnglets = false }: Partial<Apparence>) {
+export function useApparence({
+  sombre = false,
+  sansOnglets = false,
+}: Partial<Apparence>) {
   const demander = useContext(Contexte)?.demander
   useEffect(() => {
     if (!demander) return

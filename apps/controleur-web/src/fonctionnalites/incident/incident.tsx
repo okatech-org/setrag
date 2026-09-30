@@ -58,7 +58,11 @@ const CATEGORIES = [
   { valeur: "comportement", libelle: "Comportement", icone: UserXIcon },
   { valeur: "medical", libelle: "Médical", icone: HeartPulseIcon },
   { valeur: "autre", libelle: "Autre", icone: EllipsisIcon },
-] as const satisfies ReadonlyArray<{ valeur: Categorie; libelle: string; icone: unknown }>
+] as const satisfies ReadonlyArray<{
+  valeur: Categorie
+  libelle: string
+  icone: unknown
+}>
 
 const LIBELLE_CATEGORIE: Record<Categorie, string> = {
   securite: "Sécurité",
@@ -89,9 +93,11 @@ const PRIORITE: Record<Gravite, string> = {
 
 /** Ce que l'agent lit une fois le signalement enregistré, selon réseau et gravité. */
 function annonce(incident: LocalIncident, online: boolean): string {
-  if (online) return "Il part à la prochaine synchronisation, dans quelques secondes."
+  if (online)
+    return "Il part à la prochaine synchronisation, dans quelques secondes."
   const horsReseau = "Enregistré hors couverture réseau."
-  if (incident.severity === "critique") return `${horsReseau} Il partira en tête de file dès le premier signal.`
+  if (incident.severity === "critique")
+    return `${horsReseau} Il partira en tête de file dès le premier signal.`
   if (incident.severity === "important") {
     return `${horsReseau} Il partira dès le premier signal, avant les ventes et les contrôles.`
   }
@@ -99,7 +105,9 @@ function annonce(incident: LocalIncident, online: boolean): string {
 }
 
 function categorieDe(valeur: string | null): Categorie {
-  return CATEGORIES.some((c) => c.valeur === valeur) ? (valeur as Categorie) : "technique"
+  return CATEGORIES.some((c) => c.valeur === valeur)
+    ? (valeur as Categorie)
+    : "technique"
 }
 
 export function Incident() {
@@ -107,14 +115,20 @@ export function Incident() {
   const { manifest, settings, online, refresh, queue } = useTerminal()
   const entreePhoto = useRef<HTMLInputElement | null>(null)
 
-  const [categorie, setCategorie] = useState<Categorie>(categorieDe(parametres.get("categorie")))
+  const [categorie, setCategorie] = useState<Categorie>(
+    categorieDe(parametres.get("categorie"))
+  )
   const [gravite, setGravite] = useState<Gravite>("important")
-  const [description, setDescription] = useState(parametres.get("description") ?? "")
+  const [description, setDescription] = useState(
+    parametres.get("description") ?? ""
+  )
   // Tant que l'agent n'a rien saisi, le lieu suit la voiture et la dernière
   // gare atteinte : c'est presque toujours la bonne réponse.
   const [lieuSaisi, setLieuSaisi] = useState<string | null>(null)
   const [modifierLieu, setModifierLieu] = useState(false)
-  const [photos, setPhotos] = useState<Array<{ id: string; url: string; blob: Blob }>>([])
+  const [photos, setPhotos] = useState<
+    Array<{ id: string; url: string; blob: Blob }>
+  >([])
   const [enregistre, setEnregistre] = useState<LocalIncident | null>(null)
   const [historique, setHistorique] = useState<LocalIncident[]>([])
   const [enCours, setEnCours] = useState(false)
@@ -136,7 +150,9 @@ export function Incident() {
   }, [photos])
 
   const lieuParDefaut = useMemo(() => {
-    const gare = manifest ? arretDeRang(manifest, settings.currentStopIndex) : undefined
+    const gare = manifest
+      ? arretDeRang(manifest, settings.currentStopIndex)
+      : undefined
     return `Voiture ${numeroVoiture(settings.coachLabel)}${gare ? ` · après ${gare.name}` : ""}`
   }, [manifest, settings.coachLabel, settings.currentStopIndex])
   const lieu = lieuSaisi ?? lieuParDefaut
@@ -201,7 +217,9 @@ export function Incident() {
       grandTitre="Incident"
       actions={
         manifest && (
-          <span className="px-2 font-mono text-[14px] font-semibold text-ink-muted">{nomDuTrain(manifest)}</span>
+          <span className="px-2 font-mono text-[14px] font-semibold text-ink-muted">
+            {nomDuTrain(manifest)}
+          </span>
         )
       }
     />
@@ -229,21 +247,37 @@ export function Incident() {
       <>
         {barre}
         <Corps>
-          <Message ton="info" titre={`Signalement enregistré — n° ${enregistre.localNumber}`}>
+          <Message
+            ton="info"
+            titre={`Signalement enregistré — n° ${enregistre.localNumber}`}
+          >
             {annonce(enregistre, online)}
           </Message>
           <div className="flex flex-wrap gap-1.5">
-            <Tag tone={enregistre.severity === "critique" ? "danger" : "neutral"} className="h-[30px] text-[13px]">
+            <Tag
+              tone={enregistre.severity === "critique" ? "danger" : "neutral"}
+              className="h-[30px] text-[13px]"
+            >
               <GaugeIcon aria-hidden />
               {PRIORITE[enregistre.severity]}
             </Tag>
             <PastilleEnvoi
-              etat={historique.find((i) => i.clientId === enregistre.clientId)?.state ?? enregistre.state}
+              etat={
+                historique.find((i) => i.clientId === enregistre.clientId)
+                  ?.state ?? enregistre.state
+              }
               className="h-[30px] text-[13px]"
             />
           </div>
           {journal}
-          <Message ton="danger" titre={enregistre.severity === "critique" ? "Incident critique" : "En « Critique »"}>
+          <Message
+            ton="danger"
+            titre={
+              enregistre.severity === "critique"
+                ? "Incident critique"
+                : "En « Critique »"
+            }
+          >
             {enregistre.severity === "critique"
               ? "Il passe en tête de file, avant les contrôles et les ventes."
               : "Il passerait en tête de file, avant les contrôles et les ventes."}{" "}
@@ -273,7 +307,11 @@ export function Incident() {
             label="Catégorie"
             variante="puces"
             colonnes={3}
-            options={CATEGORIES.map((c) => ({ valeur: c.valeur, libelle: c.libelle, icone: c.icone }))}
+            options={CATEGORIES.map((c) => ({
+              valeur: c.valeur,
+              libelle: c.libelle,
+              icone: c.icone,
+            }))}
             valeur={categorie}
             onChange={setCategorie}
           />
@@ -283,10 +321,12 @@ export function Incident() {
           <Cases
             label="Gravité"
             serre
-            options={(["information", "important", "critique"] as const).map((g) => ({
-              valeur: g,
-              libelle: LIBELLE_GRAVITE[g],
-            }))}
+            options={(["information", "important", "critique"] as const).map(
+              (g) => ({
+                valeur: g,
+                libelle: LIBELLE_GRAVITE[g],
+              })
+            )}
             valeur={gravite}
             onChange={setGravite}
           />
@@ -303,13 +343,21 @@ export function Incident() {
 
         {modifierLieu ? (
           <Field label="Lieu" htmlFor="incident-lieu">
-            <Input autoFocus value={lieu} onChange={(event) => setLieuSaisi(event.target.value)} />
+            <Input
+              autoFocus
+              value={lieu}
+              onChange={(event) => setLieuSaisi(event.target.value)}
+            />
           </Field>
         ) : (
           <div className="flex min-h-12 items-center gap-2 rounded-md border border-line bg-surface pr-1 pl-3.5 text-[14px] font-semibold">
-            <MapPinIcon aria-hidden className="size-[18px] shrink-0 text-ink-muted" />
+            <MapPinIcon
+              aria-hidden
+              className="size-[18px] shrink-0 text-ink-muted"
+            />
             <span className="min-w-0 truncate">
-              {lieu} <small className="font-medium text-ink-muted">· lieu</small>
+              {lieu}{" "}
+              <small className="font-medium text-ink-muted">· lieu</small>
             </span>
             <button
               type="button"
@@ -335,11 +383,19 @@ export function Incident() {
           {photos.map((photo) => (
             <span key={photo.id} className="relative shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo.url} alt="Photo jointe au signalement" className="size-14 rounded-md border border-line object-cover" />
+              <img
+                src={photo.url}
+                alt="Photo jointe au signalement"
+                className="size-14 rounded-md border border-line object-cover"
+              />
               <button
                 type="button"
                 aria-label="Retirer la photo"
-                onClick={() => setPhotos((courantes) => courantes.filter((p) => p.id !== photo.id))}
+                onClick={() =>
+                  setPhotos((courantes) =>
+                    courantes.filter((p) => p.id !== photo.id)
+                  )
+                }
                 className="absolute -top-2.5 -right-2.5 grid size-11 place-items-center"
               >
                 <span className="grid size-6 place-items-center rounded-pill bg-ink text-ink-inverse">
@@ -368,7 +424,9 @@ export function Incident() {
               event.target.value = ""
             }}
           />
-          <Note className="flex-1">Photos stockées localement, envoyées à la reconnexion.</Note>
+          <Note className="flex-1">
+            Photos stockées localement, envoyées à la reconnexion.
+          </Note>
         </div>
 
         {journal}
@@ -389,4 +447,3 @@ export function Incident() {
     </>
   )
 }
-

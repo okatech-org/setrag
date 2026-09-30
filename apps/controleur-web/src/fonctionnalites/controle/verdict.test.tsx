@@ -1,7 +1,11 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { EmbarkedManifest, EmbarkedTicket, Verdict as VerdictLocal } from "@/lib/offline/types"
+import type {
+  EmbarkedManifest,
+  EmbarkedTicket,
+  Verdict as VerdictLocal,
+} from "@/lib/offline/types"
 import { LIBELLE_SUITE, LIBELLE_VERDICT, suitesDuVerdict } from "@/lib/verdicts"
 
 import type { ResultatControle } from "./controle"
@@ -13,8 +17,12 @@ const mocks = vi.hoisted(() => ({
   retour: vi.fn(),
 }))
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: vi.fn() }) }))
-vi.mock("./controle", () => ({ useControle: () => ({ enregistrer: mocks.enregistrer, inspecter: vi.fn() }) }))
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mocks.push, replace: vi.fn() }),
+}))
+vi.mock("./controle", () => ({
+  useControle: () => ({ enregistrer: mocks.enregistrer, inspecter: vi.fn() }),
+}))
 vi.mock("@/lib/retour", () => ({ retourDuVerdict: mocks.retour }))
 
 const MANIFESTE: EmbarkedManifest = {
@@ -27,9 +35,27 @@ const MANIFESTE: EmbarkedManifest = {
   destinationName: "Franceville",
   segmentCount: 2,
   stops: [
-    { sequence: 0, stationId: "s0", code: "OWE", name: "Owendo Virié", kilometerPoint: 0 },
-    { sequence: 1, stationId: "s1", code: "BOO", name: "Booué", kilometerPoint: 340 },
-    { sequence: 2, stationId: "s2", code: "FCV", name: "Franceville", kilometerPoint: 648 },
+    {
+      sequence: 0,
+      stationId: "s0",
+      code: "OWE",
+      name: "Owendo Virié",
+      kilometerPoint: 0,
+    },
+    {
+      sequence: 1,
+      stationId: "s1",
+      code: "BOO",
+      name: "Booué",
+      kilometerPoint: 340,
+    },
+    {
+      sequence: 2,
+      stationId: "s2",
+      code: "FCV",
+      name: "Franceville",
+      kilometerPoint: 648,
+    },
   ],
   fare: null,
   penalties: [],
@@ -42,7 +68,10 @@ const MANIFESTE: EmbarkedManifest = {
 }
 
 vi.mock("../terminal/contexte-terminal", () => ({
-  useTerminal: () => ({ manifest: MANIFESTE, settings: { currentStopIndex: 1, coachLabel: "V4" } }),
+  useTerminal: () => ({
+    manifest: MANIFESTE,
+    settings: { currentStopIndex: 1, coachLabel: "V4" },
+  }),
 }))
 
 const TITRE: EmbarkedTicket = {
@@ -63,7 +92,18 @@ function resultat(verdict: VerdictLocal): ResultatControle {
     verdict,
     reason: verdict === "valide" ? null : "motif",
     payload: lu
-      ? { v: 1, k: 1, kind: "billet", ref: TITRE.number, trip: "t", date: "2026-10-01", cls: "DEUXIEME", from: 0, to: 2, exp: 0 }
+      ? {
+          v: 1,
+          k: 1,
+          kind: "billet",
+          ref: TITRE.number,
+          trip: "t",
+          date: "2026-10-01",
+          cls: "DEUXIEME",
+          from: 0,
+          to: 2,
+          exp: 0,
+        }
       : null,
     ticket: lu && verdict !== "inconnu" ? TITRE : undefined,
     fromManifest: false,
@@ -82,15 +122,22 @@ describe("Écran de verdict", () => {
     vi.useRealTimers()
   })
 
-  it.each(VERDICTS)("%s : le mot en tête, un seul bouton primaire", (verdict) => {
-    render(<Verdict resultat={resultat(verdict)} onFermer={mocks.retour} />)
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(LIBELLE_VERDICT[verdict])
-    const primaires = screen
-      .getAllByRole("button")
-      .filter((bouton) => bouton.className.includes("bg-accent-base"))
-    expect(primaires).toHaveLength(1)
-    expect(primaires[0]!.textContent).toBe(LIBELLE_SUITE[suitesDuVerdict(verdict).principale])
-  })
+  it.each(VERDICTS)(
+    "%s : le mot en tête, un seul bouton primaire",
+    (verdict) => {
+      render(<Verdict resultat={resultat(verdict)} onFermer={mocks.retour} />)
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+        LIBELLE_VERDICT[verdict]
+      )
+      const primaires = screen
+        .getAllByRole("button")
+        .filter((bouton) => bouton.className.includes("bg-accent-base"))
+      expect(primaires).toHaveLength(1)
+      expect(primaires[0]!.textContent).toBe(
+        LIBELLE_SUITE[suitesDuVerdict(verdict).principale]
+      )
+    }
+  )
 
   it("revient seul au viseur 1,5 s après un titre valide, en enregistrant le contrôle", async () => {
     const onFermer = vi.fn()

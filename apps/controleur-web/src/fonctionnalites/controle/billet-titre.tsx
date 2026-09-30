@@ -44,11 +44,16 @@ export function BilletTitre({
       }}
       voie={trajetAcquis ? "pleine" : "vide"}
       cases={[
-        { libelle: "Voiture", valeur: ticket.coachLabel ? numeroVoiture(ticket.coachLabel) : "—" },
+        {
+          libelle: "Voiture",
+          valeur: ticket.coachLabel ? numeroVoiture(ticket.coachLabel) : "—",
+        },
         { libelle: "Place", valeur: ticket.seatLabel ?? "debout" },
         { libelle: "Classe", valeur: classeCourte(ticket.serviceClass) },
       ]}
-      pied={<span className="font-mono tracking-[0.04em]">N° {ticket.number}</span>}
+      pied={
+        <span className="font-mono tracking-[0.04em]">N° {ticket.number}</span>
+      }
     />
   )
 }

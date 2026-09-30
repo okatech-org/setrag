@@ -21,12 +21,16 @@ export function nomTrain(type: string | undefined, numero: string): string {
   return `${TYPES_TRAIN[type ?? ""] ?? "Train"} ${numero.replace(/^[A-Z]+-/, "")}`
 }
 
-export function nomDuTrain(manifest: Pick<EmbarkedManifest, "trainType" | "trainNumber">): string {
+export function nomDuTrain(
+  manifest: Pick<EmbarkedManifest, "trainType" | "trainNumber">
+): string {
   return nomTrain(manifest.trainType, manifest.trainNumber)
 }
 
 /** « l'Express 201 », « le Train spécial 305 » : le train, avec son article. */
-export function leTrain(manifest: Pick<EmbarkedManifest, "trainType" | "trainNumber">): string {
+export function leTrain(
+  manifest: Pick<EmbarkedManifest, "trainType" | "trainNumber">
+): string {
   const nom = nomDuTrain(manifest)
   return /^[AEIOUYH]/i.test(nom) ? `l'${nom}` : `le ${nom}`
 }
@@ -43,7 +47,10 @@ export function numeroVoiture(repere: string): string {
 }
 
 /** Deux repères désignent-ils la même voiture ? « 4 », « V4 » et « V04 » : oui. */
-export function memeVoiture(a: string | undefined, b: string | undefined): boolean {
+export function memeVoiture(
+  a: string | undefined,
+  b: string | undefined
+): boolean {
   if (!a || !b) return false
   return numeroVoiture(a) === numeroVoiture(b)
 }

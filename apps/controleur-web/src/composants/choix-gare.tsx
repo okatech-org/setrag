@@ -42,9 +42,14 @@ export function ChampSelection({
     >
       <span className="truncate">{valeur}</span>
       {complement && (
-        <small className="shrink-0 font-mono text-[13px] font-medium text-ink-muted">{complement}</small>
+        <small className="shrink-0 font-mono text-[13px] font-medium text-ink-muted">
+          {complement}
+        </small>
       )}
-      <ChevronDownIcon aria-hidden className="ml-auto size-[18px] shrink-0 text-ink-muted" />
+      <ChevronDownIcon
+        aria-hidden
+        className="ml-auto size-[18px] shrink-0 text-ink-muted"
+      />
     </button>
   )
 }
@@ -127,7 +132,10 @@ export function ChoixGare({
     >
       <ol ref={liste} className="relative">
         {arrets.length > 1 && (
-          <span aria-hidden className="voie-v top-[23px] bottom-[23px] left-[23px]" />
+          <span
+            aria-hidden
+            className="voie-v top-[23px] bottom-[23px] left-[23px]"
+          />
         )}
         {arrets.map((arret) => {
           const choisie = arret.sequence === courante
@@ -159,14 +167,24 @@ export function ChoixGare({
                   className={cn(
                     "z-[1] justify-self-center rounded-pill border-[3px] bg-surface",
                     repere || choisie ? "size-4" : "size-3",
-                    choisie ? "border-accent-base" : repere ? "border-ink-muted" : "border-line-strong"
+                    choisie
+                      ? "border-accent-base"
+                      : repere
+                        ? "border-ink-muted"
+                        : "border-line-strong"
                   )}
                 />
-                <span className={cn("truncate", repere || choisie ? "font-bold" : "font-medium")}>
+                <span
+                  className={cn(
+                    "truncate",
+                    repere || choisie ? "font-bold" : "font-medium"
+                  )}
+                >
                   {arret.name}
                 </span>
                 <small className="font-mono text-[12px] text-ink-muted">
-                  {passage !== undefined && `${heure(passage)} · `}PK {arret.kilometerPoint}
+                  {passage !== undefined && `${heure(passage)} · `}PK{" "}
+                  {arret.kilometerPoint}
                 </small>
               </button>
             </li>

@@ -22,13 +22,17 @@ export function CarteTitre({
     <div
       className={cn(
         "grid gap-1.5 rounded-md border px-4 py-3.5",
-        vide ? "border-dashed border-line-strong bg-surface-sunk" : "border-line bg-surface",
+        vide
+          ? "border-dashed border-line-strong bg-surface-sunk"
+          : "border-line bg-surface",
         className
       )}
     >
       <b className="text-[17px] leading-snug font-bold">{titre}</b>
       {children && (
-        <div className="grid gap-1 text-[13.5px] leading-snug font-medium text-ink-muted">{children}</div>
+        <div className="grid gap-1 text-[13.5px] leading-snug font-medium text-ink-muted">
+          {children}
+        </div>
       )}
     </div>
   )

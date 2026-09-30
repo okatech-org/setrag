@@ -42,7 +42,10 @@ function empreinte(code: string): string {
   return [...octets].map((b) => b.toString(16).padStart(2, "0")).join("")
 }
 
-const Contexte = createContext<{ verrouiller: () => void; possible: boolean } | null>(null)
+const Contexte = createContext<{
+  verrouiller: () => void
+  possible: boolean
+} | null>(null)
 
 /** Verrouiller le terminal d'un geste (bouton cadenas de la tournée). */
 export function useVerrouillage() {
@@ -52,7 +55,9 @@ export function useVerrouillage() {
 export function Verrouillage({ children }: { children: ReactNode }) {
   const { settings, updateSettings, queue, ready } = useTerminal()
   // Pourquoi le terminal s'est refermé : l'écran le dit tel quel.
-  const [verrouille, setVerrouille] = useState<false | "inactivite" | "manuel">(false)
+  const [verrouille, setVerrouille] = useState<false | "inactivite" | "manuel">(
+    false
+  )
   const [saisie, setSaisie] = useState("")
   const [erreur, setErreur] = useState<string | null>(null)
   const minuteur = useRef<number | null>(null)
@@ -63,7 +68,10 @@ export function Verrouillage({ children }: { children: ReactNode }) {
     if (minuteur.current) window.clearTimeout(minuteur.current)
     // Sans code défini, verrouiller enfermerait l'agent dehors.
     if (!aUnCode) return
-    minuteur.current = window.setTimeout(() => setVerrouille("inactivite"), INACTIVITE_MS)
+    minuteur.current = window.setTimeout(
+      () => setVerrouille("inactivite"),
+      INACTIVITE_MS
+    )
   }, [aUnCode])
 
   useEffect(() => {
@@ -78,7 +86,8 @@ export function Verrouillage({ children }: { children: ReactNode }) {
       window.addEventListener(evenement, activite, { passive: true })
     }
     return () => {
-      for (const evenement of evenements) window.removeEventListener(evenement, activite)
+      for (const evenement of evenements)
+        window.removeEventListener(evenement, activite)
       if (minuteur.current) window.clearTimeout(minuteur.current)
     }
   }, [armer, ready])
@@ -155,8 +164,9 @@ export function Verrouillage({ children }: { children: ReactNode }) {
       note={
         <>
           <span className="tabular">{queue.total}</span>{" "}
-          {queue.total > 1 ? "écritures" : "écriture"} en attente d&apos;envoi. Le
-          déverrouillage se fait sans réseau : le code est vérifié localement.
+          {queue.total > 1 ? "écritures" : "écriture"} en attente d&apos;envoi.
+          Le déverrouillage se fait sans réseau : le code est vérifié
+          localement.
         </>
       }
     />
@@ -203,7 +213,7 @@ function Ecran({
         <h1 id="verrou-titre" className="text-[24px] font-bold">
           {titre}
         </h1>
-        <p className="max-w-[30ch] text-small text-ink-muted">{texte}</p>
+        <p className="text-small max-w-[30ch] text-ink-muted">{texte}</p>
         <div className="grid w-[248px] gap-2">
           <CodeOtp
             valeur={saisie}
@@ -215,7 +225,10 @@ function Ecran({
             label="Code de reprise à quatre chiffres"
           />
           {erreur && (
-            <p role="alert" className="text-[13px] font-semibold text-danger-ink">
+            <p
+              role="alert"
+              className="text-[13px] font-semibold text-danger-ink"
+            >
               {erreur}
             </p>
           )}
@@ -223,7 +236,9 @@ function Ecran({
         <Button type="submit" size="lg" block className={TERRAIN}>
           {action}
         </Button>
-        <p className="max-w-[34ch] text-[12.5px] leading-[1.45] font-medium text-ink-muted">{note}</p>
+        <p className="max-w-[34ch] text-[12.5px] leading-[1.45] font-medium text-ink-muted">
+          {note}
+        </p>
       </form>
     </div>
   )
