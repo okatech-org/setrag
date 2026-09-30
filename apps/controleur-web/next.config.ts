@@ -2,7 +2,16 @@ import path from "node:path"
 
 import type { NextConfig } from "next"
 
+/**
+ * Empreinte du build, qui nomme les caches du service worker : le commit
+ * déployé sur Vercel, à défaut l'instant de la compilation.
+ */
+const EMPREINTE_BUILD = (
+  process.env.VERCEL_GIT_COMMIT_SHA ?? Date.now().toString(36)
+).slice(0, 12)
+
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_EMPREINTE_BUILD: EMPREINTE_BUILD },
   // La racine du monorepo, dite explicitement : sans elle, Turbopack la
   // devine d'après le premier `bun.lock` trouvé en remontant — celui d'un
   // dépôt parent quand l'application est extraite dans un worktree.
@@ -31,7 +40,10 @@ const nextConfig: NextConfig = {
         source: "/sw.js",
         headers: [
           { key: "Service-Worker-Allowed", value: "/" },
-          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
         ],
       },
     ]

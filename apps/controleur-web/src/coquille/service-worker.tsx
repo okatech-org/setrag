@@ -27,29 +27,15 @@ const ROUTES = [
 ] as const
 
 /**
- * Empreinte du build servi à cette page.
+ * Empreinte du build, inscrite dans le code au moment de la compilation
+ * (`next.config.ts`). Elle nomme les caches du service worker : un
+ * déploiement chasse le précédent.
  *
- * Les noms de fichiers de Next contiennent le hash de leur contenu : leur
- * ensemble identifie donc le déploiement, sans qu'on ait à propager un
- * numéro de version à la main. L'empreinte pilote le nom des caches du
- * service worker, ce qui garantit qu'un déploiement chasse le précédent.
+ * Elle ne se déduit pas des scripts de la page : chaque écran en charge un
+ * jeu différent, et l'empreinte changerait d'un écran à l'autre — le worker
+ * se réinstallerait à chaque ouverture d'une autre page.
  */
-function buildSignature(): string {
-  const sources = [
-    ...document.querySelectorAll<HTMLScriptElement>(
-      'script[src*="/_next/static/"]'
-    ),
-  ]
-    .map((script) => script.src.split("/").pop() ?? "")
-    .sort()
-    .join("|")
-
-  let hash = 0
-  for (let index = 0; index < sources.length; index += 1) {
-    hash = (hash * 31 + sources.charCodeAt(index)) | 0
-  }
-  return Math.abs(hash).toString(36)
-}
+const EMPREINTE_BUILD = process.env.NEXT_PUBLIC_EMPREINTE_BUILD ?? "v1"
 
 /**
  * Enregistre le service worker qui rend l'application ouvrable hors réseau.
@@ -110,7 +96,7 @@ export function ServiceWorker() {
     }
     const register = () => {
       void navigator.serviceWorker
-        .register(`/sw.js?v=${buildSignature()}`, { scope: "/" })
+        .register(`/sw.js?v=${EMPREINTE_BUILD}`, { scope: "/" })
         .catch(() => {
           // Un service worker refusé — navigation privée, contexte non
           // sécurisé — dégrade le hors-ligne mais ne doit rien interrompre :
