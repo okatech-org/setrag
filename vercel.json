@@ -1,0 +1,36 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "billetterie-web": {
+      "root": "apps/billetterie-web",
+      "framework": "nextjs",
+      "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then (cd ../../packages/backend && bunx convex deploy); fi && bun run build"
+    },
+    "agent-web": {
+      "root": "apps/agent-web",
+      "framework": "nextjs",
+      "buildCommand": "bun run build"
+    },
+    "controleur-web": {
+      "root": "apps/controleur-web",
+      "framework": "nextjs",
+      "buildCommand": "bun run build"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": { "pre": "agent." } }],
+      "destination": { "service": "agent-web" }
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": { "pre": "controle." } }],
+      "destination": { "service": "controleur-web" }
+    },
+    {
+      "source": "/(.*)",
+      "destination": { "service": "billetterie-web" }
+    }
+  ]
+}

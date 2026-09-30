@@ -31,11 +31,16 @@ import { SectionInfo, Texte } from "./elements"
  * charges recense 23 gares et une agence (§7.4).
  */
 
-/** Les trois applications déployées, dans l'ordre du parcours d'un billet. */
+/**
+ * Les trois applications déployées, dans l'ordre du parcours d'un billet.
+ * Chacune a son propre domaine (`vercel.json`) : l'adresse du portail agent
+ * et du contrôle vient de la configuration ; sans elle, la carte reste
+ * affichée, sans lien.
+ */
 const APPLICATIONS: {
   nom: string
   role: string
-  href: string
+  href: string | null
   icone: LucideIcon
   description: string
   points: string[]
@@ -43,7 +48,7 @@ const APPLICATIONS: {
   {
     nom: "Billetterie voyageur",
     role: "Vente en ligne",
-    href: "https://setrag-billetterie-web.vercel.app",
+    href: "/",
     icone: SmartphoneIcon,
     description:
       "Recherche d’itinéraire, choix de la classe, paiement Mobile Money ou carte, billet à code Aztec lisible sans réseau.",
@@ -56,7 +61,7 @@ const APPLICATIONS: {
   {
     nom: "Contrôle à bord",
     role: "Équipes de contrôle",
-    href: "https://setrag-controleur-web.vercel.app",
+    href: process.env.NEXT_PUBLIC_CONTROLEUR_URL ?? null,
     icone: ScanLineIcon,
     description:
       "Scan et validation des titres, procès-verbaux d’infraction, encaissement des amendes, en mode hors ligne complet sur toute la voie.",
@@ -69,7 +74,7 @@ const APPLICATIONS: {
   {
     nom: "Portail agent",
     role: "Guichet et back-office",
-    href: "https://setrag-agent-web.vercel.app",
+    href: process.env.NEXT_PUBLIC_AGENT_URL ?? null,
     icone: LayoutDashboardIcon,
     description:
       "Vente au guichet, gestion des trains et des places, tarifs et yield management, états de caisse, reporting et gestion des rôles.",
@@ -249,48 +254,65 @@ export function Presentation() {
         >
           <div className="grid gap-4 md:grid-cols-3">
             {APPLICATIONS.map(
-              ({ nom, role, href, icone: Icone, description, points }) => (
-                <a
-                  key={nom}
-                  href={href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group grid content-start gap-4 rounded-lg border border-line bg-surface p-5 transition-colors duration-[var(--dur-fast)] hover:border-accent-line md:p-6"
-                >
-                  <span className="flex items-start justify-between gap-3">
-                    <span className="grid size-11 place-items-center rounded-md bg-accent-soft text-accent-ink">
-                      <Icone className="size-5" aria-hidden />
-                    </span>
-                    <ArrowUpRightIcon
-                      className="size-5 text-ink-faint transition-colors group-hover:text-accent-ink"
-                      aria-hidden
-                    />
-                  </span>
-                  <span className="grid gap-1.5">
-                    <span className="text-mono-label text-ink-muted">
-                      {role}
-                    </span>
-                    <span className="text-h4">{nom}</span>
-                  </span>
-                  <span className="text-[14.5px] leading-relaxed text-ink-muted">
-                    {description}
-                  </span>
-                  <span className="flex flex-wrap gap-1.5">
-                    {points.map((point) => (
-                      <span
-                        key={point}
-                        className="rounded-pill border border-line bg-canvas px-2.5 py-1 text-[12.5px] font-medium text-ink-muted"
-                      >
-                        {point}
+              ({ nom, role, href, icone: Icone, description, points }) => {
+                const contenu = (
+                  <>
+                    <span className="flex items-start justify-between gap-3">
+                      <span className="grid size-11 place-items-center rounded-md bg-accent-soft text-accent-ink">
+                        <Icone className="size-5" aria-hidden />
                       </span>
-                    ))}
-                  </span>
-                  <span className="inline-flex min-h-11 items-center gap-1.5 text-[15px] font-semibold text-accent-ink">
-                    Ouvrir l’application
-                    <span className="sr-only"> (nouvel onglet)</span>
-                  </span>
-                </a>
-              )
+                      {href && (
+                        <ArrowUpRightIcon
+                          className="size-5 text-ink-faint transition-colors group-hover:text-accent-ink"
+                          aria-hidden
+                        />
+                      )}
+                    </span>
+                    <span className="grid gap-1.5">
+                      <span className="text-mono-label text-ink-muted">
+                        {role}
+                      </span>
+                      <span className="text-h4">{nom}</span>
+                    </span>
+                    <span className="text-[14.5px] leading-relaxed text-ink-muted">
+                      {description}
+                    </span>
+                    <span className="flex flex-wrap gap-1.5">
+                      {points.map((point) => (
+                        <span
+                          key={point}
+                          className="rounded-pill border border-line bg-canvas px-2.5 py-1 text-[12.5px] font-medium text-ink-muted"
+                        >
+                          {point}
+                        </span>
+                      ))}
+                    </span>
+                    {href && (
+                      <span className="inline-flex min-h-11 items-center gap-1.5 text-[15px] font-semibold text-accent-ink">
+                        Ouvrir l’application
+                        <span className="sr-only"> (nouvel onglet)</span>
+                      </span>
+                    )}
+                  </>
+                )
+                const classe =
+                  "group grid content-start gap-4 rounded-lg border border-line bg-surface p-5 md:p-6"
+                return href ? (
+                  <a
+                    key={nom}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`${classe} transition-colors duration-[var(--dur-fast)] hover:border-accent-line`}
+                  >
+                    {contenu}
+                  </a>
+                ) : (
+                  <div key={nom} className={classe}>
+                    {contenu}
+                  </div>
+                )
+              }
             )}
           </div>
         </SectionInfo>
