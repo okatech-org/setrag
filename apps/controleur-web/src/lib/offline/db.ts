@@ -28,7 +28,7 @@ import type {
   SyncState,
   TerminalSettings,
 } from "./types"
-import { QUEUE_PRIORITY } from "./types"
+import { INCIDENT_PRIORITY, QUEUE_PRIORITY } from "./types"
 
 export const DB_NAME = "setrag-controle"
 export const DB_VERSION = 1
@@ -80,23 +80,31 @@ export function openDb(): Promise<IDBDatabase> {
         s.createIndex("by_card", "cardNumber")
       }
       if (!db.objectStoreNames.contains(STORES.scans)) {
-        const s = db.createObjectStore(STORES.scans, { keyPath: "clientScanId" })
+        const s = db.createObjectStore(STORES.scans, {
+          keyPath: "clientScanId",
+        })
         s.createIndex("by_trip", "tripId")
         s.createIndex("by_ticket", "ticketNumber")
         s.createIndex("by_state", "state")
       }
       if (!db.objectStoreNames.contains(STORES.sales)) {
-        const s = db.createObjectStore(STORES.sales, { keyPath: "clientSaleId" })
+        const s = db.createObjectStore(STORES.sales, {
+          keyPath: "clientSaleId",
+        })
         s.createIndex("by_trip", "tripId")
         s.createIndex("by_state", "state")
       }
       if (!db.objectStoreNames.contains(STORES.penalties)) {
-        const s = db.createObjectStore(STORES.penalties, { keyPath: "clientId" })
+        const s = db.createObjectStore(STORES.penalties, {
+          keyPath: "clientId",
+        })
         s.createIndex("by_trip", "tripId")
         s.createIndex("by_state", "state")
       }
       if (!db.objectStoreNames.contains(STORES.incidents)) {
-        const s = db.createObjectStore(STORES.incidents, { keyPath: "clientId" })
+        const s = db.createObjectStore(STORES.incidents, {
+          keyPath: "clientId",
+        })
         s.createIndex("by_state", "state")
       }
       if (!db.objectStoreNames.contains(STORES.photos)) {
@@ -230,7 +238,9 @@ export async function putTicketBatch(
     store.put(stored)
   }
   const manifests = tx.objectStore(STORES.manifests)
-  const current = await wrap<EmbarkedManifest | undefined>(manifests.get(tripId))
+  const current = await wrap<EmbarkedManifest | undefined>(
+    manifests.get(tripId)
+  )
   let total = 0
   if (current) {
     // Le compte se déduit des clés écrites, pas d'un cumul : un lot rejoué
@@ -307,6 +317,22 @@ const STORE_BY_KIND: Record<QueueKind, StoreName> = {
 }
 
 /**
+ * Rang d'envoi d'une écriture.
+ *
+ * Un incident prend le rang de sa gravité (`INCIDENT_PRIORITY`) : seul le
+ * critique passe en tête de file. Les autres natures ont un rang fixe.
+ */
+function priorityOf(
+  kind: QueueKind,
+  record: LocalScan | LocalSale | LocalPenalty | LocalIncident
+): number {
+  if (kind === "incident" && "severity" in record) {
+    return INCIDENT_PRIORITY[record.severity] ?? QUEUE_PRIORITY.incident
+  }
+  return QUEUE_PRIORITY[kind]
+}
+
+/**
  * Écrit une opération de terrain ET son entrée en file, atomiquement.
  *
  * C'est l'unique porte d'entrée des écritures locales. Tout ce qui doit
@@ -325,7 +351,7 @@ export async function commitOperation(
   const entry: QueueEntry = {
     id,
     kind,
-    priority: options.priority ?? QUEUE_PRIORITY[kind],
+    priority: options.priority ?? priorityOf(kind, record),
     createdAt: Date.now(),
     state: "pending",
     attempts: 0,
@@ -446,7 +472,9 @@ export async function scansForTicket(
   ticketNumber: string
 ): Promise<LocalScan[]> {
   return await withStore(STORES.scans, "readonly", (s) =>
-    wrap<LocalScan[]>(s.index("by_ticket").getAll(IDBKeyRange.only(ticketNumber)))
+    wrap<LocalScan[]>(
+      s.index("by_ticket").getAll(IDBKeyRange.only(ticketNumber))
+    )
   )
 }
 
@@ -488,6 +516,8 @@ export async function queueSummary(): Promise<{
   byKind: Record<QueueKind, { pending: number; failed: number; sent: number }>
   failed: number
   criticalPending: number
+  /** Dernière tentative d'envoi en échec : la reprise part 30 s après. */
+  lastFailedAt?: number
 }> {
   const entries = await listQueue()
   const byKind = {
@@ -499,13 +529,19 @@ export async function queueSummary(): Promise<{
 
   let failed = 0
   let criticalPending = 0
+  let lastFailedAt: number | undefined
   for (const entry of entries) {
     byKind[entry.kind][entry.state] += 1
-    if (entry.state === "failed") failed += 1
+    if (entry.state === "failed") {
+      failed += 1
+      if (entry.lastAttemptAt !== undefined) {
+        lastFailedAt = Math.max(lastFailedAt ?? 0, entry.lastAttemptAt)
+      }
+    }
     if (entry.priority === 0 && entry.state !== "sent") criticalPending += 1
   }
   const total = entries.filter((e) => e.state !== "sent").length
-  return { total, byKind, failed, criticalPending }
+  return { total, byKind, failed, criticalPending, lastFailedAt }
 }
 
 /* ──────────────────────────────── Réglages ─────────────────────────────── */
@@ -578,5 +614,10 @@ export async function purgeLocalData(): Promise<void> {
   const tx = db.transaction(targets, "readwrite")
   for (const name of targets) tx.objectStore(name).clear()
   await done(tx)
-  await saveSettings({ activeTripId: undefined, currentStopIndex: 0 })
+  await saveSettings({
+    activeTripId: undefined,
+    activeTripLabel: undefined,
+    currentStopIndex: 0,
+    currentStopConfirmedAt: undefined,
+  })
 }

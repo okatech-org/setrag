@@ -16,6 +16,7 @@ export function CodeOtp({
   invalide,
   autoFocus,
   label = "Code de connexion",
+  masque = false,
   className,
 }: {
   valeur: string
@@ -24,6 +25,8 @@ export function CodeOtp({
   invalide?: boolean
   autoFocus?: boolean
   label?: string
+  /** Code confidentiel (verrouillage) : chaque chiffre saisi s'affiche « • ». */
+  masque?: boolean
   className?: string
 }) {
   const [focus, setFocus] = React.useState(false)
@@ -40,7 +43,7 @@ export function CodeOtp({
               invalide ? "border-danger" : courant ? "border-accent-base shadow-[var(--focus-ring)]" : "border-line-strong"
             )}
           >
-            {valeur[i] ?? (courant ? <span className="h-6 w-0.5 animate-[st-veille_1.1s_steps(1)_infinite] bg-accent-base" /> : "")}
+            {(masque && valeur[i] !== undefined ? "•" : valeur[i]) ?? (courant ? <span className="h-6 w-0.5 animate-[st-veille_1.1s_steps(1)_infinite] bg-accent-base" /> : "")}
           </span>
         )
       })}
@@ -48,7 +51,8 @@ export function CodeOtp({
         aria-label={label}
         aria-invalid={invalide || undefined}
         inputMode="numeric"
-        autoComplete="one-time-code"
+        type={masque ? "password" : "text"}
+        autoComplete={masque ? "off" : "one-time-code"}
         autoFocus={autoFocus}
         maxLength={longueur}
         value={valeur}

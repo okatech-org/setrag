@@ -3,9 +3,10 @@
 `apps/controleur-web` — application web installable (PWA), pensée pour le
 terminal d'un contrôleur du Transgabonais. Port 3002.
 
-Elle reprend écran par écran les maquettes CM-01 à CM-11 de
-`docs/maquettes-setrag/Controleur Mobile.dc.html` et le plan
-`docs/plans/controleur-mobile.html`, portés du mobile natif vers le web.
+Elle suit la charte « la voie et le ruban », comme la billetterie : mêmes
+composants (`@workspace/ui`), même coquille mobile, mêmes feuilles. Les
+maquettes validées sont celles de la page « Contrôleur » de la charte
+(`docs/charte-setrag/controleur.html`, 38 écrans et leurs décisions).
 
 ## Le principe : hors ligne d'abord
 
@@ -22,19 +23,140 @@ billet est authentique ; il l'établit lui-même.
 
 ## Écrans
 
-| Écran | Route         | Rôle                                                      |
-| ----- | ------------- | --------------------------------------------------------- |
-| CM-01 | `/connexion`  | Mot de passe puis code à six chiffres, tous deux vérifiés |
-| CM-02 | `/tournee`    | Desserte du jour, fraîcheur des données, compteurs        |
-| CM-03 | `/manifeste`  | Téléchargement par lots, reprenable, interruptible        |
-| CM-04 | `/scan`       | Viseur Aztec, lampe, voiture, recherche                   |
-| CM-05 | —             | Verdict, en surcouche du viseur                           |
-| CM-06 | `/recherche`  | Recherche locale par référence, nom ou place              |
-| CM-07 | `/vente`      | Vente à bord — trajet, encaissement, titre                |
-| CM-08 | `/pv`         | Procès-verbal — motif, montant, signature                 |
-| CM-09 | `/incident`   | Signalement, photos, gravité                              |
-| CM-10 | `/historique` | File d'envoi, synchronisation, purge                      |
-| CM-11 | `/conflits`   | Titres contrôlés sur deux terminaux                       |
+Quatre écrans racines portent les onglets (Tournée, Scanner, Historique,
+Incident) ; les sous-écrans les masquent et portent un retour, comme l'app
+voyageur. Le verdict recouvre tout l'écran : il masque aussi les onglets.
+
+| Route         | Écran                                                                      |
+| ------------- | -------------------------------------------------------------------------- |
+| `/connexion`  | Compte de service et mot de passe, puis code à six chiffres ; compte démo |
+| `/tournee`    | Prise de service (choisir la desserte, puis télécharger) ; puis la tournée : voie de la desserte, dernière gare atteinte, compteurs, rame des voitures |
+| `/manifeste`  | Données embarquées : téléchargement par lots, reprenable, interruptible   |
+| `/voiture`    | Manifeste d'une voiture : plan des places (quatre états) ou liste          |
+| `/scan`       | Viseur toujours sombre, quatre commandes ; puis le verdict plein écran    |
+| `/recherche`  | Recherche locale par référence, nom ou place                               |
+| `/vente`      | Vente à bord — trajet, encaissement, titre remis                           |
+| `/pv`         | Procès-verbal — motif, montant, signature                                  |
+| `/incident`   | Signalement : catégorie, gravité, lieu, description, photos                |
+| `/historique` | File d'envoi et journal des contrôles ; purge de fin de tournée            |
+| `/conflits`   | Titres contrôlés sur deux terminaux, et leur détail                        |
+
+Le code suit la billetterie : `src/coquille` (bandeau de service, onglets,
+barre d'app, thème, démarrage, worker), `src/composants` (pièces propres au
+terminal : messages, cases, cartes de choix, journal, pictogrammes de
+verdict, choix de gare), `src/fonctionnalites/<écran>`, et `src/lib` pour
+les règles pures, testées sans interface (`verdicts`, `position`, `tournee`,
+`bandeau`, `preferences`, `train`, `format`, et `offline/*`).
+
+## La charte sur le terminal
+
+### Le bandeau de service
+
+Un bandeau permanent de 44 px sous la barre d'état, sur chaque écran, même
+verrouillé : réseau, nombre d'écritures à envoyer, heure de la dernière
+**confirmation** du serveur (`TerminalSettings.lastSyncAt`). Cinq états
+(`lib/bandeau.ts`) : en ligne, hors ligne, envoi en cours (une rame passe
+dessous, « Envoi · 2 sur 9 · lot 3 sur 4 »), session non reconnue, échec
+(« 2 en échec · conservés · nouvel essai 30 s », compté depuis le dernier
+échec). Le toucher ouvre la file d'envoi. L'état s'écrit en toutes lettres.
+
+### Les quatre familles de verdict
+
+Treize verdicts, quatre familles (`lib/verdicts.ts`). Chaque famille a une
+forme, un mot, une texture et un retour physique ; la teinte vient en
+dernier.
+
+| Famille            | Forme                         | Texture             | Vibration      | Son (réglable)      | Verdicts |
+| ------------------ | ----------------------------- | ------------------- | -------------- | ------------------- | -------- |
+| Accepté            | cercle, coche                 | —                   | 40 ms          | un bip aigu bref    | Valide, Abonnement valide |
+| À vérifier         | triangle, point d'exclamation | liseré en tirets    | 40-60-40 ms    | deux bips moyens    | Déjà contrôlé, Statut inconnu, Clé hors service |
+| Refusé             | octogone, croix               | hachures            | 260 ms         | un son grave long   | Hors segment, Mauvaise desserte, Expiré, Titre annulé, Titre remboursé, Non payé, Signature invalide |
+| Lecture impossible | cadre en tirets               | fond gris           | aucune         | aucun               | Code illisible |
+
+La suite de chaque verdict tient dans `suitesDuVerdict()` : **un seul**
+bouton primaire, puis des secondaires, puis des boutons fantômes.
+
+- Valide, Abonnement : « Valider et scanner le suivant ». Le retour au
+  viseur est **automatique après 1,5 s** ; toucher l'écran l'annule.
+- Déjà contrôlé : « Continuer sans second contrôle », l'heure du premier
+  contrôle écrite.
+- Statut inconnu : « Régulariser », puis « Établir un procès-verbal » ;
+  « Enregistrer et scanner le suivant » reste possible, hors du primaire.
+- Clé hors service : « Chercher dans le manifeste », puis « Signaler à
+  l'exploitation » (incident technique prérempli) — jamais de
+  procès-verbal : c'est un problème d'exploitation, pas de voyageur.
+- Hors segment : « Régulariser — vendre le complément », puis le
+  procès-verbal. La ligne sous le billet dit l'écart en gares et en PK.
+- Mauvaise desserte, Expiré (refus de bonne foi) : la vente d'abord, puis le
+  procès-verbal.
+- Annulé, Remboursé, Non payé, Signature invalide : le procès-verbal, puis
+  la vente.
+- Code illisible : « Scanner à nouveau », « Saisir le code à la main »,
+  « Chercher dans le manifeste ». Rien n'est enregistré : ce n'est pas un
+  verdict sur le voyageur.
+
+Tout verdict sur un titre est enregistré dès que l'agent choisit une suite
+(refus compris) ; « Fermer sans enregistrer » n'écrit rien. La caméra est
+coupée pendant le verdict, et rouverte au retour sur le viseur.
+
+### La dernière gare atteinte
+
+C'est d'elle que dépend « hors segment ». Le terminal la **propose**
+d'après l'horaire embarqué (`gareProposee` : la dernière gare dont l'heure de
+passage est échue), sur la tournée et sur le viseur ; l'agent la
+**confirme** d'un geste, sur la voie des gares (`ChoixGare`). Rien n'avance
+sans lui, et la proposition ne recule jamais. `currentStopIndex` porte le
+rang (`sequence`) de la gare confirmée.
+
+### Voitures, composition et plan
+
+Le manifeste embarque la composition du train (`composition` : voitures dans
+l'ordre de la rame, classe, places assises et debout, plan des places) et la
+voiture de chaque titre. La rame de la tournée dit, sous chaque voiture, la
+part de ses titres déjà contrôlés ; le plan d'une voiture montre ses places
+en quatre états (contrôlé, à contrôler, refusé, sans titre), chacun avec sa
+forme et son mot. Le choix de la voiture contrôlée suit la composition
+réelle (six voitures pour l'Express, quatre pour l'Omnibus). Un manifeste
+téléchargé avant cet ajout se rabat sur les voitures des titres.
+
+« Contrôlés » compte les **titres distincts**, pas les passages : un titre
+compte dès qu'il a été vu, sur ce terminal ou par un autre agent (statut
+« utilisé »), quel qu'ait été le verdict. Ni un code illisible ni une
+contrefaçon — qui peut recopier la référence d'un vrai titre — ne sont
+imputés à un titre.
+
+### Thème de nuit, son, contraste renforcé
+
+Réglages du terminal, dans `localStorage` (`lib/preferences.ts`) : ils valent
+dès l'écran de connexion et survivent à la purge.
+
+- **Thème** : sombre de 18:30 à 06:00 (heure de Libreville), heures
+  réglables, ou forcé clair ou sombre. Un script posé dans `<head>`
+  l'applique avant le premier rendu (`lib/script-affichage.ts`) : un terminal
+  rouvert à minuit ne s'allume pas en clair. Le viseur reste **toujours**
+  sombre. De nuit, les tokens sombres s'appliquent tels quels — le bouton
+  principal devient un aplat bleu clair.
+- **Son des verdicts** : un son par famille (Web Audio, rien à télécharger),
+  coupable — des voyageurs dorment. La vibration reste.
+- **Contraste renforcé**, pour le plein soleil : textes secondaires passés
+  en encre, bordures plus sombres (`[data-contraste="renforce"]` dans
+  `app/globals.css`). Les tirets qui portent un sens restent des tirets.
+
+### La marque
+
+Logo compact dans la barre d'app des écrans racines (négatif la nuit), voie
+de la desserte et ruban jusqu'à la position du train, ruban sous chaque
+voiture, onglets et étapes à ruban, billet encre dans le verdict. Démarrage
+à froid au logo animé, une fois, sur l'application installée et hors
+tournée. Aucun assistant sur le terminal : pas de réseau là où l'on
+contrôle, et un verdict doit rester déterministe et vérifiable.
+
+Les icônes de l'application se régénèrent depuis l'icône d'app du design
+system :
+
+```bash
+cd apps/controleur-web && node scripts/generer-icones.mjs
+```
 
 ## Authentification
 
@@ -56,7 +178,10 @@ n'aurait pas lieu.
 **Verrouillage.** Après cinq minutes d'inactivité, le terminal se referme et
 ne rouvre que sur un code court à quatre chiffres, vérifié **localement**
 (empreinte SHA-256 dans les réglages, jamais le code). Redemander le second
-facteur ici condamnerait l'agent à attendre la prochaine gare.
+facteur ici condamnerait l'agent à attendre la prochaine gare. Le code se
+valide seul au quatrième chiffre ; l'écran dit pourquoi il s'est verrouillé
+(inactivité ou verrouillage manuel), et le bandeau de service reste visible
+par-dessus.
 
 **Reprise hors réseau.** Une session ouverte laisse une trace locale
 (matricule, rôle, date). Si le serveur ne répond pas, l'application reprend la
@@ -92,8 +217,14 @@ Ordre d'envoi, décidé par l'exploitation et non par le code appelant :
 
 1. **incidents critiques** — seul retard à conséquence physique à bord ;
 2. procès-verbaux ;
-3. ventes à bord ;
-4. contrôles.
+3. incidents importants ;
+4. ventes à bord ;
+5. contrôles ;
+6. incidents d'information.
+
+Le rang d'un incident suit donc sa gravité (`INCIDENT_PRIORITY`), et l'écran
+le dit hors réseau : seul un incident critique est annoncé « en tête de
+file » ; les autres « partent avec le reste de la file ».
 
 Chaque écriture porte un identifiant client. Les contrôles, procès-verbaux et
 incidents partent groupés — leurs mutations sont idempotentes par lot. Les
@@ -131,7 +262,12 @@ Trois recours, dans cet ordre :
 Le worker précache **tous** les écrans, le décodeur WebAssembly et les
 ressources du build. Ses caches sont nommés d'après une empreinte du build :
 un déploiement chasse le précédent, sinon un terminal servirait indéfiniment
-une page réclamant des ressources supprimées.
+une page réclamant des ressources supprimées. L'empreinte est **fixée à la
+compilation** (`NEXT_PUBLIC_EMPREINTE_BUILD` dans `next.config.ts` : le commit
+Vercel, à défaut l'heure du build) et le worker s'enregistre sous
+`/sw.js?v=<empreinte>`. Elle était auparavant déduite des scripts de la page
+ouverte, qui diffèrent d'un écran à l'autre : chaque navigation installait
+alors un nouveau worker et vidait les caches.
 
 En ligne, le worker **ne s'interpose pas** sur les navigations : il les laisse
 partir au réseau et se contente d'en garder une copie. Intercepter une
@@ -159,14 +295,12 @@ production :
 cd apps/controleur-web && bun run build && bun run start
 ```
 
-> **À valider sur un terminal réel.** Le service worker n'a pas pu être vérifié
-> de bout en bout : le navigateur d'aperçu utilisé pendant le développement
-> interrompt la page dès qu'un service worker s'enregistre, quelle que soit sa
-> stratégie — y compris sans aucune interception. Ce qui est vérifié : le
-> worker s'installe, précache les onze écrans, vingt-cinq fragments de code et
-> le décodeur WebAssembly, et l'application entière fonctionne lorsqu'il est
-> désactivé. Ce qui reste à confirmer sur Chrome Android : l'ouverture de
-> l'application réseau coupé. En cas de difficulté sur un modèle de terminal,
+> **Vérifié sous Chromium, à confirmer sur un terminal réel.** Sur un build de
+> production, Chromium (Playwright, 390 × 844) installe le worker, précache
+> les écrans, garde la même empreinte d'une navigation à l'autre, et rouvre
+> les écrans réseau coupé ; les écritures faites hors ligne partent au retour
+> du réseau. Reste à confirmer sur Chrome Android, le terminal visé. En cas de
+> difficulté sur un modèle de terminal,
 > `NEXT_PUBLIC_DISABLE_SW=1` neutralise le worker et le désinstalle des
 > terminaux déjà équipés ; l'application perd le hors-ligne mais reste
 > utilisable, et tout le reste — vérification locale des titres, écritures,
@@ -184,6 +318,14 @@ Ajouts à `convex/functions/control.ts` pour ce portage :
 | `syncSale`               | Une vente, idempotente par `clientSaleId`                    |
 | `flagConflict`           | Signale un conflit au chef de gare, sans y toucher           |
 | `incidentPhotoUploadUrl` | Jeton d'envoi d'une photo                                    |
+
+Pour la charte, deux ajouts rétrocompatibles, en lecture seule :
+
+- `manifest` embarque `composition` — voitures de la rame dans l'ordre,
+  classe, places actives et leur position sur le plan ;
+- `manifest`, `manifestTickets` et `verifyTicket` résolvent la voiture de
+  chaque titre depuis sa place quand le titre ne la porte pas (les titres
+  vendus au guichet n'avaient pas de `coachLabel`).
 
 **Un contrôle enregistré n'est jamais modifiable** — invariante du projet,
 vérifiée par un test de la matrice de droits. Le contrôleur signale donc un
@@ -238,8 +380,10 @@ Ce seed installe ce qu'un contrôleur trouve en montant à bord : la prochaine
 desserte ouverte à la vente avec six voyageurs, une caisse ouverte, trois
 contrôles déjà effectués, un procès-verbal réglé, un incident en cours — et un
 **conflit à arbitrer**, le seul état qu'on ne peut pas produire en manipulant
-l'application, puisqu'il faut un second terminal. Il est idempotent : le
-relancer met à jour sans dupliquer.
+l'application, puisqu'il faut un second terminal. Il se veut idempotent,
+mais ne l'est pas tout à fait : sa recherche des titres déjà vendus filtre
+sur une voiture que ces titres ne portent pas, si bien que chaque relance
+vend six titres de plus sur la desserte.
 
 Ajouter `--prod` à ces deux commandes les applique à la production.
 
@@ -287,4 +431,8 @@ Les tests couvrent ce qui doit tenir sans réseau : vérification de titres
 réellement signés (verdicts valide, contrefait, hors segment, expiré, annulé,
 déjà contrôlé, abonnement, clé hors service), atomicité des écritures, ordre
 de la file, conservation des échecs, refus de purge prématurée, et égalité du
-tarif embarqué avec le barème de référence du backend.
+tarif embarqué avec le barème de référence du backend. S'y ajoutent les
+règles de la charte : familles et suites des verdicts (un seul primaire,
+retour automatique limité aux titres acceptés), gare proposée d'après
+l'horaire, titres contrôlés distincts, états du bandeau, thème de nuit, et
+formats (taux « 43,42 », heures de Libreville).

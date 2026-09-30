@@ -33,6 +33,17 @@ export interface BilletProps extends React.ComponentProps<"article"> {
   emis?: boolean
   /** Couleur du fond autour du billet : les encoches de la découpe la prennent. */
   fondDecoupe?: string
+  /** Nom du voyageur, sous l'en-tête : le billet tel que le contrôleur le lit. */
+  titulaire?: React.ReactNode
+  /**
+   * Voie du trajet : `pleine` (le trajet est acquis, par défaut) ou `vide`
+   * (titre remboursé, annulé : le trajet n'est plus acquis).
+   */
+  voie?: "pleine" | "vide"
+  /** Sans découpe : un billet lu au contrôle n'a pas de talon à détacher. */
+  decoupe?: boolean
+  /** Contenu libre sous les cases, avant le code : référence provisoire… */
+  children?: React.ReactNode
 }
 
 /**
@@ -52,6 +63,10 @@ export function Billet({
   pied,
   emis,
   fondDecoupe = "var(--c-canvas)",
+  titulaire,
+  voie = "pleine",
+  decoupe = true,
+  children,
   className,
   style,
   ...props
@@ -90,6 +105,12 @@ export function Billet({
           {statut && <span className="ml-auto">{statut}</span>}
         </header>
 
+        {titulaire && (
+          <p className="-mb-1 truncate text-[16px] font-bold text-[oklch(0.97_0.006_257)]">
+            {titulaire}
+          </p>
+        )}
+
         <div
           className={cn(
             "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 transition-opacity",
@@ -106,7 +127,7 @@ export function Billet({
           </div>
           <div className="grid justify-items-center gap-1 font-mono text-[11.5px] text-[oklch(0.76_0.016_257)]">
             {milieu}
-            <Voie etat="pleine" fond="encre" className="w-full" />
+            <Voie etat={voie} fond="encre" className="w-full" />
           </div>
           <div className="text-right">
             <b className="block font-mono text-[26px] leading-none font-semibold tabular-nums">
@@ -119,21 +140,23 @@ export function Billet({
         </div>
 
         {/* La découpe : une voie, que le ruban traverse à l'émission. */}
-        <div className="relative -mx-5 px-4" aria-hidden>
-          <span
-            className="absolute top-1/2 -left-2.5 size-5 -translate-y-1/2 rounded-pill"
-            style={{ background: "var(--fond-decoupe)" }}
-          />
-          <span
-            className="absolute top-1/2 -right-2.5 size-5 -translate-y-1/2 rounded-pill"
-            style={{ background: "var(--fond-decoupe)" }}
-          />
-          <Voie
-            fond="encre"
-            rempli={emis ? rempli : 0}
-            className="w-full [&_.voie-ruban]:duration-[720ms]"
-          />
-        </div>
+        {decoupe && (
+          <div className="relative -mx-5 px-4" aria-hidden>
+            <span
+              className="absolute top-1/2 -left-2.5 size-5 -translate-y-1/2 rounded-pill"
+              style={{ background: "var(--fond-decoupe)" }}
+            />
+            <span
+              className="absolute top-1/2 -right-2.5 size-5 -translate-y-1/2 rounded-pill"
+              style={{ background: "var(--fond-decoupe)" }}
+            />
+            <Voie
+              fond="encre"
+              rempli={emis ? rempli : 0}
+              className="w-full [&_.voie-ruban]:duration-[720ms]"
+            />
+          </div>
+        )}
 
         {cases && cases.length > 0 && (
           <dl
@@ -154,6 +177,8 @@ export function Billet({
             ))}
           </dl>
         )}
+
+        {children}
 
         {code && (
           <div

@@ -1,9 +1,14 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 
-import { ScannerScreen } from "@/components/scanner-screen"
+import { Controle } from "@/fonctionnalites/controle/viseur"
 
 export const metadata: Metadata = { title: "Scanner" }
 
 export default function ScanPage() {
-  return <ScannerScreen />
+  return (
+    <Suspense fallback={null}>
+      <Controle />
+    </Suspense>
+  )
 }

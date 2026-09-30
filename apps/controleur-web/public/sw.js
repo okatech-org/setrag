@@ -61,6 +61,7 @@ const PRECACHE = [
   "/historique",
   "/conflits",
   "/manifeste",
+  "/voiture",
   "/wasm/zxing_reader.wasm",
 ]
 

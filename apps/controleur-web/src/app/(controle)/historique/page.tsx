@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 
-import { HistoryScreen } from "@/components/history-screen"
+import { Historique } from "@/fonctionnalites/historique/historique"
 
-export const metadata: Metadata = { title: "Historique et envoi" }
+export const metadata: Metadata = { title: "Historique" }
 
 export default function HistoriquePage() {
-  return <HistoryScreen />
+  return <Historique />
 }

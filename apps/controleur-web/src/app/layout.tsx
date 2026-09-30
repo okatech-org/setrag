@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next"
-import { Toaster } from "sonner"
 
-import { Providers } from "@/components/providers"
-import { ServiceWorker } from "@/components/service-worker"
+import { Demarrage } from "@/coquille/demarrage"
+import { Fournisseurs } from "@/coquille/fournisseurs"
+import { ServiceWorker } from "@/coquille/service-worker"
+import { SCRIPT_AFFICHAGE } from "@/lib/script-affichage"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   },
   description:
     "Application de contrôle à bord du Transgabonais : vérification des titres, régularisation, procès-verbaux et signalements, y compris hors réseau.",
+  applicationName: "Contrôle SETRAG",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -24,13 +26,9 @@ export const metadata: Metadata = {
     capable: true,
     title: "Contrôle SETRAG",
     /**
-     * `default`, et surtout PAS `black-translucent`.
-     *
-     * Ce dernier fait passer le contenu SOUS la barre d'état : l'heure et la
-     * batterie se superposent alors au titre de l'écran, et il revient à
-     * l'application de compenser au pixel près. Un terminal de contrôle n'a
-     * rien à gagner à cette immersion — iOS réserve la barre, le contenu
-     * commence dessous, et l'écran reste lisible sur tous les modèles.
+     * `default`, et surtout PAS `black-translucent` : ce dernier fait passer
+     * le contenu SOUS la barre d'état, et l'heure se superposerait au
+     * bandeau de service.
      */
     statusBarStyle: "default",
   },
@@ -38,7 +36,11 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#2f4d8f",
+  // La barre système prend le fond de l'écran (--c-canvas), clair ou sombre.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F8FAFD" },
+    { media: "(prefers-color-scheme: dark)", color: "#0C121A" },
+  ],
   width: "device-width",
   initialScale: 1,
   // Le terminal se tient d'une main en marche : un zoom accidentel décalerait
@@ -52,12 +54,16 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body className="bg-canvas min-h-dvh">
-        <Providers>
+      <head>
+        {/* Thème de nuit et contraste appliqués avant le premier rendu. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_AFFICHAGE }} />
+      </head>
+      <body className="min-h-dvh bg-canvas text-ink">
+        <Fournisseurs>
+          <Demarrage />
           {children}
           <ServiceWorker />
-          <Toaster position="top-center" richColors closeButton />
-        </Providers>
+        </Fournisseurs>
       </body>
     </html>
   )

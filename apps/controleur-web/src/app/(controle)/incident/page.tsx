@@ -1,9 +1,14 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 
-import { IncidentScreen } from "@/components/incident-screen"
+import { Incident } from "@/fonctionnalites/incident/incident"
 
-export const metadata: Metadata = { title: "Incidents" }
+export const metadata: Metadata = { title: "Incident" }
 
 export default function IncidentPage() {
-  return <IncidentScreen />
+  return (
+    <Suspense fallback={null}>
+      <Incident />
+    </Suspense>
+  )
 }

@@ -36,10 +36,34 @@ function manifest(patch: Partial<EmbarkedManifest> = {}): EmbarkedManifest {
     destinationName: "Franceville",
     segmentCount: 3,
     stops: [
-      { sequence: 0, stationId: "s0", code: "OWE", name: "Owendo", kilometerPoint: 0 },
-      { sequence: 1, stationId: "s1", code: "BOO", name: "Booué", kilometerPoint: 340 },
-      { sequence: 2, stationId: "s2", code: "MOA", name: "Moanda", kilometerPoint: 583 },
-      { sequence: 3, stationId: "s3", code: "FCV", name: "Franceville", kilometerPoint: 648 },
+      {
+        sequence: 0,
+        stationId: "s0",
+        code: "OWE",
+        name: "Owendo",
+        kilometerPoint: 0,
+      },
+      {
+        sequence: 1,
+        stationId: "s1",
+        code: "BOO",
+        name: "Booué",
+        kilometerPoint: 340,
+      },
+      {
+        sequence: 2,
+        stationId: "s2",
+        code: "MOA",
+        name: "Moanda",
+        kilometerPoint: 583,
+      },
+      {
+        sequence: 3,
+        stationId: "s3",
+        code: "FCV",
+        name: "Franceville",
+        kilometerPoint: 648,
+      },
     ],
     fare: null,
     penalties: [],
@@ -140,7 +164,9 @@ describe("Vérification locale d'un titre", () => {
     // Deux circulations d'un même train peuvent coexister le même jour : le
     // motif doit nommer celle qui est embarquée, sinon l'agent voit « mauvaise
     // desserte » sur un titre qui est bien celui de son train.
-    expect(r.reason).toContain("TR-201")
+    // Avec le nom du billet, pas le code interne « TR-201 ».
+    expect(r.reason).toContain("l'Express 201")
+    expect(r.reason).not.toContain("TR-201")
     expect(r.reason).toMatch(/manifeste/i)
   })
 

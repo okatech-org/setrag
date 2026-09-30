@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 
-import { ConflictScreen } from "@/components/conflict-screen"
+import { Conflits } from "@/fonctionnalites/conflits/conflits"
 
-export const metadata: Metadata = { title: "Conflits à arbitrer" }
+export const metadata: Metadata = { title: "Conflits" }
 
 export default function ConflitsPage() {
-  return <ConflictScreen />
+  return <Conflits />
 }
