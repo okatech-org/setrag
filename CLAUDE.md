@@ -44,9 +44,14 @@ Convex packagé (`packages/backend`).
   (`seDeconnecter()`) ou en ligne — hors réseau, la session paraît absente sans
   l'être. Détails : [docs/billetterie-pwa.md](docs/billetterie-pwa.md).
 - **Design system** : le web suit **SETRAG** — voir [docs/design-system.md](docs/design-system.md)
-  et la référence vivante sur `/design-system` (billetterie). Source de vérité
+  et la référence vivante sur `/charte` (billetterie). Source de vérité
   des tokens : `packages/ui/src/styles/tokens.css`, copie du projet Claude
-  Design. Pas de valeur hexadécimale en dur dans les composants applicatifs :
+  Design. Le logo, le ruban et leurs tracés SVG vivent dans
+  `@workspace/ui/marque` (`Logo`, `LogoAnime`, `SigneRuban`) ; tout se régénère
+  avec `packages/ui/scripts/marque/generer.mjs`, qui écrit
+  `src/marque/traces.ts`, `src/marque/svg/*.svg` et
+  `packages/mobile-ui/src/tokens/ruban.ts` — ne jamais modifier ces sorties à
+  la main. Pas de valeur hexadécimale en dur dans les composants applicatifs :
   on passe par les utilitaires (`bg-surface`, `text-ink-muted`, `rounded-lg`)
   ou les variables (`var(--c-accent)`).
   Le mobile (`packages/mobile-ui`) porte la même charte : les couleurs y sont
@@ -83,9 +88,19 @@ créés par GitHub portent `noreply@github.com` : un « Merge pull request » es
 donc **refusé avant toute compilation**, et les journaux de build restent
 vides — le blocage n'apparaît que sur la fiche du déploiement.
 
-L'auteur des commits de ce dépôt est donc `admin@okatech.fr`, l'e-mail du
-compte Vercel. À défaut, déployer depuis un poste avec `bunx vercel --prod`,
-qui attribue le déploiement au compte connecté plutôt qu'à l'auteur du commit.
+Le dépôt déployé est `github.com/ntsagui/setrag`, dont le propriétaire est
+aussi celui du compte Vercel. Chaque commit a donc pour auteur ET committer
+`ntsagui <326687397+ntsagui@users.noreply.github.com>` (adresse noreply du
+compte GitHub, qui suffit à l'y rattacher), avec okafrancois en co-auteur :
+
+```bash
+GIT_AUTHOR_NAME=ntsagui GIT_AUTHOR_EMAIL=326687397+ntsagui@users.noreply.github.com \
+GIT_COMMITTER_NAME=ntsagui GIT_COMMITTER_EMAIL=326687397+ntsagui@users.noreply.github.com \
+git commit -m "…" -m "Co-authored-by: okafrancois <44721873+okafrancois@users.noreply.github.com>"
+```
+
+À défaut, déployer depuis un poste avec `bunx vercel --prod`, qui attribue le
+déploiement au compte connecté plutôt qu'à l'auteur du commit.
 
 ## Frictions de typage connues
 

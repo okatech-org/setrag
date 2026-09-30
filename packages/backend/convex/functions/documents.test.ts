@@ -1,11 +1,13 @@
 import { convexTest } from "convex-test"
-import { describe, expect, it } from "vitest"
+import { PDFDict, PDFDocument, PDFName } from "pdf-lib"
+import { describe, expect, it, vi } from "vitest"
 import { api, internal } from "../_generated/api"
 import type { Id } from "../_generated/dataModel"
 import schema from "../schema"
 import { modules } from "../test.setup"
 import type { AppRole } from "../model/permissions"
 import { addDays, toServiceDate } from "../model/calendar"
+import { MISE_EN_PAGE_DU } from "../lib/ticketPdf"
 
 /**
  * Génération du billet PDF.
@@ -163,23 +165,25 @@ async function asAgent(
   return { ctx: t.withIdentity({ subject: authId }), userId }
 }
 
-const TELEPHONE = "+241 06 11 22 33"
+const TELEPHONE = "+241 66 11 22 33"
 
 /** Vend un billet en ligne et le règle, pour avoir un titre à imprimer. */
 async function issueTicket(
   t: ReturnType<typeof convexTest>,
-  fx: Awaited<ReturnType<typeof seedTrip>>
+  fx: Awaited<ReturnType<typeof seedTrip>>,
+  trajet: { de: Id<"stations">; a: Id<"stations"> } = { de: fx.owe, a: fx.fcv }
 ) {
   const r = await t.mutation(api.functions.bookings.create, {
     tripId: fx.tripId,
-    originStationId: fx.owe,
-    destinationStationId: fx.fcv,
+    originStationId: trajet.de,
+    destinationStationId: trajet.a,
     serviceClass: "DEUXIEME",
     passengers: [{ lastName: "MBADINGA", firstName: "Paul", gender: "M" }],
     contactPhone: TELEPHONE,
   })
   await t.mutation(api.functions.bookings.confirm, {
     reference: r.reference,
+    contactPhone: TELEPHONE,
     method: "airtel_money",
   })
   const vue = await t.query(api.functions.bookings.getByReference, {
@@ -204,6 +208,89 @@ describe("Billet PDF", () => {
 
     const stocke = await t.run(async (c) => (await c.db.get(billet._id))!)
     expect(stocke.pdfStorageId).toBeDefined()
+
+    // Le fichier rangé est bien un billet à la charte : une page, les cinq
+    // polices de la charte en sous-ensemble.
+    const octets = await t.run(async (c) => {
+      const blob = await c.storage.get(stocke.pdfStorageId!)
+      return await blob!.arrayBuffer()
+    })
+    const pdf = await PDFDocument.load(new Uint8Array(octets))
+    expect(pdf.getPageCount()).toBe(1)
+    expect(pdf.getTitle()).toBe(`Billet ${stocke.number}`)
+    const polices = [...pdf.context.enumerateIndirectObjects()].filter(
+      ([, objet]) =>
+        objet instanceof PDFDict &&
+        objet.get(PDFName.of("Subtype")) === PDFName.of("Type0")
+    )
+    expect(polices).toHaveLength(5)
+  })
+
+  it("refait un billet rangé avant la mise en page actuelle", async () => {
+    // Tout se passe la veille de la nouvelle charte : la vente, puis un PDF
+    // de l'ancienne identité rangé pour ce billet. (Les dates de création
+    // de convex-test ne reculent jamais : l'horloge est avancée dès le début.)
+    vi.useFakeTimers({ now: MISE_EN_PAGE_DU - 86_400_000, toFake: ["Date"] })
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    const billet = await issueTicket(t, fx)
+    const ancien = await t.run(async (c) => {
+      const id = await c.storage.store(
+        new Blob(["%PDF-ancien"], { type: "application/pdf" })
+      )
+      await c.db.patch(billet._id, { pdfStorageId: id })
+      return id
+    })
+    vi.useRealTimers()
+
+    const r = await t.action(api.functions.documents.ticketPdf, {
+      ticketId: billet._id,
+      contactPhone: TELEPHONE,
+    })
+    expect(r.regenerated).toBe(true)
+    const apres = await t.run(async (c) => ({
+      billet: (await c.db.get(billet._id))!,
+      ancien: await c.storage.get(ancien),
+    }))
+    expect(apres.billet.pdfStorageId).not.toBe(ancien)
+    expect(apres.ancien).toBeNull()
+  })
+
+  it("imprime les heures et le train comme la billetterie", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    const billet = await issueTicket(t, fx)
+
+    const donnees = await t.query(internal.functions.documents.printData, {
+      ticketId: billet._id,
+      contactPhone: TELEPHONE,
+    })
+    // 08:00 à Libreville, comme sur le site (`formatTime`), plus « 08h00 ».
+    expect(donnees.departureLabel).toBe("08:00")
+    expect(donnees.arrivalLabel).toMatch(/^\d{2}:\d{2}$/)
+    expect(donnees.trainType).toBe("EXPRESS")
+  })
+
+  it("imprime les heures de montée et de descente du voyageur", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    // Départ d'Owendo à 08:00, Booué à 14:20, Franceville à 19:40.
+    const versBooue = await issueTicket(t, fx, { de: fx.owe, a: fx.boo })
+    const depuisBooue = await issueTicket(t, fx, { de: fx.boo, a: fx.fcv })
+
+    const aller = await t.query(internal.functions.documents.printData, {
+      ticketId: versBooue._id,
+      contactPhone: TELEPHONE,
+    })
+    expect([aller.departureLabel, aller.arrivalLabel]).toEqual(["08:00", "14:20"])
+
+    // Booué n'a qu'une heure d'arrivée : on y monte à cette heure-là.
+    const suite = await t.query(internal.functions.documents.printData, {
+      ticketId: depuisBooue._id,
+      contactPhone: TELEPHONE,
+    })
+    expect([suite.departureLabel, suite.arrivalLabel]).toEqual(["14:20", "19:40"])
+    expect(suite.departureAt).toBeGreaterThan(aller.departureAt)
   })
 
   it("assemble tous les titres d'un dossier dans un PDF multi-pages", async () => {
@@ -321,7 +408,7 @@ describe("Billet PDF", () => {
     await expect(
       t.action(api.functions.documents.ticketPdf, {
         ticketId: billet._id,
-        contactPhone: "+241 06 99 99 99",
+        contactPhone: "+241 66 99 99 99",
       })
     ).rejects.toThrow()
   })

@@ -610,7 +610,7 @@ describe("Actions de gestion", () => {
         product: "billet",
         channel: "ligne",
         status: "confirmee",
-        contactPhone: "+24106123456",
+        contactPhone: "+24166123456",
         contactEmail: "ariane@example.ga",
         amounts: {
           ht: 20_000,
@@ -667,7 +667,7 @@ describe("Actions de gestion", () => {
         status: "valide",
       },
       sale: {
-        contactPhone: "+24106123456",
+        contactPhone: "+24166123456",
         contactEmail: "ariane@example.ga",
       },
       trip: { trainNumber: "TR-BLOCK" },

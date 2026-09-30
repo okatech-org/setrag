@@ -1,11 +1,12 @@
 "use node"
 
 import { createSign } from "node:crypto"
-import { deflateSync } from "node:zlib"
 
 import { PKPass } from "passkit-generator"
 
+import { classeCourte, dateBillet, nomTrain } from "./libellesBillet"
 import type { TicketPrintData } from "./ticketPdf"
+import { IMAGES_WALLET } from "./walletImages"
 
 export interface WalletTicketData extends TicketPrintData {
   readonly departureAt: number
@@ -25,6 +26,29 @@ interface AppleWalletConfig {
   readonly signerCertificate: string
   readonly signerPrivateKey: string
   readonly wwdrCertificate: string
+}
+
+/**
+ * Couleurs du pass : celles du billet du site — fond encre, texte clair,
+ * libellés atténués. Conversion sRGB des valeurs oklch de
+ * `packages/ui/src/styles/tokens.css` (portage, pas seconde source de
+ * vérité ; même conversion que `pdfMarque.ts`).
+ */
+const COULEURS_PASS = {
+  /** --brand-encre · oklch(0.22 0.025 257) */
+  fond: { hex: "#131B26", rgb: "rgb(19, 27, 38)" },
+  /** texte du billet · oklch(0.97 0.006 257) */
+  texte: "rgb(243, 245, 249)",
+  /** libellés · oklch(0.76 0.016 257) */
+  libelle: "rgb(171, 178, 187)",
+} as const
+
+/** « 1re · V2 · 12A », « 2e · Placement libre » */
+function classeEtPlace(data: WalletTicketData): string {
+  const place = data.seatLabel
+    ? `${data.coachLabel ? `${data.coachLabel} · ` : ""}${data.seatLabel}`
+    : "Placement libre"
+  return `${classeCourte(data.serviceClass)} · ${place}`
 }
 
 function localized(value: string) {
@@ -66,9 +90,7 @@ export function createGoogleWalletUrl(
 ): string {
   const classId = `${config.issuerId}.setrag_train_ticket`
   const objectId = `${config.issuerId}.${walletObjectSuffix(data.number)}`
-  const seat = data.seatLabel
-    ? `${data.coachLabel ? `${data.coachLabel} · ` : ""}${data.seatLabel}`
-    : "Placement libre"
+  const site = config.siteUrl.replace(/\/$/, "")
 
   const claims = {
     iss: config.serviceAccountEmail,
@@ -85,10 +107,18 @@ export function createGoogleWalletUrl(
           state: "ACTIVE",
           cardTitle: localized("SETRAG · Transgabonais"),
           header: localized(`${data.origin.name} → ${data.destination.name}`),
-          subheader: localized(`Train ${data.trainNumber}`),
-          hexBackgroundColor: "#0F50A0",
+          subheader: localized(nomTrain(data.trainType, data.trainNumber)),
+          hexBackgroundColor: COULEURS_PASS.fond.hex,
+          // L'icône d'application de la billetterie (le S et son ruban),
+          // servie par le site : Google exige une image publique.
+          logo: {
+            sourceUri: { uri: `${site}/icons/icon-192.png` },
+            contentDescription: localized("SETRAG"),
+          },
+          // Aztec, comme le billet PDF et le billet du site : un seul symbole
+          // à reconnaître pour le voyageur comme pour le contrôleur.
           barcode: {
-            type: "QR_CODE",
+            type: "AZTEC",
             value: data.barcode,
             alternateText: data.number,
           },
@@ -103,22 +133,22 @@ export function createGoogleWalletUrl(
           textModulesData: [
             {
               id: "passenger",
-              header: "VOYAGEUR",
+              header: "Voyageur",
               body: `${data.passenger.firstName} ${data.passenger.lastName}`,
             },
             {
               id: "schedule",
-              header: "HORAIRES",
-              body: `${data.serviceDate} · ${data.departureLabel} → ${data.arrivalLabel}`,
+              header: "Horaires",
+              body: `${dateBillet(data.serviceDate)} · ${data.departureLabel} → ${data.arrivalLabel}`,
             },
             {
               id: "seat",
-              header: "CLASSE ET PLACE",
-              body: `${data.serviceClass} · ${seat}`,
+              header: "Classe et place",
+              body: classeEtPlace(data),
             },
             {
               id: "booking",
-              header: "RÉSERVATION",
+              header: "Réservation",
               body: data.saleNumber,
             },
           ],
@@ -126,7 +156,7 @@ export function createGoogleWalletUrl(
             uris: [
               {
                 id: "booking",
-                uri: `${config.siteUrl.replace(/\/$/, "")}/reservation/${encodeURIComponent(data.saleNumber)}`,
+                uri: `${site}/billets/${encodeURIComponent(data.saleNumber)}`,
                 description: "Voir ma réservation SETRAG",
               },
             ],
@@ -140,52 +170,14 @@ export function createGoogleWalletUrl(
   return `https://pay.google.com/gp/v/save/${token}`
 }
 
-// PNG RGBA minimal, généré à la volée : Apple exige un icon.png mais le
-// logotype principal reste du texte pour conserver une netteté parfaite.
-function crc32(bytes: Uint8Array): number {
-  let crc = 0xffffffff
-  for (const byte of bytes) {
-    crc ^= byte
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0)
-    }
-  }
-  return (crc ^ 0xffffffff) >>> 0
-}
-
-function pngChunk(type: string, data: Uint8Array): Buffer {
-  const typeBytes = Buffer.from(type, "ascii")
-  const length = Buffer.alloc(4)
-  length.writeUInt32BE(data.length)
-  const checksum = Buffer.alloc(4)
-  checksum.writeUInt32BE(crc32(Buffer.concat([typeBytes, Buffer.from(data)])))
-  return Buffer.concat([length, typeBytes, Buffer.from(data), checksum])
-}
-
-function solidIcon(size: number): Buffer {
-  const scanlines = Buffer.alloc((size * 4 + 1) * size)
-  for (let y = 0; y < size; y += 1) {
-    const row = y * (size * 4 + 1)
-    scanlines[row] = 0
-    for (let x = 0; x < size; x += 1) {
-      const pixel = row + 1 + x * 4
-      scanlines[pixel] = 0x0f
-      scanlines[pixel + 1] = 0x50
-      scanlines[pixel + 2] = 0xa0
-      scanlines[pixel + 3] = 0xff
-    }
-  }
-  const header = Buffer.alloc(13)
-  header.writeUInt32BE(size, 0)
-  header.writeUInt32BE(size, 4)
-  header[8] = 8
-  header[9] = 6
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    pngChunk("IHDR", header),
-    pngChunk("IDAT", deflateSync(scanlines)),
-    pngChunk("IEND", Buffer.alloc(0)),
-  ])
+/** Images du pass (icône, logo), générées par scripts/generer-images-wallet.mjs. */
+function imagesDuPass(): Record<string, Buffer> {
+  return Object.fromEntries(
+    Object.entries(IMAGES_WALLET).map(([nom, base64]) => [
+      nom,
+      Buffer.from(base64, "base64"),
+    ])
+  )
 }
 
 export function createAppleWalletPass(
@@ -193,10 +185,7 @@ export function createAppleWalletPass(
   config: AppleWalletConfig
 ): Buffer {
   const pass = new PKPass(
-    {
-      "icon.png": solidIcon(29),
-      "icon@2x.png": solidIcon(58),
-    },
+    imagesDuPass(),
     {
       wwdr: config.wwdrCertificate,
       signerCert: config.signerCertificate,
@@ -210,17 +199,18 @@ export function createAppleWalletPass(
       description: `Billet SETRAG ${data.number}`,
       serialNumber: data.number,
       groupingIdentifier: data.saleNumber,
-      logoText: "SETRAG · Transgabonais",
-      backgroundColor: "rgb(15, 80, 160)",
-      foregroundColor: "rgb(255, 255, 255)",
-      labelColor: "rgb(208, 229, 255)",
+      // Le logo (logo.png) porte le nom : pas de logoText à côté.
+      backgroundColor: COULEURS_PASS.fond.rgb,
+      foregroundColor: COULEURS_PASS.texte,
+      labelColor: COULEURS_PASS.libelle,
     }
   )
 
   pass.type = "boardingPass"
   pass.transitType = "PKTransitTypeTrain"
   pass.setBarcodes({
-    format: "PKBarcodeFormatQR",
+    // Aztec, comme le billet PDF et le billet du site.
+    format: "PKBarcodeFormatAztec",
     message: data.barcode,
     messageEncoding: "iso-8859-1",
     altText: data.number,
@@ -230,43 +220,43 @@ export function createAppleWalletPass(
   pass.primaryFields.push(
     {
       key: "origin",
-      label: "DÉPART",
+      label: "Départ",
       value: data.origin.name,
     },
     {
       key: "destination",
-      label: "ARRIVÉE",
+      label: "Arrivée",
       value: data.destination.name,
     }
   )
   pass.secondaryFields.push(
     {
       key: "departure",
-      label: "DÉPART",
+      label: "Départ",
       value: new Date(data.departureAt),
       dateStyle: "PKDateStyleMedium",
       timeStyle: "PKDateStyleShort",
     },
     {
       key: "train",
-      label: "TRAIN",
-      value: data.trainNumber,
+      label: "Train",
+      value: nomTrain(data.trainType, data.trainNumber),
     }
   )
   pass.auxiliaryFields.push(
     {
       key: "passenger",
-      label: "VOYAGEUR",
+      label: "Voyageur",
       value: `${data.passenger.firstName} ${data.passenger.lastName}`,
     },
     {
       key: "class",
-      label: "CLASSE",
-      value: data.serviceClass,
+      label: "Classe",
+      value: classeCourte(data.serviceClass),
     },
     {
       key: "seat",
-      label: "PLACE",
+      label: "Place",
       value: data.seatLabel
         ? `${data.coachLabel ? `${data.coachLabel} · ` : ""}${data.seatLabel}`
         : "Libre",

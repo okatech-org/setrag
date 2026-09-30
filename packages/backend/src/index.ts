@@ -21,3 +21,6 @@ export {
   SEAT_HOLD_DURATION_MS,
   CANCELLATION_CUTOFF_MS,
 } from "@workspace/shared/constants"
+
+/** Version des CGV acceptée au paiement (aussi exportée par `@workspace/backend/cgv`). */
+export { CURRENT_CGV_VERSION } from "../convex/model/cgv"

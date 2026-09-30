@@ -2,6 +2,7 @@ import { generateKeyPairSync, verify } from "node:crypto"
 
 import { describe, expect, it, vi } from "vitest"
 
+import { IMAGES_WALLET } from "./walletImages"
 import {
   createGoogleWalletUrl,
   walletObjectSuffix,
@@ -17,8 +18,8 @@ const ticket: WalletTicketData = {
   serviceDate: "2026-08-07",
   departureAt: Date.UTC(2026, 7, 7, 7),
   arrivalAt: Date.UTC(2026, 7, 7, 19),
-  departureLabel: "08h00",
-  arrivalLabel: "20h00",
+  departureLabel: "08:00",
+  arrivalLabel: "20:00",
   trainNumber: "TR-201",
   serviceClass: "premiere",
   coachLabel: "V1",
@@ -61,8 +62,29 @@ describe("walletPass", () => {
     expect(claims.payload.genericObjects[0]).toMatchObject({
       id: "3388000000023143702.setrag_ticket_BT_2026_001",
       state: "ACTIVE",
-      barcode: { value: "SETRAG1:SIGNED" },
+      // Aztec, comme le billet PDF.
+      barcode: { type: "AZTEC", value: "SETRAG1:SIGNED" },
     })
+    // À la charte : fond encre du billet, logo de la billetterie, libellés
+    // du site.
+    const objet = claims.payload.genericObjects[0]
+    expect(objet.hexBackgroundColor).toBe("#131B26")
+    expect(objet.logo.sourceUri.uri).toBe(
+      "https://billets.setrag.ga/icons/icon-192.png"
+    )
+    expect(objet.subheader.defaultValue.value).toBe("Train 201")
+    expect(objet.textModulesData).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          header: "Horaires",
+          body: "Ven. 7 août 2026 · 08:00 → 20:00",
+        }),
+        expect.objectContaining({
+          header: "Classe et place",
+          body: "1re · V1 · 12A",
+        }),
+      ])
+    )
     expect(
       verify(
         "RSA-SHA256",
@@ -71,5 +93,29 @@ describe("walletPass", () => {
         Buffer.from(signature!, "base64url")
       )
     ).toBe(true)
+  })
+
+  it("embarque l'icône et le logo du pass Apple aux tailles d'Apple", () => {
+    const tailles: Record<string, [number, number]> = {
+      "icon.png": [29, 29],
+      "icon@2x.png": [58, 58],
+      "icon@3x.png": [87, 87],
+      "logo.png": [111, 50],
+      "logo@2x.png": [223, 100],
+      "logo@3x.png": [334, 150],
+    }
+    for (const [nom, [largeur, hauteur]] of Object.entries(tailles)) {
+      const png = Buffer.from(
+        IMAGES_WALLET[nom as keyof typeof IMAGES_WALLET],
+        "base64"
+      )
+      expect(png.subarray(1, 4).toString("ascii")).toBe("PNG")
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([
+        largeur,
+        hauteur,
+      ])
+      // Apple borne le logo à 160 × 50 points.
+      expect(largeur / (hauteur / 50)).toBeLessThanOrEqual(160)
+    }
   })
 })

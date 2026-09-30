@@ -7,16 +7,26 @@
 export const DEFAULT_CURRENCY = "XAF"
 export const DEFAULT_LOCALE = "fr-GA"
 
+/**
+ * `Intl` sépare les milliers par une espace fine insécable (U+202F), absente
+ * de Schibsted Grotesk dans certaines graisses : « 31500 » s'affiche alors
+ * collé. On la remplace par l'espace insécable ordinaire, que toutes les
+ * polices ont.
+ */
+const espaces = (texte: string) => texte.replace(/\u202F/g, "\u00A0")
+
 /** Montant sans décimales — le franc CFA n'a pas de subdivision d'usage. */
 export function formatPrice(
   amount: number,
   { currency = DEFAULT_CURRENCY, locale = DEFAULT_LOCALE } = {}
 ): string {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount)
+  return espaces(
+    new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  )
 }
 
 /**
@@ -28,8 +38,8 @@ export function formatPriceCompact(
   amount: number,
   { locale = DEFAULT_LOCALE } = {}
 ): string {
-  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(
-    amount
+  return espaces(
+    new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(amount)
   )
 }
 

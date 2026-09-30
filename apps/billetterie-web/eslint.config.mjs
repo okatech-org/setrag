@@ -5,7 +5,8 @@ const config = [
   ...nextCoreWebVitals,
   ...nextTypeScript,
   {
-    ignores: [".next/**", "node_modules/**", "next-env.d.ts"],
+    // `.next-*` : les builds séparés (`NEXT_DIST_DIR`) des tests de bout en bout.
+    ignores: [".next/**", ".next-*/**", "node_modules/**", "next-env.d.ts"],
   },
 ]
 

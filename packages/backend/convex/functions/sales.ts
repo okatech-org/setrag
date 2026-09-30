@@ -377,7 +377,10 @@ export async function performSale(
       occupancyRate: occupancyRate(capacity, soldOnRoute),
       daysUntilDeparture: daysUntilDeparture(trip.departureAt, now),
       departureWeekday: weekdayOf(trip.serviceDate),
-      channel: "guichet",
+      // Le canal réel de la vente : une règle de yield « ligne » doit valoir
+      // pour le prix figé d'une réservation en ligne comme pour le devis
+      // annoncé par `bookings.quote`, et non celles du guichet.
+      channel: sale.channel,
       now,
       promoCode: args.promoCode,
     }

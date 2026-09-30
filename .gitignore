@@ -21,6 +21,8 @@ playwright-report
 
 # Next.js
 .next
+# Builds de vérification et de tests de bout en bout (NEXT_DIST_DIR)
+.next-*
 next-env.d.ts
 
 # Expo

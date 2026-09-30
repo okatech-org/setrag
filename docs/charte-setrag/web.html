@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETRAG — billetterie web</title>
+  <link rel="icon" href="logo/setrag-symbole.svg">
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shared/ui.css">
+  <link rel="stylesheet" href="shared/web.css">
+  <script src="vendor/lottie_light.min.js"></script>
+  <link rel="stylesheet" href="shared/assistant.css">
+  <script type="module" src="shared/app.js"></script>
+  <script type="module" src="shared/assistant.js"></script>
+</head>
+<body>
+<header class="doc-barre">
+  <a class="doc-logo" href="index.html" data-logo="compact" data-titre="SETRAG — charte graphique"></a>
+  <nav aria-label="Pages de la charte">
+    <a href="index.html">Charte</a>
+    <a href="mouvement.html">Mouvement</a>
+    <a href="composants.html">Composants</a>
+    <a href="web.html">Web</a>
+    <a href="mobile.html">Mobile</a>
+    <a href="widgets.html">Widgets &amp; Live</a>
+    <a href="assistant.html">Assistant</a>
+  </nav>
+  <button class="doc-bouton" id="theme" aria-pressed="false"><i data-i="moon"></i><span>Thème sombre</span></button>
+</header>
+
+<main class="doc">
+  <section class="doc-tete">
+    <div>
+      <p class="doc-sur">Billetterie web · Next.js · grand écran</p>
+      <h1>La billetterie, sur ordinateur</h1>
+      <p class="doc-chapo">Les routes réelles de <code>apps/billetterie-web</code>, dessinées avec les composants de la charte. Le ruban suit l'onglet de navigation, le jour choisi, le trajet sélectionné et l'étape du tunnel ; ailleurs, rien ne bouge.</p>
+    </div>
+    <div class="doc-carte">
+      <h3>Parcours</h3>
+      <p><code>/</code> → <code>/resultats</code> → voyageurs → <code>/paiement</code> → <code>/paiement/attente</code> → <code>/confirmation</code>. À côté : <code>/mesreservations</code>, <code>/suivi</code>, <code>/connexion</code>. Chaque changement de page fait passer le ruban dans le filet du haut, si le chargement dure plus de 150 ms.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ Accueil -->
+  <section class="doc-section">
+    <h2><span class="n">01</span>Accueil</h2>
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga</span></div>
+        <div class="site">
+          <header class="s-tete">
+            <span data-logo="compact"></span>
+            <nav class="nav" data-glisse="a"><a aria-current="page">Réserver</a><a>Mes réservations</a><a>Suivi des trains</a><a>Tarifs</a><a>Aide</a><span class="indicateur"></span></nav>
+            <div class="droite"><span class="langue"><i data-i="globe"></i>FR</span><span class="avatar">NM</span></div>
+          </header>
+          <div class="bandeau-trafic"><i data-i="triangle-alert"></i><span><b>Travaux entre Booué et Ivindo</b> samedi 3 octobre : les départs de l'après-midi partiront 25 min plus tard. Vos places sont conservées.</span><a>En savoir plus</a></div>
+          <div class="s-hero">
+            <div class="s-hero-int">
+              <div>
+                <h1>Owendo–Franceville, et 21 gares entre les deux.</h1>
+                <p class="chapo">Réservez en Mobile Money, recevez votre billet par SMS, lisez-le sans réseau.</p>
+              </div>
+              <div class="recherche-h">
+                <div class="gares2 recherche-gares" style="overflow:visible">
+                  <div class="bloc-champ" style="border-radius:var(--r-md)"><small>Départ</small><b>Owendo</b></div>
+                  <div class="bloc-champ" style="border-radius:var(--r-md);padding-left:32px"><small>Arrivée</small><b>Franceville</b></div>
+                  <button class="inverser" aria-label="Inverser départ et arrivée"><i data-i="arrow-left-right"></i></button>
+                </div>
+                <div class="bloc-champ"><small>Aller</small><b>Ven. 2 octobre</b></div>
+                <div class="bloc-champ"><small>Voyageurs</small><b>1 adulte, 1 enfant</b></div>
+                <span class="btn btn-primaire btn-lg"><i data-i="search"></i>Rechercher</span>
+              </div>
+              <div class="s-schema" data-schema-ligne data-segment="0,669"></div>
+            </div>
+          </div>
+          <div class="s-contenu">
+            <div class="tableau">
+              <div class="tableau-tete"><i data-i="train-front"></i><b>Départs d'Owendo · vendredi 2 octobre</b><span class="horloge">07:02</span></div>
+              <table>
+                <thead><tr><th>Heure</th><th>Destination</th><th>Train</th><th style="text-align:center">Quai</th><th>État</th></tr></thead>
+                <tbody>
+                  <tr><td class="h">07:40</td><td class="dest"><b>Franceville</b><small>Ndjolé, Booué, Lastourville, Moanda</small></td><td>Express 201</td><td class="q">1</td><td><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></td></tr>
+                  <tr><td class="h">09:15</td><td class="dest"><b>Ndjolé</b><small>Ntoum, Andem, Oyan, Abanga</small></td><td>Autorail 115</td><td class="q">2</td><td><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></td></tr>
+                  <tr><td class="h">14:30<s>14:05</s></td><td class="dest"><b>Franceville</b><small>Ndjolé, Booué, Lastourville, Moanda</small></td><td>Express 207</td><td class="q">1</td><td><span class="tag tag-retard"><i data-i="clock-alert"></i>+25 min</span></td></tr>
+                  <tr><td class="h">18:10</td><td class="dest"><b>Franceville</b><small>Toutes les gares</small></td><td>Omnibus 403</td><td class="q">2</td><td><span class="tag tag-neutre">Prévu</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="cartes3">
+              <div class="carte carte-info"><i data-i="badge-percent"></i><b>Tarifs réduits</b><ul><li>Enfant, 4 à 11 ans <b>−50 %</b></li><li>Militaire <b>−10 %</b></li><li>Groupe de 10 à 49 <b>−30 %</b></li><li>Groupe de 50 et plus <b>−45 %</b></li></ul><a>Tous les tarifs →</a></div>
+              <div class="carte carte-info"><i data-i="luggage"></i><b>Bagages, animaux, colis</b><p>Ajoutez-les pendant la réservation. Un animal accompagné voyage avec son propre billet.</p><a>Préparer son voyage →</a></div>
+              <div class="carte carte-info"><span data-logo="icone" style="width:44px;height:44px;border-radius:11px;overflow:hidden;display:block"></span><b>Le billet dans l'app</b><p>Il s'affiche sans réseau, et l'app vous prévient si l'horaire change.</p><a>Installer l'app →</a></div>
+            </div>
+          </div>
+          <button class="r-fab" aria-label="Ouvrir Ruban, l'assistant" style="bottom:96px"><span data-signe="repos" data-fond="sombre"></span></button>
+          <footer class="s-pied"><span data-logo="compact"></span><span>Société d'Exploitation du Transgabonais</span><nav><a>Aide</a><a>Conditions</a><a>Confidentialité</a><a>Contact</a></nav></footer>
+        </div>
+      </div>
+      <figcaption><b>Accueil</b><code>/</code><span>La ligne entière sous la recherche : l'illustration, c'est le réseau.</span><span class="anim">le ruban suit l'onglet survolé puis choisi (cliquez)</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- ========================================================== Résultats -->
+  <section class="doc-section">
+    <h2><span class="n">02</span>Résultats</h2>
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga/resultats</span></div>
+        <div class="site">
+          <header class="s-tete"><span data-logo="compact"></span><nav class="nav" data-glisse="a"><a aria-current="page">Réserver</a><a>Mes réservations</a><a>Suivi des trains</a><a>Tarifs</a><a>Aide</a><span class="indicateur"></span></nav><div class="droite"><span class="avatar">NM</span></div></header>
+          <div class="s-contenu">
+            <div class="s-tunnel-tete">
+              <div class="s-resume">Owendo → Franceville <small>· 2 voyageurs</small><a>Modifier</a></div>
+              <ol class="etapes" style="--n:4"><span class="ruban" style="--p:0"></span><li class="etape ici"><span class="gare"></span>Trajet</li><li class="etape"><span class="gare"></span>Voyageurs</li><li class="etape"><span class="gare"></span>Paiement</li><li class="etape"><span class="gare"></span>Billet</li></ol>
+            </div>
+            <div class="jours" style="--n:7" data-glisse=".jour">
+              <div class="jour" aria-pressed="false"><small>Mar. 29</small><b>32 500</b><span>2 trains</span></div>
+              <div class="jour" aria-pressed="false"><small>Mer. 30</small><b>32 500</b><span>2 trains</span></div>
+              <div class="jour" aria-pressed="false"><small>Jeu. 1</small><b>32 500</b><span>2 trains</span></div>
+              <div class="jour" aria-pressed="true"><small>Ven. 2</small><b>24 000</b><span>3 trains</span></div>
+              <div class="jour meilleur" aria-pressed="false"><small>Sam. 3</small><b>24 000</b><span>meilleur prix</span></div>
+              <div class="jour" aria-pressed="false"><small>Dim. 4</small><b>32 500</b><span>2 trains</span></div>
+              <div class="jour complet" aria-pressed="false"><small>Lun. 5</small><b>—</b><span>complet</span></div>
+              <span class="indicateur"></span>
+            </div>
+            <div class="s-grille">
+              <aside class="filtres">
+                <div><h4>Départ</h4><label class="coche"><i class="case on"></i>Matin<small>1</small></label><label class="coche"><i class="case on"></i>Après-midi<small>1</small></label><label class="coche"><i class="case on"></i>Soir<small>1</small></label></div>
+                <div><h4>Train</h4><label class="coche"><i class="case on"></i>Express<small>2</small></label><label class="coche"><i class="case on"></i>Omnibus<small>1</small></label></div>
+                <div><h4>Classe</h4><label class="coche"><i class="case on"></i>2e classe</label><label class="coche"><i class="case"></i>1re classe</label><label class="coche"><i class="case"></i>VIP</label></div>
+              </aside>
+              <div class="s-liste apparait" data-demo="trajets">
+                <article class="trajet choisi" style="--i:0">
+                  <div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>11 h 45 · 6 arrêts</small></div><div class="trajet-pt fin"><b>19:25</b><span>Franceville</span></div></div>
+                  <div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Express 201</span><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></div>
+                  <div class="trajet-prix"><small>dès</small><b>32 500 XAF</b><span>par adulte</span></div>
+                  <div class="trajet-classes">
+                    <div class="puce-classe on"><span class="radio"></span>2e classe<span class="prix">32 500</span><small>Place attribuée</small></div>
+                    <div class="puce-classe"><span class="radio"></span>1re classe<span class="prix">48 000</span><small>Place attribuée</small></div>
+                    <div class="puce-classe"><span class="radio"></span>VIP<span class="prix">65 000</span><small>Encore 6 places</small></div>
+                  </div>
+                </article>
+                <article class="trajet" style="--i:1">
+                  <div class="trajet-heures"><div class="trajet-pt"><b>14:05</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>11 h 50 · 6 arrêts</small></div><div class="trajet-pt fin"><b>01:55<sup>+1</sup></b><span>Franceville</span></div></div>
+                  <div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Express 207</span><span class="tag tag-retard"><i data-i="clock-alert"></i>Départ 14:30 · +25 min</span></div>
+                  <div class="trajet-prix"><small>dès</small><b>32 500 XAF</b><span>par adulte</span></div>
+                  <div class="trajet-classes"><div class="puce-classe on"><span class="radio"></span>2e classe<span class="prix">32 500</span><small>Place attribuée</small></div><div class="puce-classe"><span class="radio"></span>1re classe<span class="prix">48 000</span><small>Place attribuée</small></div><div class="puce-classe"><span class="radio"></span>VIP<span class="prix">65 000</span><small>Encore 8 places</small></div></div>
+                </article>
+                <article class="trajet" style="--i:2">
+                  <div class="trajet-heures"><div class="trajet-pt"><b>18:10</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>13 h 20 · 22 arrêts</small></div><div class="trajet-pt fin"><b>07:30<sup>+1</sup></b><span>Franceville</span></div></div>
+                  <div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Omnibus 403</span><span class="tag tag-marque">Meilleur prix</span></div>
+                  <div class="trajet-prix"><small>dès</small><b>24 000 XAF</b><span>par adulte</span></div>
+                  <div class="trajet-classes"><div class="puce-classe on"><span class="radio"></span>2e classe<span class="prix">24 000</span><small>Place attribuée</small></div><div class="puce-classe"><span class="radio"></span>1re classe<span class="prix">36 000</span><small>Place attribuée</small></div></div>
+                </article>
+              </div>
+            </div>
+          </div>
+          <div class="barre-action"><div class="info"><b>Express 201 · 2e classe</b>Ven. 2 oct. · 07:40 → 19:25 · 2 voyageurs</div><div class="total">Total<b>48 750 XAF</b></div><span class="btn btn-primaire btn-lg">Continuer</span></div>
+        </div>
+      </div>
+      <figcaption><b>Résultats</b><code>/resultats</code><span>Le trajet choisi s'ouvre sur ses classes ; la barre du bas porte le seul bouton principal.</span><span class="anim">le ruban suit le jour choisi, remplit la voie du trajet choisi (cliquez)</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- ========================================================== Voyageurs -->
+  <section class="doc-section">
+    <h2><span class="n">03</span>Voyageurs et options</h2>
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga/reservation/voyageurs</span></div>
+        <div class="site">
+          <header class="s-tete"><span data-logo="compact"></span><nav class="nav" data-glisse="a"><a aria-current="page">Réserver</a><a>Mes réservations</a><a>Suivi des trains</a><a>Tarifs</a><a>Aide</a><span class="indicateur"></span></nav><div class="droite"><span class="avatar">NM</span></div></header>
+          <div class="s-contenu">
+            <div class="s-tunnel-tete" data-demo="etapes" data-depart="1">
+              <div class="s-resume">Qui voyage ? <small>· étape 2 sur 4</small><button class="doc-bouton" data-suivant style="min-height:32px">Étape suivante</button></div>
+              <ol class="etapes" style="--n:4"><span class="ruban"></span><li class="etape"><span class="gare"></span>Trajet</li><li class="etape"><span class="gare"></span>Voyageurs</li><li class="etape"><span class="gare"></span>Paiement</li><li class="etape"><span class="gare"></span>Billet</li></ol>
+            </div>
+            <div class="s-grille droite">
+              <div style="display:grid;gap:var(--s-4)">
+                <div class="carte s-bloc">
+                  <h3><i data-i="user"></i>Voyageur 1 · adulte<span class="tag tag-accent">Vous</span></h3>
+                  <div class="champs3"><div class="champ"><span class="champ-libelle">Prénom</span><div class="saisie"><span>Nadia</span></div></div><div class="champ"><span class="champ-libelle">Nom</span><div class="saisie"><span>Mboumba</span></div></div><div class="champ"><span class="champ-libelle">Téléphone</span><div class="saisie"><span class="tabular">+241 07 12 34 56</span></div></div></div>
+                  <div class="champ"><span class="champ-libelle">Réduction</span><div class="saisie"><span>Aucune — plein tarif</span><i data-i="chevron-down" style="margin-left:auto"></i></div><span class="champ-aide">Militaire −10 % : justificatif demandé au contrôle.</span></div>
+                </div>
+                <div class="carte s-bloc">
+                  <h3><i data-i="baby"></i>Voyageur 2 · enfant<span class="tag tag-ok">−50 %</span></h3>
+                  <div class="champs3"><div class="champ"><span class="champ-libelle">Prénom</span><div class="saisie"><span>Enzo</span></div></div><div class="champ"><span class="champ-libelle">Nom</span><div class="saisie"><span>Mboumba</span></div></div><div class="champ erreur"><span class="champ-libelle">Date de naissance</span><div class="saisie focus"><span class="tabular">12/03/2023</span></div><span class="champ-aide"><i data-i="circle-alert"></i>Le tarif enfant vaut de 4 à 11 ans le jour du voyage.</span></div></div>
+                </div>
+                <div class="carte s-bloc">
+                  <h3><i data-i="luggage"></i>Options</h3>
+                  <div class="option"><i data-i="luggage"></i><div><b>Bagage en soute</b><small>À déposer au guichet bagages de la gare de départ</small></div><div class="compteur"><button aria-label="Retirer"><i data-i="minus"></i></button><output>1</output><button aria-label="Ajouter"><i data-i="plus"></i></button></div></div>
+                  <div class="option"><i data-i="dog"></i><div><b>Animal accompagné</b><small>Transport d'animal accompagné, avec son propre titre</small></div><span class="interrupteur"></span></div>
+                </div>
+              </div>
+              <aside class="recap">
+                <div class="recap-tete"><b>Owendo → Franceville</b><span>Ven. 2 oct. · 07:40 → 19:25 · Express 201</span></div>
+                <div class="recap-corps">
+                  <div class="tenue"><i data-i="timer"></i>Places tenues encore <b data-rebours="14:32"></b></div>
+                  <div class="recap-l"><span>Adulte · 2e classe</span><span class="tabular">32 500</span></div>
+                  <div class="recap-l"><span>Enfant · 2e classe</span><span class="tabular">32 500</span></div>
+                  <div class="recap-l remise"><span>Réduction enfant −50 %</span><span class="tabular">−16 250</span></div>
+                  <div class="recap-l"><span>Bagage en soute × 1</span><span class="tabular">2 000</span></div>
+                  <div class="recap-total"><span>Total</span><span>50 750 XAF</span></div>
+                  <span class="btn btn-primaire btn-lg btn-bloc">Continuer vers le paiement</span>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Voyageurs et options</b><span>L'erreur dit quoi faire, pas seulement ce qui ne va pas. La réduction s'écrit en montant, en vert.</span><span class="anim">« Étape suivante » : le ruban avance d'une gare (480 ms)</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- ========================================================== Paiement -->
+  <section class="doc-section">
+    <h2><span class="n">04</span>Paiement, puis attente de validation</h2>
+    <div class="doc-grille g2">
+      <figure class="ecran-web">
+        <div class="navigateur">
+          <div class="navigateur-barre"><i></i><i></i><i></i><span class="url" style="min-width:0"><i data-i="lock"></i>/paiement</span></div>
+          <div class="site" style="min-height:640px">
+            <header class="s-tete" style="padding:0 var(--s-6)"><span data-logo="compact"></span><div class="droite"><span class="avatar">NM</span></div></header>
+            <div class="s-contenu" style="padding:var(--s-6)">
+              <ol class="etapes" style="--n:4"><span class="ruban" style="--p:.667"></span><li class="etape faite"><span class="gare"></span>Trajet</li><li class="etape faite"><span class="gare"></span>Voyageurs</li><li class="etape ici"><span class="gare"></span>Paiement</li><li class="etape"><span class="gare"></span>Billet</li></ol>
+              <div class="tenue"><i data-i="timer"></i>Vos places sont tenues encore <b data-rebours="11:48"></b></div>
+              <div class="moyens2" role="radiogroup" aria-label="Moyen de paiement">
+                <div class="moyen" role="radio" aria-checked="true"><span class="radio"></span><div>Airtel Money<small>Validation sur le téléphone</small></div></div>
+                <div class="moyen" role="radio" aria-checked="false"><span class="radio"></span><div>Moov Money<small>Validation sur le téléphone</small></div></div>
+                <div class="moyen" role="radio" aria-checked="false"><span class="radio"></span><div>Carte bancaire<small>Visa, Mastercard</small></div></div>
+                <div class="moyen" role="radio" aria-checked="false"><span class="radio"></span><div>Click-Pay</div></div>
+              </div>
+              <div class="champ"><span class="champ-libelle">Numéro Airtel Money</span><div class="saisie"><span class="tabular">+241 07 12 34 56</span></div><span class="champ-aide">La demande de paiement arrivera sur ce téléphone.</span></div>
+              <div class="recap-total" style="border:0;padding:0"><span>Total</span><span>50 750 XAF</span></div>
+              <span class="btn btn-primaire btn-lg btn-bloc" data-demo="en-cours">Payer 50 750 XAF</span>
+              <p class="securise"><i data-i="shield-check"></i>Paiement traité par l'opérateur ; SETRAG ne voit pas votre code secret.</p>
+            </div>
+          </div>
+        </div>
+        <figcaption><b>Paiement</b><code>/paiement</code><span class="anim">en attente, le ruban passe sous « Payer » (cliquez)</span></figcaption>
+      </figure>
+      <figure class="ecran-web">
+        <div class="navigateur">
+          <div class="navigateur-barre"><i></i><i></i><i></i><span class="url" style="min-width:0"><i data-i="lock"></i>/paiement/attente</span></div>
+          <div class="site" style="min-height:640px">
+            <header class="s-tete" style="padding:0 var(--s-6)"><span data-logo="compact"></span></header>
+            <div class="s-centre" style="margin:var(--s-6) auto">
+              <div class="carte s-attente">
+                <span class="rond"><i data-i="smartphone"></i></span>
+                <h2>Validez le paiement sur votre téléphone</h2>
+                <p>Airtel Money a envoyé une demande de <b class="tabular">50 750 XAF</b> au 07 •• •• 56. Tapez votre code secret pour confirmer.</p>
+                <div class="chargeur"><span class="voie attente"><span class="ruban"></span></span><p>En attente de votre confirmation…</p></div>
+                <div class="tenue"><i data-i="timer"></i>Places tenues encore <b data-rebours="11:02"></b></div>
+                <div class="actions"><span class="btn btn-secondaire">Je n'ai rien reçu</span><span class="btn btn-fantome">Changer de moyen</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><b>Attente</b><code>/paiement/attente</code><span class="anim">une rame passe, 1,6 s, jusqu'à la réponse</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ======================================================= Confirmation -->
+  <section class="doc-section">
+    <h2><span class="n">05</span>Confirmation</h2>
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga/confirmation</span></div>
+        <div class="site" style="min-height:0">
+          <header class="s-tete"><span data-logo="compact"></span><nav class="nav" data-glisse="a"><a aria-current="page">Réserver</a><a>Mes réservations</a><a>Suivi des trains</a><a>Tarifs</a><a>Aide</a><span class="indicateur"></span></nav><div class="droite"><span class="avatar">NM</span></div></header>
+          <div class="s-contenu">
+            <div class="s-tunnel-tete">
+              <div class="s-succes"><span class="rond"><i data-i="check"></i></span><div><h2>C'est réservé</h2><p>Réf. <span class="tabular">STG-7K4Q2P</span> · reçu envoyé par SMS au 07 •• •• 56</p></div></div>
+              <ol class="etapes" style="--n:4"><span class="ruban" style="--p:1"></span><li class="etape faite"><span class="gare"></span>Trajet</li><li class="etape faite"><span class="gare"></span>Voyageurs</li><li class="etape faite"><span class="gare"></span>Paiement</li><li class="etape ici"><span class="gare"></span>Billet</li></ol>
+            </div>
+            <div class="s-confirmation">
+              <div class="billet" data-emission-auto>
+                <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span class="tag tag-ok"><i data-i="circle-check"></i>Valide</span></div>
+                <div class="billet-trajet"><div><b>07:40</b><span>Owendo</span></div><div class="milieu">11 h 45<span class="voie sur-encre pleine"><span class="ruban"></span></span>Express 201</div><div><b>19:25</b><span>Franceville</span></div></div>
+                <div class="billet-coupe" style="--fond-coupe:var(--c-canvas)"><span class="voie sur-encre"><span class="ruban"></span></span></div>
+                <div class="billet-grille"><div><span>Voyageur</span><b style="font-size:15px;font-family:var(--font-ui)">N. Mboumba</b></div><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>32</b></div><div><span>Classe</span><b>2e</b></div></div>
+                <div class="billet-pied"><span>Ven. 2 oct. · embarquement <b>07:10</b> · quai 1</span><span>1/2</span></div>
+              </div>
+              <div class="billet" data-emission-auto>
+                <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span class="tag tag-ok"><i data-i="circle-check"></i>Valide</span></div>
+                <div class="billet-trajet"><div><b>07:40</b><span>Owendo</span></div><div class="milieu">11 h 45<span class="voie sur-encre pleine"><span class="ruban"></span></span>Express 201</div><div><b>19:25</b><span>Franceville</span></div></div>
+                <div class="billet-coupe" style="--fond-coupe:var(--c-canvas)"><span class="voie sur-encre"><span class="ruban"></span></span></div>
+                <div class="billet-grille"><div><span>Voyageur</span><b style="font-size:15px;font-family:var(--font-ui)">E. Mboumba</b></div><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>33</b></div><div><span>Classe</span><b>2e</b></div></div>
+                <div class="billet-pied"><span>Tarif enfant · bagage en soute × 1</span><span>2/2</span></div>
+              </div>
+            </div>
+            <div class="s-actions">
+              <span class="btn btn-primaire btn-lg"><i data-i="download"></i>Télécharger les billets (PDF)</span>
+              <span class="btn btn-noir btn-lg"><i data-i="wallet"></i>Apple Wallet</span>
+              <span class="btn btn-noir btn-lg"><i data-i="wallet"></i>Google Wallet</span>
+              <span class="btn btn-fantome btn-lg"><i data-i="calendar"></i>Ajouter au calendrier</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Confirmation</b><code>/confirmation</code><span>Les billets d'abord, les moyens de les emporter ensuite.</span><span class="anim">à l'affichage, le ruban traverse chaque découpe, une fois (720 ms)</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- ===================================================== Réservations -->
+  <section class="doc-section">
+    <h2><span class="n">06</span>Mes réservations</h2>
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga/mesreservations</span></div>
+        <div class="site" style="min-height:0">
+          <header class="s-tete"><span data-logo="compact"></span><nav class="nav" data-glisse="a"><a>Réserver</a><a aria-current="page">Mes réservations</a><a>Suivi des trains</a><a>Tarifs</a><a>Aide</a><span class="indicateur"></span></nav><div class="droite"><span class="avatar">NM</span></div></header>
+          <div class="s-contenu">
+            <div style="display:flex;align-items:center;gap:var(--s-4)"><h2 style="font:var(--t-h2)">Mes réservations</h2><div class="segment" data-glisse="span:not(.indicateur)" style="margin-left:auto"><span aria-pressed="true">À venir</span><span aria-pressed="false">Passées</span><span aria-pressed="false">Toutes</span><span class="indicateur"></span></div></div>
+            <div class="s-grille droite">
+              <table class="s-table">
+                <thead><tr><th>Trajet</th><th>Date</th><th>Voyageurs</th><th>État</th><th style="text-align:right">Montant</th></tr></thead>
+                <tbody>
+                  <tr class="on"><td><b>Owendo → Franceville</b><small>Express 201 · réf. STG-7K4Q2P</small></td><td class="tabular">ven. 2 oct.<small>07:40</small></td><td>2</td><td><span class="tag tag-ok"><i data-i="circle-check"></i>Confirmée</span></td><td class="tabular" style="text-align:right">50 750</td></tr>
+                  <tr><td><b>Franceville → Owendo</b><small>Express 202 · réf. STG-9M2A7C</small></td><td class="tabular">dim. 11 oct.<small>06:30</small></td><td>1</td><td><span class="tag tag-retard"><i data-i="hourglass"></i>Paiement en attente</span></td><td class="tabular" style="text-align:right">32 500</td></tr>
+                  <tr><td><b>Owendo → Ndjolé</b><small>Omnibus 405 · réf. STG-3P8L1D</small></td><td class="tabular">lun. 14 sept.<small>06:15</small></td><td>1</td><td><span class="tag tag-info"><i data-i="rotate-ccw"></i>Remboursée</span></td><td class="tabular" style="text-align:right">12 000</td></tr>
+                  <tr><td><b>Owendo → Lopé</b><small>Express 201 · réf. STG-6D4R0K</small></td><td class="tabular">sam. 22 août<small>07:40</small></td><td>3</td><td><span class="tag tag-neutre">Voyage effectué</span></td><td class="tabular" style="text-align:right">67 500</td></tr>
+                </tbody>
+              </table>
+              <aside class="s-detail">
+                <div class="recap">
+                  <div class="recap-tete"><b>STG-7K4Q2P</b><span>Owendo → Franceville · ven. 2 oct.</span></div>
+                  <div class="recap-corps">
+                    <div class="recap-l"><span>N. Mboumba · adulte</span><span class="tabular">voit. 4 · pl. 32</span></div>
+                    <div class="recap-l"><span>E. Mboumba · enfant</span><span class="tabular">voit. 4 · pl. 33</span></div>
+                    <div class="recap-l"><span>Payé par Airtel Money</span><span class="tabular">50 750 XAF</span></div>
+                    <span class="btn btn-secondaire btn-bloc"><i data-i="download"></i>Télécharger les billets</span>
+                    <span class="btn btn-fantome btn-bloc"><i data-i="route"></i>Suivre ce train</span>
+                    <span class="btn btn-danger btn-bloc">Annuler la réservation</span>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Mes réservations</b><code>/mesreservations</code><span>Chaque état a son mot : confirmée, paiement en attente, remboursée, voyage effectué.</span><span class="anim">le fond du filtre glisse (320 ms)</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- =============================================================== Suivi -->
+  <section class="doc-section">
+    <h2><span class="n">07</span>Suivi des trains</h2>
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga/suivi</span></div>
+        <div class="site" style="min-height:0">
+          <header class="s-tete"><span data-logo="compact"></span><nav class="nav" data-glisse="a"><a>Réserver</a><a>Mes réservations</a><a aria-current="page">Suivi des trains</a><a>Tarifs</a><a>Aide</a><span class="indicateur"></span></nav><div class="droite"><span class="avatar">NM</span></div></header>
+          <div class="s-contenu">
+            <div style="display:flex;align-items:baseline;gap:var(--s-4)"><h2 style="font:var(--t-h2)">Les trains du jour</h2><span class="direct">En direct · mis à jour à 12:16</span></div>
+            <div class="carte" style="padding:var(--s-4) var(--s-5)"><div data-schema-ligne data-segment="" data-trains="306|201 +12 min|retard|>;458|202|ok|<;120|115|ok|>"></div></div>
+            <div class="s-suivi">
+              <table class="s-table">
+                <thead><tr><th>Train</th><th>Trajet</th><th>Position estimée</th><th>État</th></tr></thead>
+                <tbody>
+                  <tr class="on"><td><b>Express 201</b><small>07:40 → 19:25</small></td><td>Owendo → Franceville</td><td>entre Lopé et Booué</td><td><span class="tag tag-retard"><i data-i="clock-alert"></i>+12 min</span></td></tr>
+                  <tr><td><b>Express 202</b><small>06:30 → 18:15</small></td><td>Franceville → Owendo</td><td>entre Lastourville et Milolé</td><td><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></td></tr>
+                  <tr><td><b>Autorail 115</b><small>09:15 → 12:40</small></td><td>Owendo → Ndjolé</td><td>après Oyan</td><td><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></td></tr>
+                  <tr><td><b>Express 207</b><small>14:05 → 01:55</small></td><td>Owendo → Franceville</td><td>à quai, Owendo</td><td><span class="tag tag-retard"><i data-i="clock-alert"></i>Départ 14:30</span></td></tr>
+                  <tr><td><b>Omnibus 405</b><small>11:00 → 16:10</small></td><td>Ndjolé → Owendo</td><td>—</td><td><span class="tag tag-annule"><i data-i="circle-x"></i>Supprimé</span></td></tr>
+                </tbody>
+              </table>
+              <div class="carte" style="padding:var(--s-4) var(--s-5)">
+                <p class="titre-section" style="margin-bottom:var(--s-3)">Express 201 <span class="tag tag-retard"><i data-i="clock-alert"></i>+12 min</span></p>
+                <div class="arrets" data-rame="116,119,122,125">
+                  <span class="voie-v passee" style="top:22px;height:100px"></span>
+                  <span class="voie-v" style="top:122px;bottom:22px"></span>
+                  <span class="rame" style="height:22px"></span>
+                  <div class="arret passe" style="min-height:44px"><span class="h">10:33</span><span class="pt"></span><span class="nom">Ndjolé</span></div>
+                  <div class="arret passe" style="min-height:44px"><span class="h">11:20</span><span class="pt"></span><span class="nom">Otoumbi</span></div>
+                  <div class="arret passe" style="min-height:44px"><span class="h">12:14</span><span class="pt"></span><span class="nom">Lopé</span></div>
+                  <div class="arret maj" style="min-height:44px"><span class="h">13:07<s>12:55</s></span><span class="pt"></span><span class="nom">Booué</span><span class="tag tag-accent">Prochain</span></div>
+                  <div class="arret" style="min-height:44px"><span class="h">15:50<s>15:38</s></span><span class="pt"></span><span class="nom">Lastourville</span></div>
+                  <div class="arret maj" style="min-height:44px"><span class="h">19:37<s>19:25</s></span><span class="pt"></span><span class="nom">Franceville</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Suivi des trains</b><code>/suivi</code><span>Chaque train en circulation est une rame de ruban sur la ligne, orientée dans son sens de marche.</span><span class="anim">la rame avance à chaque mise à jour du statut (1,2 s)</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- =========================================================== Connexion -->
+  <section class="doc-section">
+    <h2><span class="n">08</span>Connexion</h2>
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga/connexion</span></div>
+        <div class="site" style="min-height:0">
+          <div class="s-connexion">
+            <div class="marque"><div class="lottie" id="lt-connexion" data-lottie="logo-anime" aria-label="Logo SETRAG animé"></div></div>
+            <div class="forme">
+              <div><h2>Connexion</h2><p class="doc-note" style="margin-top:var(--s-2)">Un code vous est envoyé par SMS. Pas de mot de passe à retenir.</p></div>
+              <div class="segment" data-glisse="span:not(.indicateur)" style="width:100%"><span aria-pressed="true">Téléphone</span><span aria-pressed="false">E-mail</span><span class="indicateur"></span></div>
+              <div class="champ"><span class="champ-libelle">Numéro de téléphone</span><div class="saisie focus"><span class="tabular">+241</span><span class="tabular">07 12 34 56</span></div></div>
+              <span class="btn btn-primaire btn-lg btn-bloc">Recevoir le code</span>
+              <p class="doc-note">En continuant, vous acceptez les conditions de vente. Votre numéro ne sert qu'à vos billets et à vos alertes.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Connexion</b><code>/connexion</code><span>Le seul écran web où le logo s'anime : une fois, à la première ouverture de la PWA installée.</span><span class="anim">logo animé ; le fond du choix téléphone / e-mail glisse</span></figcaption>
+    </figure>
+  </section>
+</main>
+
+<footer class="doc-pied">
+  <span>SETRAG — billetterie web. Données fictives ; gares, classes, réductions et moyens de paiement réels.</span>
+  <span><a href="composants.html">Composants →</a></span>
+</footer>
+</body>
+</html>

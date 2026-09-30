@@ -26,7 +26,7 @@ describe("socle de messagerie multicanale", () => {
     expect(replay).toEqual({ eventId: first.eventId, duplicate: true })
   })
 
-  it("associe durablement un thread à une conversation Mbolo", async () => {
+  it("associe durablement un thread à une conversation Ruban", async () => {
     const t = convexTest(schema, modules)
     const args = {
       channel: "telegram" as const,
@@ -43,6 +43,48 @@ describe("socle de messagerie multicanale", () => {
     expect(replay.conversationId).toBe(first.conversationId)
     const conversation = await t.run((ctx) => ctx.db.get(first.conversationId))
     expect(conversation?.assistantId).toBe("concierge")
+  })
+
+  it("donne au fil d'une identité reliée une conversation de ce compte", async () => {
+    const t = convexTest(schema, modules)
+    const userId = await t.run((ctx) =>
+      ctx.db.insert("users", {
+        authId: "traveler-thread",
+        role: "voyageur",
+        identitySource: "local",
+        isActive: true,
+      })
+    )
+    const args = {
+      channel: "telegram" as const,
+      externalThreadId: "chat-linked",
+      externalUserId: "user-linked",
+      guestKey: GUEST_KEY,
+    }
+    const first = await t.mutation(internal.messaging.core.ensureThread, args)
+    await t.run((ctx) => ctx.db.patch(first.identityId, { userId }))
+
+    // L'identité vient d'être reliée alors que la conversation est invitée :
+    // le fil repart sur une conversation du compte.
+    const linked = await t.mutation(internal.messaging.core.ensureThread, args)
+    expect(linked.conversationId).not.toBe(first.conversationId)
+    const conversation = await t.run((ctx) =>
+      ctx.db.get(linked.conversationId)
+    )
+    expect(conversation?.userId).toBe(userId)
+    expect((await t.run((ctx) => ctx.db.get(first.conversationId)))?.status).toBe(
+      "closed"
+    )
+
+    // `/nouveau` garde le compte ; une conversation cohérente est conservée.
+    const reset = await t.mutation(internal.messaging.core.resetThread, {
+      threadId: linked._id,
+      guestKey: GUEST_KEY,
+    })
+    const fresh = await t.run((ctx) => ctx.db.get(reset.conversationId))
+    expect(fresh?.userId).toBe(userId)
+    const stable = await t.mutation(internal.messaging.core.ensureThread, args)
+    expect(stable.conversationId).toBe(reset.conversationId)
   })
 
   it("ne résout une approbation qu'une seule fois", async () => {

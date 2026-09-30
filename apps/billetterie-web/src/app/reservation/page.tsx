@@ -1,22 +1,18 @@
-import { BookingForm } from "@/components/booking-form"
-import { JourneyStepper } from "@/components/journey-stepper"
-import { PageIntro } from "@/components/site-shell"
-import { TunnelStepper } from "@/components/tunnel-stepper"
+import type { Metadata } from "next"
+import { Suspense } from "react"
 
-export default function ReservationPage() {
+import { SqueletteTunnel } from "@/fonctionnalites/tunnel/etapes"
+import { Reservation } from "@/fonctionnalites/tunnel/reservation/reservation"
+
+export const metadata: Metadata = {
+  title: "Voyageurs et classe",
+  robots: { index: false },
+}
+
+export default function PageReservation() {
   return (
-    <main className="mx-auto grid w-full max-w-5xl min-w-0 gap-6 px-s-5 py-s-5 md:gap-9 md:px-6 md:py-12">
-      <TunnelStepper current={1} />
-      {/* Le fil du bureau compte quatre étapes ; le mobile en montre trois,
-          conformément à la maquette. */}
-      <JourneyStepper current={1} className="hidden md:grid" />
-      <PageIntro
-        className="hidden md:grid"
-        eyebrow="Étape 2 sur 4"
-        title="Votre voyage et vos passagers"
-        description="Choisissez la classe, puis renseignez les informations qui figureront sur chaque billet."
-      />
-      <BookingForm />
-    </main>
+    <Suspense fallback={<SqueletteTunnel />}>
+      <Reservation />
+    </Suspense>
   )
 }

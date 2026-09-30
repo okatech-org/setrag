@@ -1,0 +1,255 @@
+/* Ruban, l'assistant SETRAG — signe, bouton flottant, fenêtre, feuille, conversation, voix. */
+
+/* ================================================================ Le signe === */
+.signe { display: block; width: 100%; height: 100%; overflow: visible; color: currentColor; }
+.signe path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: var(--w, 14); }
+.signe .sg-piste { stroke: currentColor; opacity: 0; transition: opacity var(--dur-base) var(--ease); }
+/* Réflexion : une rame parcourt le S, sur la trace pâle du S. */
+.signe[data-etat="reflexion"] .sg-piste { opacity: 0.16; }
+.signe[data-etat="reflexion"] .sg-ruban { stroke-dasharray: 0.34 2; animation: sg-glisse var(--dur-boucle) var(--ease-glisse) infinite; }
+@keyframes sg-glisse { 0% { stroke-dashoffset: 0.34; opacity: 0; } 8%, 90% { opacity: 1; } 100% { stroke-dashoffset: -1; opacity: 0; } }
+.signe[data-etat="hors-ligne"] .sg-ruban { stroke: var(--c-line-strong); }
+/* Apparition : le ruban se trace, une fois, à l'ouverture. */
+.trace .sg-ruban, .signe.trace .sg-ruban { stroke-dasharray: 1 2; animation: sg-trace 700ms var(--ease-glisse) both; }
+@keyframes sg-trace { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* ============================================================== Bouton flottant === */
+.r-fab {
+  position: absolute; z-index: 10; right: 24px; bottom: 24px; width: 60px; height: 60px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--brand-encre); color: oklch(1 0 0 / 0.9); border: 0;
+  box-shadow: 0 10px 28px oklch(0.2 0.03 257 / 0.3), inset 0 0 0 1px oklch(1 0 0 / 0.08);
+  transition: transform var(--dur-micro) var(--ease);
+}
+.r-fab:active { transform: scale(0.96); }
+.r-fab .signe { width: 26px; height: 35px; }
+.r-fab .point { position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--brand-jaune); box-shadow: 0 0 0 3px var(--c-canvas); }
+.r-fab.etendu { width: auto; padding: 0 20px 0 14px; border-radius: 30px; display: flex; gap: 10px; font: 700 15px var(--font-ui); color: #fff; }
+.r-fab.etendu .signe { width: 22px; height: 30px; }
+.r-fab.statique { position: relative; right: auto; bottom: auto; }
+.r-fab.m { right: 16px; bottom: 100px; width: 56px; height: 56px; }
+[data-theme="dark"] .r-fab { background: oklch(0.34 0.03 257); box-shadow: 0 10px 28px oklch(0 0 0 / 0.5), inset 0 0 0 1px oklch(1 0 0 / 0.12); }
+/* Bulle d'accueil : une fois, à la première visite. */
+.r-bulle {
+  position: absolute; z-index: 10; right: 96px; bottom: 30px; width: 300px; padding: 12px 36px 12px 14px;
+  background: var(--c-surface); border: 1px solid var(--c-line); border-radius: 16px 16px 4px 16px; box-shadow: var(--sh-lg);
+  font: 500 14px/1.45 var(--font-ui); color: var(--c-ink);
+}
+.r-bulle b { display: block; font-weight: 700; margin-bottom: 2px; }
+.r-bulle .fermer { position: absolute; right: 8px; top: 8px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: var(--c-ink-muted); }
+.r-bulle .fermer .ic { width: 15px; height: 15px; }
+.r-bulle.m { right: 16px; bottom: 166px; width: auto; left: 64px; border-radius: 16px 16px 4px 16px; }
+
+/* Avatar du signe (en-tête, messages) */
+.r-avatar { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--brand-encre); color: #fff; }
+.r-avatar .signe { width: 15px; height: 21px; }
+[data-theme="dark"] :is(.r-avatar, .r-rond.encre) { background: oklch(0.34 0.03 257); }
+
+/* ================================================================ Fenêtre web === */
+.r-panneau {
+  position: absolute; z-index: 11; right: 24px; bottom: 96px; width: 404px; height: 640px;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--c-canvas); border: 1px solid var(--c-line); border-radius: 22px;
+  box-shadow: 0 24px 60px oklch(0.2 0.03 257 / 0.26);
+}
+.r-tete { flex: none; display: flex; align-items: center; gap: 10px; padding: 12px 10px 12px 14px; background: var(--c-surface); border-bottom: 1px solid var(--c-line); }
+.r-tete b { display: block; font: 700 15.5px var(--font-ui); }
+.r-tete small { display: flex; align-items: center; gap: 6px; font: 500 12px var(--font-ui); color: var(--c-ink-muted); }
+.r-tete .actions { margin-left: auto; display: flex; gap: 2px; }
+.r-action { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--c-ink-muted); }
+.r-action:hover { background: var(--c-surface-sunk); }
+.r-action .ic { width: 19px; height: 19px; }
+
+/* Le fil de la conversation */
+.r-fil { position: relative; flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+.r-fil.bas { justify-content: flex-end; }
+.r-jour { align-self: center; font: 600 11.5px var(--font-ui); color: var(--c-ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.r-ia { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; }
+.r-ia > .r-avatar { width: 26px; height: 26px; margin-top: 1px; }
+.r-ia > .r-avatar .signe { width: 11px; height: 15px; }
+.r-texte { display: grid; gap: 10px; min-width: 0; font: 400 15px/1.5 var(--font-ui); }
+.r-texte p b { font-weight: 700; }
+.r-source { font: 500 12px var(--font-ui); color: var(--c-ink-faint); display: flex; align-items: center; gap: 5px; }
+.r-source .ic { width: 13px; height: 13px; }
+.r-moi { align-self: flex-end; max-width: 84%; padding: 10px 14px; border-radius: 18px 18px 4px 18px; background: var(--c-accent); color: var(--c-ink-inverse); font: 500 15px/1.4 var(--font-ui); }
+.r-moi.vocal { display: flex; gap: 8px; align-items: flex-start; }
+.r-moi.vocal .ic { width: 16px; height: 16px; margin-top: 2px; opacity: 0.8; flex: none; }
+.r-pense { display: flex; align-items: center; gap: 10px; font: 500 14px var(--font-ui); color: var(--c-ink-muted); }
+.r-pense .r-avatar { width: 26px; height: 26px; }
+.r-pense .r-avatar .signe { width: 11px; height: 15px; }
+.r-mot { animation: r-mot 180ms var(--ease) both; }
+@keyframes r-mot { from { opacity: 0; } }
+.r-apparait { animation: monte var(--dur-base) var(--ease) both; }
+
+/* Suggestions */
+.r-puces { display: flex; flex-wrap: wrap; gap: 8px; }
+.r-puce { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--c-accent-line); background: var(--c-surface); color: var(--c-accent-ink); font: 600 13.5px var(--font-ui); white-space: nowrap; }
+.r-puce .ic { width: 15px; height: 15px; }
+.r-puces.grandes { display: grid; grid-template-columns: 1fr 1fr; }
+.r-puces.grandes .r-puce { min-height: 64px; border-radius: 16px; white-space: normal; align-items: flex-start; flex-direction: column; justify-content: center; gap: 2px; padding: 10px 14px; color: var(--c-ink); border-color: var(--c-line); font-weight: 600; }
+.r-puces.grandes .r-puce .ic { color: var(--c-accent-ink); width: 18px; height: 18px; }
+
+/* Barre de saisie */
+.r-saisie { flex: none; display: grid; gap: 8px; padding: 10px 12px 12px; background: var(--c-surface); border-top: 1px solid var(--c-line); }
+.r-champ { display: flex; align-items: center; gap: 4px; min-height: 50px; padding: 0 5px 0 16px; border: 1px solid var(--c-line-strong); border-radius: 25px; background: var(--c-canvas); }
+.r-champ .indice { flex: 1; color: var(--c-ink-faint); font: 400 15px var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-champ .tape { flex: 1; font: 400 15px var(--font-ui); }
+.r-rond { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--c-accent-ink); flex: none; }
+.r-rond .ic { width: 20px; height: 20px; }
+.r-rond.plein { background: var(--c-accent); color: var(--c-ink-inverse); }
+.r-rond.encre { background: var(--brand-encre); color: #fff; }
+.r-rond.encre .signe { width: 14px; height: 19px; }
+.r-mention { text-align: center; font: 500 11.5px var(--font-ui); color: var(--c-ink-faint); }
+
+/* ================================================================ Cartes d'action === */
+.r-carte { background: var(--c-surface); border: 1px solid var(--c-line); border-radius: 16px; overflow: hidden; }
+.r-carte-tete { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--c-line); font: 700 11.5px var(--font-ui); color: var(--c-ink-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.r-carte-tete .ic { width: 15px; height: 15px; }
+.r-carte-tete .tag, .r-carte-tete .fin { margin-left: auto; text-transform: none; letter-spacing: 0; }
+.r-carte-corps { padding: 12px 14px; display: grid; gap: 10px; }
+.r-carte-pied { padding: 0 14px 14px; display: flex; gap: 8px; }
+.r-carte-pied .btn { flex: 1; min-height: 42px; font-size: 14px; padding: 0 12px; }
+.r-carte-pied .btn.court { flex: none; padding: 0 16px; }
+/* Une carte déjà traitée devient un résumé : un seul bouton actif dans le fil. */
+.r-carte.faite .r-carte-pied { display: none; }
+.r-fait { display: flex; align-items: center; gap: 6px; padding: 0 14px 12px; font: 600 13px var(--font-ui); color: var(--c-success-ink); }
+.r-fait .ic { width: 15px; height: 15px; }
+.r-carte.danger { border-color: color-mix(in srgb, var(--c-danger) 45%, var(--c-line)); }
+
+/* Trajet compact, dans une carte */
+.r-trajet { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--c-line); border-radius: 12px; cursor: pointer; transition: border-color var(--dur-base) var(--ease); }
+.r-trajet.choisi { border-color: var(--c-accent); box-shadow: inset 0 0 0 1px var(--c-accent); }
+.r-trajet .trajet-heures { gap: 8px; }
+.r-trajet .trajet-pt b { font-size: 18px; }
+.r-trajet .trajet-pt span { font-size: 12px; margin-top: 3px; }
+.r-trajet .trajet-milieu small { font-size: 11px; }
+.r-trajet .prix { grid-row: span 2; text-align: right; font: 700 15px var(--font-ui); white-space: nowrap; }
+.r-trajet .prix small { display: block; font: 500 11px var(--font-ui); color: var(--c-ink-muted); }
+.r-trajet .infos { display: flex; gap: 6px; }
+.r-trajet .infos .tag { height: 22px; font-size: 11.5px; padding: 0 8px; }
+
+/* Avant / après */
+.r-avant-apres { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
+.r-avant-apres > div { padding: 10px 12px; border-radius: 12px; background: var(--c-surface-sunk); display: grid; gap: 2px; }
+.r-avant-apres small { font: 600 11px var(--font-ui); color: var(--c-ink-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.r-avant-apres b { font: 600 15px var(--font-ui); }
+.r-avant-apres span { font: 500 13px var(--font-mono); }
+.r-avant-apres .avant b, .r-avant-apres .avant span { color: var(--c-ink-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.r-avant-apres .apres { background: var(--c-accent-soft); }
+.r-avant-apres > .ic { color: var(--c-ink-faint); }
+
+/* Paiement dans le fil */
+.r-moyen { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--c-line); border-radius: 12px; font: 600 14px var(--font-ui); }
+.r-moyen .marque { width: 40px; height: 28px; border-radius: 6px; display: grid; place-items: center; background: var(--c-surface-sunk); font: 800 9.5px var(--font-ui); color: var(--c-ink-muted); }
+.r-moyen small { display: block; font: 500 12px var(--font-mono); color: var(--c-ink-muted); }
+.r-moyen a { margin-left: auto; font: 600 13px var(--font-ui); color: var(--c-accent-ink); }
+.r-attente { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 6px 0 2px; }
+.r-attente b { font: 700 16px var(--font-ui); }
+.r-attente p { font: var(--t-small); color: var(--c-ink-muted); }
+.r-attente .voie { width: 100%; max-width: 240px; }
+.r-carte .tenue { padding: 8px 12px; }
+
+/* ================================================================ Page dédiée (web) === */
+.r-page { display: grid; grid-template-columns: 250px 1fr 330px; min-height: 780px; }
+.r-historique { border-right: 1px solid var(--c-line); background: var(--c-surface); padding: var(--s-4); display: grid; align-content: start; gap: var(--s-3); }
+.r-historique .btn { justify-content: flex-start; }
+.r-conv { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; font: 500 14px var(--font-ui); }
+.r-conv small { font: 400 12px var(--font-ui); color: var(--c-ink-muted); }
+.r-conv.on { background: var(--c-accent-soft); }
+.r-centre { display: flex; flex-direction: column; min-width: 0; }
+.r-centre .r-fil { width: 100%; max-width: 700px; margin: 0 auto; padding: var(--s-6) var(--s-6) var(--s-4); }
+.r-centre .r-saisie { background: transparent; border-top: 0; width: 100%; max-width: 700px; margin: 0 auto; padding: 0 var(--s-6) var(--s-5); }
+.r-contexte { border-left: 1px solid var(--c-line); background: var(--c-surface-sunk); padding: var(--s-5); display: grid; align-content: start; gap: var(--s-4); }
+.r-contexte h4 { font: 700 12px var(--font-ui); color: var(--c-ink-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ================================================================ Feuille (mobile) === */
+.r-feuille { position: absolute; z-index: 6; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background: var(--c-canvas); border-radius: 24px 24px 0 0; box-shadow: 0 -10px 34px oklch(0.15 0.02 257 / 0.22); overflow: hidden; }
+.r-feuille.moyenne { top: 330px; }
+.r-feuille.grande { top: 58px; }
+.r-feuille .poignee { width: 40px; height: 5px; border-radius: 3px; background: var(--c-line-strong); margin: 8px auto 2px; flex: none; }
+.r-feuille .r-tete { background: transparent; border-bottom: 0; padding: 4px 8px 8px 16px; }
+.r-feuille .r-saisie { padding-bottom: 30px; }
+.r-feuille .r-fil { padding: 4px 16px 12px; }
+.r-accueil { display: grid; gap: 12px; padding: 0 16px 12px; }
+.r-accueil h2 { font: 700 22px/1.2 var(--font-ui); }
+.r-accueil p { font: var(--t-small); color: var(--c-ink-muted); }
+
+/* ================================================================ Mode vocal === */
+.r-vocal { background: radial-gradient(120% 70% at 50% 34%, oklch(0.3 0.05 257), var(--brand-encre) 70%); color: #fff; }
+.r-vocal .statut { color: #fff; }
+.r-vocal .barre-accueil { background: #fff; }
+.r-vocal-corps { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 24px 0; gap: 18px; min-height: 0; }
+.r-vocal-etat { font: 700 12px var(--font-ui); letter-spacing: 0.1em; text-transform: uppercase; color: oklch(0.82 0.1 257); display: flex; align-items: center; gap: 8px; }
+.r-grand-signe { width: 120px; height: 160px; margin-top: 18px; }
+.r-grand-signe.petit { width: 64px; height: 86px; margin-top: 6px; }
+.r-transcription { text-align: center; font: 600 23px/1.35 var(--font-ui); letter-spacing: -0.005em; }
+.r-transcription .suite { color: oklch(1 0 0 / 0.45); }
+.r-sous-titre { text-align: center; font: 500 17px/1.45 var(--font-ui); color: oklch(0.9 0.02 257); }
+.r-commandes { flex: none; display: flex; justify-content: center; align-items: center; gap: 22px; padding: 14px 0 44px; }
+.r-cmd { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: oklch(1 0 0 / 0.12); color: #fff; }
+.r-cmd .ic { width: 24px; height: 24px; }
+.r-cmd.raccrocher { background: var(--c-danger); }
+.r-cmd small { position: absolute; }
+.r-plateau { width: 100%; background: var(--c-canvas); color: var(--c-ink); border-radius: 20px; padding: 12px; display: grid; gap: 10px; box-shadow: 0 8px 30px oklch(0 0 0 / 0.35); }
+
+/* Barre vocale dans la fenêtre web */
+.r-barre-vocale { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 8px 0 12px; border-radius: 29px; background: var(--brand-encre); color: #fff; }
+.r-barre-vocale .sg { width: 22px; height: 30px; flex: none; }
+.r-barre-vocale .texte { flex: 1; font: 500 14px var(--font-ui); color: oklch(0.88 0.02 257); }
+.r-barre-vocale .r-rond { background: oklch(1 0 0 / 0.12); color: #fff; }
+.r-barre-vocale .r-rond.stop { background: var(--c-danger); }
+
+/* Hors réseau */
+.r-hors-ligne { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 20px 10px; }
+.r-hors-ligne .grand { width: 54px; height: 72px; color: var(--c-line-strong); }
+.r-hors-ligne b { font: 700 17px var(--font-ui); }
+.r-hors-ligne p { font: var(--t-small); color: var(--c-ink-muted); max-width: 30ch; }
+
+/* ================================================================ Planches de la page === */
+.etats-signe { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--s-4); }
+.etat-signe { display: grid; gap: var(--s-3); justify-items: center; text-align: center; background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-lg); padding: var(--s-5) var(--s-4); }
+.etat-signe .vis { width: 64px; height: 86px; color: var(--c-ink); }
+.etat-signe b { font: 700 15px var(--font-ui); }
+.etat-signe p { font: var(--t-caption); color: var(--c-ink-muted); font-weight: 400; }
+.etat-signe code { font-size: 11px; color: var(--c-accent-ink); }
+.duo { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--s-6); align-items: center; }
+.duo .planche { height: 240px; }
+.duo .planche > span { height: 170px; width: 130px; display: block; }
+.duo .planche svg { height: 100%; width: 100%; }
+.duo .plus { font: 300 40px var(--font-ui); color: var(--c-ink-faint); }
+.selecteur { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.selecteur button { min-height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--c-line); background: var(--c-surface); font: 600 13px var(--font-ui); color: var(--c-ink-muted); }
+.selecteur button[aria-pressed="true"] { background: var(--brand-encre); color: #fff; border-color: transparent; }
+.scene-signe { position: relative; display: grid; justify-items: center; gap: var(--s-5); padding: var(--s-8) var(--s-6); background: var(--brand-encre); border-radius: var(--r-lg); color: #fff; }
+.scene-signe .vis { width: 130px; height: 175px; }
+.scene-signe .selecteur button { background: oklch(1 0 0 / 0.08); color: oklch(0.9 0.02 257); border-color: oklch(1 0 0 / 0.14); }
+.scene-signe .selecteur button[aria-pressed="true"] { background: #fff; color: var(--brand-encre); }
+.fabs { display: flex; gap: var(--s-8); align-items: flex-end; justify-content: center; flex-wrap: wrap; }
+.fabs figure { display: grid; gap: var(--s-3); justify-items: center; font: var(--t-caption); color: var(--c-ink-muted); text-align: center; }
+.traits { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-4); }
+.traits .doc-carte p.exemple { margin-top: var(--s-3); padding: 10px 12px; border-radius: 12px; background: var(--c-surface-sunk); color: var(--c-ink); font: 500 14px/1.45 var(--font-ui); }
+.cartes-catalogue { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-5); align-items: start; }
+.cartes-catalogue figure { display: grid; gap: var(--s-2); }
+.cartes-catalogue figcaption { font: var(--t-caption); color: var(--c-ink-muted); }
+.cartes-catalogue figcaption b { color: var(--c-ink); font: 700 14px var(--font-ui); display: block; }
+.flux-vocal { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-3); }
+.flux-vocal .doc-carte { display: grid; gap: var(--s-2); justify-items: start; }
+.flux-vocal .vis { width: 40px; height: 54px; color: var(--c-ink); }
+.archi { display: grid; grid-template-columns: 1fr auto 1.2fr auto 1fr; gap: var(--s-3); align-items: stretch; }
+.archi .bloc { background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-lg); padding: var(--s-4); display: grid; gap: var(--s-2); align-content: start; }
+.archi .bloc b { font: 700 15px var(--font-ui); }
+.archi .bloc li { font: var(--t-small); color: var(--c-ink-muted); padding-left: 14px; position: relative; }
+.archi .bloc li::before { content: ""; position: absolute; left: 0; top: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--c-accent-line); }
+.archi .fleche { display: grid; place-items: center; color: var(--c-ink-faint); }
+.archi .bloc.ruban { background: var(--brand-encre); color: #fff; border-color: transparent; }
+.archi .bloc.ruban li { color: oklch(0.85 0.02 257); }
+
+@media (prefers-reduced-motion: reduce) {
+  .signe[data-etat="reflexion"] .sg-ruban { animation: none; stroke-dasharray: none; opacity: 1; }
+  .r-mot, .signe.trace .sg-ruban { animation: none; }
+}
+
+/* Saisie : le champ (le micro y dicte), et à côté le signe qui lance la conversation à voix haute. */
+.r-saisie .rang { display: flex; align-items: center; gap: 8px; }
+.r-saisie .rang .r-champ { flex: 1; }
+.r-saisie .rang .r-rond.encre { width: 50px; height: 50px; }
+.r-saisie .rang .r-rond.encre .signe { width: 17px; height: 23px; }

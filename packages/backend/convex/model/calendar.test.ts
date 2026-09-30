@@ -9,6 +9,7 @@ import {
   fromServiceDate,
   isWithinSaleWindow,
   saleWindow,
+  toLocalTime,
   toServiceDate,
   weekdayNameOf,
   weekdayOf,
@@ -246,5 +247,13 @@ describe("daysUntilDeparture — assiette de la règle d'anticipation", () => {
 
   it("refuse un horodatage invalide", () => {
     expect(() => daysUntilDeparture(Number.NaN, 0)).toThrow(RangeError)
+  })
+})
+
+describe("toLocalTime", () => {
+  it("donne l'heure de Libreville, pas celle du serveur (UTC+1, sans heure d'été)", () => {
+    expect(toLocalTime(Date.parse("2026-10-01T07:00:00Z"))).toBe("08:00")
+    expect(toLocalTime(Date.parse("2026-10-01T23:30:00Z"))).toBe("00:30")
+    expect(toLocalTime(Date.parse("2026-07-01T16:05:00Z"))).toBe("17:05")
   })
 })

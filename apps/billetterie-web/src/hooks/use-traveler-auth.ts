@@ -9,7 +9,6 @@ import {
   clearPendingTravelerOnboarding,
   readPendingTravelerOnboarding,
 } from "@/lib/traveler-onboarding"
-import { IS_E2E } from "@/lib/ticketing"
 
 function profileParts(name?: string | null) {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean)
@@ -25,7 +24,7 @@ function profileParts(name?: string | null) {
  * chaque voyageur doit aussi posséder un profil dans la table applicative.
  * Ce hook crée ce profil une seule fois puis expose un état prêt à l'emploi.
  */
-function useLiveTravelerAuth() {
+export function useTravelerAuth() {
   const auth = useAuth()
   const { isAuthenticated, user } = auth
   const profile = useQuery(
@@ -73,31 +72,15 @@ function useLiveTravelerAuth() {
       })
   }, [ensureProfile, isAuthenticated, profile, user])
 
+  // Un profil désactivé (compte supprimé) n'est jamais « prêt » : les
+  // fonctions qui exigent un compte actif lèveraient pendant le rendu.
+  const compteSupprime = profile?.user.isActive === false
   return {
     ...auth,
     profile,
+    compteSupprime,
     isProfileReady:
-      !isAuthenticated || (profile !== undefined && profile !== null),
+      !isAuthenticated ||
+      (profile !== undefined && profile !== null && !compteSupprime),
   }
 }
-
-function useE2ETravelerAuth() {
-  return {
-    isLoading: false,
-    isAuthenticated: false,
-    user: null,
-    session: null,
-    profile: undefined,
-    isProfileReady: true,
-  }
-}
-
-/**
- * Le mode navigateur local ne doit jamais contacter Better Auth : son origine
- * locale n'est volontairement pas autorisée en production et l'erreur CORS
- * ouvrirait l'overlay Next.js au milieu des parcours Playwright.
- */
-export const useTravelerAuth =
-  IS_E2E && process.env.NODE_ENV !== "test"
-    ? useE2ETravelerAuth
-    : useLiveTravelerAuth

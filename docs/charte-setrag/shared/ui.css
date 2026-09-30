@@ -1,0 +1,353 @@
+/* Charte SETRAG — composants produit, tels qu'ils vivent dans les apps.
+   Les maquettes web et mobile ne sont faites que de ces pièces. */
+
+@property --p { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+/* ============================================================== Cadres === */
+.navigateur { border: 1px solid var(--c-line-strong); border-radius: 12px; overflow: hidden; box-shadow: var(--sh-lg); background: var(--c-canvas); }
+.navigateur-barre { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: var(--c-surface-sunk); border-bottom: 1px solid var(--c-line); font: var(--t-caption); color: var(--c-ink-muted); }
+.navigateur-barre i { width: 11px; height: 11px; border-radius: 50%; background: var(--c-line-strong); }
+.navigateur-barre .url { margin-left: var(--s-4); padding: 4px 14px; min-width: 320px; background: var(--c-surface); border-radius: var(--r-pill); display: inline-flex; gap: 6px; align-items: center; }
+.navigateur-barre .url .ic { width: 12px; height: 12px; }
+.site { position: relative; background: var(--c-canvas); min-height: 720px; display: flex; flex-direction: column; }
+
+.tel { width: 376px; height: 796px; padding: 8px; flex: none; border-radius: 54px; background: #0c1016; box-shadow: var(--sh-lg), inset 0 0 0 2px #2a303a; }
+.tel-ecran { position: relative; height: 100%; border-radius: 46px; overflow: hidden; background: var(--c-canvas); display: flex; flex-direction: column; isolation: isolate; }
+.statut { position: relative; z-index: 3; height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0 36px; font: 600 15px var(--font-ui); }
+.statut .ic { width: 16px; height: 16px; }
+.statut .reseau { display: inline-flex; gap: 5px; align-items: center; }
+.ilot { position: absolute; z-index: 4; top: 11px; left: 50%; translate: -50% 0; width: 118px; height: 34px; border-radius: 20px; background: #000; }
+.barre-accueil { position: absolute; z-index: 4; bottom: 8px; left: 50%; translate: -50% 0; width: 128px; height: 5px; border-radius: 3px; background: var(--c-ink); opacity: 0.85; }
+.tel-legende { margin-top: var(--s-3); text-align: center; font: var(--t-caption); color: var(--c-ink-muted); max-width: 376px; }
+.tel-legende b { color: var(--c-ink); font-weight: 600; }
+.tels { display: flex; flex-wrap: wrap; gap: var(--s-8) var(--s-6); justify-content: center; }
+
+.ic { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ============================================================ Boutons === */
+.btn {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+  min-height: var(--target-min); padding: 0 var(--s-5); border-radius: var(--r-pill); border: 1px solid transparent;
+  font: 600 15px/1 var(--font-ui); white-space: nowrap; text-decoration: none;
+  transition: background var(--dur-fast) var(--ease), transform var(--dur-micro) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.btn .ic { width: 18px; height: 18px; }
+.btn:active { transform: scale(0.98); }
+.btn-sm { min-height: 36px; padding: 0 var(--s-4); font-size: 14px; }
+.btn-lg { min-height: 52px; padding: 0 var(--s-6); font-size: 16px; }
+.btn-bloc { width: 100%; }
+.btn-primaire { background: var(--c-accent); color: var(--c-ink-inverse); }
+.btn-primaire:hover { background: var(--c-accent-hover); }
+.btn-secondaire { background: var(--c-surface); color: var(--c-accent-ink); border-color: var(--c-accent-line); }
+.btn-fantome { background: transparent; color: var(--c-accent-ink); }
+.btn-fantome:hover { background: var(--c-accent-soft); }
+.btn-danger { background: var(--c-surface); color: var(--c-danger-ink); border-color: color-mix(in oklch, var(--c-danger) 40%, transparent); }
+.btn-icone { width: var(--target-min); padding: 0; }
+/* En cours : le libellé reste, un ruban fin passe sous lui. */
+.btn.en-cours { cursor: progress; }
+.btn.en-cours::after {
+  content: ""; position: absolute; z-index: -1; left: 0; bottom: 0; height: 3px; width: 34%; border-radius: 3px;
+  background: linear-gradient(90deg in oklch, var(--brand-vert), var(--brand-jaune) 60%, #fff);
+  animation: rame var(--dur-boucle) var(--ease-glisse) infinite;
+}
+.btn-secondaire.en-cours::after { background: var(--brand-ruban); }
+@keyframes rame { from { translate: -100% 0; } to { translate: 300% 0; } }
+
+/* ============================================================= Champs === */
+.champ { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.champ-libelle { font: 600 13px var(--font-ui); }
+.saisie {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px;
+  border: 1px solid var(--c-line-strong); border-radius: var(--r-md); background: var(--c-surface);
+  font: 500 16px var(--font-ui); min-width: 0;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.saisie > span:not(.ic) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saisie .ic { color: var(--c-ink-muted); width: 18px; height: 18px; }
+.saisie .indice { color: var(--c-ink-faint); font-weight: 400; }
+.saisie .suffixe { margin-left: auto; color: var(--c-ink-muted); font: 500 13px var(--font-ui); }
+.saisie.focus { border-color: var(--c-accent); box-shadow: var(--focus-ring); }
+.champ-aide { font: var(--t-caption); font-weight: 400; color: var(--c-ink-muted); }
+.champ.erreur .saisie { border-color: var(--c-danger); }
+.champ.erreur .champ-aide { color: var(--c-danger-ink); font-weight: 500; display: flex; gap: 6px; align-items: center; }
+.champ.erreur .champ-aide .ic { width: 14px; height: 14px; }
+
+/* Bloc de recherche : départ / arrivée reliés, inversion au milieu */
+.recherche { display: grid; gap: var(--s-2); background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-lg); padding: var(--s-3); box-shadow: var(--sh-md); }
+.recherche-gares { position: relative; display: grid; gap: 2px; border-radius: var(--r-md); overflow: hidden; }
+.bloc-champ { display: flex; flex-direction: column; justify-content: center; min-height: 56px; padding: 6px 16px; background: var(--c-surface-sunk); min-width: 0; }
+.bloc-champ small { font: var(--t-caption); color: var(--c-ink-muted); }
+.bloc-champ b { font: 600 16px var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bloc-champ.coins { border-radius: var(--r-md); }
+.inverser {
+  position: absolute; right: 14px; top: 50%; translate: 0 -50%; width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--c-surface); border: 1px solid var(--c-line-strong); color: var(--c-accent-ink);
+  transition: rotate var(--dur-slow) var(--ease-glisse);
+}
+.inverser .ic { width: 18px; height: 18px; }
+.inverser.tourne { rotate: 180deg; }
+
+/* =========================================================== Pastilles === */
+.tag { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: var(--r-pill); font: 600 12.5px var(--font-ui); white-space: nowrap; }
+.tag .ic { width: 14px; height: 14px; stroke-width: 2.2; }
+.tag-ok { background: var(--c-success-soft); color: var(--c-success-ink); }
+.tag-retard { background: var(--c-warning-soft); color: var(--c-warning-ink); }
+.tag-annule { background: var(--c-danger-soft); color: var(--c-danger-ink); }
+.tag-info { background: var(--c-info-soft); color: var(--c-info-ink); }
+.tag-neutre { background: var(--c-surface-sunk); color: var(--c-ink-muted); }
+.tag-accent { background: var(--c-accent-soft); color: var(--c-accent-ink); }
+.tag-marque { background: var(--brand-jaune); color: var(--brand-bleu); }
+.direct { display: inline-flex; align-items: center; gap: 6px; font: 600 12px var(--font-ui); color: var(--c-success-ink); }
+.direct::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c-success); animation: veille 2.4s ease-in-out infinite; }
+@keyframes veille { 50% { opacity: 0.35; } }
+
+/* ================================================== La voie et le ruban === */
+/* Rails et traverses neutres : la structure. Le ruban : ce qui bouge. */
+.voie {
+  --rail: var(--c-line-strong); --traverse: var(--c-line);
+  position: relative; display: block; height: 14px; flex: 1; min-width: 32px; overflow: hidden;
+  background:
+    linear-gradient(var(--rail) 0 0) 0 3px / 100% 1.5px no-repeat,
+    linear-gradient(var(--rail) 0 0) 0 9.5px / 100% 1.5px no-repeat,
+    repeating-linear-gradient(90deg, var(--traverse) 0 2px, transparent 2px 7px) 0 0 / 100% 14px no-repeat;
+}
+.voie .ruban {
+  position: absolute; left: 0; top: 3px; height: 8px; border-radius: 4px; width: calc(var(--p) * 100%);
+  background: var(--brand-ruban);
+  transition: --p var(--dur-glisse) var(--ease-glisse);
+}
+.voie.pleine .ruban, .choisi .voie .ruban { --p: 1; }
+/* Attente : une rame passe, de gauche à droite, sans fin. */
+.voie.attente .ruban { width: 34%; animation: rame var(--dur-boucle) var(--ease-glisse) infinite; }
+.voie.sur-encre { --rail: oklch(0.5 0.03 257); --traverse: oklch(0.34 0.025 257); }
+.voie.sur-bleu { --rail: oklch(1 0 0 / 0.55); --traverse: oklch(1 0 0 / 0.22); }
+.voie-v {
+  --rail: var(--c-line-strong); --traverse: var(--c-line);
+  position: absolute; width: 14px; overflow: hidden;
+  background:
+    linear-gradient(var(--rail) 0 0) 3px 0 / 1.5px 100% no-repeat,
+    linear-gradient(var(--rail) 0 0) 9.5px 0 / 1.5px 100% no-repeat,
+    repeating-linear-gradient(180deg, var(--traverse) 0 2px, transparent 2px 7px) 0 0 / 14px 100% no-repeat;
+}
+.chargeur { display: grid; gap: var(--s-2); justify-items: center; text-align: center; }
+.chargeur .voie { width: 100%; max-width: 220px; }
+.chargeur p { font: var(--t-small); color: var(--c-ink-muted); }
+
+/* Filet de navigation (web) : le ruban traverse le haut de page pendant un chargement. */
+.filet { position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 3px; overflow: hidden; }
+.filet::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: 0 3px 3px 0; background: var(--brand-ruban); animation: rame var(--dur-boucle) var(--ease-glisse) infinite; }
+
+/* ============================================ Étapes du tunnel d'achat === */
+.etapes { --p: 0; position: relative; display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); }
+.etapes::before { content: ""; position: absolute; left: calc(50% / var(--n, 4)); right: calc(50% / var(--n, 4)); top: 8px; height: 6px; border-radius: 3px; background: var(--c-line); }
+.etapes .ruban {
+  position: absolute; left: calc(50% / var(--n, 4)); top: 8px; height: 6px; border-radius: 3px;
+  width: calc((100% - 100% / var(--n, 4)) * var(--p)); background: var(--brand-ruban);
+  transition: --p var(--dur-glisse) var(--ease-glisse);
+}
+.etape { position: relative; display: grid; justify-items: center; gap: 8px; font: 500 13px var(--font-ui); color: var(--c-ink-muted); text-align: center; }
+.etape .gare { width: 22px; height: 22px; border-radius: 50%; background: var(--c-surface); border: 3px solid var(--c-line-strong); z-index: 1; display: grid; place-items: center; transition: border-color var(--dur-base) var(--ease), background var(--dur-base) var(--ease); }
+.etape.faite .gare { border-color: var(--c-accent); background: var(--c-accent); }
+.etape.faite .gare::after { content: ""; width: 8px; height: 4px; border: solid #fff; border-width: 0 0 2px 2px; rotate: -45deg; translate: 0 -1px; }
+.etape.ici { color: var(--c-ink); font-weight: 700; }
+.etape.ici .gare { border-color: var(--c-accent); }
+
+/* ============================================================ Onglets === */
+.nav { position: relative; display: flex; gap: 2px; }
+.nav a { position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: var(--target-min); padding: 0 14px; font: 600 14.5px var(--font-ui); color: var(--c-ink-muted); text-decoration: none; cursor: pointer; transition: color var(--dur-base) var(--ease); }
+.nav a .ic { width: 18px; height: 18px; }
+.nav a[aria-current] { color: var(--c-ink); }
+.nav .indicateur { position: absolute; bottom: 0; left: 0; height: 3px; border-radius: 3px; width: var(--w, 0); transform: translateX(var(--x, 0)); background: var(--brand-ruban); transition: transform var(--dur-glisse) var(--ease-glisse), width var(--dur-glisse) var(--ease-glisse); }
+
+.onglets-m { position: relative; z-index: 3; flex: none; display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); background: var(--c-surface); border-top: 1px solid var(--c-line); padding-bottom: 26px; }
+.onglets-m a { display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 56px; font: 600 11px var(--font-ui); color: var(--c-ink-muted); cursor: pointer; text-decoration: none; transition: color var(--dur-base) var(--ease); }
+.onglets-m a .ic { width: 24px; height: 24px; stroke-width: 1.9; }
+.onglets-m a[aria-current] { color: var(--c-accent-ink); }
+.onglets-m .indicateur { position: absolute; top: -1px; left: 0; height: 3px; width: 44px; border-radius: 0 0 3px 3px; background: var(--brand-ruban); transform: translateX(var(--x, 0)); transition: transform var(--dur-glisse) var(--ease-glisse); }
+
+/* Segmenté */
+.segment { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 3px; gap: 3px; background: var(--c-surface-sunk); border-radius: var(--r-pill); position: relative; }
+.segment > span:not(.indicateur) { display: grid; place-items: center; min-height: 38px; padding: 0 14px; border-radius: var(--r-pill); font: 600 13.5px var(--font-ui); color: var(--c-ink-muted); position: relative; z-index: 1; cursor: pointer; white-space: nowrap; }
+.segment > span[aria-pressed="true"] { color: var(--c-ink); }
+.segment .indicateur { position: absolute; top: 3px; bottom: 3px; left: 0; width: var(--w, 0); transform: translateX(var(--x, 0)); background: var(--c-surface); border-radius: var(--r-pill); box-shadow: var(--sh-sm); transition: transform var(--dur-slow) var(--ease-glisse), width var(--dur-slow) var(--ease-glisse); }
+
+/* ================================================== Bandeaux et toasts === */
+.bandeau-trafic { display: flex; align-items: center; gap: var(--s-3); padding: 12px 16px; background: var(--brand-bleu); color: var(--brand-jaune); font: 500 14px/1.4 var(--font-ui); }
+.bandeau-trafic .ic { width: 18px; height: 18px; flex: none; }
+.bandeau-trafic b { font-weight: 700; }
+.bandeau-trafic a { margin-left: auto; color: #fff; font-weight: 600; white-space: nowrap; text-underline-offset: 3px; }
+.bandeau-trafic.arrondi { border-radius: var(--r-md); align-items: flex-start; }
+.hors-ligne { display: flex; align-items: center; gap: var(--s-2); padding: 8px 14px; background: var(--c-surface-sunk); color: var(--c-ink-muted); font: 500 13px var(--font-ui); border-bottom: 1px solid var(--c-line); }
+.hors-ligne .ic { width: 16px; height: 16px; }
+.toast { display: flex; align-items: center; gap: var(--s-3); padding: 12px 14px 12px 16px; border-radius: var(--r-md); background: var(--brand-encre); color: oklch(0.96 0.008 257); box-shadow: var(--sh-lg); font: 500 14px var(--font-ui); }
+.toast .ic { width: 18px; height: 18px; color: oklch(0.8 0.13 146); }
+.toast a { margin-left: auto; color: var(--c-accent-on-ink); font-weight: 700; text-decoration: none; }
+
+/* ========================================================= Cartes, listes === */
+.carte { background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-md); }
+.carte-pad { padding: var(--s-4); }
+.titre-section { display: flex; align-items: baseline; justify-content: space-between; font: 700 17px var(--font-ui); }
+.titre-section a { font: 600 13px var(--font-ui); color: var(--c-accent-ink); text-decoration: none; }
+.liste { background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-md); overflow: hidden; }
+.ligne { display: flex; align-items: center; gap: var(--s-3); min-height: 54px; padding: 0 var(--s-4); border-top: 1px solid var(--c-line); font: 500 15px var(--font-ui); }
+.ligne:first-child { border-top: 0; }
+.ligne > .ic:first-child { color: var(--c-ink-muted); }
+.ligne .fin { margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--c-ink-muted); font: 500 14px var(--font-ui); }
+.ligne .fin .ic { width: 18px; height: 18px; }
+.ligne small { display: block; font: 400 12.5px var(--font-ui); color: var(--c-ink-muted); }
+.interrupteur { width: 46px; height: 28px; border-radius: 14px; background: var(--c-line-strong); position: relative; flex: none; transition: background var(--dur-fast) var(--ease); }
+.interrupteur::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: var(--sh-sm); transition: translate var(--dur-base) var(--ease); }
+.interrupteur.on { background: var(--c-accent); }
+.interrupteur.on::after { translate: 18px 0; }
+.avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--c-second-soft); color: var(--c-second-ink); font: 700 13px var(--font-ui); flex: none; }
+
+/* ===================================================== Jours et tarifs === */
+.jours { position: relative; display: grid; grid-template-columns: repeat(var(--n, 7), 1fr); background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-md); overflow: hidden; }
+.jour { display: grid; justify-items: center; gap: 1px; padding: 9px 4px 11px; cursor: pointer; border-left: 1px solid var(--c-line); }
+.jour:first-child { border-left: 0; }
+.jour small { font: 500 12px var(--font-ui); color: var(--c-ink-muted); }
+.jour b { font: 700 15px var(--font-ui); }
+.jour span { font: 500 11.5px var(--font-mono); color: var(--c-ink-muted); }
+.jour.meilleur span { color: var(--c-success-ink); font-weight: 600; }
+.jour.complet span { color: var(--c-ink-faint); }
+.jour[aria-pressed="true"] b { color: var(--c-accent-ink); }
+.jours .indicateur { position: absolute; bottom: 0; left: 0; height: 3px; width: var(--w, 0); transform: translateX(var(--x, 0)); background: var(--brand-ruban); border-radius: 3px 3px 0 0; transition: transform var(--dur-glisse) var(--ease-glisse), width var(--dur-glisse) var(--ease-glisse); }
+
+/* ===================================================== Carte de trajet === */
+.trajet { display: grid; grid-template-columns: 1fr auto; gap: var(--s-3) var(--s-6); align-items: center; padding: var(--s-4) var(--s-5); background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-md); cursor: pointer; transition: border-color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease); }
+.trajet:hover { border-color: var(--c-line-strong); }
+.trajet.choisi { border-color: var(--c-accent); box-shadow: inset 0 0 0 1px var(--c-accent); }
+.trajet-heures { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--s-3); }
+.trajet-pt b { display: block; font: 600 24px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.trajet-pt span { display: block; margin-top: 5px; font: 500 13px var(--font-ui); color: var(--c-ink-muted); }
+.trajet-pt.fin { text-align: right; }
+.trajet-pt sup { font: 600 11px var(--font-mono); color: var(--c-ink-muted); vertical-align: top; margin-left: 2px; }
+.trajet-milieu { display: grid; gap: 5px; justify-items: center; }
+.trajet-milieu .voie { width: 100%; }
+.trajet-milieu small { font: 500 12px var(--font-mono); color: var(--c-ink-muted); white-space: nowrap; }
+.trajet-infos { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; grid-column: 1; }
+.trajet-prix { grid-column: 2; grid-row: 1 / span 2; display: grid; justify-items: end; align-content: center; gap: 2px; padding-left: var(--s-5); border-left: 1px solid var(--c-line); min-width: 140px; }
+.trajet-prix small { font: var(--t-caption); color: var(--c-ink-muted); }
+.trajet-prix b { font: 700 21px var(--font-ui); white-space: nowrap; }
+.trajet-prix span { font: 500 12px var(--font-ui); color: var(--c-ink-muted); }
+.trajet.annule { opacity: 0.72; cursor: default; }
+.trajet.annule .trajet-pt b { text-decoration: line-through; text-decoration-thickness: 2px; }
+/* Version mobile : prix sous les heures */
+.trajet.m { grid-template-columns: 1fr; padding: var(--s-4); gap: var(--s-3); }
+.trajet.m .trajet-prix { grid-column: 1; grid-row: auto; border-left: 0; padding-left: 0; display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--c-line); padding-top: var(--s-3); }
+.trajet.m .trajet-pt b { font-size: 22px; }
+
+/* Classes */
+.classes { display: grid; gap: var(--s-2); }
+.classe { display: grid; grid-template-columns: auto 1fr auto; gap: 2px var(--s-3); align-items: center; padding: 12px 16px; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); cursor: pointer; transition: border-color var(--dur-base) var(--ease); }
+.classe .radio { grid-row: span 2; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--c-line-strong); transition: border var(--dur-fast) var(--ease); }
+.classe b { font: 700 15px var(--font-ui); }
+.classe small { font: 400 12.5px var(--font-ui); color: var(--c-ink-muted); grid-column: 2; }
+.classe .prix { grid-row: span 2; font: 700 16px var(--font-ui); }
+.classe[aria-checked="true"] { border-color: var(--c-accent); box-shadow: inset 0 0 0 1px var(--c-accent); }
+.classe[aria-checked="true"] .radio { border: 7px solid var(--c-accent); }
+
+/* Voyageurs et compteurs */
+.voyageur { display: grid; grid-template-columns: auto 1fr auto; gap: var(--s-3); align-items: center; padding: 12px 16px; }
+.voyageur + .voyageur { border-top: 1px solid var(--c-line); }
+.voyageur b { font: 600 15px var(--font-ui); display: block; }
+.voyageur small { font: 400 12.5px var(--font-ui); color: var(--c-ink-muted); }
+.compteur { display: inline-flex; align-items: center; gap: 4px; }
+.compteur button { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--c-line-strong); background: var(--c-surface); display: grid; place-items: center; color: var(--c-accent-ink); padding: 0; }
+.compteur button .ic { width: 16px; height: 16px; }
+.compteur output { min-width: 26px; text-align: center; font: 600 16px var(--font-mono); }
+
+/* Récapitulatif */
+.recap { background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-md); overflow: hidden; }
+.recap-tete { padding: var(--s-4); border-bottom: 1px solid var(--c-line); display: grid; gap: 4px; }
+.recap-tete b { font: 700 17px var(--font-ui); }
+.recap-tete span { font: 500 13px var(--font-mono); color: var(--c-ink-muted); }
+.recap-corps { padding: var(--s-3) var(--s-4) var(--s-4); display: grid; gap: 9px; font: var(--t-small); }
+.recap-l { display: flex; justify-content: space-between; gap: var(--s-3); color: var(--c-ink-muted); }
+.recap-l .tabular { color: var(--c-ink); }
+.recap-l.remise .tabular { color: var(--c-success-ink); }
+.recap-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: var(--s-3); border-top: 1px solid var(--c-line); font: 700 18px var(--font-ui); }
+.tenue { display: flex; align-items: center; gap: var(--s-2); padding: 10px 14px; border-radius: var(--r-md); background: var(--c-warning-soft); color: var(--c-warning-ink); font: 500 13px var(--font-ui); }
+.tenue .ic { width: 16px; height: 16px; }
+.tenue b { font: 600 14px var(--font-mono); }
+
+/* Moyens de paiement */
+.moyen { display: flex; align-items: center; gap: var(--s-3); min-height: 60px; padding: 0 16px; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); cursor: pointer; font: 600 15px var(--font-ui); }
+.moyen .radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--c-line-strong); flex: none; }
+.moyen[aria-checked="true"] { border-color: var(--c-accent); box-shadow: inset 0 0 0 1px var(--c-accent); }
+.moyen[aria-checked="true"] .radio { border: 7px solid var(--c-accent); }
+.moyen small { display: block; font: 400 12.5px var(--font-ui); color: var(--c-ink-muted); }
+.moyen .marque { margin-left: auto; width: 44px; height: 30px; border-radius: 6px; background: var(--c-surface-sunk); border: 1px solid var(--c-line); display: grid; place-items: center; font: 800 10px var(--font-ui); color: var(--c-ink-muted); letter-spacing: 0.02em; }
+
+/* ============================================================== Billet === */
+/* Fond encre, dans les deux thèmes : c'est un objet, pas une surface. */
+.billet { --ink-2: oklch(0.76 0.016 257); position: relative; background: var(--brand-encre); color: oklch(0.97 0.006 257); border-radius: var(--r-lg); padding: var(--s-4) var(--s-5); display: grid; gap: var(--s-3); box-shadow: var(--sh-md); }
+.billet-tete { display: flex; align-items: center; gap: var(--s-3); font: 600 13px var(--font-ui); color: var(--ink-2); }
+.billet-tete svg { height: 26px; width: auto; }
+.billet-tete .tag { margin-left: auto; }
+.billet .tag-ok { background: oklch(0.36 0.07 146); color: oklch(0.93 0.07 146); }
+.billet .tag-retard { background: oklch(0.4 0.07 92); color: oklch(0.95 0.1 92); }
+.billet .tag-neutre { background: oklch(0.32 0.02 257); color: var(--ink-2); }
+.billet-trajet { display: grid; grid-template-columns: auto 1fr auto; gap: var(--s-3); align-items: center; }
+.billet-trajet b { display: block; font: 600 26px/1 var(--font-mono); }
+.billet-trajet span { display: block; margin-top: 6px; font: 500 13px var(--font-ui); color: var(--ink-2); }
+.billet-trajet > div:last-child { text-align: right; }
+.billet-trajet .milieu { display: grid; justify-items: center; gap: 4px; font: 500 11.5px var(--font-mono); color: var(--ink-2); }
+.billet-trajet .voie { width: 100%; }
+.billet-coupe { position: relative; margin: 2px calc(var(--s-5) * -1); padding: 0 16px; }
+.billet-coupe::before, .billet-coupe::after { content: ""; position: absolute; top: 50%; width: 20px; height: 20px; border-radius: 50%; background: var(--fond-coupe, var(--c-canvas)); translate: 0 -50%; }
+.billet-coupe::before { left: -10px; }
+.billet-coupe::after { right: -10px; }
+.billet-grille { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
+.billet-grille span { display: block; font: 500 11px var(--font-ui); color: var(--ink-2); }
+.billet-grille b { font: 600 18px var(--font-mono); }
+.billet-code { background: #fff; border-radius: var(--r-md); padding: 12px; display: grid; justify-items: center; gap: 6px; color: #131b26; }
+.billet-code svg { width: 150px; height: 150px; }
+.billet-code small { font: 500 11.5px var(--font-mono); color: #58606c; letter-spacing: 0.08em; }
+.billet-pied { display: flex; justify-content: space-between; font: 500 12px var(--font-ui); color: var(--ink-2); }
+.billet-pied b { color: oklch(0.97 0.006 257); font-weight: 600; }
+.billet.utilise .billet-code, .billet.utilise .billet-trajet { opacity: 0.45; transition: opacity var(--dur-slow) var(--ease); }
+/* Émission : le ruban traverse la découpe une fois. */
+.billet-coupe .voie .ruban { background: linear-gradient(90deg in oklch, var(--brand-vert), var(--brand-jaune) 50%, var(--c-accent-on-ink)); }
+.billet.emis .billet-coupe .voie .ruban { --p: 1; transition-duration: 720ms; }
+
+/* ================================================= Ligne et arrêts === */
+.arrets { position: relative; }
+.arret { position: relative; display: grid; grid-template-columns: 52px 26px 1fr auto; align-items: center; min-height: 44px; font: 500 14px var(--font-ui); }
+.arret .h { font: 600 14px var(--font-mono); font-variant-numeric: tabular-nums; }
+.arret .h s { display: block; font: 400 11px var(--font-mono); color: var(--c-ink-faint); }
+.arret .pt { justify-self: center; width: 14px; height: 14px; border-radius: 50%; background: var(--c-surface); border: 3px solid var(--c-accent); z-index: 1; }
+.arret.maj .pt { width: 18px; height: 18px; }
+.arret .nom { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.arret .nom small { font: 400 12px var(--font-mono); color: var(--c-ink-faint); }
+.arret.passe { color: var(--c-ink-faint); }
+.arret.passe .pt { border-color: var(--c-line-strong); }
+.arret.maj .nom { font-weight: 700; }
+.arrets .voie-v { left: calc(52px + 6px); top: 22px; bottom: 22px; --rail: var(--c-accent-line); --traverse: var(--c-accent-soft); }
+.arrets .voie-v.passee { --rail: var(--c-line-strong); --traverse: var(--c-line); }
+/* Position estimée du train : le ruban, sur la voie. */
+.arrets .rame { position: absolute; left: calc(52px + 6px + 3px); width: 8px; height: 30px; border-radius: 4px; background: var(--brand-ruban-v); top: var(--y, 0); transition: top 1.2s var(--ease-glisse); z-index: 2; box-shadow: 0 0 0 3px var(--c-canvas); }
+
+/* ============================================================ État vide === */
+.etat-vide { display: grid; justify-items: center; text-align: center; gap: var(--s-3); padding: var(--s-6) var(--s-4); }
+.etat-vide svg { width: 92px; height: auto; }
+.etat-vide b { font: 700 18px var(--font-ui); }
+.etat-vide p { font: var(--t-small); color: var(--c-ink-muted); max-width: 30ch; }
+
+/* ============================================================== Code OTP === */
+.otp { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.otp span { height: 56px; border-radius: var(--r-md); border: 1px solid var(--c-line-strong); background: var(--c-surface); display: grid; place-items: center; font: 600 24px var(--font-mono); }
+.otp span.focus { border-color: var(--c-accent); box-shadow: var(--focus-ring); }
+.otp span.focus::after { content: ""; width: 2px; height: 26px; background: var(--c-accent); animation: veille 1.1s steps(1) infinite; }
+
+/* ================================================= Apparitions (listes) === */
+.apparait > * { animation: monte var(--dur-base) var(--ease) both; animation-delay: calc(min(var(--i, 0), 5) * 28ms); }
+@keyframes monte { from { opacity: 0; translate: 0 6px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .voie.attente .ruban, .btn.en-cours::after, .filet::after { animation: none; translate: 0 0; left: 33%; }
+  .apparait > * { animation: none; }
+  .direct::before { animation: none; }
+  * { transition-duration: 1ms !important; }
+}

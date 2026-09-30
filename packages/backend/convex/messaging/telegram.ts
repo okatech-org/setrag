@@ -1,7 +1,12 @@
 import { v } from "convex/values"
 import { internal } from "../_generated/api"
 import { httpAction, internalAction } from "../_generated/server"
-import type { InboundMessage, OutboundButton } from "./contracts"
+import {
+  hashLinkToken,
+  isUrlButton,
+  type InboundMessage,
+  type OutboundButton,
+} from "./contracts"
 
 type TelegramUser = {
   id: number
@@ -46,6 +51,17 @@ function commandFrom(text: string): string | undefined {
   return text.split(/\s+/, 1)[0]?.split("@", 1)[0]?.toLowerCase()
 }
 
+/**
+ * Paramètre d'un lien profond `https://t.me/<bot>?start=<jeton>` : Telegram
+ * l'envoie au bot sous la forme `/start <jeton>` quand la personne appuie sur
+ * « Démarrer ».
+ */
+function startPayloadFrom(text: string): string | undefined {
+  const [command, payload] = text.split(/\s+/, 2)
+  if (command?.split("@", 1)[0]?.toLowerCase() !== "/start") return undefined
+  return payload ? payload.slice(0, 256) : undefined
+}
+
 export function parseTelegramUpdate(
   update: TelegramUpdate
 ): InboundMessage | null {
@@ -88,23 +104,31 @@ export function parseTelegramUpdate(
     const from = message.from!
     const text = message.text?.trim()
     const command = text ? commandFrom(text) : undefined
+    const isPrivate = chat.type === undefined || chat.type === "private"
+    // Le jeton d'un `/start <jeton>` n'est jamais conservé : seule son
+    // empreinte part avec l'événement, et le message brut est expurgé.
+    const startPayload = text ? startPayloadFrom(text) : undefined
+    const stored = startPayload
+      ? { ...update, message: { ...message, text: "/start" } }
+      : update
     return {
       eventId,
       channel: "telegram",
       externalThreadId: String(chat.id),
       externalUserId: String(from.id),
-      type:
-        chat.type !== undefined && chat.type !== "private"
-          ? "unsupported"
-          : command
-            ? "command"
-            : text
-              ? "text"
-              : "unsupported",
+      type: !isPrivate
+        ? "unsupported"
+        : command
+          ? "command"
+          : text
+            ? "text"
+            : "unsupported",
       text: command ?? text,
+      linkTokenHash:
+        startPayload && isPrivate ? hashLinkToken(startPayload) : undefined,
       displayName: displayName(from),
       locale: from.language_code,
-      rawPayload: JSON.stringify(update),
+      rawPayload: JSON.stringify(stored),
     }
   }
   return null
@@ -156,11 +180,32 @@ async function telegramRequest(
   return payload.result ?? {}
 }
 
-function buttonRows(buttons: OutboundButton[]): OutboundButton[][] {
-  const rows: OutboundButton[][] = []
-  for (let index = 0; index < buttons.length; index += 2) {
-    rows.push(buttons.slice(index, index + 2))
+type TelegramInlineButton =
+  | { text: string; callback_data: string }
+  | { text: string; url: string }
+
+/**
+ * Clavier en ligne : les boutons de rappel vont par deux (« Confirmer » à
+ * côté d'« Annuler ») ; un bouton lien occupe sa propre ligne, sous les
+ * autres, pour ne jamais être confondu avec une confirmation.
+ */
+export function telegramInlineKeyboard(
+  buttons: OutboundButton[]
+): TelegramInlineButton[][] {
+  const callbacks = buttons.filter(
+    (button): button is { label: string; data: string } => !isUrlButton(button)
+  )
+  const links = buttons.filter(isUrlButton)
+  const rows: TelegramInlineButton[][] = []
+  for (let index = 0; index < callbacks.length; index += 2) {
+    rows.push(
+      callbacks.slice(index, index + 2).map((button) => ({
+        text: button.label,
+        callback_data: button.data,
+      }))
+    )
   }
+  for (const link of links) rows.push([{ text: link.label, url: link.url }])
   return rows
 }
 
@@ -197,6 +242,7 @@ export const webhook = httpAction(async (ctx, request) => {
     type: message.type,
     text: message.text,
     actionToken: message.actionToken,
+    linkTokenHash: message.linkTokenHash,
     providerInteractionId: message.providerInteractionId,
     displayName: message.displayName,
     locale: message.locale,
@@ -260,14 +306,7 @@ export const flushThread = internalAction({
                 text: outbox.text,
                 reply_markup:
                   outbox.buttons && outbox.buttons.length > 0
-                    ? {
-                        inline_keyboard: buttonRows(outbox.buttons).map((row) =>
-                          row.map((button) => ({
-                            text: button.label,
-                            callback_data: button.data,
-                          }))
-                        ),
-                      }
+                    ? { inline_keyboard: telegramInlineKeyboard(outbox.buttons) }
                     : undefined,
               })
         await ctx.runMutation(internal.messaging.core.markOutboxSent, {

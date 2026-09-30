@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETRAG — composants</title>
+  <link rel="icon" href="logo/setrag-symbole.svg">
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shared/ui.css">
+  <link rel="stylesheet" href="shared/mobile.css">
+  <link rel="stylesheet" href="shared/web.css">
+  <style>
+    .cmp { display: grid; grid-template-columns: 1fr 300px; gap: var(--s-6); padding: var(--s-6) 0; border-top: 1px solid var(--c-line); }
+    .cmp:first-of-type { border-top: 0; }
+    .cmp-vis { display: grid; gap: var(--s-4); align-content: start; }
+    .cmp-ligne { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; }
+    .cmp-fiche h3 { font: 700 17px var(--font-ui); display: flex; gap: var(--s-2); align-items: baseline; flex-wrap: wrap; }
+    .cmp-fiche h3 code { font-size: 12px; color: var(--c-accent-ink); font-weight: 500; }
+    .cmp-fiche p { font: var(--t-small); color: var(--c-ink-muted); margin-top: var(--s-2); }
+    .cmp-fiche dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin-top: var(--s-3); font: var(--t-caption); }
+    .cmp-fiche dt { color: var(--c-ink-muted); font-weight: 600; }
+    .cmp-fiche dd { font-weight: 400; }
+    .etat { font: 600 11px var(--font-ui); color: var(--c-ink-faint); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 6px; }
+    .surface { background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-lg); padding: var(--s-5); }
+    .cellules { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--s-4); }
+    .mini-tel { width: 360px; border: 1px solid var(--c-line); border-radius: var(--r-lg); overflow: hidden; background: var(--c-canvas); position: relative; }
+  </style>
+  <script type="module" src="shared/app.js"></script>
+</head>
+<body>
+<header class="doc-barre">
+  <a class="doc-logo" href="index.html" data-logo="compact" data-titre="SETRAG — charte graphique"></a>
+  <nav aria-label="Pages de la charte">
+    <a href="index.html">Charte</a>
+    <a href="mouvement.html">Mouvement</a>
+    <a href="composants.html">Composants</a>
+    <a href="web.html">Web</a>
+    <a href="mobile.html">Mobile</a>
+    <a href="widgets.html">Widgets &amp; Live</a>
+    <a href="assistant.html">Assistant</a>
+  </nav>
+  <button class="doc-bouton" id="theme" aria-pressed="false"><i data-i="moon"></i><span>Thème sombre</span></button>
+</header>
+
+<main class="doc">
+  <section class="doc-tete">
+    <div>
+      <p class="doc-sur">Composants · web et mobile</p>
+      <h1>Les pièces, une par une</h1>
+      <p class="doc-chapo">Chaque composant avec ses états, et son nom dans le code. La plupart existent déjà dans <code>packages/ui</code> et <code>packages/mobile-ui</code> : la charte ajoute la voie et le ruban, sans en changer l'interface de programmation.</p>
+    </div>
+    <div class="doc-carte">
+      <h3>Trois nouveaux composants</h3>
+      <p><code>Voie</code> (rails, ruban, attente), <code>RubanIndicateur</code> (onglets, jours, segments) et <code>LigneArrets</code> (suivi vertical). Tous les autres gagnent une variante, pas un remplaçant.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================ 01 -->
+  <section class="doc-section">
+    <h2><span class="n">01</span>Actions</h2>
+    <div class="cmp">
+      <div class="cmp-vis surface">
+        <div class="cmp-ligne"><span class="btn btn-primaire">Rechercher</span><span class="btn btn-secondaire">Choisir</span><span class="btn btn-fantome">Modifier</span><span class="btn btn-danger">Annuler la réservation</span></div>
+        <div class="cmp-ligne"><span class="btn btn-primaire btn-sm">Petit · 36</span><span class="btn btn-primaire">Normal · 44</span><span class="btn btn-primaire btn-lg">Grand · 52</span><span class="btn btn-primaire" style="opacity:.45;cursor:not-allowed">Indisponible</span></div>
+        <div class="cmp-ligne"><button class="btn btn-primaire btn-lg" data-demo="en-cours">Payer 50 750 XAF</button><button class="btn btn-secondaire btn-lg" data-demo="en-cours">Je n'ai rien reçu</button><span class="btn btn-wallet"><i data-i="wallet"></i>Ajouter à Apple Wallet</span></div>
+        <p class="doc-note">Cliquez « Payer » : le libellé reste, le bouton garde sa taille, un ruban passe sous le texte.</p>
+      </div>
+      <div class="cmp-fiche"><h3>Bouton <code>@workspace/ui/components/button</code></h3><p>Pastille, 44 px au moins. Un seul primaire par écran : celui qui fait avancer le voyage.</p><dl><dt>Variantes</dt><dd>primaire, secondaire, fantôme, danger</dd><dt>Nouveau</dt><dd>état <code>loading</code> : ruban sous le libellé, à la place de la barre actuelle</dd><dt>Pression</dt><dd>échelle 0,98, 90 ms</dd></dl></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 02 -->
+  <section class="doc-section">
+    <h2><span class="n">02</span>Saisie</h2>
+    <div class="cmp">
+      <div class="cmp-vis surface">
+        <div class="cellules">
+          <div class="champ"><span class="champ-libelle">Numéro Airtel Money</span><div class="saisie"><span class="tabular">+241 07 12 34 56</span></div><span class="champ-aide">La demande arrivera sur ce téléphone.</span></div>
+          <div class="champ"><span class="champ-libelle">Prénom</span><div class="saisie focus"><span>Nad</span></div><span class="champ-aide">Comme sur la pièce d'identité.</span></div>
+          <div class="champ erreur"><span class="champ-libelle">Date de naissance</span><div class="saisie"><span class="tabular">12/03/2023</span></div><span class="champ-aide"><i data-i="circle-alert"></i>Le tarif enfant vaut de 4 à 11 ans.</span></div>
+          <div class="champ"><span class="champ-libelle">Réduction</span><div class="saisie"><span>Militaire −10 %</span><i data-i="chevron-down" style="margin-left:auto"></i></div></div>
+        </div>
+        <div class="cellules">
+          <div><span class="etat">Départ, arrivée</span><div class="recherche m-recherche" style="box-shadow:none"><div class="recherche-gares"><div class="bloc-champ"><small>Départ</small><b>Owendo</b></div><div class="bloc-champ"><small>Arrivée</small><b>Franceville</b></div><button class="inverser" aria-label="Inverser"><i data-i="arrow-up-down"></i></button></div></div></div>
+          <div><span class="etat">Code à 6 chiffres</span><div class="otp"><span>4</span><span>8</span><span>1</span><span class="focus"></span><span></span><span></span></div></div>
+          <div><span class="etat">Compteur, interrupteur</span><div class="cmp-ligne"><div class="compteur"><button aria-label="Retirer"><i data-i="minus"></i></button><output>1</output><button aria-label="Ajouter"><i data-i="plus"></i></button></div><span class="interrupteur on"></span><span class="interrupteur"></span></div></div>
+        </div>
+      </div>
+      <div class="cmp-fiche"><h3>Champ <code>field</code> · <code>Field</code></h3><p>Le libellé au-dessus, l'aide dessous, l'erreur écrite : ce qu'il faut faire, pas seulement ce qui ne va pas.</p><dl><dt>États</dt><dd>repos, focus (anneau 3 px), erreur, lecture seule</dd><dt>Erreur</dt><dd>bordure et texte danger, icône ; aucune secousse</dd><dt>Inverser</dt><dd>⇅ pivote de 180° en 320 ms et échange les gares</dd></dl></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 03 -->
+  <section class="doc-section">
+    <h2><span class="n">03</span>Statuts et messages</h2>
+    <div class="cmp">
+      <div class="cmp-vis surface">
+        <div class="cmp-ligne"><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span><span class="tag tag-retard"><i data-i="clock-alert"></i>+12 min</span><span class="tag tag-annule"><i data-i="circle-x"></i>Supprimé</span><span class="tag tag-info"><i data-i="rotate-ccw"></i>Remboursée</span><span class="tag tag-neutre">Prévu</span><span class="tag tag-accent">Prochain</span><span class="tag tag-marque">Meilleur prix</span><span class="direct">En direct</span></div>
+        <div class="bandeau-trafic arrondi"><i data-i="triangle-alert"></i><span><b>Travaux entre Booué et Ivindo</b> samedi 3 octobre : départs de l'après-midi retardés de 25 min.</span><a>En savoir plus</a></div>
+        <div class="cmp-ligne" style="align-items:stretch"><div class="hors-ligne" style="border:1px solid var(--c-line);border-radius:var(--r-md)"><i data-i="wifi-off"></i>Pas de réseau. Vos billets restent consultables.</div><div class="toast"><i data-i="circle-check"></i>Billets ajoutés à Apple Wallet<a>Voir</a></div></div>
+      </div>
+      <div class="cmp-fiche"><h3>Pastille <code>tag</code> · Bandeau <code>traffic-banner</code></h3><p>Toujours une icône et un mot ; le retard toujours chiffré. Le bandeau d'information reprend le jaune sur bleu du site.</p><dl><dt>Pastilles</dt><dd>à l'heure, retard, supprimé, information, prévu, marque</dd><dt>Bandeau</dt><dd>entre par le haut en 200 ms, une fois par session</dd><dt>Toast</dt><dd>entre par le bas en 200 ms, reste 4 s</dd></dl></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 04 -->
+  <section class="doc-section">
+    <h2><span class="n">04</span>La voie et le ruban</h2>
+    <div class="cmp">
+      <div class="cmp-vis surface">
+        <div class="cellules">
+          <div><span class="etat">Voie seule</span><span class="voie"></span></div>
+          <div><span class="etat">Voie choisie</span><span class="voie pleine"><span class="ruban"></span></span></div>
+          <div><span class="etat">Attente</span><span class="voie attente"><span class="ruban"></span></span></div>
+        </div>
+        <div data-demo="etapes" data-depart="1" style="display:grid;gap:var(--s-3)">
+          <span class="etat">Étapes — cliquez « Étape suivante »</span>
+          <ol class="etapes" style="--n:4"><span class="ruban"></span><li class="etape"><span class="gare"></span>Trajet</li><li class="etape"><span class="gare"></span>Voyageurs</li><li class="etape"><span class="gare"></span>Paiement</li><li class="etape"><span class="gare"></span>Billet</li></ol>
+          <button class="doc-bouton" data-suivant style="justify-self:start">Étape suivante</button>
+        </div>
+      </div>
+      <div class="cmp-fiche"><h3>Voie <code>Voie</code> <span class="tag tag-accent">nouveau</span></h3><p>La structure qui relie deux informations. Le ruban y glisse : rempli pour « choisi », rame pour « en cours ».</p><dl><dt>Props</dt><dd><code>etat</code> : vide · pleine · attente ; <code>surFond</code> : clair · encre · bleu</dd><dt>Étapes</dt><dd><code>stepper</code> existant : les étapes deviennent des gares</dd><dt>Durée</dt><dd>480 ms, <code>--ease-glisse</code></dd></dl></div>
+    </div>
+    <div class="cmp">
+      <div class="cmp-vis surface">
+        <span class="etat">Onglets web — cliquez</span>
+        <nav class="nav" data-glisse="a" style="border-bottom:1px solid var(--c-line)"><a aria-current="page">Réserver</a><a>Mes réservations</a><a>Suivi des trains</a><a>Tarifs</a><a>Aide</a><span class="indicateur"></span></nav>
+        <span class="etat">Jours et tarifs — cliquez</span>
+        <div class="jours" style="--n:7" data-glisse=".jour"><div class="jour" aria-pressed="false"><small>Mar. 29</small><b>32 500</b><span>2 trains</span></div><div class="jour" aria-pressed="false"><small>Mer. 30</small><b>32 500</b><span>2 trains</span></div><div class="jour" aria-pressed="false"><small>Jeu. 1</small><b>32 500</b><span>2 trains</span></div><div class="jour" aria-pressed="true"><small>Ven. 2</small><b>24 000</b><span>3 trains</span></div><div class="jour meilleur" aria-pressed="false"><small>Sam. 3</small><b>24 000</b><span>meilleur prix</span></div><div class="jour" aria-pressed="false"><small>Dim. 4</small><b>32 500</b><span>2 trains</span></div><div class="jour complet" aria-pressed="false"><small>Lun. 5</small><b>—</b><span>complet</span></div><span class="indicateur"></span></div>
+        <div class="cmp-ligne"><div><span class="etat">Segmenté — cliquez</span><div class="segment" data-glisse="span:not(.indicateur)"><span aria-pressed="true">À venir</span><span aria-pressed="false">Passés</span><span aria-pressed="false">Tous</span><span class="indicateur"></span></div></div>
+        <div class="mini-tel"><nav class="onglets-m" data-glisse="a" style="padding-bottom:0"><a aria-current="page"><i data-i="house"></i>Accueil</a><a><i data-i="ticket"></i>Billets</a><a><i data-i="circle-user-round"></i>Compte</a><span class="indicateur"></span></nav></div></div>
+      </div>
+      <div class="cmp-fiche"><h3>Indicateur <code>RubanIndicateur</code> <span class="tag tag-accent">nouveau</span></h3><p>Un ruban de 3 px qui glisse vers l'élément choisi. Même geste sur les onglets, les jours et le choix segmenté (où c'est le fond qui glisse).</p><dl><dt>Web</dt><dd>sous l'élément, largeur du libellé</dd><dt>Mobile</dt><dd>au-dessus de l'onglet, 44 pt de large</dd><dt>Durée</dt><dd>480 ms ; 320 ms pour le segmenté</dd></dl></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 05 -->
+  <section class="doc-section">
+    <h2><span class="n">05</span>Trajets et achat</h2>
+    <div class="cmp">
+      <div class="cmp-vis surface" data-demo="trajets" style="gap:var(--s-3)">
+        <span class="etat">Touchez un trajet</span>
+        <article class="trajet">
+          <div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>11 h 45 · 6 arrêts</small></div><div class="trajet-pt fin"><b>19:25</b><span>Franceville</span></div></div>
+          <div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Express 201</span><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></div>
+          <div class="trajet-prix"><small>dès</small><b>32 500 XAF</b><span>par adulte</span></div>
+        </article>
+        <article class="trajet">
+          <div class="trajet-heures"><div class="trajet-pt"><b>14:05</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>11 h 50 · 6 arrêts</small></div><div class="trajet-pt fin"><b>01:55<sup>+1</sup></b><span>Franceville</span></div></div>
+          <div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Express 207</span><span class="tag tag-retard"><i data-i="clock-alert"></i>Départ 14:30 · +25 min</span></div>
+          <div class="trajet-prix"><small>dès</small><b>32 500 XAF</b><span>par adulte</span></div>
+        </article>
+        <article class="trajet annule">
+          <div class="trajet-heures"><div class="trajet-pt"><b>09:15</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"></span><small>3 h 25</small></div><div class="trajet-pt fin"><b>12:40</b><span>Ndjolé</span></div></div>
+          <div class="trajet-infos"><span class="tag tag-annule"><i data-i="circle-x"></i>Supprimé</span></div>
+          <div class="trajet-prix"><small>Remboursé</small><b>—</b><span>automatiquement</span></div>
+        </article>
+      </div>
+      <div class="cmp-fiche"><h3>Trajet <code>voyage/trip-result-card</code></h3><p>L'heure d'abord, en mono 24 ; le prix ensuite ; le reste en gris. La voie entre les heures porte le ruban quand le trajet est choisi.</p><dl><dt>États</dt><dd>défaut, choisi, retard, supprimé</dd><dt>Choisi</dt><dd>bordure accent + ruban 480 ms</dd><dt>Supprimé</dt><dd>heures barrées, le mot « Supprimé », non cliquable</dd></dl></div>
+    </div>
+    <div class="cmp">
+      <div class="cmp-vis surface">
+        <div class="cellules">
+          <div class="classes" role="radiogroup" aria-label="Classe"><span class="etat">Classes</span>
+            <div class="classe" role="radio" aria-checked="true"><span class="radio"></span><b>2e classe</b><span class="prix">32 500</span><small>Place attribuée</small></div>
+            <div class="classe" role="radio" aria-checked="false"><span class="radio"></span><b>1re classe</b><span class="prix">48 000</span><small>Place attribuée</small></div>
+            <div class="classe" role="radio" aria-checked="false"><span class="radio"></span><b>VIP</b><span class="prix">65 000</span><small>Encore 6 places</small></div>
+          </div>
+          <div class="recap"><div class="recap-tete"><b>Owendo → Franceville</b><span>Ven. 2 oct. · 07:40 · Express 201</span></div><div class="recap-corps"><div class="tenue"><i data-i="timer"></i>Tenues encore <b data-rebours="14:32"></b></div><div class="recap-l"><span>Adulte · 2e</span><span class="tabular">32 500</span></div><div class="recap-l remise"><span>Enfant −50 %</span><span class="tabular">16 250</span></div><div class="recap-total"><span>Total</span><span>48 750 XAF</span></div></div></div>
+        </div>
+      </div>
+      <div class="cmp-fiche"><h3>Classe, récapitulatif <code>checkout-summary</code></h3><p>Les places restantes ne s'affichent que sous 10. La tenue des places reste visible jusqu'au paiement, sans clignoter.</p><dl><dt>Réductions</dt><dd>enfant −50 %, militaire −10 %, groupes −30 / −45 %</dd><dt>Rebours</dt><dd>mono ; passe en danger sous 2 min</dd></dl></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 06 -->
+  <section class="doc-section">
+    <h2><span class="n">06</span>Le billet</h2>
+    <div class="cmp">
+      <div class="cmp-vis surface" style="grid-template-columns:1fr 1fr" data-billet>
+        <div class="billet" id="billet-demo">
+          <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span class="tag tag-ok"><i data-i="circle-check"></i>Valide</span></div>
+          <div class="billet-trajet"><div><b>07:40</b><span>Owendo</span></div><div class="milieu">11 h 45<span class="voie sur-encre pleine"><span class="ruban"></span></span>Express 201</div><div><b>19:25</b><span>Franceville</span></div></div>
+          <div class="billet-coupe" style="--fond-coupe:var(--c-surface)"><span class="voie sur-encre"><span class="ruban"></span></span></div>
+          <div class="billet-grille"><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>32</b></div><div><span>Quai</span><b>1</b></div><div><span>Classe</span><b>2e</b></div></div>
+        </div>
+        <div style="display:grid;gap:var(--s-3);align-content:start">
+          <div class="billet utilise" style="padding:var(--s-3) var(--s-4)"><div class="billet-tete"><span>Ndjolé → Owendo · 14 sept.</span><span class="tag tag-neutre">Utilisé</span></div></div>
+          <div class="billet" style="padding:var(--s-3) var(--s-4)"><div class="billet-tete"><span>Owendo → Franceville · 2 oct.</span><span class="tag tag-retard"><i data-i="clock-alert"></i>+12 min</span></div></div>
+          <div class="billet" style="padding:var(--s-3) var(--s-4)"><div class="billet-tete"><span>Owendo → Ndjolé · 14 sept.</span><span class="tag" style="background:oklch(0.4 0.1 25);color:oklch(0.94 0.05 25)"><i data-i="circle-x"></i>Annulé</span></div></div>
+          <button class="doc-bouton" data-demo="emission" data-cible="#billet-demo" style="justify-self:start">Rejouer l'émission</button>
+        </div>
+      </div>
+      <div class="cmp-fiche"><h3>Billet <code>voyage/ticket</code></h3><p>Fond encre dans les deux thèmes. La voie remplace la ligne de découpe ; à l'émission, le ruban la traverse une fois.</p><dl><dt>États</dt><dd>valide, retard, utilisé, annulé, expiré</dd><dt>Code</dt><dd>Aztec, sur fond blanc, lisible hors réseau</dd><dt>Émission</dt><dd>720 ms, puis vibration légère sur mobile</dd></dl></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 07 -->
+  <section class="doc-section">
+    <h2><span class="n">07</span>Suivi et états</h2>
+    <div class="cmp">
+      <div class="cmp-vis surface" style="grid-template-columns:1fr 1fr">
+        <div class="arrets" data-rame="116,119,122,125">
+          <span class="voie-v passee" style="top:22px;height:100px"></span>
+          <span class="voie-v" style="top:122px;bottom:22px"></span>
+          <span class="rame" style="height:22px"></span>
+          <div class="arret passe" style="min-height:44px"><span class="h">10:33</span><span class="pt"></span><span class="nom">Ndjolé</span></div>
+          <div class="arret passe" style="min-height:44px"><span class="h">11:20</span><span class="pt"></span><span class="nom">Otoumbi</span></div>
+          <div class="arret passe" style="min-height:44px"><span class="h">12:14</span><span class="pt"></span><span class="nom">Lopé</span></div>
+          <div class="arret maj" style="min-height:44px"><span class="h">13:07<s>12:55</s></span><span class="pt"></span><span class="nom">Booué</span><span class="tag tag-accent">Prochain</span></div>
+          <div class="arret" style="min-height:44px"><span class="h">15:50<s>15:38</s></span><span class="pt"></span><span class="nom">Lastourville</span></div>
+        </div>
+        <div style="display:grid;gap:var(--s-4)">
+          <div class="etat-vide carte"><span data-s-attente></span><b>Aucun billet à venir</b><p>Vos billets apparaîtront ici, lisibles sans réseau.</p></div>
+          <div class="carte" style="padding:var(--s-5)"><div class="chargeur"><span class="voie attente"><span class="ruban"></span></span><p>Recherche des trains…</p></div></div>
+        </div>
+      </div>
+      <div class="cmp-fiche"><h3>Arrêts <code>LigneArrets</code> <span class="tag tag-accent">nouveau</span> · État vide <code>empty-state</code></h3><p>La rame (ruban vertical) se place entre deux gares d'après l'horaire et le retard ; elle avance d'un cran à chaque mise à jour. L'état vide montre le S gris, rame à quai.</p><dl><dt>Heures</dt><dd>réelle en gras, prévue barrée dessous</dd><dt>Rame</dt><dd>1,2 s par mise à jour, jamais en continu</dd><dt>Chargement</dt><dd>squelettes sous 1 s, voie + phrase au-delà</dd></dl></div>
+    </div>
+  </section>
+</main>
+
+<footer class="doc-pied">
+  <span>SETRAG — composants. Noms de code : <code>packages/ui</code>, <code>packages/mobile-ui</code>.</span>
+  <span><a href="mouvement.html">Mouvement →</a></span>
+</footer>
+</body>
+</html>

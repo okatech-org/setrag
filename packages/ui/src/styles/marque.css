@@ -1,0 +1,232 @@
+/* ============================================================================
+   Charte « voie et ruban » — le motif de la marque dans l'interface.
+
+   La voie (rails + traverses) structure : elle relie deux informations.
+   Le ruban (vert → jaune → bleu, le bleu en tête) est la seule chose colorée
+   qui bouge : il glisse sur la voie pour dire « choisi », « ça avance »,
+   « vous êtes ici ». Détail : docs/design-system.md.
+   ============================================================================ */
+
+/* Remplissage du ruban (0 → 1), animable : c'est une propriété enregistrée. */
+@property --p {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/* Le ruban relit --c-accent : il est redéclaré dans chaque portée de thème. */
+:root,
+[data-theme="light"],
+[data-theme="dark"] {
+  --brand-ruban: linear-gradient(90deg in oklch, var(--brand-vert), var(--brand-jaune) 50%, var(--c-accent));
+  --brand-ruban-v: linear-gradient(180deg in oklch, var(--brand-vert), var(--brand-jaune) 50%, var(--c-accent));
+  /* Sur fond encre ou bleu, la tête du ruban s'éclaircit pour rester visible. */
+  --brand-ruban-clair: linear-gradient(90deg in oklch, var(--brand-vert), var(--brand-jaune) 55%, var(--c-accent-on-ink));
+}
+
+/* ─────────────────────────────── La voie ─────────────────────────────── */
+
+.voie {
+  --rail: var(--c-line-strong);
+  --traverse: var(--c-line);
+  position: relative;
+  display: block;
+  height: 14px;
+  min-width: 32px;
+  overflow: hidden;
+  background:
+    linear-gradient(var(--rail) 0 0) 0 3px / 100% 1.5px no-repeat,
+    linear-gradient(var(--rail) 0 0) 0 9.5px / 100% 1.5px no-repeat,
+    repeating-linear-gradient(90deg, var(--traverse) 0 2px, transparent 2px 7px) 0 0 / 100% 14px no-repeat;
+}
+.voie[data-fond="encre"] {
+  --rail: oklch(0.5 0.03 257);
+  --traverse: oklch(0.34 0.025 257);
+}
+.voie[data-fond="bleu"] {
+  --rail: oklch(1 0 0 / 0.55);
+  --traverse: oklch(1 0 0 / 0.22);
+}
+.voie-ruban {
+  position: absolute;
+  left: 0;
+  top: 3px;
+  height: 8px;
+  width: calc(var(--p) * 100%);
+  border-radius: 4px;
+  background: var(--brand-ruban);
+  transition: --p var(--dur-glisse) var(--ease-glisse);
+}
+.voie[data-fond="encre"] .voie-ruban,
+.voie[data-fond="bleu"] .voie-ruban {
+  background: var(--brand-ruban-clair);
+}
+.voie[data-etat="pleine"] .voie-ruban {
+  --p: 1;
+}
+/* Attente : une rame passe, de gauche à droite, sans fin. */
+.voie[data-etat="attente"] .voie-ruban {
+  width: 34%;
+  animation: st-rame var(--dur-boucle) var(--ease-glisse) infinite;
+}
+
+/* Voie verticale : suivi d'un train, liste des gares. */
+.voie-v {
+  --rail: var(--c-line-strong);
+  --traverse: var(--c-line);
+  position: absolute;
+  width: 14px;
+  overflow: hidden;
+  background:
+    linear-gradient(var(--rail) 0 0) 3px 0 / 1.5px 100% no-repeat,
+    linear-gradient(var(--rail) 0 0) 9.5px 0 / 1.5px 100% no-repeat,
+    repeating-linear-gradient(180deg, var(--traverse) 0 2px, transparent 2px 7px) 0 0 / 14px 100% no-repeat;
+}
+.voie-v[data-etat="a-venir"] {
+  --rail: var(--c-accent-line);
+  --traverse: var(--c-accent-soft);
+}
+
+/* Filet de navigation : le ruban traverse le haut de l'écran pendant un
+   chargement de page. N'apparaît qu'au-delà de 150 ms. */
+.filet-ruban {
+  position: fixed;
+  z-index: 60;
+  inset: 0 0 auto;
+  height: 3px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease);
+}
+.filet-ruban[data-actif] {
+  opacity: 1;
+  transition-delay: 150ms;
+}
+.filet-ruban::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  border-radius: 0 3px 3px 0;
+  background: var(--brand-ruban);
+  animation: st-rame var(--dur-boucle) var(--ease-glisse) infinite;
+}
+
+/* Bouton en cours : le libellé reste, un ruban fin passe dessous. */
+.st-en-cours::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 34%;
+  border-radius: 3px;
+  background: var(--brand-ruban-clair);
+  animation: st-rame var(--dur-boucle) var(--ease-glisse) infinite;
+}
+
+/* ─────────────────────────── Le signe de Ruban ─────────────────────────── */
+
+.signe {
+  display: block;
+  overflow: visible;
+}
+.signe path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: var(--w, 14);
+}
+.signe .sg-piste {
+  stroke: currentColor;
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease);
+}
+.signe[data-etat="reflexion"] .sg-piste {
+  opacity: 0.16;
+}
+.signe[data-etat="reflexion"] .sg-ruban {
+  stroke-dasharray: 0.34 2;
+  animation: st-signe-glisse var(--dur-boucle) var(--ease-glisse) infinite;
+}
+.signe[data-etat="hors-ligne"] .sg-ruban {
+  stroke: var(--c-line-strong);
+}
+.signe[data-trace] .sg-ruban {
+  stroke-dasharray: 1 2;
+  animation: st-signe-trace 700ms var(--ease-glisse) both;
+}
+
+/* ─────────────────────────────── Logo ─────────────────────────────── */
+
+/* Thème « auto » : couleur en clair, négatif en sombre. */
+.logo-auto {
+  --logo-rail: var(--brand-orange);
+  --logo-mot: var(--brand-bleu);
+  --logo-signature: var(--brand-bleu);
+}
+[data-theme="dark"] .logo-auto {
+  --logo-mot: #fff;
+  --logo-signature: oklch(0.9 0.02 257);
+}
+.logo-auto .logo-ruban-sombre,
+[data-theme="dark"] .logo-auto .logo-ruban-clair {
+  display: none;
+}
+[data-theme="dark"] .logo-auto .logo-ruban-sombre {
+  display: inline;
+}
+
+/* ─────────────────────────────── Apparitions ─────────────────────────────── */
+
+/* Listes : cascade courte, six éléments au plus. */
+.st-apparait > * {
+  animation: st-monte var(--dur-base) var(--ease) both;
+  animation-delay: calc(min(var(--i, 0), 5) * 28ms);
+}
+
+@keyframes st-rame {
+  from { translate: -100% 0; }
+  to { translate: 300% 0; }
+}
+@keyframes st-monte {
+  from { opacity: 0; translate: 0 6px; }
+}
+/* Bandeau d'information : descend du haut. */
+@keyframes st-descend {
+  from { opacity: 0; translate: 0 -8px; }
+}
+@keyframes st-veille {
+  50% { opacity: 0.35; }
+}
+@keyframes st-signe-glisse {
+  0% { stroke-dashoffset: 0.34; opacity: 0; }
+  8%, 90% { opacity: 1; }
+  100% { stroke-dashoffset: -1; opacity: 0; }
+}
+@keyframes st-signe-trace {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Moins d'animations : rien ne glisse, l'information reste identique. */
+@media (prefers-reduced-motion: reduce) {
+  .voie[data-etat="attente"] .voie-ruban,
+  .filet-ruban::after,
+  .st-en-cours::after {
+    animation: none;
+    translate: 100% 0;
+  }
+  .voie-ruban {
+    transition: none;
+  }
+  .signe[data-etat="reflexion"] .sg-ruban {
+    animation: none;
+    stroke-dasharray: none;
+  }
+  .st-apparait > * {
+    animation: none;
+  }
+}

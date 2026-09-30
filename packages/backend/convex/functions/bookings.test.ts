@@ -135,7 +135,7 @@ const VOYAGEUR = {
   gender: "M" as const,
 }
 
-const CONTACT = "+241 06 11 22 33"
+const CONTACT = "+241 66 11 22 33"
 
 async function reserve(
   t: ReturnType<typeof convexTest>,
@@ -255,7 +255,52 @@ describe("Réservation en ligne", () => {
         reference: r.reference,
         contactPhone: "+241 00 00 00 00",
       }),
-    ).rejects.toThrow(/ne correspondent pas/)
+    ).resolves.toBeNull()
+  })
+
+  it("répond de même à une référence inconnue et à un mauvais téléphone", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedSellable(t)
+    const r = await reserve(t, fx)
+    const inconnue = await t.query(api.functions.bookings.getByReference, {
+      reference: "V-INEXISTANTE",
+      contactPhone: CONTACT,
+    })
+    const mauvaisTelephone = await t.query(
+      api.functions.bookings.getByReference,
+      { reference: r.reference, contactPhone: "+241 77 99 99 99" },
+    )
+    const sansTelephone = await t.query(api.functions.bookings.getByReference, {
+      reference: r.reference,
+    })
+    // Rien ne distingue une référence qui existe d'une qui n'existe pas.
+    expect(inconnue).toBeNull()
+    expect(mauvaisTelephone).toBeNull()
+    expect(sansTelephone).toBeNull()
+    // Pareil pour la variante interne de l'assistant.
+    await expect(
+      t.query(internal.functions.bookings.getByReferenceForActor, {
+        reference: r.reference,
+        contactPhone: "+241 77 99 99 99",
+      }),
+    ).resolves.toBeNull()
+  })
+
+  it("refuse un téléphone de contact trop court pour ouvrir la réservation", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedSellable(t)
+    for (const contactPhone of ["0771234", "+241 07 12 34 56"]) {
+      await expect(
+        t.mutation(api.functions.bookings.create, {
+          tripId: fx.tripId,
+          originStationId: fx.owe,
+          destinationStationId: fx.fcv,
+          serviceClass: "DEUXIEME",
+          passengers: [VOYAGEUR],
+          contactPhone,
+        }),
+      ).rejects.toThrow(/Téléphone de contact incomplet.*au moins 8 chiffres/)
+    }
   })
 
   it("n'entre pas en comptabilité tant qu'elle n'est pas réglée", async () => {
@@ -318,6 +363,7 @@ describe("Règlement d'une réservation", () => {
 
     const conf = await t.mutation(api.functions.bookings.confirm, {
       reference: r.reference,
+      contactPhone: CONTACT,
       method: "airtel_money",
     })
     expect(conf.status).toBe("confirmee")
@@ -344,6 +390,7 @@ describe("Règlement d'une réservation", () => {
     const r = await reserve(t, fx)
     await t.mutation(api.functions.bookings.confirm, {
       reference: r.reference,
+      contactPhone: CONTACT,
       method: "moov_money",
     })
 
@@ -362,11 +409,13 @@ describe("Règlement d'une réservation", () => {
     const r = await reserve(t, fx)
     await t.mutation(api.functions.bookings.confirm, {
       reference: r.reference,
+      contactPhone: CONTACT,
       method: "airtel_money",
     })
     await expect(
       t.mutation(api.functions.bookings.confirm, {
         reference: r.reference,
+        contactPhone: CONTACT,
         method: "airtel_money",
       }),
     ).rejects.toThrow(/déjà réglée/)
@@ -384,19 +433,232 @@ describe("Règlement d'une réservation", () => {
     await expect(
       t.mutation(api.functions.bookings.confirm, {
         reference: r.reference,
+        contactPhone: CONTACT,
         method: "airtel_money",
       }),
     ).rejects.toThrow(/délai de règlement est dépassé/)
   })
 
-  it("signale une référence inconnue", async () => {
+  it("signale une référence inconnue comme un mauvais téléphone", async () => {
     const t = convexTest(schema, modules)
     await expect(
       t.mutation(api.functions.bookings.confirm, {
         reference: "V-INEXISTANTE",
+        contactPhone: CONTACT,
         method: "airtel_money",
       }),
-    ).rejects.toThrow(/introuvable/)
+    ).rejects.toThrow(/Référence ou téléphone incorrect/)
+  })
+
+  it("n'accepte le règlement que du titulaire ou de qui connaît le téléphone", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedSellable(t)
+    const r = await reserve(t, fx)
+    await t.run((c) =>
+      c.db.insert("users", {
+        authId: "voyageur-tiers",
+        role: "voyageur",
+        identitySource: "local",
+        isActive: true,
+      }),
+    )
+    const tiers = t.withIdentity({ subject: "voyageur-tiers" })
+
+    // La référence seule, même depuis un compte connecté, ne suffit pas.
+    for (const caller of [t, tiers]) {
+      for (const contactPhone of [undefined, "+241 77 99 99 99"]) {
+        await expect(
+          caller.mutation(api.functions.bookings.confirm, {
+            reference: r.reference,
+            contactPhone,
+            method: "airtel_money",
+          }),
+        ).rejects.toThrow(/Référence ou téléphone incorrect/)
+      }
+    }
+    const vente = await t.run((c) => c.db.get(r.saleId as Id<"sales">))
+    expect(vente?.status).toBe("en_attente_paiement")
+
+    // Le téléphone de contact, sous une autre écriture, ouvre le règlement.
+    await expect(
+      t.mutation(api.functions.bookings.confirm, {
+        reference: r.reference,
+        contactPhone: "066 11 22 33",
+        method: "airtel_money",
+      }),
+    ).resolves.toMatchObject({ status: "confirmee" })
+  })
+
+  it("laisse le titulaire connecté régler sans téléphone, y compris via l'assistant", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedSellable(t)
+    const [titulaire, autre] = await t.run(async (c) => [
+      await c.db.insert("users", {
+        authId: "voyageur-titulaire",
+        role: "voyageur",
+        identitySource: "local",
+        isActive: true,
+      }),
+      await c.db.insert("users", {
+        authId: "voyageur-autre",
+        role: "voyageur",
+        identitySource: "local",
+        isActive: true,
+      }),
+    ])
+    const creer = () =>
+      t.withIdentity({ subject: "voyageur-titulaire" }).mutation(
+        api.functions.bookings.create,
+        {
+          tripId: fx.tripId,
+          originStationId: fx.owe,
+          destinationStationId: fx.fcv,
+          serviceClass: "DEUXIEME",
+          passengers: [VOYAGEUR],
+          contactPhone: CONTACT,
+        },
+      )
+
+    const web = await creer()
+    await expect(
+      t
+        .withIdentity({ subject: "voyageur-titulaire" })
+        .mutation(api.functions.bookings.confirm, {
+          reference: web.reference,
+          method: "visa",
+        }),
+    ).resolves.toMatchObject({ status: "confirmee" })
+
+    // `confirmForActor` : l'acteur de l'assistant tient lieu de session.
+    const assistant = await creer()
+    await expect(
+      t.mutation(internal.functions.bookings.confirmForActor, {
+        userId: autre,
+        reference: assistant.reference,
+        method: "airtel_money",
+      }),
+    ).rejects.toThrow(/Référence ou téléphone incorrect/)
+    await expect(
+      t.mutation(internal.functions.bookings.confirmForActor, {
+        userId: titulaire,
+        reference: assistant.reference,
+        method: "airtel_money",
+      }),
+    ).resolves.toMatchObject({ status: "confirmee" })
+
+    // Un compte désactivé ne règle plus rien, même comme acteur.
+    const troisieme = await creer()
+    await t.run((c) => c.db.patch(titulaire, { isActive: false }))
+    await expect(
+      t.mutation(internal.functions.bookings.confirmForActor, {
+        userId: titulaire,
+        reference: troisieme.reference,
+        method: "airtel_money",
+      }),
+    ).rejects.toThrow(/Compte désactivé/)
+  })
+})
+
+/* ═════════════════════ Yield propre à un canal ═══════════════════════════ */
+
+describe("Yield propre à un canal", () => {
+  async function regleCanal(
+    t: ReturnType<typeof convexTest>,
+    code: "ligne" | "guichet",
+    modifierPct: number,
+  ) {
+    await t.run(async (c) => {
+      const admin = (await c.db.query("users").collect()).find(
+        (user) => user.authId === "seed-admin",
+      )
+      await c.db.insert("pricingRules", {
+        scope: "reseau",
+        type: "canal",
+        code,
+        modifierPct,
+        priority: 10,
+        isActive: true,
+        createdBy: admin!._id,
+      })
+    })
+  }
+
+  async function vendeur(
+    t: ReturnType<typeof convexTest>,
+    pointOfSaleId: Id<"pointsOfSale">,
+  ) {
+    await t.run((c) =>
+      c.db.insert("users", {
+        authId: "vendeur-canal",
+        role: "vendeur_guichet",
+        pointOfSaleId,
+        identitySource: "annuaire",
+        isActive: true,
+      }),
+    )
+    const ctx = t.withIdentity({ subject: "vendeur-canal" })
+    await ctx.mutation(api.functions.cash.openSession, {
+      openingFloatXaf: 50_000,
+    })
+    return ctx
+  }
+
+  const trajet = (fx: Awaited<ReturnType<typeof seedSellable>>) => ({
+    tripId: fx.tripId,
+    originStationId: fx.owe,
+    destinationStationId: fx.fcv,
+    serviceClass: "DEUXIEME" as const,
+  })
+
+  it("fige en ligne le prix annoncé par bookings.quote sous une règle « ligne »", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedSellable(t)
+    await regleCanal(t, "ligne", -10)
+
+    const devis = await t.query(api.functions.bookings.quote, {
+      ...trajet(fx),
+      passengerCount: 1,
+    })
+    const r = await reserve(t, fx)
+    expect(devis.totalTtc).toBeLessThan(28100)
+    expect(r.amounts.ttc).toBe(devis.totalTtc)
+    expect(r.tickets[0]?.unitPriceTtc).toBe(devis.lines[0]?.unitPriceTtc)
+
+    // Le guichet, lui, n'est pas concerné par la règle en ligne.
+    const guichet = await vendeur(t, fx.pos)
+    const vente = await guichet.mutation(api.functions.sales.createCounterSale, {
+      ...trajet(fx),
+      passengers: [VOYAGEUR],
+      method: "especes",
+    })
+    expect(vente.amounts.ttc).toBe(28100)
+  })
+
+  it("n'applique pas en ligne une règle propre au guichet", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedSellable(t)
+    await regleCanal(t, "guichet", 20)
+
+    const devis = await t.query(api.functions.bookings.quote, {
+      ...trajet(fx),
+      passengerCount: 1,
+    })
+    const r = await reserve(t, fx)
+    expect(devis.totalTtc).toBe(28100)
+    expect(r.amounts.ttc).toBe(28100)
+
+    const guichet = await vendeur(t, fx.pos)
+    const devisGuichet = await guichet.query(
+      api.functions.sales.quoteCounterSale,
+      { ...trajet(fx), passengerCount: 1 },
+    )
+    const vente = await guichet.mutation(api.functions.sales.createCounterSale, {
+      ...trajet(fx),
+      passengers: [VOYAGEUR],
+      method: "especes",
+    })
+    expect(devisGuichet.totalTtc).toBeGreaterThan(28100)
+    expect(vente.amounts.ttc).toBe(devisGuichet.totalTtc)
   })
 })
 
@@ -448,6 +710,7 @@ describe("Expiration des réservations", () => {
     const r = await reserve(t, fx)
     await t.mutation(api.functions.bookings.confirm, {
       reference: r.reference,
+      contactPhone: CONTACT,
       method: "airtel_money",
     })
     await t.run(async (c) =>
@@ -507,6 +770,7 @@ describe("Annulation d'une réservation non réglée", () => {
     const r = await reserve(t, fx)
     await t.mutation(api.functions.bookings.confirm, {
       reference: r.reference,
+      contactPhone: CONTACT,
       method: "airtel_money",
     })
     await expect(
@@ -526,7 +790,14 @@ describe("Annulation d'une réservation non réglée", () => {
         reference: r.reference,
         contactPhone: "+241 99 99 99 99",
       }),
-    ).rejects.toThrow(/ne correspondent pas/)
+    ).rejects.toThrow(/Référence ou téléphone incorrect/)
+    // Une référence inconnue reçoit exactement la même réponse.
+    await expect(
+      t.mutation(api.functions.bookings.cancelHold, {
+        reference: "V-INEXISTANTE",
+        contactPhone: CONTACT,
+      }),
+    ).rejects.toThrow(/Référence ou téléphone incorrect/)
   })
 })
 
@@ -585,6 +856,68 @@ describe("Espace client", () => {
     const billets = await ctx.query(api.functions.bookings.myTickets, {})
     expect(billets).toHaveLength(1)
     expect(billets[0]?.origin?.code).toBe("OWE")
+  })
+
+  it("complète la civilité du titulaire qui voyage, sans jamais la remplacer", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedSellable(t)
+    const ctx = await asTraveller(t)
+    const reserver = (passager: { firstName: string; lastName: string; gender: "M" | "F" }) =>
+      ctx.mutation(api.functions.bookings.create, {
+        tripId: fx.tripId,
+        originStationId: fx.owe,
+        destinationStationId: fx.fcv,
+        serviceClass: "DEUXIEME",
+        passengers: [passager],
+        contactPhone: CONTACT,
+      })
+
+    // Le titulaire ne voyage pas : son profil reste tel quel.
+    const pourUnAutre = await reserver({ firstName: "Alice", lastName: "Mba", gender: "F" })
+    expect(pourUnAutre.civiliteEnregistree).toBeNull()
+    expect((await ctx.query(api.functions.customers.me, {}))?.user.gender).toBeUndefined()
+
+    // Il voyage, écrit autrement (casse) : sa civilité complète le profil.
+    const pourLui = await reserver({ firstName: "paul", lastName: "Mbadinga", gender: "M" })
+    expect(pourLui.civiliteEnregistree).toBe("M")
+    expect((await ctx.query(api.functions.customers.me, {}))?.user.gender).toBe("M")
+
+    // Une fois connue, une réservation ne la remplace plus.
+    const ensuite = await reserver({ ...VOYAGEUR, gender: "F" })
+    expect(ensuite.civiliteEnregistree).toBeNull()
+    expect((await ctx.query(api.functions.customers.me, {}))?.user.gender).toBe("M")
+
+    const journal = await t.run((c) => c.db.query("auditLogs").collect())
+    expect(journal.filter((l) => l.action === "profil.completer_civilite")).toHaveLength(1)
+  })
+
+  it("ne complète aucun profil pour une réservation sans compte", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedSellable(t)
+    await asTraveller(t)
+    // Même nom que le titulaire, mais sans session : aucun compte à compléter.
+    const r = await t.mutation(api.functions.bookings.create, {
+      tripId: fx.tripId,
+      originStationId: fx.owe,
+      destinationStationId: fx.fcv,
+      serviceClass: "DEUXIEME",
+      passengers: [VOYAGEUR],
+      contactPhone: CONTACT,
+    })
+    expect(r.civiliteEnregistree).toBeNull()
+    const users = await t.run((c) => c.db.query("users").collect())
+    expect(users.every((u) => u.gender === undefined)).toBe(true)
+  })
+
+  it("enregistre la civilité donnée au profil, et l'exporte", async () => {
+    const t = convexTest(schema, modules)
+    const ctx = await asTraveller(t)
+    await ctx.mutation(api.functions.customers.updateProfile, { gender: "F" })
+    const profil = await ctx.query(api.functions.customers.me, {})
+    // Les autres champs restent en place.
+    expect(profil?.user).toMatchObject({ gender: "F", firstName: "Paul", lastName: "MBADINGA" })
+    const exporte = await ctx.query(api.functions.customers.exportMyData, {})
+    expect(exporte.profile.gender).toBe("F")
   })
 
   it("enregistre et révoque les consentements", async () => {
@@ -689,6 +1022,32 @@ describe("Espace client", () => {
     const anonyme = users.find((u) => u.lastName === "supprimé")
     expect(anonyme?.phone).toBeUndefined()
     expect(anonyme?.isActive).toBe(false)
+  })
+
+  it("détache l'identité supprimée : pas de profil qui renaît, identité effacée", async () => {
+    const t = convexTest(schema, modules)
+    const ctx = await asTraveller(t)
+    await ctx.mutation(api.functions.customers.deleteMyAccount, {
+      confirmation: "SUPPRIMER",
+    })
+
+    // Le jeton encore valide ne retrouve plus le profil…
+    await expect(ctx.query(api.functions.customers.me, {})).resolves.toBeNull()
+    // …et ne peut pas en recréer un pour l'identité effacée.
+    await expect(
+      ctx.mutation(api.functions.customers.ensureProfile, {})
+    ).rejects.toThrow(/Session expirée/)
+
+    const etat = await t.run(async (c) => ({
+      users: await c.db.query("users").collect(),
+      identites: await c.db.query("identitesSupprimees").collect(),
+      planifiees: await c.db.system.query("_scheduled_functions").collect(),
+    }))
+    expect(etat.users.every((u) => u.authId.startsWith("supprime:"))).toBe(true)
+    expect(etat.identites).toHaveLength(1)
+    expect(etat.planifiees.map((f) => f.name)).toContain(
+      "betterAuth/effacement:effacerIdentite"
+    )
   })
 
   it("refuse la suppression avec une réservation en cours", async () => {

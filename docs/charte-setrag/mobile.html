@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETRAG — app voyageur</title>
+  <link rel="icon" href="logo/setrag-symbole.svg">
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shared/ui.css">
+  <link rel="stylesheet" href="shared/mobile.css">
+  <script src="vendor/lottie_light.min.js"></script>
+  <link rel="stylesheet" href="shared/assistant.css">
+  <script type="module" src="shared/app.js"></script>
+  <script type="module" src="shared/assistant.js"></script>
+</head>
+<body>
+<header class="doc-barre">
+  <a class="doc-logo" href="index.html" data-logo="compact" data-titre="SETRAG — charte graphique"></a>
+  <nav aria-label="Pages de la charte">
+    <a href="index.html">Charte</a>
+    <a href="mouvement.html">Mouvement</a>
+    <a href="composants.html">Composants</a>
+    <a href="web.html">Web</a>
+    <a href="mobile.html">Mobile</a>
+    <a href="widgets.html">Widgets &amp; Live</a>
+    <a href="assistant.html">Assistant</a>
+  </nav>
+  <button class="doc-bouton" id="theme" aria-pressed="false"><i data-i="moon"></i><span>Thème sombre</span></button>
+</header>
+
+<main class="doc">
+  <section class="doc-tete">
+    <div>
+      <p class="doc-sur">App voyageur · Expo · iOS et Android</p>
+      <h1>L'app voyageur, écran par écran</h1>
+      <p class="doc-chapo">Quinze écrans, du démarrage au suivi du train, sur les trois onglets de l'app : Accueil, Billets, Compte. Sous chaque écran : le mouvement qu'il porte. Les écrans sont cliquables là où le ruban bouge : onglets, jours, trajets.</p>
+    </div>
+    <div class="doc-carte">
+      <h3>Ce que l'app sait faire</h3>
+      <p>Connexion par code SMS ou e-mail, achat en Mobile Money ou par carte, places tenues 15 minutes pendant le paiement, billets à code Aztec lisibles hors réseau, alertes de retard et de suppression, Apple Wallet et Google Wallet. La place est attribuée par le système : pas de plan de voiture.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================ 01 -->
+  <section class="doc-section">
+    <h2><span class="n">01</span>Entrer dans l'app</h2>
+    <p class="doc-intro">Le logo animé ne joue qu'au démarrage à froid. Il ne retient personne : si la session et les billets sont prêts avant la fin, l'app passe au premier écran dès que le ruban est posé (2,4 s).</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" style="background:#fff">
+          <div class="statut" style="color:#131B26"><span class="tabular">9:41</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-demarrage">
+            <div class="lottie" id="lt-demarrage" data-lottie="logo-anime" aria-label="Logo SETRAG animé"></div>
+          </div>
+          <span class="version">SETRAG · version 1.0</span>
+          <div class="barre-accueil" style="background:#131B26"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Démarrage</b> — fond blanc, rien d'autre que le logo. <button class="doc-bouton" style="min-height:32px;margin-top:6px" data-rejouer="#lt-demarrage"><i data-i="rotate-ccw"></i><span>Rejouer</span></button><span class="anim">logo animé, 3,3 s, une fois</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:41</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-bienvenue">
+            <span data-logo="compact"></span>
+            <h1>Vos billets du Transgabonais, dans votre poche.</h1>
+            <div class="atouts">
+              <div class="atout"><span class="puce"><i data-i="smartphone"></i></span><div><b>Payez en Mobile Money</b><span>Airtel Money, Moov Money ou carte.</span></div></div>
+              <div class="atout"><span class="puce"><i data-i="wifi-off"></i></span><div><b>Billets lisibles sans réseau</b><span>Le code s'affiche même en pleine forêt.</span></div></div>
+              <div class="atout"><span class="puce"><i data-i="bell"></i></span><div><b>Prévenu en cas de retard</b><span>Une alerte dès que l'horaire change.</span></div></div>
+            </div>
+          </div>
+          <div class="m-bas sans-bord">
+            <span class="btn btn-primaire btn-lg btn-bloc">Continuer avec mon numéro</span>
+            <a class="m-lien">J'ai une adresse e-mail</a>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Bienvenue</b> — trois promesses, un seul bouton.<span class="anim">aucun : le texte est déjà là</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:41</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span></div>
+          <div class="m-corps" style="gap:var(--s-4)">
+            <div><p class="m-grand-titre">Entrez le code reçu par SMS</p><p class="m-sous" style="margin-top:6px">Envoyé au <span class="tabular">+241 07 12 34 56</span> · <a style="color:var(--c-accent-ink);font-weight:600">Modifier</a></p></div>
+            <div class="otp"><span>4</span><span>8</span><span>1</span><span class="focus"></span><span></span><span></span></div>
+            <p class="m-sous">Renvoyer le code dans <b class="tabular" data-rebours="00:42"></b></p>
+          </div>
+          <div class="m-bas sans-bord" style="padding-bottom:var(--s-3)"><span class="btn btn-primaire btn-lg btn-bloc" data-demo="en-cours">Valider</span></div>
+          <div class="clavier">
+            <span>1</span><span>2<small>ABC</small></span><span>3<small>DEF</small></span>
+            <span>4<small>GHI</small></span><span>5<small>JKL</small></span><span>6<small>MNO</small></span>
+            <span>7<small>PQRS</small></span><span>8<small>TUV</small></span><span>9<small>WXYZ</small></span>
+            <span class="touche-vide"></span><span>0</span><span class="touche-vide"><i data-i="arrow-left"></i></span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Connexion</b> — code à 6 chiffres, lu automatiquement quand le téléphone le permet.<span class="anim">en attente, un ruban passe sous « Valider » (cliquez)</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 02 -->
+  <section class="doc-section">
+    <h2><span class="n">02</span>Chercher un train</h2>
+    <p class="doc-intro">La recherche tient sur l'accueil. Les gares se choisissent sur la ligne, dans l'ordre où le train les dessert. Les résultats arrivent en cascade courte ; le ruban suit le jour choisi.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:41</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre logo"><span data-logo="compact"></span><div class="actions"><span class="action"><i data-i="bell"></i><span class="point"></span></span></div></div>
+          <div class="m-corps">
+            <p class="m-grand-titre">Où allez-vous ?</p>
+            <div class="recherche m-recherche">
+              <div class="recherche-gares">
+                <div class="bloc-champ"><small>Départ</small><b>Owendo</b></div>
+                <div class="bloc-champ"><small>Arrivée</small><b>Franceville</b></div>
+                <button class="inverser" aria-label="Inverser départ et arrivée"><i data-i="arrow-up-down"></i></button>
+              </div>
+              <div class="ligne2">
+                <div class="bloc-champ coins"><small>Aller</small><b>Ven. 2 oct.</b></div>
+                <div class="bloc-champ coins"><small>Voyageurs</small><b>2</b></div>
+              </div>
+            </div>
+            <span class="btn btn-primaire btn-lg btn-bloc">Rechercher</span>
+            <p class="titre-section">Prochain voyage <a>Tout voir</a></p>
+            <div class="prochain">
+              <div class="prochain-tete"><span>Express 201 · ven. 2 oct.</span><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></div>
+              <div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie pleine"><span class="ruban"></span></span><small>11 h 45</small></div><div class="trajet-pt fin"><b>19:25</b><span>Franceville</span></div></div>
+            </div>
+            <div class="bandeau-trafic arrondi"><i data-i="triangle-alert"></i><span><b>Travaux entre Booué et Ivindo</b> samedi 3 octobre : départs retardés de 25 min.</span></div>
+          </div>
+          <button class="r-fab m" aria-label="Ouvrir Ruban, l'assistant"><span data-signe="repos" data-fond="sombre"></span></button>
+          <nav class="onglets-m" data-glisse="a"><a aria-current="page"><i data-i="house"></i>Accueil</a><a><i data-i="ticket"></i>Billets</a><a><i data-i="circle-user-round"></i>Compte</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Accueil</b> — recherche, prochain voyage, info trafic.<span class="anim">le ruban suit l'onglet (cliquez les onglets) ; ⇅ pivote et échange les gares</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut" style="color:#fff"><span class="tabular">9:41</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre logo"><span data-logo="compact"></span></div>
+          <div class="m-corps"><p class="m-grand-titre">Où allez-vous ?</p></div>
+          <div class="voile"></div>
+          <div class="feuille">
+            <span class="poignee"></span>
+            <div class="feuille-tete">Arrivée <span class="fermer"><i data-i="x"></i></span></div>
+            <div style="padding:0 var(--s-4);display:grid;gap:var(--s-3)">
+              <div class="saisie focus"><i data-i="search"></i><span>Franc</span><span class="suffixe">23 gares</span></div>
+              <p class="m-etiquette">Sur la ligne, depuis Owendo</p>
+            </div>
+            <div class="gares-ligne" style="padding:0 var(--s-4)">
+              <span class="voie-v" style="left:calc(var(--s-4) + 23px)"></span>
+              <div class="gare-l maj depart"><span class="pt"></span><b>Owendo</b><span class="tag tag-accent">Départ</span></div>
+              <div class="gare-l"><span class="pt"></span><span>Ntoum</span><small>PK 35</small></div>
+              <div class="gare-l maj"><span class="pt"></span><b>Ndjolé</b><small>PK 182</small></div>
+              <div class="gare-l"><span class="pt"></span><span>Lopé</span><small>PK 290</small></div>
+              <div class="gare-l maj"><span class="pt"></span><b>Booué</b><small>PK 338</small></div>
+              <div class="gare-l maj"><span class="pt"></span><b>Lastourville</b><small>PK 484</small></div>
+              <div class="gare-l"><span class="pt"></span><span>Moanda</span><small>PK 619</small></div>
+              <div class="gare-l maj choisie"><span class="pt"></span><b>Franceville</b><small>PK 669</small></div>
+              <div class="gare-l" style="opacity:.5"><span class="pt"></span><span>Toutes les gares…</span></div>
+            </div>
+          </div>
+          <div class="barre-accueil" style="z-index:7"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Choisir une gare</b> — la liste suit la ligne ; la saisie filtre sans quitter la voie.<span class="anim">la feuille monte en 320 ms, sans rebond</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:42</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Owendo → Franceville<small>2 voyageurs · aller simple</small></span></div>
+          <div class="m-corps">
+            <div class="jours m-jours" data-glisse=".jour">
+              <div class="jour" aria-pressed="false"><small>Jeu.</small><b>1</b><span>32 500</span></div>
+              <div class="jour" aria-pressed="true"><small>Ven.</small><b>2</b><span>24 000</span></div>
+              <div class="jour meilleur" aria-pressed="false"><small>Sam.</small><b>3</b><span>24 000</span></div>
+              <div class="jour" aria-pressed="false"><small>Dim.</small><b>4</b><span>32 500</span></div>
+              <div class="jour complet" aria-pressed="false"><small>Lun.</small><b>5</b><span>complet</span></div>
+              <span class="indicateur"></span>
+            </div>
+            <div class="m-filtres"><span class="puce-filtre on"><i data-i="sliders-horizontal"></i>Tous</span><span class="puce-filtre">Matin</span><span class="puce-filtre">Soir</span><span class="puce-filtre">1re classe</span></div>
+            <div class="apparait" data-demo="trajets" style="display:grid;gap:var(--s-3)">
+              <article class="trajet m" style="--i:0">
+                <div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>11 h 45 · 6 arrêts</small></div><div class="trajet-pt fin"><b>19:25</b><span>Franceville</span></div></div>
+                <div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Express 201</span><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></div>
+                <div class="trajet-prix"><span>2e · 1re · VIP</span><b>dès 32 500 XAF</b></div>
+              </article>
+              <article class="trajet m" style="--i:1">
+                <div class="trajet-heures"><div class="trajet-pt"><b>18:10</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>13 h 20 · 22 arrêts</small></div><div class="trajet-pt fin"><b>07:30<sup>+1</sup></b><span>Franceville</span></div></div>
+                <div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Omnibus 403</span><span class="tag tag-marque">Meilleur prix</span></div>
+                <div class="trajet-prix"><span>2e · 1re</span><b>dès 24 000 XAF</b></div>
+              </article>
+              <article class="trajet m annule" style="--i:2">
+                <div class="trajet-heures"><div class="trajet-pt"><b>14:05</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"></span><small>11 h 50</small></div><div class="trajet-pt fin"><b>01:55<sup>+1</sup></b><span>Franceville</span></div></div>
+                <div class="trajet-infos"><span class="tag tag-annule"><i data-i="circle-x"></i>Supprimé · travaux</span></div>
+              </article>
+            </div>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Résultats</b> — l'heure d'abord, le prix ensuite, le reste en gris.<span class="anim">cascade 28 ms × 3 cartes ; touchez un trajet : le ruban remplit sa voie</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 03 -->
+  <section class="doc-section">
+    <h2><span class="n">03</span>Acheter</h2>
+    <p class="doc-intro">Quatre étapes, quatre gares. Les places sont tenues 15 minutes dès le choix du trajet ; le compte à rebours reste visible jusqu'au paiement. La validation Mobile Money se fait sur le téléphone du voyageur : l'app attend, et le dit.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:43</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Voyageurs et classe<small>Étape 2 sur 4</small></span></div>
+          <div class="m-corps">
+            <div data-demo="etapes" data-depart="1"><ol class="etapes m-etapes" style="--n:4"><span class="ruban"></span><li class="etape"><span class="gare"></span>Trajet</li><li class="etape"><span class="gare"></span>Voyageurs</li><li class="etape"><span class="gare"></span>Paiement</li><li class="etape"><span class="gare"></span>Billet</li></ol></div>
+            <div class="m-trajet-resume">
+              <div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie pleine"><span class="ruban"></span></span><small>Express 201</small></div><div class="trajet-pt fin"><b>19:25</b><span>Franceville</span></div></div>
+            </div>
+            <p class="m-etiquette">Classe</p>
+            <div class="classes" role="radiogroup" aria-label="Classe">
+              <div class="classe" role="radio" aria-checked="true"><span class="radio"></span><b>2e classe</b><span class="prix">32 500</span><small>Place attribuée</small></div>
+              <div class="classe" role="radio" aria-checked="false"><span class="radio"></span><b>1re classe</b><span class="prix">48 000</span><small>Place attribuée</small></div>
+              <div class="classe" role="radio" aria-checked="false"><span class="radio"></span><b>VIP</b><span class="prix">65 000</span><small>Encore 6 places</small></div>
+            </div>
+            <p class="m-etiquette">Voyageurs</p>
+            <div class="carte">
+              <div class="voyageur"><span class="avatar">NM</span><div><b>Vous · adulte</b><small>Plein tarif</small></div><span class="tabular">32 500</span></div>
+              <div class="voyageur"><span class="avatar"><i data-i="baby" style="width:18px;height:18px"></i></span><div><b>Enfant, 4 à 11 ans</b><small>Réduction enfant −50 %</small></div><span class="tabular">16 250</span></div>
+            </div>
+          </div>
+          <div class="m-bas">
+            <div class="m-total"><span>Total · 2 voyageurs</span><b>48 750 XAF</b></div>
+            <span class="btn btn-primaire btn-lg btn-bloc">Continuer</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Voyageurs et classe</b> — la réduction s'écrit sur la ligne du voyageur, en montant.<span class="anim">le ruban des étapes avance d'une gare (480 ms)</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:44</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Paiement<small>Étape 3 sur 4</small></span></div>
+          <div class="m-corps">
+            <div data-demo="etapes" data-depart="2"><ol class="etapes m-etapes" style="--n:4"><span class="ruban"></span><li class="etape"><span class="gare"></span>Trajet</li><li class="etape"><span class="gare"></span>Voyageurs</li><li class="etape"><span class="gare"></span>Paiement</li><li class="etape"><span class="gare"></span>Billet</li></ol></div>
+            <div class="tenue"><i data-i="timer"></i><span>Vos places sont tenues encore</span><b data-rebours="14:32"></b></div>
+            <div class="classes" role="radiogroup" aria-label="Moyen de paiement" style="gap:var(--s-2)">
+              <div class="moyen" role="radio" aria-checked="true"><span class="radio"></span><div>Airtel Money<small>Validation sur votre téléphone</small></div><span class="marque">AIRTEL</span></div>
+              <div class="champ" style="padding:0 2px"><span class="champ-libelle">Numéro Airtel Money</span><div class="saisie"><span class="tabular">+241 07 12 34 56</span></div></div>
+              <div class="moyen" role="radio" aria-checked="false"><span class="radio"></span><div>Moov Money</div><span class="marque">MOOV</span></div>
+              <div class="moyen" role="radio" aria-checked="false"><span class="radio"></span><div>Carte bancaire<small>Visa, Mastercard</small></div><span class="marque"><i data-i="credit-card" style="width:18px;height:18px"></i></span></div>
+              <div class="moyen" role="radio" aria-checked="false"><span class="radio"></span><div>Click-Pay</div><span class="marque">CLICK</span></div>
+            </div>
+          </div>
+          <div class="m-bas">
+            <div class="m-total"><span>2 billets · 2e classe</span><b>48 750 XAF</b></div>
+            <span class="btn btn-primaire btn-lg btn-bloc">Payer 48 750 XAF</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Paiement</b> — le compte à rebours ne clignote pas : il se contente de défiler.<span class="anim">aucun, hors le chiffre des secondes</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:44</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="titre" style="padding-left:var(--s-3)">Paiement en cours</span></div>
+          <div class="m-corps centre">
+            <div class="attente-carte">
+              <span class="rond"><i data-i="smartphone"></i></span>
+              <h2>Validez le paiement sur votre téléphone</h2>
+              <p>Airtel Money vous a envoyé une demande de <b class="tabular">48 750 XAF</b> au 07 •• •• 56. Tapez votre code secret pour confirmer.</p>
+              <div class="chargeur"><span class="voie attente"><span class="ruban"></span></span><p>En attente de votre confirmation…</p></div>
+            </div>
+            <div class="tenue" style="width:100%;justify-content:center"><i data-i="timer"></i><span>Places tenues encore</span><b data-rebours="13:05"></b></div>
+          </div>
+          <div class="m-bas sans-bord">
+            <span class="btn btn-secondaire btn-bloc">Je n'ai rien reçu</span>
+            <a class="m-lien">Changer de moyen de paiement</a>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Validation Mobile Money</b> — une consigne, une attente, deux portes de sortie.<span class="anim">une rame passe sur la voie, 1,6 s, tant que dure l'attente</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 04 -->
+  <section class="doc-section">
+    <h2><span class="n">04</span>Les billets</h2>
+    <p class="doc-intro">Le billet est un objet : fond encre, dans les deux thèmes. À l'émission, le ruban traverse sa ligne de découpe, une fois. L'onglet Billets se lit sans réseau ; il dit à quelle heure il a été mis à jour.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:45</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="titre" style="padding-left:var(--s-3)">Billets émis</span><div class="actions"><span class="action"><i data-i="x"></i></span></div></div>
+          <div class="m-corps">
+            <div class="succes"><span class="rond"><i data-i="check"></i></span><h2>C'est réservé</h2><p>2 billets · réf. <span class="tabular">STG-7K4Q2P</span> · reçu envoyé par SMS</p></div>
+            <div class="billet billet-m" data-emission-auto id="billet-emis">
+              <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span class="tag tag-ok"><i data-i="circle-check"></i>Valide</span></div>
+              <div class="billet-trajet"><div><b>07:40</b><span>Owendo</span></div><div class="milieu">11 h 45<span class="voie sur-encre pleine"><span class="ruban"></span></span>Express 201</div><div><b>19:25</b><span>Franceville</span></div></div>
+              <div class="billet-coupe" style="--fond-coupe:var(--c-canvas)"><span class="voie sur-encre"><span class="ruban"></span></span></div>
+              <div class="billet-grille"><div><span>Voiture</span><b>4</b></div><div><span>Places</span><b>32-33</b></div><div><span>Quai</span><b>1</b></div><div><span>Classe</span><b>2e</b></div></div>
+              <div class="billet-pied"><span>Ven. 2 oct. · embarquement <b>07:10</b></span></div>
+            </div>
+          </div>
+          <div class="m-bas sans-bord">
+            <span class="btn btn-wallet btn-bloc"><i data-i="wallet"></i>Ajouter à Apple Wallet</span>
+            <a class="m-lien" data-demo="emission" data-cible="#billet-emis">Voir mes billets</a>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Billets émis</b> — la preuve d'abord, la suite ensuite.<span class="anim">le ruban traverse la découpe (720 ms) ; vibration légère</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:46</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi-off"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre logo"><span class="m-grand-titre" style="font-size:24px">Billets</span></div>
+          <div class="m-corps">
+            <div class="segment" data-glisse="span:not(.indicateur)" style="width:100%"><span aria-pressed="true">À venir · 2</span><span aria-pressed="false">Passés</span><span class="indicateur"></span></div>
+            <p class="m-offline"><i data-i="circle-check"></i>Sans réseau · à jour du 30 sept. à 09:12</p>
+            <div class="billet billet-mini">
+              <div class="billet-trajet"><div><b>07:40</b><span>Owendo</span></div><div class="milieu">ven. 2 oct.<span class="voie sur-encre pleine"><span class="ruban"></span></span>Express 201</div><div><b>19:25</b><span>Franceville</span></div></div>
+              <span class="qui"><b>Vous</b> · voiture 4, place 32</span><span class="ouvrir"><i data-i="qr-code"></i></span>
+            </div>
+            <div class="billet billet-mini">
+              <div class="billet-trajet"><div><b>07:40</b><span>Owendo</span></div><div class="milieu">ven. 2 oct.<span class="voie sur-encre pleine"><span class="ruban"></span></span>Express 201</div><div><b>19:25</b><span>Franceville</span></div></div>
+              <span class="qui"><b>Enfant</b> · voiture 4, place 33</span><span class="ouvrir"><i data-i="qr-code"></i></span>
+            </div>
+            <p class="m-etiquette" style="margin-top:var(--s-2)">Septembre</p>
+            <div class="billet billet-mini passe">
+              <div class="billet-trajet"><div><b>06:15</b><span>Ndjolé</span></div><div class="milieu">14 sept.<span class="voie"></span>Omnibus 402</div><div><b>11:02</b><span>Owendo</span></div></div>
+              <span class="qui"><b>Vous</b> · utilisé</span><span class="ouvrir"><i data-i="receipt"></i></span>
+            </div>
+          </div>
+          <nav class="onglets-m" data-glisse="a"><a><i data-i="house"></i>Accueil</a><a aria-current="page"><i data-i="ticket"></i>Billets</a><a><i data-i="circle-user-round"></i>Compte</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Billets</b> — hors réseau, l'écran ne se vide pas : il dit de quand datent les données.<span class="anim">le fond du segment glisse (320 ms)</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran m-billet-plein">
+          <div class="statut"><span class="tabular">7:02</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Billet 1 sur 2</span><div class="actions"><span class="action"><i data-i="share-2"></i></span></div></div>
+          <div class="m-corps" style="gap:var(--s-3)">
+            <div class="billet">
+              <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span class="tag tag-ok"><i data-i="circle-check"></i>Valide</span></div>
+              <div class="billet-trajet"><div><b>07:40</b><span>Owendo</span></div><div class="milieu">ven. 2 oct.<span class="voie sur-encre pleine"><span class="ruban"></span></span>Express 201</div><div><b>19:25</b><span>Franceville</span></div></div>
+              <div class="billet-grille"><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>32</b></div><div><span>Quai</span><b>1</b></div><div><span>Classe</span><b>2e</b></div></div>
+              <div class="billet-code"><span data-aztec="23"></span><small>STG-7K4Q2P · 1/2</small></div>
+            </div>
+            <div class="embarquement"><span>Embarquement dans</span><b data-rebours="38:00"></b></div>
+            <div class="pages"><i class="on"></i><i></i></div>
+            <p class="lum"><i data-i="sun"></i>Luminosité au maximum pendant l'affichage</p>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Billet plein écran</b> — le code au plus grand, lisible par le contrôleur hors réseau.<span class="anim">luminosité relevée en fondu ; balayer pour le billet suivant</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 05 -->
+  <section class="doc-section">
+    <h2><span class="n">05</span>Pendant le voyage, et le compte</h2>
+    <p class="doc-intro">Le suivi montre le statut de la desserte, pas un GPS : la position du train est estimée d'après l'horaire et le retard annoncé, et l'écran le dit. Le ruban y est la rame : il avance d'un cran à chaque mise à jour.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">12:21</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Express 201<small>Owendo → Franceville</small></span><div class="actions" style="padding-right:8px"><span class="direct">En direct</span></div></div>
+          <div class="m-corps">
+            <div class="suivi-tete">
+              <div class="eta"><div><small>Arrivée prévue à Franceville</small><b>19:37</b></div><span class="tag tag-retard"><i data-i="clock-alert"></i>+12 min</span></div>
+              <p>Le train roule avec 12 min de retard depuis Lopé. Votre place est conservée.</p>
+            </div>
+            <div class="arrets m-arrets" data-rame="120,124,128,132">
+              <span class="voie-v passee" style="top:23px;height:100px"></span>
+              <span class="voie-v" style="top:123px;bottom:23px"></span>
+              <span class="rame"></span>
+              <div class="arret passe"><span class="h">10:33</span><span class="pt"></span><span class="nom">Ndjolé</span></div>
+              <div class="arret passe"><span class="h">11:20</span><span class="pt"></span><span class="nom">Otoumbi</span></div>
+              <div class="arret passe"><span class="h">12:14</span><span class="pt"></span><span class="nom">Lopé</span></div>
+              <div class="arret maj"><span class="h">13:07<s>12:55</s></span><span class="pt"></span><span class="nom">Booué<small>PK 338</small></span><span class="tag tag-accent">Prochain</span></div>
+              <div class="arret"><span class="h">15:50<s>15:38</s></span><span class="pt"></span><span class="nom">Lastourville</span></div>
+              <div class="arret"><span class="h">18:20<s>18:08</s></span><span class="pt"></span><span class="nom">Moanda</span></div>
+              <div class="arret maj"><span class="h">19:37<s>19:25</s></span><span class="pt"></span><span class="nom">Franceville<small>PK 669</small></span></div>
+            </div>
+            <p class="m-note"><i data-i="info"></i>Position estimée d'après l'horaire et le retard annoncé à 12:16.</p>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Suivi du voyage</b> — heure réelle en gras, heure prévue barrée dessous.<span class="anim">la rame avance d'un cran à chaque mise à jour (1,2 s)</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">12:21</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Notifications</span></div>
+          <div class="m-corps">
+            <p class="m-etiquette">Aujourd'hui</p>
+            <div class="liste">
+              <div class="notif nouveau"><span class="pic" style="background:var(--c-warning-soft);color:var(--c-warning-ink)"><i data-i="clock-alert"></i></span><div><b>Retard de 12 min</b><p>Express 201 : arrivée prévue à Franceville à 19:37. Votre place est conservée.</p></div><time>12:16</time></div>
+              <div class="notif"><span class="pic" style="background:var(--c-accent-soft);color:var(--c-accent-ink)"><i data-i="bell"></i></span><div><b>Embarquement à 07:10, quai 1</b><p>Présentez le code de votre billet à l'entrée du quai.</p></div><time>06:40</time></div>
+            </div>
+            <p class="m-etiquette">Hier</p>
+            <div class="liste">
+              <div class="notif"><span class="pic" style="background:var(--c-success-soft);color:var(--c-success-ink)"><i data-i="ticket"></i></span><div><b>2 billets émis</b><p>Owendo → Franceville, vendredi 2 octobre, Express 201.</p></div><time>18:52</time></div>
+              <div class="notif"><span class="pic" style="background:var(--c-surface-sunk);color:var(--c-ink-muted)"><i data-i="receipt"></i></span><div><b>Paiement reçu</b><p>48 750 XAF par Airtel Money · réf. STG-7K4Q2P.</p></div><time>18:51</time></div>
+            </div>
+            <p class="m-etiquette">14 septembre</p>
+            <div class="liste">
+              <div class="notif"><span class="pic" style="background:var(--c-danger-soft);color:var(--c-danger-ink)"><i data-i="circle-x"></i></span><div><b>Omnibus 405 supprimé</b><p>Remboursement de 12 000 XAF lancé sur votre compte Airtel Money.</p></div><time>08:05</time></div>
+            </div>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Notifications</b> — chaque alerte dit ce qui change et ce qui reste acquis.<span class="anim">une nouvelle alerte entre par le haut (200 ms)</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:47</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre logo"><span class="m-grand-titre" style="font-size:24px">Compte</span></div>
+          <div class="m-corps">
+            <div class="profil"><span class="avatar">NM</span><div><b>Nadia Mboumba</b><span>+241 07 •• •• 56</span></div><i data-i="chevron-right"></i></div>
+            <div class="liste">
+              <div class="ligne"><i data-i="users"></i><span>Voyageurs enregistrés</span><span class="fin">2<i data-i="chevron-right"></i></span></div>
+              <div class="ligne"><i data-i="smartphone"></i><span>Moyens de paiement</span><span class="fin">Airtel Money<i data-i="chevron-right"></i></span></div>
+            </div>
+            <p class="m-etiquette">Alertes</p>
+            <div class="liste">
+              <div class="ligne"><span>Retards et suppressions<small>Recommandé : on vous prévient même hors de l'app</small></span><span class="fin"><span class="interrupteur on"></span></span></div>
+              <div class="ligne"><span>Rappel avant le départ</span><span class="fin"><span class="interrupteur on"></span></span></div>
+              <div class="ligne"><span>Offres et nouveautés</span><span class="fin"><span class="interrupteur"></span></span></div>
+            </div>
+            <div class="liste">
+              <div class="ligne"><i data-i="moon"></i><span>Thème</span><span class="fin">Automatique<i data-i="chevron-right"></i></span></div>
+              <div class="ligne"><i data-i="languages"></i><span>Langue</span><span class="fin">Français<i data-i="chevron-right"></i></span></div>
+              <div class="ligne"><i data-i="circle-help"></i><span>Aide et contact</span><span class="fin"><i data-i="chevron-right"></i></span></div>
+            </div>
+          </div>
+          <nav class="onglets-m" data-glisse="a"><a><i data-i="house"></i>Accueil</a><a><i data-i="ticket"></i>Billets</a><a aria-current="page"><i data-i="circle-user-round"></i>Compte</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Compte</b> — les alertes de retard d'abord : c'est le service le plus utile.<span class="anim">interrupteur 200 ms ; rien d'autre</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 06 -->
+  <section class="doc-section">
+    <h2><span class="n">06</span>En thème sombre</h2>
+    <p class="doc-intro">Mêmes écrans, tokens sombres de la charte. Le billet ne change pas : il est déjà sur fond encre. Le ruban reste identique ; seul son bleu s'éclaircit pour tenir sur le fond sombre.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" data-theme="dark">
+          <div class="statut"><span class="tabular">21:12</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre logo"><span data-logo="compact" data-theme="negatif"></span><div class="actions"><span class="action"><i data-i="bell"></i></span></div></div>
+          <div class="m-corps">
+            <p class="m-grand-titre">Où allez-vous ?</p>
+            <div class="recherche m-recherche">
+              <div class="recherche-gares"><div class="bloc-champ"><small>Départ</small><b>Franceville</b></div><div class="bloc-champ"><small>Arrivée</small><b>Owendo</b></div><button class="inverser" aria-label="Inverser"><i data-i="arrow-up-down"></i></button></div>
+              <div class="ligne2"><div class="bloc-champ coins"><small>Aller</small><b>Dim. 11 oct.</b></div><div class="bloc-champ coins"><small>Voyageurs</small><b>1</b></div></div>
+            </div>
+            <span class="btn btn-primaire btn-lg btn-bloc">Rechercher</span>
+            <p class="titre-section">Prochain voyage <a>Tout voir</a></p>
+            <div class="prochain">
+              <div class="prochain-tete"><span>Express 201 · ven. 2 oct.</span><span class="tag tag-retard"><i data-i="clock-alert"></i>+12 min</span></div>
+              <div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie pleine"><span class="ruban"></span></span><small>11 h 45</small></div><div class="trajet-pt fin"><b>19:37</b><span>Franceville</span></div></div>
+            </div>
+          </div>
+          <button class="r-fab m" aria-label="Ouvrir Ruban, l'assistant"><span data-signe="repos" data-fond="sombre"></span></button>
+          <nav class="onglets-m" data-glisse="a"><a aria-current="page"><i data-i="house"></i>Accueil</a><a><i data-i="ticket"></i>Billets</a><a><i data-i="circle-user-round"></i>Compte</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Accueil</b>, en sombre.</figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" data-theme="dark">
+          <div class="statut"><span class="tabular">21:13</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Franceville → Owendo<small>1 voyageur</small></span></div>
+          <div class="m-corps">
+            <div class="jours m-jours" data-glisse=".jour">
+              <div class="jour" aria-pressed="false"><small>Sam.</small><b>10</b><span>32 500</span></div>
+              <div class="jour" aria-pressed="true"><small>Dim.</small><b>11</b><span>32 500</span></div>
+              <div class="jour meilleur" aria-pressed="false"><small>Lun.</small><b>12</b><span>24 000</span></div>
+              <div class="jour" aria-pressed="false"><small>Mar.</small><b>13</b><span>32 500</span></div>
+              <div class="jour" aria-pressed="false"><small>Mer.</small><b>14</b><span>32 500</span></div>
+              <span class="indicateur"></span>
+            </div>
+            <div data-demo="trajets" style="display:grid;gap:var(--s-3)">
+              <article class="trajet m choisi">
+                <div class="trajet-heures"><div class="trajet-pt"><b>06:30</b><span>Franceville</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>11 h 45 · 6 arrêts</small></div><div class="trajet-pt fin"><b>18:15</b><span>Owendo</span></div></div>
+                <div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Express 202</span><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></div>
+                <div class="trajet-prix"><span>2e · 1re · VIP</span><b>dès 32 500 XAF</b></div>
+              </article>
+              <article class="trajet m">
+                <div class="trajet-heures"><div class="trajet-pt"><b>17:45</b><span>Franceville</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>13 h 20 · 22 arrêts</small></div><div class="trajet-pt fin"><b>07:05<sup>+1</sup></b><span>Owendo</span></div></div>
+                <div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Omnibus 404</span></div>
+                <div class="trajet-prix"><span>2e · 1re</span><b>dès 24 000 XAF</b></div>
+              </article>
+            </div>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Résultats</b>, en sombre : le trajet choisi porte le ruban.</figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" data-theme="dark">
+          <div class="statut"><span class="tabular">21:14</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre logo"><span class="m-grand-titre" style="font-size:24px">Billets</span></div>
+          <div class="m-corps">
+            <div class="etat-vide" style="margin-top:var(--s-10)">
+              <span data-s-attente></span>
+              <b>Aucun billet à venir</b>
+              <p>Vos billets apparaîtront ici, et resteront lisibles sans réseau.</p>
+              <span class="btn btn-primaire" style="margin-top:var(--s-2)">Chercher un train</span>
+            </div>
+          </div>
+          <nav class="onglets-m" data-glisse="a"><a><i data-i="house"></i>Accueil</a><a aria-current="page"><i data-i="ticket"></i>Billets</a><a><i data-i="circle-user-round"></i>Compte</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>État vide</b> : le S en gris, la rame à quai. Rien ne roule encore.</figcaption>
+      </figure>
+    </div>
+  </section>
+</main>
+
+<footer class="doc-pied">
+  <span>SETRAG — app voyageur. Données fictives ; gares et points kilométriques réels.</span>
+  <span><a href="widgets.html">Widgets, Live Activities et notifications →</a></span>
+</footer>
+</body>
+</html>

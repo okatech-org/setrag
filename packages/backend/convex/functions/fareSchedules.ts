@@ -18,6 +18,41 @@ import { serviceClass, trainType } from "../schema"
  * opposable au moment de l'émission.
  */
 
+/**
+ * Réductions ouvertes au public, telles que la grille active les définit.
+ *
+ * Le site et l'app en tirent les types de voyageurs (enfant, militaire…) au
+ * lieu de les coder en dur : une réduction ajoutée ou retirée par la
+ * direction commerciale apparaît ou disparaît sans nouvelle version.
+ */
+export const publicDiscounts = query({
+  args: {},
+  handler: async (ctx) => {
+    const schedule = await ctx.db
+      .query("fareSchedules")
+      .withIndex("by_status", (q) => q.eq("status", "actif"))
+      .first()
+    if (!schedule) return []
+    const discounts = await ctx.db
+      .query("discounts")
+      .withIndex("by_schedule", (q) => q.eq("scheduleId", schedule._id))
+      .collect()
+    return discounts
+      .filter((discount) => discount.isActive)
+      .map((discount) => ({
+        code: discount.code,
+        label: discount.label,
+        ratePct: discount.ratePct,
+        minAge: discount.minAge ?? null,
+        maxAge: discount.maxAge ?? null,
+        minPassengers: discount.minPassengers ?? null,
+        maxPassengers: discount.maxPassengers ?? null,
+        requiresProof: discount.requiresProof,
+      }))
+      .sort((left, right) => right.ratePct - left.ratePct)
+  },
+})
+
 export const get = query({
   args: { scheduleId: v.id("fareSchedules") },
   handler: async (ctx, args) => {

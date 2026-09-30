@@ -57,6 +57,8 @@ export interface TripSearchResult {
   toIndex: number
   distanceKm: number
   availableByClass: Record<string, number>
+  /** Desserte supprimée : affichée, marquée, jamais vendable. */
+  cancelled?: boolean
   hasAvailability: boolean
 }
 

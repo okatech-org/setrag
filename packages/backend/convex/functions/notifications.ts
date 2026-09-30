@@ -7,6 +7,13 @@ import { Resend } from "resend"
 import { components, internal } from "../_generated/api"
 import { action, internalAction, type ActionCtx } from "../_generated/server"
 import { renderBookingPdf } from "./documents"
+import {
+  codeUnique,
+  courriel,
+  echapperHtml,
+  mono,
+  paragraphe,
+} from "../lib/courriels"
 import { transactionalEmail } from "../lib/resend"
 
 const notificationRateLimiter = new RateLimiter(components.rateLimiter, {
@@ -17,15 +24,6 @@ const notificationRateLimiter = new RateLimiter(components.rateLimiter, {
     capacity: 2,
   },
 })
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;")
-}
 
 /**
  * Envoie tous les billets d'un dossier en pièce jointe.
@@ -90,16 +88,19 @@ async function sendTicketsEmail(
 
   const pdf = await renderBookingPdf(data.tickets)
   const subject = `Vos billets SETRAG — ${data.reference}`
-  const safeReference = escapeHtml(data.reference)
-  const safeCount = String(data.tickets.length)
-  const html =
-    `<div style="font-family:Arial,sans-serif;color:#131b26">` +
-    `<h1 style="font-size:22px">Vos billets SETRAG</h1>` +
-    `<p>Votre dossier <strong>${safeReference}</strong> contient ` +
-    `${safeCount} titre(s) de transport.</p>` +
-    `<p>Le document PDF est joint à ce message. Présentez le code du billet ` +
-    `à l’embarquement et conservez votre référence de réservation.</p>` +
-    `<p style="color:#5c646f">SETRAG — Transgabonais</p></div>`
+  const html = courriel({
+    titre: "Vos billets SETRAG",
+    siteUrl: process.env.SITE_URL?.trim(),
+    corps:
+      paragraphe(
+        `Votre dossier ${mono(data.reference)} contient ` +
+          `${echapperHtml(String(data.tickets.length))} titre(s) de transport.`
+      ) +
+      paragraphe(
+        "Le document PDF est joint à ce message. Présentez le code du " +
+          "billet à l’embarquement et conservez votre référence de réservation."
+      ),
+  })
   const text =
     `Vos billets SETRAG\n\nDossier ${data.reference} — ` +
     `${data.tickets.length} titre(s).\nLe PDF est joint à ce message.`
@@ -179,14 +180,16 @@ export const sendAuthOtpEmail = internalAction({
           from,
           to: args.email,
           subject,
-          html:
-            `<div style="font-family:Arial,sans-serif;color:#131b26">` +
-            `<h1 style="font-size:22px">Connexion à la billetterie SETRAG</h1>` +
-            `<p>Votre code à usage unique est :</p>` +
-            `<p style="font-size:30px;font-weight:700;letter-spacing:6px">` +
-            `${args.otp}</p>` +
-            `<p>Il expire dans dix minutes. Ne le communiquez à personne.</p>` +
-            `</div>`,
+          html: courriel({
+            titre: "Connexion à la billetterie SETRAG",
+            siteUrl: process.env.SITE_URL?.trim(),
+            corps:
+              paragraphe("Votre code à usage unique est :") +
+              codeUnique(args.otp) +
+              paragraphe(
+                "Il expire dans dix minutes. Ne le communiquez à personne."
+              ),
+          }),
           text:
             `Votre code de connexion SETRAG est ${args.otp}. ` +
             `Il expire dans dix minutes.`,

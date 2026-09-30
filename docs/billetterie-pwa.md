@@ -29,13 +29,16 @@ rappellent que le code affiché à l'écran suffit au contrôle à bord.
 ## Installation
 
 - **Manifeste** : `public/manifest.webmanifest` — `start_url` sur l'accueil,
-  affichage `standalone`, raccourcis « Mes billets » et « Suivre un train ».
-- **Icônes** : `public/icons/`, fabriquées depuis le logo par
-  `scripts/generer-icones.mjs` (`bun run icones` dans l'application). Le script
-  isole le « S » ferroviaire du logo — le nom et la baseline sont illisibles
-  dans un carré de 48 px — et le pose sur une pastille blanche au bleu SETRAG.
-  À relancer après toute modification de `public/setrag-logo.png`.
-- **Invite** : `src/components/offline/invite-installation.tsx`. Le bandeau
+  affichage `standalone`, raccourcis « Mes billets » (`/billets`), « Suivre un
+  train » (`/suivi`) et « Demander à Ruban » (`/assistant`).
+- **Icônes** : `public/icons/`, rastérisées par `scripts/generer-icones.mjs`
+  (`bun run icones` dans l'application) depuis l'icône d'app du design system,
+  `packages/ui/src/marque/svg/setrag-icone-app.svg` : le S épaissi, qui reste
+  lisible à 48 px. La variante « maskable » réduit le symbole à 72 % sur fond
+  blanc, pour tenir dans la zone sûre d'Android. Le script copie aussi les logos
+  SVG de `public/marque/`. À relancer après toute modification du logo.
+- **Invite** : `src/fonctionnalites/hors-ligne/invite-installation.tsx`,
+  affichée sur les seuls écrans racines (accueil, billets, compte). Le bandeau
   reste dans le flux plutôt que flottant, capte `beforeinstallprompt` pour que
   le navigateur ne choisisse pas lui-même son moment, et explique le geste du
   menu de partage sur iOS, où aucun événement n'existe. Un refus est retenu.
@@ -74,14 +77,16 @@ sont les points les plus délicats de cette fonctionnalité :
    toujours sous l'hypothèse « en ligne », et effacer sur cette hypothèse
    détruirait les billets à l'instant précis où ils sont la seule ressource du
    voyageur. Ce comportement est verrouillé par
-   `src/components/offline/donnees-locales.test.tsx`.
+   `src/fonctionnalites/hors-ligne/donnees-locales.test.tsx`.
 
 ## Ce qui alimente la base
 
-`src/components/offline/donnees-locales.tsx` est monté dans le shell, au-dessus
-de tous les écrans : il doit enregistrer les billets même si le voyageur n'ouvre
-jamais « Mes billets » avec du réseau — le cas courant, puisqu'on réserve chez
-soi et qu'on ouvre son billet sur le quai.
+`DonneesLocalesProvider` (`src/fonctionnalites/hors-ligne/donnees-locales.tsx`)
+est monté dans `src/coquille/fournisseurs.tsx`, au-dessus de tous les écrans : il
+doit enregistrer les billets même si le voyageur n'ouvre jamais « Billets » avec
+du réseau — le cas courant, puisqu'on réserve chez soi et qu'on ouvre son billet
+sur le quai. Il ne le fait que pour un voyageur connecté : sans compte, le
+téléphone ne garde aucune copie, et l'aide conseille de télécharger le PDF.
 
 Il enregistre les dossiers reçus de `bookings.listMine`, puis télécharge le
 parcours (`trips.get`) des cinq prochains trajets de ces dossiers. Les parcours
@@ -89,7 +94,7 @@ dont plus aucun dossier ne dépend sont élagués. Il n'expose **jamais** la cop
 locale par-dessus une réponse du serveur.
 
 L'écran de suivi retrouve un parcours par numéro de train et date de
-circulation (`src/features/suivi/use-parcours-local.ts`). Hors réseau, seuls les
+circulation (`src/fonctionnalites/suivi/use-parcours-local.ts`). Hors réseau, seuls les
 trains des billets du voyageur sont consultables : c'est le périmètre utile, et
 le seul qui puisse être téléchargé d'avance.
 
@@ -98,7 +103,13 @@ le seul qui puisse être téléchargé d'avance.
 Tout affichage issu de la base locale porte sa date, en clair et jamais en
 « il y a un moment » : l'écart entre un retard relevé il y a dix minutes et un
 retard de la veille change la décision du voyageur, et lui seul peut en juger.
-Voir `src/components/offline/bandeau-hors-ligne.tsx`.
+Voir `AvisCopieLocale` et `dateDeReception` dans
+`src/fonctionnalites/hors-ligne/copie-locale.tsx`.
+
+La barre réseau, `BandeauReseau` (`src/fonctionnalites/hors-ligne/bandeau-reseau.tsx`),
+répond à une autre question : « est-ce l'application, ou le réseau ? ». Elle
+s'affiche en haut de tous les écrans dès que le téléphone perd le réseau, avec
+une icône et une phrase — jamais la couleur seule.
 
 Un billet, lui, reste valable sans réseau : son code est émis à l'achat et le
 contrôleur le vérifie hors ligne.
@@ -109,22 +120,31 @@ contrôleur le vérifie hors ligne.
 ligne, il ne s'interpose sur aucune navigation. Il ne prend la parole que hors
 réseau, ou pour les ressources dont le nom contient déjà l'empreinte du contenu.
 
-- Précache à l'installation : `/`, `/connexion`, `/mes-reservations`, `/suivi`,
-  `/aide`. Les écrans de réservation et de paiement en sont exclus : ils
+- Précache à l'installation : `/`, `/billets`, `/suivi`, `/aide`, `/connexion`,
+  `/compte`. Les écrans de réservation et de paiement en sont exclus : ils
   supposent un serveur, et les précacher n'offrirait qu'un formulaire qui échoue
   à l'envoi.
-- `/_next/static/`, `/icons/` : cache d'abord. `/_next/` : réseau d'abord, avec
-  copie — c'est ce cache qui permet d'ouvrir le détail d'un billet depuis la
-  liste sans réseau.
+- Hors réseau, une page absente du cache retombe sur `/billets` : c'est l'écran
+  que le voyageur cherche quand il ouvre l'application sur le quai.
+- `/_next/static/`, `/icons/`, `/marque/` : cache d'abord. `/_next/` : réseau
+  d'abord, avec copie — c'est ce cache qui permet d'ouvrir le détail d'un billet
+  depuis la liste sans réseau.
+- Le service worker met en cache les pages, pas les fragments de code qu'elles
+  chargent à la demande. `ServiceWorker`
+  (`src/fonctionnalites/hors-ligne/service-worker.tsx`) précharge donc
+  `/billets`, `/suivi` et `/aide` quatre secondes après l'ouverture, tant qu'il
+  y a du réseau.
 - Les appels à Convex ne sont **jamais** mis en cache : une réponse servie
   depuis un cache muet ferait croire à des informations du jour.
 - Ni `skipWaiting` ni `clients.claim()` : un worker qui prend le contrôle d'une
   page ouverte l'interrompt, et un voyageur en cours de paiement perdrait son
   écran. Conséquence assumée : après un déploiement, le nouveau worker attend la
   fermeture des onglets, et son cache d'installation coexiste avec l'ancien
-  jusque-là.
+  jusque-là. Le worker n'écoute qu'une demande explicite (message
+  `SKIP_WAITING`), qu'aucun écran n'envoie aujourd'hui.
 - Le nom des caches dérive de l'empreinte du build
-  (`src/components/service-worker.tsx`) : un déploiement chasse le précédent.
+  (`src/fonctionnalites/hors-ligne/service-worker.tsx`) : un déploiement chasse
+  le précédent.
 - `NEXT_PUBLIC_DISABLE_SW=1` neutralise le tout par simple redéploiement.
 
 ## Vérifier le hors-ligne

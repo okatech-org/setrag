@@ -35,13 +35,7 @@ const ASSET_CACHE = `setrag-voyageur-assets-${VERSION}`
  * comparer des tarifs suppose un serveur : précacher ces pages ne ferait
  * qu'offrir un formulaire qui échoue à l'envoi.
  */
-const PRECACHE = [
-  "/",
-  "/connexion",
-  "/mes-reservations",
-  "/suivi",
-  "/aide",
-]
+const PRECACHE = ["/", "/billets", "/suivi", "/aide", "/connexion", "/compte"]
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -104,7 +98,7 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
-    url.pathname === "/setrag-logo.png"
+    url.pathname.startsWith("/marque/")
   ) {
     event.respondWith(cacheFirst(request))
     return
@@ -142,7 +136,7 @@ async function offlineDocument(request) {
   const cached =
     (await cache.match(request, MATCH)) ??
     (await cache.match(url.pathname, MATCH)) ??
-    (await cache.match("/mes-reservations", MATCH))
+    (await cache.match("/billets", MATCH))
   if (cached) return cached
   return new Response(
     '<!doctype html><meta charset="utf-8"><title>Hors réseau</title>' +

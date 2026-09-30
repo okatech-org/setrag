@@ -1,5 +1,5 @@
 /**
- * SETRAG — design system voyage · tokens React Native · v1.1.0
+ * SETRAG — design system voyage · tokens React Native · v2.0.0
  *
  * Portage exact de `packages/ui/src/styles/tokens.css`. React Native ne lit pas
  * `oklch()` : les couleurs sont converties en sRGB hexadécimal depuis les
@@ -184,8 +184,40 @@ export const shadows = {
   },
 } as const
 
+/**
+ * Marque — réservée au logo, au ruban et à leurs dérivés : jamais pour un
+ * statut. Valeurs du site setrag.eramet.com (tokens.css, bloc « Marque »).
+ */
+export const brand = {
+  orange: "#FA6414",
+  jaune: "#FCDF49",
+  vert: "#009E60",
+  indigo: "#1A003B",
+  bleu: "#0F50A0",
+  encre: "#131B26",
+} as const
+
+export { RUBAN } from "./ruban"
+
+/**
+ * Mouvement. Durées en millisecondes ; courbes en points de contrôle de
+ * Bézier, à passer à `Easing.bezier(...)` (Reanimated).
+ */
 export const motion = {
+  /** Réponse au doigt. */
+  durationMicro: 90,
   durationFast: 120,
   durationBase: 200,
   durationSlow: 320,
+  /** Le ruban se déplace : onglet, jour, trajet, étape. */
+  durationGlisse: 480,
+  /** Un passage de rame, pendant une attente réelle. */
+  durationBoucle: 1600,
+  easing: {
+    standard: [0.2, 0.8, 0.2, 1],
+    /** Départ progressif, arrivée douce : le geste d'un train. */
+    glisse: [0.45, 0, 0.2, 1],
+    /** Ce qui part accélère. */
+    sortie: [0.4, 0, 1, 1],
+  },
 } as const

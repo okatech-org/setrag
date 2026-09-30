@@ -6,9 +6,11 @@ import {
   internalQuery,
   type ActionCtx,
 } from "../_generated/server"
-import type { Id } from "../_generated/dataModel"
-import { addDays, toServiceDate } from "../model/calendar"
+import type { Doc, Id } from "../_generated/dataModel"
+import { addDays, toLocalTime, toServiceDate } from "../model/calendar"
+import { CATEGORIES_NOTE } from "../model/memoire"
 import { getAssistantTools } from "./contracts"
+import type { ConversationActor } from "./conversations"
 import { assistantRateLimiter } from "./rateLimiter"
 
 export type ToolExecutionResult =
@@ -289,12 +291,161 @@ export const rejectExecution = internalMutation({
   },
 })
 
+function requireActor(actorId: Id<"users"> | null): Id<"users"> {
+  if (!actorId) throw new Error("Connexion requise pour cette action.")
+  return actorId
+}
+
+/* ──────────────── Projections : ce que le modèle peut lire ──────────────── */
+
+/*
+ * Les sorties d'outils partent chez le fournisseur IA et restent dans
+ * l'historique de la conversation. Elles ne portent que ce qui sert à
+ * répondre et à dessiner les cartes de l'interface : jamais le code-barres
+ * signé d'un titre (qui vaut billet), ni pièce d'identité, date de
+ * naissance, nationalité, téléphone d'urgence, numéro débité ou e-mail.
+ */
+
+type HydratedBooking = {
+  sale: Doc<"sales">
+  tickets: Doc<"tickets">[]
+  trip: Doc<"trips"> | null
+  origin: Doc<"stations"> | null
+  destination: Doc<"stations"> | null
+  segment: { departureAt: number; arrivalAt: number } | null
+}
+
+type TicketListItem = {
+  ticket: Doc<"tickets">
+  trip: Doc<"trips"> | null
+  origin: Doc<"stations"> | null
+  destination: Doc<"stations"> | null
+  reference: string
+}
+
+function projectTrip(trip: Doc<"trips"> | null) {
+  return trip
+    ? {
+        trainNumber: trip.trainNumber,
+        trainType: trip.trainType,
+        serviceDate: trip.serviceDate,
+        departureAt: trip.departureAt,
+        arrivalAt: trip.arrivalAt,
+        status: trip.status,
+        delayMinutes: trip.delayMinutes,
+      }
+    : null
+}
+
+function projectStation(station: Doc<"stations"> | null) {
+  return station ? { name: station.name } : null
+}
+
+function projectSale(sale: Doc<"sales">) {
+  return {
+    number: sale.number,
+    status: sale.status,
+    amounts: { ttc: sale.amounts.ttc },
+    priceLockedUntil: sale.priceLockedUntil ?? null,
+  }
+}
+
+function projectTicket(ticket: Doc<"tickets">) {
+  return {
+    _id: ticket._id,
+    passenger: {
+      firstName: ticket.passenger.firstName,
+      lastName: ticket.passenger.lastName,
+    },
+    serviceClass: ticket.serviceClass,
+    seatLabel: ticket.seatLabel ?? null,
+    status: ticket.status,
+    unitPriceTtc: ticket.unitPriceTtc,
+  }
+}
+
+/** Sortie de `get_booking` : le dossier, sans données sensibles. */
+export function projectBooking(booking: HydratedBooking | null) {
+  if (!booking) return null
+  return {
+    sale: projectSale(booking.sale),
+    tickets: booking.tickets.map(projectTicket),
+    trip: projectTrip(booking.trip),
+    origin: projectStation(booking.origin),
+    destination: projectStation(booking.destination),
+    segment: booking.segment,
+  }
+}
+
+/** Sortie de `list_my_bookings` : une ligne par dossier. */
+export function projectBookingSummary(booking: HydratedBooking) {
+  return {
+    sale: projectSale(booking.sale),
+    trip: projectTrip(booking.trip),
+    origin: projectStation(booking.origin),
+    destination: projectStation(booking.destination),
+    segment: booking.segment,
+    ticketCount: booking.tickets.length,
+  }
+}
+
+/** Sortie de `list_my_tickets` : un billet valide, sans son code-barres. */
+export function projectTicketListItem(item: TicketListItem) {
+  return {
+    reference: item.reference,
+    ticket: {
+      _id: item.ticket._id,
+      status: item.ticket.status,
+      passenger: {
+        firstName: item.ticket.passenger.firstName,
+        lastName: item.ticket.passenger.lastName,
+      },
+      serviceClass: item.ticket.serviceClass,
+      coachLabel: item.ticket.coachLabel ?? null,
+      seatLabel: item.ticket.seatLabel ?? null,
+    },
+    trip: projectTrip(item.trip),
+    origin: projectStation(item.origin),
+    destination: projectStation(item.destination),
+  }
+}
+
+type SearchTripResult = {
+  trip: {
+    _id: Id<"trips">
+    trainNumber: string
+    trainType: string
+    serviceDate: string
+    status: string
+  }
+  departureAt: number
+  arrivalAt: number
+  distanceKm: number
+  intermediateStops: number
+  availableByClass: Record<string, number>
+  prixParClasse: Record<string, { totalTtc: number; unitaireTtc: number }>
+  hasAvailability: boolean
+}
+
+/**
+ * Traduit un appel d'outil vers le domaine billettique.
+ *
+ * `actor` est l'acteur résolu par `accessContext` pour la conversation —
+ * jamais une valeur produite par le modèle ou le client. Les outils qui
+ * agissent pour un voyageur appellent les variantes internes `…ForActor` :
+ * elles ne dépendent pas du jeton de l'appel, ce qui permet à un fil de
+ * messagerie relié à un compte d'agir pour ce compte. La voie de l'acteur
+ * (`source`) suit : venu d'une messagerie, il n'hérite d'aucun droit interne.
+ */
 export async function dispatchAssistantTool(
   ctx: ActionCtx,
   name: string,
-  rawInput: unknown
+  rawInput: unknown,
+  actor: ConversationActor | null = null
 ): Promise<unknown> {
   const input = asRecord(rawInput)
+  const actorId = actor?.userId ?? null
+  const userId = actorId ?? undefined
   switch (name) {
     case "list_stations": {
       const stations = await ctx.runQuery(
@@ -326,7 +477,7 @@ export async function dispatchAssistantTool(
         relativeDaysFromToday === null
           ? requiredString(input, "serviceDate")
           : addDays(toServiceDate(Date.now()), relativeDaysFromToday)
-      const results = await ctx.runQuery(api.functions.trips.search, {
+      const search = {
         originStationId: requiredString(
           input,
           "originStationId"
@@ -337,34 +488,37 @@ export async function dispatchAssistantTool(
         ) as Id<"stations">,
         serviceDate,
         passengers: requiredInteger(input, "passengers", 1, 20),
-      })
-      return results.map(
-        (result: {
-          trip: {
-            _id: Id<"trips">
-            trainNumber: string
-            trainType: string
-            serviceDate: string
-            status: string
-          }
-          departureAt: number
-          arrivalAt: number
-          distanceKm: number
-          availableByClass: Record<string, number>
-          hasAvailability: boolean
-        }) => ({
+      }
+      const results = (await ctx.runQuery(
+        api.functions.trips.search,
+        search
+      )) as SearchTripResult[]
+      // La recherche est rappelée avec son résultat : l'interface affiche
+      // les cartes de trajets sans réinterpréter les arguments du modèle.
+      return {
+        ...search,
+        trips: results.map((result) => ({
           tripId: result.trip._id,
           trainNumber: result.trip.trainNumber,
           trainType: result.trip.trainType,
           serviceDate: result.trip.serviceDate,
           status: result.trip.status,
+          // Une desserte supprimée reste listée, marquée, sans prix.
+          cancelled: result.trip.status === "annule",
           departureAt: result.departureAt,
           arrivalAt: result.arrivalAt,
+          // Heures de Libreville, à annoncer telles quelles : le modèle ne
+          // convertit jamais lui-même un horodatage (il se trompait d'une
+          // heure en lisant l'UTC).
+          departureTime: toLocalTime(result.departureAt),
+          arrivalTime: toLocalTime(result.arrivalAt),
           distanceKm: result.distanceKm,
+          intermediateStops: result.intermediateStops,
           availableByClass: result.availableByClass,
+          prixParClasse: result.prixParClasse,
           hasAvailability: result.hasAvailability,
-        })
-      )
+        })),
+      }
     }
     case "get_trip": {
       const result = await ctx.runQuery(api.functions.trips.get, {
@@ -506,16 +660,20 @@ export async function dispatchAssistantTool(
               : Math.min(minimum, counter.available),
           null
         )
-      const created = await ctx.runMutation(api.functions.bookings.create, {
-        tripId,
-        originStationId,
-        destinationStationId,
-        serviceClass,
-        passengers,
-        contactPhone: requiredString(input, "contactPhone"),
-        contactEmail: undefined,
-        promoCode: undefined,
-      })
+      const created = await ctx.runMutation(
+        internal.functions.bookings.createForActor,
+        {
+          userId,
+          tripId,
+          originStationId,
+          destinationStationId,
+          serviceClass,
+          passengers,
+          contactPhone: requiredString(input, "contactPhone"),
+          contactEmail: undefined,
+          promoCode: undefined,
+        }
+      )
       return {
         ...created,
         paymentContext: {
@@ -526,6 +684,12 @@ export async function dispatchAssistantTool(
           status: detail.trip.status,
           departureAt: originStop.departureAt ?? detail.trip.departureAt,
           arrivalAt: destinationStop.arrivalAt ?? detail.trip.arrivalAt,
+          departureTime: toLocalTime(
+            originStop.departureAt ?? detail.trip.departureAt
+          ),
+          arrivalTime: toLocalTime(
+            destinationStop.arrivalAt ?? detail.trip.arrivalAt
+          ),
           originName: originStop.station.name,
           destinationName: destinationStop.station.name,
           available: available ?? 0,
@@ -533,42 +697,78 @@ export async function dispatchAssistantTool(
       }
     }
     case "get_booking":
-      return await ctx.runQuery(api.functions.bookings.getByReference, {
-        reference: requiredString(input, "reference"),
-        contactPhone: optionalString(input, "contactPhone"),
-      })
-    case "list_my_bookings":
-      return await ctx.runQuery(api.functions.bookings.listMine, {})
-    case "list_my_tickets":
-      return await ctx.runQuery(api.functions.bookings.myTickets, {})
+      return projectBooking(
+        (await ctx.runQuery(
+          internal.functions.bookings.getByReferenceForActor,
+          {
+            userId,
+            reference: requiredString(input, "reference"),
+            contactPhone: optionalString(input, "contactPhone"),
+          }
+        )) as HydratedBooking | null
+      )
+    case "list_my_bookings": {
+      const bookings = (await ctx.runQuery(
+        internal.functions.bookings.listMineForActor,
+        { userId: requireActor(actorId) }
+      )) as HydratedBooking[]
+      return bookings.map(projectBookingSummary)
+    }
+    case "list_my_tickets": {
+      const tickets = (await ctx.runQuery(
+        internal.functions.bookings.myTicketsForActor,
+        { userId: requireActor(actorId) }
+      )) as TicketListItem[]
+      return tickets.map(projectTicketListItem)
+    }
     case "pay_booking":
-      return await ctx.runMutation(api.functions.bookings.confirm, {
-        reference: requiredString(input, "reference"),
-        method: oneOf(input, "method", [
-          "airtel_money",
-          "moov_money",
-          "clickpay",
-          "visa",
-          "mastercard",
-        ] as const),
-        payerPhone: optionalString(input, "payerPhone"),
-      })
+      // L'accès est celui de l'acteur (titulaire) ou du téléphone de contact
+      // saisi, exactement comme `bookings.confirm` sur le site.
+      return await ctx.runMutation(
+        internal.functions.bookings.confirmForActor,
+        {
+          userId,
+          reference: requiredString(input, "reference"),
+          method: oneOf(input, "method", [
+            "airtel_money",
+            "moov_money",
+            "clickpay",
+            "visa",
+            "mastercard",
+          ] as const),
+          payerPhone: optionalString(input, "payerPhone"),
+          contactPhone: optionalString(input, "contactPhone"),
+        }
+      )
     case "cancel_booking":
-      return await ctx.runMutation(api.functions.bookings.cancelHold, {
-        reference: requiredString(input, "reference"),
-        contactPhone: optionalString(input, "contactPhone"),
-      })
+      return await ctx.runMutation(
+        internal.functions.bookings.cancelHoldForActor,
+        {
+          userId,
+          reference: requiredString(input, "reference"),
+          contactPhone: optionalString(input, "contactPhone"),
+        }
+      )
     case "get_ticket_download_url":
-      return await ctx.runAction(api.functions.documents.ticketPdf, {
-        ticketId: requiredString(input, "ticketId") as Id<"tickets">,
-        contactPhone: optionalString(input, "contactPhone"),
-      })
+      return await ctx.runAction(
+        internal.functions.documents.ticketPdfForActor,
+        {
+          userId,
+          source: actor?.source,
+          ticketId: requiredString(input, "ticketId") as Id<"tickets">,
+          contactPhone: optionalString(input, "contactPhone"),
+        }
+      )
     case "get_my_profile": {
-      const profile = await ctx.runQuery(api.functions.customers.me, {})
+      const profile = await ctx.runQuery(
+        internal.functions.customers.meForActor,
+        { userId: requireActor(actorId) }
+      )
       if (!profile) return null
       return {
         firstName: profile.user.firstName ?? null,
         lastName: profile.user.lastName ?? null,
+        gender: profile.user.gender ?? null,
         phone: profile.user.phone ?? null,
         email: profile.user.email ?? null,
         consents: profile.consents.map((consent) => ({
@@ -579,8 +779,8 @@ export async function dispatchAssistantTool(
     }
     case "list_saved_passengers": {
       const passengers = await ctx.runQuery(
-        api.functions.customers.listSavedPassengers,
-        {}
+        internal.functions.customers.listSavedPassengersForActor,
+        { userId: requireActor(actorId) }
       )
       return passengers.map((passenger) => ({
         firstName: passenger.firstName,
@@ -590,26 +790,71 @@ export async function dispatchAssistantTool(
         discountCode: passenger.discountCode ?? null,
       }))
     }
-    case "update_my_profile":
-      return await ctx.runMutation(api.functions.customers.updateProfile, {
-        firstName: optionalString(input, "firstName"),
-        lastName: optionalString(input, "lastName"),
-        phone: optionalString(input, "phone"),
-        email: optionalString(input, "email"),
+    case "update_my_profile": {
+      const gender = optionalString(input, "gender")
+      if (gender !== undefined && gender !== "M" && gender !== "F") {
+        throw new Error("Valeur invalide pour « gender ».")
+      }
+      return await ctx.runMutation(
+        internal.functions.customers.updateProfileForActor,
+        {
+          userId: requireActor(actorId),
+          firstName: optionalString(input, "firstName"),
+          lastName: optionalString(input, "lastName"),
+          phone: optionalString(input, "phone"),
+          email: optionalString(input, "email"),
+          gender,
+        }
+      )
+    }
+    case "remember":
+      // Ce que Ruban retient appartient au compte de l'acteur, jamais à un
+      // invité ; le contenu est filtré côté serveur (`model/memoire.ts`).
+      return await ctx.runMutation(internal.ai.memory.rememberForActor, {
+        userId: requireActor(actorId),
+        category: oneOf(input, "category", CATEGORIES_NOTE),
+        content: requiredString(input, "content"),
+        replacesMemoryId: optionalString(input, "replacesMemoryId"),
+        source: actor?.source ?? "session",
       })
+    case "forget": {
+      const all = input.all === true
+      return await ctx.runMutation(internal.ai.memory.forgetForActor, {
+        userId: requireActor(actorId),
+        memoryId: all ? undefined : requiredString(input, "memoryId"),
+        all,
+      })
+    }
     case "grant_consent":
-      return await ctx.runMutation(api.functions.customers.grantConsent, {
-        type: oneOf(input, "consentType", [
-          "cgv",
-          "donnees",
-          "marketing",
-        ] as const),
-        channel: oneOf(input, "channel", ["web", "mobile"] as const),
-      })
+      return await ctx.runMutation(
+        internal.functions.customers.grantConsentForActor,
+        {
+          userId: requireActor(actorId),
+          type: oneOf(input, "consentType", [
+            "cgv",
+            "donnees",
+            "marketing",
+          ] as const),
+          channel: oneOf(input, "channel", ["web", "mobile"] as const),
+        }
+      )
     case "revoke_consent":
-      return await ctx.runMutation(api.functions.customers.revokeConsent, {
-        type: oneOf(input, "consentType", ["donnees", "marketing"] as const),
-      })
+      return await ctx.runMutation(
+        internal.functions.customers.revokeConsentForActor,
+        {
+          userId: requireActor(actorId),
+          type: oneOf(input, "consentType", ["donnees", "marketing"] as const),
+        }
+      )
+    case "request_sign_in": {
+      if (actorId) throw new Error("Le voyageur est déjà connecté.")
+      // Motif court, affiché tel quel par l'interface : jamais une URL ni
+      // une consigne, simplement une raison lisible.
+      const reason = requiredString(input, "reason")
+        .replace(/\s+/g, " ")
+        .slice(0, 160)
+      return { reason }
+    }
     default:
       throw new Error(`Outil inconnu : ${name}.`)
   }
@@ -620,6 +865,8 @@ export async function executeAssistantTool(
   args: {
     conversationId: Id<"assistantConversations">
     guestKey?: string
+    /** Fourni uniquement par les variantes internes de la messagerie. */
+    messagingThreadId?: Id<"messagingThreads">
     callId: string
     name: string
     input: unknown
@@ -632,6 +879,7 @@ export async function executeAssistantTool(
   const access = await ctx.runQuery(internal.ai.conversations.accessContext, {
     conversationId: args.conversationId,
     guestKey: args.guestKey,
+    messagingThreadId: args.messagingThreadId,
   })
   const allowed = getAssistantTools(
     access.conversation.assistantId,
@@ -723,7 +971,12 @@ export async function executeAssistantTool(
   }
 
   try {
-    const output = await dispatchAssistantTool(ctx, definition.name, args.input)
+    const output = await dispatchAssistantTool(
+      ctx,
+      definition.name,
+      args.input,
+      access.acteur
+    )
     const outputJson = boundedJson(output)
     await ctx.runMutation(internal.ai.tools.completeExecution, {
       executionId: execution._id,
@@ -769,5 +1022,12 @@ export const execute = action({
     approved: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<ToolExecutionResult> =>
-    executeAssistantTool(ctx, args),
+    executeAssistantTool(ctx, {
+      conversationId: args.conversationId,
+      guestKey: args.guestKey,
+      callId: args.callId,
+      name: args.name,
+      input: args.input,
+      approved: args.approved,
+    }),
 })

@@ -8,8 +8,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#0F52A0",
+  "background_color": "#FFFFFF",
+  "theme_color": "#F8FAFD",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -34,12 +34,17 @@
     {
       "name": "Mes billets",
       "short_name": "Billets",
-      "url": "/mes-reservations"
+      "url": "/billets"
     },
     {
       "name": "Suivre un train",
       "short_name": "Suivi",
       "url": "/suivi"
+    },
+    {
+      "name": "Demander à Ruban",
+      "short_name": "Ruban",
+      "url": "/assistant"
     }
   ]
 }

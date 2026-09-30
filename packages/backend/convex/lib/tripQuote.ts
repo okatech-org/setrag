@@ -1,4 +1,4 @@
-import type { Id } from "../_generated/dataModel"
+import type { Doc, Id } from "../_generated/dataModel"
 import type { QueryCtx } from "../_generated/server"
 import { daysUntilDeparture, weekdayOf } from "../model/calendar"
 import { computeTicketFare, type FareSchedule } from "../model/fares"
@@ -15,6 +15,55 @@ export interface TripQuoteArgs {
 }
 
 /**
+ * Grille tarifaire active et règles de yield, chargées une fois.
+ *
+ * Une recherche chiffre plusieurs dessertes et plusieurs classes ; le
+ * calendrier, plusieurs jours. Recharger la grille à chaque devis multiplierait
+ * les lectures sans rien changer au résultat : elle est donc lue ici, puis
+ * passée à `devisDesserte`.
+ */
+export async function chargerTarification(ctx: QueryCtx) {
+  const schedule = await ctx.db
+    .query("fareSchedules")
+    .withIndex("by_status", (q) => q.eq("status", "actif"))
+    .first()
+  if (!schedule) throw new Error("Aucune grille tarifaire active")
+
+  const [bases, discounts, rules] = await Promise.all([
+    ctx.db
+      .query("fareBases")
+      .withIndex("by_schedule", (q) => q.eq("scheduleId", schedule._id))
+      .collect(),
+    ctx.db
+      .query("discounts")
+      .withIndex("by_schedule", (q) => q.eq("scheduleId", schedule._id))
+      .collect(),
+    ctx.db
+      .query("pricingRules")
+      .withIndex("by_active_priority", (q) => q.eq("isActive", true))
+      .collect(),
+  ])
+
+  const fareSchedule: FareSchedule = {
+    taxes: { vatPct: schedule.vatPct, cssPct: schedule.cssPct },
+    roundingBasis: schedule.roundingBasis,
+    bases: bases.map((base) => ({
+      trainType: base.trainType,
+      serviceClass: base.serviceClass,
+      shortDistanceRate: base.shortDistanceRate,
+      longDistanceRate: base.longDistanceRate,
+    })),
+  }
+  const bounds = rules
+    .filter((rule) => rule.floorXaf !== undefined || rule.capXaf !== undefined)
+    .sort((left, right) => left.priority - right.priority)[0]
+
+  return { fareSchedule, discounts, rules, bounds }
+}
+
+export type Tarification = Awaited<ReturnType<typeof chargerTarification>>
+
+/**
  * Calcule un devis sans écrire ni réserver.
  *
  * Le canal fait partie du contexte de yield : une même desserte peut avoir
@@ -27,10 +76,6 @@ export async function quoteTrip(
   args: TripQuoteArgs,
   channel: "ligne" | "guichet"
 ) {
-  if (!Number.isInteger(args.passengerCount) || args.passengerCount < 1) {
-    throw new Error(`Nombre de voyageurs invalide : ${args.passengerCount}`)
-  }
-
   const trip = await ctx.db.get(args.tripId)
   if (!trip) throw new Error("Desserte introuvable")
 
@@ -50,58 +95,95 @@ export async function quoteTrip(
   if (fromIndex === -1 || toIndex === -1 || toIndex <= fromIndex) {
     throw new Error("Trajet incompatible avec cette desserte")
   }
-  const distanceKm = Math.abs(
-    stops[toIndex]!.kilometerPoint - stops[fromIndex]!.kilometerPoint
+
+  return await devisDesserte(
+    ctx,
+    await chargerTarification(ctx),
+    {
+      trip,
+      distanceKm: Math.abs(
+        stops[toIndex]!.kilometerPoint - stops[fromIndex]!.kilometerPoint
+      ),
+      fromIndex,
+      toIndex,
+      serviceClass: args.serviceClass,
+      passengerCount: args.passengerCount,
+      discountCodes: args.discountCodes,
+      promoCode: args.promoCode,
+    },
+    channel
   )
+}
 
-  const schedule = await ctx.db
-    .query("fareSchedules")
-    .withIndex("by_status", (q) => q.eq("status", "actif"))
-    .first()
-  if (!schedule) throw new Error("Aucune grille tarifaire active")
+/**
+ * Lectures d'une desserte déjà faites par l'appelant, toutes classes
+ * confondues. Une recherche lit les compteurs pour la disponibilité, puis
+ * chiffre jusqu'à trois classes : les lui repasser évite de relire les mêmes
+ * lignes à chaque devis.
+ */
+export interface LecturesDesserte {
+  counters?: readonly Doc<"segmentCounters">[]
+  quotas?: readonly Doc<"fareClassQuotas">[]
+}
 
-  const [bases, discounts, quotas, rules] = await Promise.all([
-    ctx.db
-      .query("fareBases")
-      .withIndex("by_schedule", (q) => q.eq("scheduleId", schedule._id))
-      .collect(),
-    ctx.db
-      .query("discounts")
-      .withIndex("by_schedule", (q) => q.eq("scheduleId", schedule._id))
-      .collect(),
-    ctx.db
+/**
+ * Devis d'une desserte déjà lue, la grille étant chargée par l'appelant.
+ *
+ * Le prix d'un voyageur ne dépend que de sa réduction : le contexte de yield
+ * (remplissage, anticipation, canal, contingent pour l'effectif du groupe) est
+ * le même pour tous. Il est donc calculé une fois par code de réduction
+ * distinct, puis reporté sur chaque voyageur — un groupe de 500 adultes coûte
+ * un calcul, pas 500.
+ */
+export async function devisDesserte(
+  ctx: QueryCtx,
+  tarification: Tarification,
+  args: {
+    trip: Doc<"trips">
+    distanceKm: number
+    fromIndex: number
+    toIndex: number
+    serviceClass: "DEUXIEME" | "PREMIERE" | "VIP"
+    passengerCount: number
+    discountCodes?: string[]
+    promoCode?: string
+  },
+  channel: "ligne" | "guichet",
+  lectures: LecturesDesserte = {}
+) {
+  if (!Number.isInteger(args.passengerCount) || args.passengerCount < 1) {
+    throw new Error(`Nombre de voyageurs invalide : ${args.passengerCount}`)
+  }
+  const { trip, distanceKm, fromIndex, toIndex } = args
+  const { fareSchedule, discounts, rules, bounds } = tarification
+
+  const quotas = (
+    lectures.quotas ??
+    (await ctx.db
       .query("fareClassQuotas")
       .withIndex("by_trip_class", (q) =>
-        q.eq("tripId", args.tripId).eq("serviceClass", args.serviceClass)
+        q.eq("tripId", trip._id).eq("serviceClass", args.serviceClass)
       )
-      .collect(),
-    ctx.db
-      .query("pricingRules")
-      .withIndex("by_active_priority", (q) => q.eq("isActive", true))
-      .collect(),
-  ])
-
-  const fareSchedule: FareSchedule = {
-    taxes: { vatPct: schedule.vatPct, cssPct: schedule.cssPct },
-    roundingBasis: schedule.roundingBasis,
-    bases: bases.map((base) => ({
-      trainType: base.trainType,
-      serviceClass: base.serviceClass,
-      shortDistanceRate: base.shortDistanceRate,
-      longDistanceRate: base.longDistanceRate,
-    })),
-  }
+      .collect())
+  ).filter(
+    (quota) =>
+      quota.tripId === trip._id && quota.serviceClass === args.serviceClass
+  )
 
   const counters = (
-    await ctx.db
+    lectures.counters ??
+    (await ctx.db
       .query("segmentCounters")
       .withIndex("by_trip_class", (q) =>
-        q.eq("tripId", args.tripId).eq("serviceClass", args.serviceClass)
+        q.eq("tripId", trip._id).eq("serviceClass", args.serviceClass)
       )
-      .collect()
+      .collect())
   ).filter(
     (counter) =>
-      counter.segmentIndex >= fromIndex && counter.segmentIndex < toIndex
+      counter.tripId === trip._id &&
+      counter.serviceClass === args.serviceClass &&
+      counter.segmentIndex >= fromIndex &&
+      counter.segmentIndex < toIndex
   )
 
   const available =
@@ -124,7 +206,7 @@ export async function quoteTrip(
   }
 
   const scopedRules: PricingRule[] = rules
-    .filter((rule) => rule.tripId === undefined || rule.tripId === args.tripId)
+    .filter((rule) => rule.tripId === undefined || rule.tripId === trip._id)
     .filter(
       (rule) =>
         rule.serviceClass === undefined ||
@@ -141,14 +223,29 @@ export async function quoteTrip(
       code: rule.code,
       isActive: rule.isActive,
     }))
-  const bounds = rules
-    .filter((rule) => rule.floorXaf !== undefined || rule.capXaf !== undefined)
-    .sort((left, right) => left.priority - right.priority)[0]
+  const quotaInputs = quotas.map((quota) => ({
+    label: quota.label,
+    priority: quota.priority,
+    seatCount: quota.seatCount,
+    soldCount: quota.soldCount,
+    coefficient: quota.coefficient,
+    isActive: quota.isActive,
+  }))
 
-  const lines = []
-  let totalTtc = 0
-  for (let index = 0; index < args.passengerCount; index += 1) {
-    const code = args.discountCodes?.[index]
+  /** Une ligne de devis par code de réduction (`""` : plein tarif). */
+  const parCode = new Map<
+    string,
+    {
+      discountCode: string | null
+      discountLabel: string | null
+      quotaLabel: string | null
+      unitPriceTtc: number
+      appliedRules: string[]
+    }
+  >()
+  const ligneDuCode = (code: string) => {
+    const connue = parCode.get(code)
+    if (connue) return connue
     const discount = code
       ? discounts.find(
           (candidate) => candidate.code === code && candidate.isActive
@@ -174,28 +271,30 @@ export async function quoteTrip(
     const quote = quotePrice({
       basePriceTtc: base.ttc,
       distanceKm,
-      quotas: quotas.map((quota) => ({
-        label: quota.label,
-        priority: quota.priority,
-        seatCount: quota.seatCount,
-        soldCount: quota.soldCount,
-        coefficient: quota.coefficient,
-        isActive: quota.isActive,
-      })),
+      quotas: quotaInputs,
       seatsNeeded: args.passengerCount,
       rules: scopedRules,
       context,
       floorXaf: bounds?.floorXaf,
       capXaf: bounds?.capXaf,
     })
-    totalTtc += quote.unitPriceTtc
-    lines.push({
+    const ligne = {
       discountCode: discount?.code ?? null,
       discountLabel: discount?.label ?? null,
       quotaLabel: quote.quotaLabel,
       unitPriceTtc: quote.unitPriceTtc,
       appliedRules: quote.appliedRules,
-    })
+    }
+    parCode.set(code, ligne)
+    return ligne
+  }
+
+  const lines = []
+  let totalTtc = 0
+  for (let index = 0; index < args.passengerCount; index += 1) {
+    const ligne = ligneDuCode(args.discountCodes?.[index] || "")
+    totalTtc += ligne.unitPriceTtc
+    lines.push(ligne)
   }
 
   return {

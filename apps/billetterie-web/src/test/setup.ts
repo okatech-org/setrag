@@ -6,8 +6,6 @@ import "fake-indexeddb/auto"
 import { afterEach, vi } from "vitest"
 import { cleanup } from "@testing-library/react"
 
-process.env.NEXT_PUBLIC_E2E_MODE = "1"
-
 afterEach(() => {
   cleanup()
   window.sessionStorage.clear()

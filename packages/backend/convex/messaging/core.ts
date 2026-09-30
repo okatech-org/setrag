@@ -1,8 +1,14 @@
 import { v } from "convex/values"
-import { internalMutation, internalQuery } from "../_generated/server"
+import {
+  internalMutation,
+  internalQuery,
+  type MutationCtx,
+} from "../_generated/server"
+import type { Id } from "../_generated/dataModel"
 import { hashGuestKey } from "../ai/conversations"
 import { resolveTextProviderConfig } from "../ai/providers"
-import { channelValidator } from "./contracts"
+import { messagingButton } from "../schema"
+import { channelValidator, type OutboundButton } from "./contracts"
 
 const eventTypeValidator = v.union(
   v.literal("text"),
@@ -14,6 +20,30 @@ const eventTypeValidator = v.union(
 const EVENT_LEASE_MS = 2 * 60 * 1_000
 const MAX_EVENT_ATTEMPTS = 5
 
+/**
+ * Nouvelle conversation d'assistant pour un fil. Elle porte le compte relié
+ * à l'identité du fil, s'il y en a un : c'est ce `userId` qui fera de ce
+ * compte l'acteur des tours suivants.
+ */
+export async function insertThreadConversation(
+  ctx: MutationCtx,
+  guestKeyHash: string,
+  userId: Id<"users"> | undefined
+): Promise<Id<"assistantConversations">> {
+  const now = Date.now()
+  const config = resolveTextProviderConfig("concierge")
+  return await ctx.db.insert("assistantConversations", {
+    userId,
+    guestKeyHash,
+    assistantId: "concierge",
+    provider: config.provider,
+    model: config.model,
+    status: "active",
+    createdAt: now,
+    lastMessageAt: now,
+  })
+}
+
 export const ingestEvent = internalMutation({
   args: {
     channel: channelValidator,
@@ -23,6 +53,7 @@ export const ingestEvent = internalMutation({
     type: eventTypeValidator,
     text: v.optional(v.string()),
     actionToken: v.optional(v.string()),
+    linkTokenHash: v.optional(v.string()),
     providerInteractionId: v.optional(v.string()),
     displayName: v.optional(v.string()),
     locale: v.optional(v.string()),
@@ -130,14 +161,36 @@ export const ensureThread = internalMutation({
           lastSeenAt: now,
         })
       }
+
+      // Invariant : la conversation du fil appartient au compte relié à
+      // l'identité (ou à personne si elle n'est pas reliée). Après une
+      // déliaison depuis le site, l'ancienne conversation est close : le fil
+      // repart sur une conversation neuve, sans l'historique du compte.
+      let conversationId = existingThread.conversationId
+      const conversation = await ctx.db.get(conversationId)
+      if (
+        !conversation ||
+        conversation.status !== "active" ||
+        conversation.userId !== identity?.userId
+      ) {
+        if (conversation?.status === "active") {
+          await ctx.db.patch(conversation._id, { status: "closed" })
+        }
+        conversationId = await insertThreadConversation(
+          ctx,
+          hashGuestKey(args.guestKey),
+          identity?.userId
+        )
+      }
       await ctx.db.patch(existingThread._id, {
+        conversationId,
         lastInboundAt: now,
         state:
           existingThread.state === "closed"
             ? ("active" as const)
             : existingThread.state,
       })
-      return existingThread
+      return (await ctx.db.get(existingThread._id))!
     }
 
     let identity = await ctx.db
@@ -158,16 +211,11 @@ export const ensureThread = internalMutation({
       identity = (await ctx.db.get(identityId))!
     }
 
-    const config = resolveTextProviderConfig("concierge")
-    const conversationId = await ctx.db.insert("assistantConversations", {
-      guestKeyHash: hashGuestKey(args.guestKey),
-      assistantId: "concierge",
-      provider: config.provider,
-      model: config.model,
-      status: "active",
-      createdAt: now,
-      lastMessageAt: now,
-    })
+    const conversationId = await insertThreadConversation(
+      ctx,
+      hashGuestKey(args.guestKey),
+      identity.userId
+    )
     const threadId = await ctx.db.insert("messagingThreads", {
       channel: args.channel,
       externalThreadId: args.externalThreadId,
@@ -193,16 +241,12 @@ export const resetThread = internalMutation({
     if (current) await ctx.db.patch(current._id, { status: "closed" })
 
     const now = Date.now()
-    const config = resolveTextProviderConfig("concierge")
-    const conversationId = await ctx.db.insert("assistantConversations", {
-      guestKeyHash: hashGuestKey(args.guestKey),
-      assistantId: "concierge",
-      provider: config.provider,
-      model: config.model,
-      status: "active",
-      createdAt: now,
-      lastMessageAt: now,
-    })
+    const identity = await ctx.db.get(thread.identityId)
+    const conversationId = await insertThreadConversation(
+      ctx,
+      hashGuestKey(args.guestKey),
+      identity?.userId
+    )
     await ctx.db.patch(thread._id, {
       conversationId,
       state: "active",
@@ -418,14 +462,58 @@ export const resolveApproval = internalMutation({
   },
 })
 
+/**
+ * Met en file un lot sortant : les textes dans l'ordre, les boutons sur le
+ * dernier texte, puis les documents. Utilisable depuis toute mutation.
+ */
+export async function insertOutboxBundle(
+  ctx: MutationCtx,
+  args: {
+    threadId: Id<"messagingThreads">
+    sourceEventId?: Id<"messagingEvents">
+    texts: string[]
+    buttons?: OutboundButton[]
+    documents?: Array<{ url: string; filename: string; caption?: string }>
+  }
+): Promise<number> {
+  let enqueued = 0
+  const now = Date.now()
+  for (const [index, text] of args.texts.entries()) {
+    await ctx.db.insert("messagingOutbox", {
+      threadId: args.threadId,
+      sourceEventId: args.sourceEventId,
+      kind: "text",
+      text,
+      buttons: index === args.texts.length - 1 ? args.buttons : undefined,
+      status: "pending",
+      attempts: 0,
+      createdAt: now + index,
+    })
+    enqueued += 1
+  }
+  for (const [index, document] of (args.documents ?? []).entries()) {
+    await ctx.db.insert("messagingOutbox", {
+      threadId: args.threadId,
+      sourceEventId: args.sourceEventId,
+      kind: "document",
+      text: document.caption,
+      documentUrl: document.url,
+      filename: document.filename,
+      status: "pending",
+      attempts: 0,
+      createdAt: now + args.texts.length + index,
+    })
+    enqueued += 1
+  }
+  return enqueued
+}
+
 export const enqueueBundle = internalMutation({
   args: {
     threadId: v.id("messagingThreads"),
     sourceEventId: v.optional(v.id("messagingEvents")),
     texts: v.array(v.string()),
-    buttons: v.optional(
-      v.array(v.object({ label: v.string(), data: v.string() }))
-    ),
+    buttons: v.optional(v.array(messagingButton)),
     documents: v.optional(
       v.array(
         v.object({
@@ -446,36 +534,7 @@ export const enqueueBundle = internalMutation({
         .first()
       if (existing) return { enqueued: 0, duplicate: true }
     }
-
-    let enqueued = 0
-    const now = Date.now()
-    for (const [index, text] of args.texts.entries()) {
-      await ctx.db.insert("messagingOutbox", {
-        threadId: args.threadId,
-        sourceEventId: args.sourceEventId,
-        kind: "text",
-        text,
-        buttons: index === args.texts.length - 1 ? args.buttons : undefined,
-        status: "pending",
-        attempts: 0,
-        createdAt: now + index,
-      })
-      enqueued += 1
-    }
-    for (const [index, document] of (args.documents ?? []).entries()) {
-      await ctx.db.insert("messagingOutbox", {
-        threadId: args.threadId,
-        sourceEventId: args.sourceEventId,
-        kind: "document",
-        text: document.caption,
-        documentUrl: document.url,
-        filename: document.filename,
-        status: "pending",
-        attempts: 0,
-        createdAt: now + args.texts.length + index,
-      })
-      enqueued += 1
-    }
+    const enqueued = await insertOutboxBundle(ctx, args)
     return { enqueued, duplicate: false }
   },
 })

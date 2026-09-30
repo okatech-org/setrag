@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETRAG — pistes de marque</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor/lottie_light.min.js"></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chercher" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/></symbol>
+  <symbol id="i-billet" viewBox="0 0 24 24"><path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/><path d="M14 7v10" stroke-dasharray="2 2"/></symbol>
+  <symbol id="i-horaire" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+  <symbol id="i-compte" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 14.5-4 16 0"/></symbol>
+</svg>
+
+<header class="topbar">
+  <a class="brand" href="#haut" aria-label="Haut de page"><span data-lockup="voie" data-size="18" data-compact></span></a>
+  <nav aria-label="Sections">
+    <a href="#diagnostic">Diagnostic</a>
+    <a href="#integration">Intégration</a>
+    <a href="#logos">Logos</a>
+    <a href="#animations">Animations</a>
+    <a href="#reco">Recommandation</a>
+  </nav>
+  <button class="btn btn-ghost btn-sm" id="theme" aria-pressed="false">Thème sombre</button>
+</header>
+
+<main>
+  <section class="intro" id="haut">
+    <div>
+      <p class="eyebrow">Pistes de marque · 29 septembre 2026</p>
+      <h1>Le logo SETRAG, de l'affiche à l'écran</h1>
+      <p class="lead">Trois façons de faire vivre le logo dans la billetterie, le portail agent et l'application voyageur. Six déclinaisons du logo, toutes ferroviaires. Quatre animations Lottie prêtes à brancher.</p>
+      <p class="note" style="margin-top:var(--s-4)">Les maquettes suivent la charte actuelle (tokens, Schibsted Grotesk, IBM Plex Mono). Horaires et prix sont fictifs ; les gares et leurs points kilométriques viennent du référentiel du dépôt. Les couleurs de marque reprennent celles du site setrag.eramet.com.</p>
+    </div>
+    <div class="intro-art" data-sym="convoi" data-train="6500" data-label="Le S voie ferrée parcouru par un train"></div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section id="diagnostic">
+    <h2><span class="n">01</span>Ce que le logo contient déjà</h2>
+    <p class="section-lead">Le logo porte trois éléments forts. Aucun n'est aujourd'hui exploité dans les interfaces au-delà du fichier PNG posé dans l'en-tête.</p>
+
+    <div class="logos-actuels">
+      <figure>
+        <img src="img/logo-actuel.png" alt="Logo SETRAG actuel : S en voie ferrée rouge, ETRAG en bleu, ruban vert-jaune-bleu, signature Société d'Exploitation du Transgabonais">
+        <figcaption>Fichier du dépôt (<code>setrag-logo.png</code>) : S rouge, lettres bleues.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/logo-capture.png" alt="Logo SETRAG de la capture : S orange, lettres indigo, ruban vert-jaune-violet">
+        <figcaption>Capture transmise : S orange, lettres indigo, ruban qui finit en violet.</figcaption>
+      </figure>
+    </div>
+
+    <div class="anatomie">
+      <div class="card">
+        <div class="anatomie-vis" data-sym="voie"></div>
+        <h3>Le S en voie ferrée</h3>
+        <p>La première lettre est une voie : deux rails, des traverses, un tracé qui serpente comme la ligne d'Owendo à Franceville. C'est l'élément qu'on reconnaît.</p>
+      </div>
+      <div class="card">
+        <div class="anatomie-vis"><span class="anatomie-wm">ETRAG</span></div>
+        <h3>Des capitales penchées</h3>
+        <p>Grasses, inclinées vers l'avant : la vitesse. Leur bleu est déjà l'accent de la charte (<code>--c-accent</code>, teinte 257).</p>
+      </div>
+      <div class="card">
+        <div class="anatomie-vis"><span class="anatomie-ruban"></span></div>
+        <h3>Le ruban vert-jaune-bleu</h3>
+        <p>Les couleurs du drapeau gabonais. Le bleu du drapeau (#3A75C4) a la même teinte que le bleu SETRAG, 257 contre 256,5 : le ruban se raccorde à l'interface sans heurt.</p>
+      </div>
+    </div>
+
+    <div class="blocages">
+      <div class="blocage">
+        <span class="blocage-n">1</span>
+        <div>
+          <p><b>Le S est une illustration, pas un signe</b>Rails en relief, dégradés, ombre portée. Sous 32 px, rails et traverses se fondent en un trait rose pâle et flou : voici l’icône actuelle de la billetterie à sa taille réelle.</p>
+          <div class="pixels">
+            <figure><canvas class="px" data-actuel="32" style="--x:2"></canvas>32 px</figure>
+            <figure><canvas class="px" data-actuel="16" style="--x:4"></canvas>16 px</figure>
+          </div>
+        </div>
+      </div>
+      <div class="blocage">
+        <span class="blocage-n">2</span>
+        <p><b>Deux versions circulent</b>S rouge et lettres bleues dans le dépôt ; S orange et lettres indigo sur la capture. Le site setrag.eramet.com tranche : son orange (#FA6414) et son indigo (#1A003B) sont ceux de la capture. On s'aligne sur le site, qui est la version publique.</p>
+      </div>
+      <div class="blocage">
+        <span class="blocage-n">3</span>
+        <p><b>Le rouge du S entre en conflit avec la charte</b>L'interface réserve le rouge aux erreurs (<code>--c-danger</code>, teinte 25). L'orange du site (teinte 42) s'en écarte, à condition de rester sur le logo : jamais sur un statut ni un message.</p>
+      </div>
+      <div class="blocage">
+        <span class="blocage-n">4</span>
+        <p><b>Le ruban n'apparaît nulle part</b>C'est pourtant l'élément le plus identitaire après le S, et le plus facile à décliner : c'est un dégradé, il tient en une ligne de CSS.</p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:var(--s-12)">Les couleurs du site setrag.eramet.com</h3>
+    <p class="note" style="margin-top:var(--s-1)">Relevées dans le thème du site (variables de couleur principale, boutons et titres). La police du site est Montserrat ; les apps gardent Schibsted Grotesk.</p>
+    <div class="palette palette-site" id="site-couleurs"></div>
+    <h4 class="sous-titre">Ce que le site associe, et ce que ça donne en contraste</h4>
+    <div class="associations" id="associations"></div>
+
+    <h3 style="margin-top:var(--s-12)">Palette de marque proposée</h3>
+    <p class="note" style="margin-top:var(--s-1)">La charte des apps reste la base. Le site apporte l'<b>orange</b> du S, le <b>jaune</b> (qui remplace celui du drapeau dans le ruban, l'écart est minime) et l'<b>indigo</b> des titres. Son bleu n'ajoute rien : c'est à peu de chose près l'accent de la charte, même teinte (255,5 contre 257).</p>
+    <div class="palette" id="palette"></div>
+    <pre class="code"><span class="c">/* tokens.css — bloc « Marque ». Réservé au logo et à ses dérivés :
+   jamais pour un statut. Le vert du ruban ne doit pas se lire comme un succès. */</span>
+--brand-orange: oklch(0.686 0.199 42.3);   <span class="c">/* #FA6414, site */</span>
+--brand-jaune: oklch(0.902 0.164 97.9);    <span class="c">/* #FCDF49, site */</span>
+--brand-vert: oklch(0.615 0.146 157);      <span class="c">/* #009E60, drapeau */</span>
+--brand-indigo: oklch(0.189 0.103 295.7);  <span class="c">/* #1A003B, site */</span>
+--brand-ruban: linear-gradient(90deg, var(--brand-vert), var(--brand-jaune) 50%, var(--c-accent));</pre>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section id="integration">
+    <h2><span class="n">02</span>Trois concepts d'intégration</h2>
+    <p class="section-lead">Chaque concept part d'un élément du logo et en tire un système : où le logo apparaît, quel motif en dérive, comment il se comporte sur le web et sur mobile. Ils se combinent : la recommandation en fin de page en assemble deux.</p>
+
+    <!-- Concept 1 ------------------------------------------------------------ -->
+    <article class="concept" id="c1">
+      <div class="concept-head">
+        <div>
+          <p class="eyebrow">Concept 1</p>
+          <h3>La voie</h3>
+          <p>Le rail du S devient le fil de l'interface. Il relie une heure de départ à une heure d'arrivée, les étapes de l'achat, les deux moitiés du billet. Le S entier n'apparaît qu'aux moments forts : ouverture de l'app, chargement, en-tête.</p>
+        </div>
+        <dl class="ou">
+          <dt>Icône, favicon</dt><dd>Le S seul, logo A.</dd>
+          <dt>En-tête</dt><dd>S + ETRAG + ruban fin.</dd>
+          <dt>Démarrage</dt><dd>La voie se pose, le ruban la parcourt puis se pose sous le S (Lottie).</dd>
+          <dt>Chargement</dt><dd>Un train tourne sur le S.</dd>
+          <dt>Résultats</dt><dd>Un rail droit entre l'heure de départ et l'heure d'arrivée.</dd>
+          <dt>Billet</dt><dd>Un rail remplace les pointillés de découpe.</dd>
+          <dt>Info trafic</dt><dd>Bandeau bleu, texte jaune : repris du site.</dd>
+        </dl>
+      </div>
+
+      <div class="maquettes">
+        <div class="navigateur">
+          <div class="navigateur-barre"><i></i><i></i><i></i><span>Billetterie SETRAG</span></div>
+          <header class="site-head">
+            <span data-lockup="voie" data-size="18" data-compact></span>
+            <nav><a class="on">Réserver</a><a>Mes billets</a><a>Horaires</a><a>Aide</a></nav>
+            <span class="avatar">KM</span>
+          </header>
+          <p class="bandeau-trafic"><b>Info trafic</b>Travaux entre Booué et Ivindo samedi 3 octobre : l'express partira 25 min plus tard. Votre place est conservée.</p>
+          <div class="c1-hero">
+            <div>
+              <p class="eyebrow">Transgabonais · 23 gares · 669 km</p>
+              <h4>Owendo–Franceville,<br>votre place en deux minutes.</h4>
+              <div class="recherche">
+                <div class="champ"><span>Départ</span><b>Owendo</b></div>
+                <div class="champ"><span>Arrivée</span><b>Franceville</b></div>
+                <div class="champ"><span>Aller</span><b>Ven. 2 oct.</b></div>
+                <div class="champ"><span>Voyageurs</span><b>1 adulte</b></div>
+                <span class="btn btn-primary">Rechercher</span>
+              </div>
+            </div>
+            <div class="c1-art" data-sym="convoi" data-train="7000" data-opts='{"opacite":0.3}'></div>
+          </div>
+          <div class="resultats">
+            <h5>2 trains le vendredi 2 octobre</h5>
+            <div class="res">
+              <div class="res-heures"><span class="heure">07:40</span><span class="rail-h"></span><span class="duree">11 h 45</span><span class="rail-h"></span><span class="heure">19:25</span></div>
+              <div class="res-meta">Express 201 · direct · 2e classe</div>
+              <div class="res-prix"><span class="prix">32 500 XAF</span><span class="btn btn-secondary btn-sm">Choisir</span></div>
+            </div>
+            <div class="res">
+              <div class="res-heures"><span class="heure">18:10</span><span class="rail-h"></span><span class="duree">13 h 20</span><span class="rail-h"></span><span class="heure">07:30</span></div>
+              <div class="res-meta">Omnibus 403 · 22 arrêts · arrivée le lendemain <span class="pastille-site">Meilleur prix</span></div>
+              <div class="res-prix"><span class="prix">24 000 XAF</span><span class="btn btn-secondary btn-sm">Choisir</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bas-concept">
+          <div class="tels">
+            <div>
+              <div class="tel"><div class="ecran splash-screen">
+                <div class="statut abs"><span class="tabular">09:41</span><span class="ilot"></span><span>4G</span></div>
+                <div class="lottie" id="lt-splash-tel" data-lottie="splash" aria-label="Animation de démarrage : la voie se pose, le ruban la parcourt et se pose à l'horizontale"></div>
+                <div class="splash-wm">SETRAG</div>
+                <div class="splash-sous">Owendo — Franceville</div>
+                <button class="btn btn-ghost btn-sm rejouer-mini" data-rejouer="#lt-splash-tel">Rejouer</button>
+              </div></div>
+              <p class="tel-legende">Démarrage (Lottie)</p>
+            </div>
+            <div>
+              <div class="tel"><div class="ecran">
+                <div class="statut"><span class="tabular">09:41</span><span class="ilot"></span><span>4G</span></div>
+                <div class="m-tete"><span class="m-retour" aria-hidden="true">‹</span>Mon billet</div>
+                <div class="m-corps">
+                  <div class="billet">
+                    <div class="billet-haut"><span data-sym="voie" data-small></span>Express 201 · 2 oct.<span class="etat">✓ Valide</span></div>
+                    <div class="billet-trajet">
+                      <div><span class="heure">07:40</span><small>Owendo</small></div>
+                      <span class="rail-h sur-encre"></span>
+                      <div><span class="heure">19:25</span><small>Franceville</small></div>
+                    </div>
+                    <div class="billet-coupe"><span class="rail-h sur-encre"></span></div>
+                    <div class="billet-grille">
+                      <div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>32</b></div>
+                      <div><span>Quai</span><b>1</b></div><div><span>Classe</span><b>2e</b></div>
+                    </div>
+                    <div data-qr="11"></div>
+                  </div>
+                  <span class="btn btn-primary btn-block">Ajouter à Apple Wallet</span>
+                </div>
+              </div></div>
+              <p class="tel-legende">Billet : la découpe devient un rail</p>
+            </div>
+          </div>
+          <div class="regles">
+            <div class="oui"><h4>À faire</h4><ul>
+              <li>Rail horizontal ou vertical, jamais courbé hors du logo : le S reste unique.</li>
+              <li>Le rail relie deux informations écrites (heures, gares, étapes). Il ne remplace aucun libellé.</li>
+              <li>Orange sur fond clair, bleu clair (<code>--c-accent-on-ink</code>) sur le billet encre.</li>
+            </ul></div>
+            <div class="non"><h4>À éviter</h4><ul>
+              <li>Le rail comme simple séparateur de liste : il perd son sens.</li>
+              <li>Le train animé en boucle hors des écrans d'attente.</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Concept 2 ------------------------------------------------------------ -->
+    <article class="concept" id="c2">
+      <div class="concept-head">
+        <div>
+          <p class="eyebrow">Concept 2</p>
+          <h3>Le ruban</h3>
+          <p>Le ruban vert-jaune-bleu devient la signature. Un filet de 3 à 6 px, toujours au même endroit : haut de page, onglet actif, bord du billet, progression. Le reste de l'interface ne change pas. C'est le concept le moins coûteux et le plus reconnaissable.</p>
+        </div>
+        <dl class="ou">
+          <dt>En-tête</dt><dd>Filet de 4 px en haut de chaque page, sur les trois apps web.</dd>
+          <dt>Tunnel d'achat</dt><dd>La barre de progression se remplit du ruban.</dd>
+          <dt>Billet, récapitulatif</dt><dd>Bord supérieur en ruban.</dd>
+          <dt>Mobile</dt><dd>Indicateur de l'onglet actif, liseré de la carte « prochain voyage », chargement.</dd>
+          <dt>E-mails, PDF</dt><dd>Même filet en haut du document.</dd>
+        </dl>
+      </div>
+
+      <div class="maquettes">
+        <div class="navigateur">
+          <div class="navigateur-barre"><i></i><i></i><i></i><span>Billetterie SETRAG — paiement</span></div>
+          <div class="ruban-haut"></div>
+          <header class="site-head">
+            <span data-lockup="voie" data-size="18" data-compact></span>
+            <nav><a class="on">Réserver</a><a>Mes billets</a><a>Horaires</a><a>Aide</a></nav>
+            <span class="avatar">KM</span>
+          </header>
+          <div class="c2-corps">
+            <div>
+              <p class="etapes-label">Étape 3 sur 4 <span>— Paiement</span></p>
+              <div class="etapes-piste" role="progressbar" aria-valuenow="3" aria-valuemin="1" aria-valuemax="4" aria-label="Étape 3 sur 4"></div>
+              <ol class="etapes"><li class="fait">Trajet</li><li class="fait">Voyageurs</li><li class="ici">Paiement</li><li>Billet</li></ol>
+            </div>
+            <div class="c2-grille">
+              <div class="paiement">
+                <h5>Moyen de paiement</h5>
+                <div class="option on"><i></i>Airtel Money<small>+241 07 •• •• 18</small></div>
+                <div class="option"><i></i>Moov Money</div>
+                <div class="option"><i></i>Carte bancaire</div>
+                <span class="btn btn-primary">Payer 32 500 XAF</span>
+              </div>
+              <aside class="recap">
+                <div class="ruban-haut"></div>
+                <div class="recap-corps">
+                  <h5>Owendo → Franceville</h5>
+                  <span class="tabular">Ven. 2 oct. · 07:40 → 19:25</span>
+                  <div class="ligne-recap"><span>1 adulte · 2e classe</span><span class="tabular">32 500 XAF</span></div>
+                  <div class="ligne-recap"><span>Bagage en soute</span><span class="tabular">0 XAF</span></div>
+                  <div class="ligne-recap total"><span>Total</span><span class="tabular">32 500 XAF</span></div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+
+        <div class="bas-concept">
+          <div class="tels">
+            <div>
+              <div class="tel"><div class="ecran">
+                <div class="statut"><span class="tabular">09:41</span><span class="ilot"></span><span>4G</span></div>
+                <div class="m-tete" style="justify-content:space-between"><span data-lockup="voie" data-size="15" data-compact></span><span class="avatar">KM</span></div>
+                <div class="ruban-haut" style="height:3px"></div>
+                <div class="m-corps" style="padding-top:var(--s-4)">
+                  <p class="m-titre">Où allez-vous ?</p>
+                  <div class="prochain">
+                    <span class="prochain-lieu">Prochain voyage · 2 oct.</span>
+                    <div class="heures">07:40 <span>→</span> 19:25</div>
+                    <b>Owendo → Franceville</b>
+                    <div class="chips"><span class="chip ok">✓ À l'heure</span><span class="chip">Voiture 4 · Place 32</span></div>
+                  </div>
+                  <span class="btn btn-primary btn-block">Réserver un trajet</span>
+                </div>
+                <nav class="onglets">
+                  <span class="onglet on"><svg><use href="#i-chercher"/></svg>Réserver</span>
+                  <span class="onglet"><svg><use href="#i-billet"/></svg>Billets</span>
+                  <span class="onglet"><svg><use href="#i-horaire"/></svg>Horaires</span>
+                  <span class="onglet"><svg><use href="#i-compte"/></svg>Compte</span>
+                </nav>
+              </div></div>
+              <p class="tel-legende">Accueil : liseré et onglet actif</p>
+            </div>
+            <div>
+              <div class="tel"><div class="ecran">
+                <div class="statut"><span class="tabular">09:41</span><span class="ilot"></span><span>4G</span></div>
+                <div class="m-tete"><span class="m-retour" aria-hidden="true">‹</span>Résultats</div>
+                <div class="m-corps">
+                  <div class="resume-recherche">Owendo → Franceville<small>Ven. 2 oct. · 1 adulte</small></div>
+                  <div class="chargeur" role="progressbar" aria-label="Recherche des trains en cours"></div>
+                  <p class="note" aria-live="polite">Recherche des trains…</p>
+                  <div class="squelette"><i></i><i></i><i></i></div>
+                  <div class="squelette"><i></i><i></i><i></i></div>
+                  <div class="squelette"><i></i><i></i><i></i></div>
+                </div>
+              </div></div>
+              <p class="tel-legende">Chargement : le ruban fait la navette</p>
+            </div>
+          </div>
+          <div class="regles">
+            <div class="oui"><h4>À faire</h4><ul>
+              <li>Toujours dans le même sens : vert à gauche (ou en haut), bleu à droite.</li>
+              <li>Épaisseur fixe par usage : 3 px filet, 4 px en-tête, 6 px progression.</li>
+              <li>La progression reste écrite (« Étape 3 sur 4 ») : le ruban l'accompagne, il ne la porte pas.</li>
+            </ul></div>
+            <div class="non"><h4>À éviter</h4><ul>
+              <li>Du texte sur le ruban : le jaune tombe sous 2:1 avec le blanc.</li>
+              <li>Le ruban comme fond de bouton, ou en aplat de grande surface.</li>
+              <li>Le vert du ruban pour dire « validé » : c'est le rôle de <code>--c-success</code>.</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Concept 3 ------------------------------------------------------------ -->
+    <article class="concept" id="c3">
+      <div class="concept-head">
+        <div>
+          <p class="eyebrow">Concept 3</p>
+          <h3>La ligne</h3>
+          <p>Le S devient le plan de la ligne. Owendo en haut, Franceville en bas, les 23 gares placées à leur point kilométrique réel. Ce plan sert d'outil : choisir ses gares, voir les arrêts d'un train, suivre sa position. Il utilise le logo B.</p>
+        </div>
+        <dl class="ou">
+          <dt>Icône</dt><dd>Le S-ligne et ses deux terminus.</dd>
+          <dt>Horaires</dt><dd>Schéma de ligne, trajet choisi surligné en bleu.</dd>
+          <dt>Détail d'un train</dt><dd>Liste d'arrêts verticale, comme un plan de métro.</dd>
+          <dt>Voyage en cours</dt><dd>Position du train sur la ligne, retard chiffré.</dd>
+          <dt>Widget iOS / Android</dt><dd>Prochain départ et S-ligne du trajet.</dd>
+        </dl>
+      </div>
+
+      <div class="maquettes">
+        <div class="navigateur">
+          <div class="navigateur-barre"><i></i><i></i><i></i><span>Billetterie SETRAG — horaires</span></div>
+          <header class="site-head">
+            <span data-lockup="ligne" data-size="18" data-compact></span>
+            <nav><a>Réserver</a><a>Mes billets</a><a class="on">Horaires</a><a>Aide</a></nav>
+            <span class="avatar">KM</span>
+          </header>
+          <div class="c3-haut">
+            <p class="eyebrow">Horaires</p>
+            <h4>Owendo → Booué, vendredi 2 octobre</h4>
+            <div id="c3-ligne"></div>
+            <p class="c3-legende">Trajet sélectionné : <b>338 km</b> sur les 669 de la ligne, 14 gares desservies par l'omnibus, 6 par l'express.</p>
+          </div>
+          <div class="c3-bas">
+            <div class="card" style="padding:var(--s-4) var(--s-5)">
+              <p class="etapes-label" style="margin-bottom:var(--s-2)">Express 201 <span>— 6 arrêts · 5 h 15</span></p>
+              <ol class="arrets">
+                <li class="arret maj"><span class="h">07:40</span><span class="pt"></span>Owendo<span class="km">PK 0</span></li>
+                <li class="arret"><span class="h">08:22</span><span class="pt"></span>Ntoum<span class="km">PK 35</span></li>
+                <li class="arret maj"><span class="h">10:31</span><span class="pt"></span>Ndjolé<span class="km">PK 182</span></li>
+                <li class="arret"><span class="h">11:14</span><span class="pt"></span>Otoumbi<span class="km">PK 226</span></li>
+                <li class="arret"><span class="h">12:02</span><span class="pt"></span>Lopé<span class="km">PK 290</span></li>
+                <li class="arret maj"><span class="h">12:55</span><span class="pt"></span>Booué<span class="km">PK 338</span></li>
+              </ol>
+            </div>
+            <div class="c3-carte">
+              <span data-sym="ligne" data-opts='{"segment":[0,338]}' data-label="Trajet Owendo – Booué sur la ligne"></span>
+              <p>Le logo devient la carte : le trajet s'y surligne.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bas-concept">
+          <div class="tels">
+            <div>
+              <div class="tel"><div class="ecran">
+                <div class="statut"><span class="tabular">12:21</span><span class="ilot"></span><span>4G</span></div>
+                <div class="m-tete"><span class="m-retour" aria-hidden="true">‹</span>Express 201 · en route</div>
+                <div class="m-corps">
+                  <div class="m-eta">
+                    <div><small>Arrivée prévue à Booué</small><b>13:07</b></div>
+                    <span class="chip retard">Retard +12 min</span>
+                  </div>
+                  <div class="train-ici"><span class="pulse"></span>Vous êtes entre Lopé et Offoué</div>
+                  <ol class="arrets en-route">
+                    <li class="arret passe"><span class="h">10:31</span><span class="pt"></span>Ndjolé</li>
+                    <li class="arret passe"><span class="h">11:14</span><span class="pt"></span>Otoumbi</li>
+                    <li class="arret passe"><span class="h">11:40</span><span class="pt"></span>Ayem<span class="km">sans arrêt</span></li>
+                    <li class="arret passe ici-train"><span class="h">12:14</span><span class="pt"></span>Lopé</li>
+                    <li class="arret"><span class="h">12:40</span><span class="pt"></span>Offoué<span class="km">sans arrêt</span></li>
+                    <li class="arret maj"><span class="h">13:07</span><span class="pt"></span>Booué</li>
+                  </ol>
+                </div>
+              </div></div>
+              <p class="tel-legende">Voyage en cours</p>
+            </div>
+            <div>
+              <div class="tel"><div class="ecran accueil-tel">
+                <div class="statut"><span class="tabular">06:52</span><span class="ilot"></span><span>4G</span></div>
+                <div class="widget">
+                  <div>
+                    <span class="w-titre">Prochain train</span>
+                    <b>07:40</b>
+                    <small>Owendo → Booué</small>
+                    <small>Quai 1 · Voiture 4</small>
+                  </div>
+                  <span data-sym="ligne" data-opts='{"segment":[0,338]}'></span>
+                </div>
+                <div class="apps">
+                  <span class="app"><span class="fantome"></span>Photos</span>
+                  <span class="app"><span class="fantome"></span>Météo</span>
+                  <span class="app"><span data-tuile="ligne" data-px="52"></span>SETRAG</span>
+                  <span class="app"><span class="fantome"></span>Airtel</span>
+                  <span class="app"><span class="fantome"></span>Plans</span>
+                  <span class="app"><span class="fantome"></span>Notes</span>
+                  <span class="app"><span class="fantome"></span>Horloge</span>
+                  <span class="app"><span class="fantome"></span>Réglages</span>
+                </div>
+                <div class="dock"><span class="fantome"></span><span class="fantome"></span><span class="fantome"></span><span class="fantome"></span></div>
+              </div></div>
+              <p class="tel-legende">Écran d'accueil : icône et widget</p>
+            </div>
+          </div>
+          <div class="regles">
+            <div class="oui"><h4>À faire</h4><ul>
+              <li>Gares placées à leur vrai kilomètre : le schéma est une information, il doit être juste.</li>
+              <li>Le retard est écrit en minutes (« +12 min ») en plus de la pastille.</li>
+              <li>Position du train : un point qui pulse et une phrase (« entre Lopé et Offoué »).</li>
+            </ul></div>
+            <div class="non"><h4>À éviter</h4><ul>
+              <li>Le S-ligne avec toutes ses gares sous 48 px : on n'y garde que les terminus.</li>
+              <li>Une position de train affichée sans donnée temps réel derrière.</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section id="logos">
+    <h2><span class="n">03</span>Six logos dans l'esprit train</h2>
+    <p class="section-lead">Tous gardent le S comme première lettre et le ruban sous le mot. A est une évolution du logo actuel ; les suivants s'en éloignent de plus en plus. Sous chaque logo, l'icône d'app et le favicon rendus à leur taille réelle (32 et 16 px), agrandis sans lissage : ce sont les vrais pixels. « Animer » rejoue l'apparition.</p>
+    <div class="logos-grille" id="logos-grille"></div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section id="animations">
+    <h2><span class="n">04</span>Animations Lottie</h2>
+    <p class="section-lead">Quatre fichiers Lottie générés par script à partir de la même géométrie que les SVG de cette page (<code>generate-lottie.mjs</code>). Ils se lisent tels quels sur le web et dans l'app Expo ; un motion designer peut aussi les reprendre dans After Effects.</p>
+    <div class="anims">
+      <article class="anim">
+        <div class="lottie" id="lt-splash" data-lottie="splash" aria-label="Animation de démarrage"></div>
+        <div class="anim-corps">
+          <h3>Démarrage</h3>
+          <p>La voie se pose. Le ruban entre par le haut du S, suit les rails, sort au bout et se pose à l'horizontale sous la voie. Jouée une fois à l'ouverture de l'app.</p>
+          <dl><dt>Fichier</dt><dd>setrag-splash.json</dd><dt>Poids</dt><dd>33 Ko</dd><dt>Durée</dt><dd>3,0 s · 60 i/s</dd></dl>
+          <button class="btn btn-ghost btn-sm" data-rejouer="#lt-splash">Rejouer</button>
+        </div>
+      </article>
+      <article class="anim">
+        <div class="lottie" id="lt-chargement" data-lottie="chargement" data-loop aria-label="Animation de chargement"></div>
+        <div class="anim-corps">
+          <h3>Chargement</h3>
+          <p>Un train fait le tour du S. Remplace l'indicateur de chargement pendant une recherche ou un paiement.</p>
+          <dl><dt>Fichier</dt><dd>setrag-chargement.json</dd><dt>Poids</dt><dd>18 Ko</dd><dt>Durée</dt><dd>2,0 s en boucle</dd></dl>
+          <button class="btn btn-ghost btn-sm" data-rejouer="#lt-chargement">Rejouer</button>
+        </div>
+      </article>
+      <article class="anim">
+        <div class="lottie" id="lt-ligne" data-lottie="ligne" aria-label="Logo B animé : la ligne se trace et les gares s'allument"></div>
+        <div class="anim-corps">
+          <h3>La ligne (logo B)</h3>
+          <p>La ligne se trace, les 23 gares s'allument à leur kilomètre, puis un train la parcourt.</p>
+          <dl><dt>Fichier</dt><dd>setrag-ligne.json</dd><dt>Poids</dt><dd>18 Ko</dd><dt>Durée</dt><dd>3,2 s</dd></dl>
+          <button class="btn btn-ghost btn-sm" data-rejouer="#lt-ligne">Rejouer</button>
+        </div>
+      </article>
+      <article class="anim">
+        <div class="lottie" id="lt-traverses" data-lottie="traverses" aria-label="Logo D animé : la voie se pose traverse par traverse"></div>
+        <div class="anim-corps">
+          <h3>Traverses (logo D)</h3>
+          <p>La voie se pose traverse par traverse, en dégradé du ruban.</p>
+          <dl><dt>Fichier</dt><dd>setrag-traverses.json</dd><dt>Poids</dt><dd>2 Ko</dd><dt>Durée</dt><dd>2,5 s</dd></dl>
+          <button class="btn btn-ghost btn-sm" data-rejouer="#lt-traverses">Rejouer</button>
+        </div>
+      </article>
+    </div>
+
+    <div class="integration">
+      <div class="card">
+        <h3>Dans l'app voyageur (Expo)</h3>
+        <ul>
+          <li><code>lottie-react-native</code>, compatible Expo ; pas encore installé dans <code>apps/voyageur-mobile</code>.</li>
+          <li>L'écran de démarrage natif d'Expo reste une image fixe. L'animation prend le relais au premier rendu, pendant le chargement des polices et de la session.</li>
+          <li>Les calques sont nommés (<code>train</code>, <code>rails</code>, <code>traverses</code>, <code>ruban</code>) : <code>colorFilters</code> les recolore pour le thème sombre sans second fichier.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Sur le web (billetterie, agent, contrôleur)</h3>
+        <ul>
+          <li><code>lottie-web</code> en version <em>light</em>, chargé à la demande (<code>import()</code>) uniquement sur les écrans qui animent.</li>
+          <li>Pour le chargement, la version SVG + JS de cette page (le train du logo E) suffit et ne coûte aucune dépendance.</li>
+          <li><code>prefers-reduced-motion</code> : on affiche l'image finale, sans mouvement. Cette page le fait déjà.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section id="reco">
+    <h2><span class="n">05</span>Recommandation</h2>
+    <p class="section-lead">Garder le logo, le rendre lisible, et en tirer deux motifs.</p>
+    <div class="reco">
+      <div class="card">
+        <p class="eyebrow">Logo</p>
+        <h3>A, la voie épurée</h3>
+        <p>C'est le logo actuel redessiné, pas un nouveau logo : la reconnaissance est intacte, le S tient à 16 px, sa couleur est fixée. B (la ligne) sert de pictogramme du réseau : horaires, suivi, widget. Pas de logo principal.</p>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Intégration</p>
+        <h3>Le ruban partout, la voie aux moments forts</h3>
+        <p>Concept 2 sur les trois apps web et le mobile : c'est du CSS, sans risque. Concept 1 pour l'ouverture de l'app, les chargements et le billet. Concept 3 le jour où le suivi en temps réel existe.</p>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Animation</p>
+        <h3>Démarrage et chargement d'abord</h3>
+        <p>Ce sont les deux animations que le voyageur voit à chaque visite. Les logos animés (B, D) servent aux vidéos, réseaux sociaux et écrans en gare.</p>
+      </div>
+    </div>
+    <ol class="suite">
+      <li>Faire valider la palette (S orange et jaune repris du site) et le logo A par SETRAG : c'est leur marque, la décision leur revient.</li>
+      <li>Produire le SVG maître du logo A, puis régénérer les icônes : PWA 192/512/maskable, icône et icône adaptative Expo, favicon.</li>
+      <li>Ajouter le bloc « Marque » à <code>tokens.css</code> et son portage dans <code>packages/mobile-ui</code>.</li>
+      <li>Poser le ruban dans <code>AppHeader</code> (web) et la barre d'onglets (mobile).</li>
+      <li>Installer <code>lottie-react-native</code> et brancher démarrage et chargement dans l'app voyageur.</li>
+    </ol>
+  </section>
+</main>
+
+<footer>SETRAG — pistes de marque. Page de travail, hors application : <code>docs/concepts-marque/</code>. Horaires et prix fictifs.</footer>
+</body>
+</html>

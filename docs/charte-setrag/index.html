@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETRAG — charte graphique</title>
+  <link rel="icon" href="logo/setrag-symbole.svg">
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shared/ui.css">
+  <link rel="stylesheet" href="shared/charte.css">
+  <script src="vendor/lottie_light.min.js"></script>
+  <script type="module" src="shared/app.js"></script>
+</head>
+<body>
+<header class="doc-barre">
+  <a class="doc-logo" href="index.html" data-logo="compact" data-titre="SETRAG — charte graphique"></a>
+  <nav aria-label="Pages de la charte">
+    <a href="index.html">Charte</a>
+    <a href="mouvement.html">Mouvement</a>
+    <a href="composants.html">Composants</a>
+    <a href="web.html">Web</a>
+    <a href="mobile.html">Mobile</a>
+    <a href="widgets.html">Widgets &amp; Live</a>
+    <a href="assistant.html">Assistant</a>
+  </nav>
+  <button class="doc-bouton" id="theme" aria-pressed="false"><i data-i="moon"></i><span>Thème sombre</span></button>
+</header>
+
+<main class="doc">
+  <section class="doc-tete">
+    <div>
+      <p class="doc-sur">Charte graphique · version 1 · 30 septembre 2026</p>
+      <h1>Une voie, et le ruban qui glisse dessus</h1>
+      <p class="doc-chapo">Tout le système SETRAG part du logo. La voie ferrée du S donne la structure des écrans. Le ruban vert, jaune, bleu, les couleurs du Gabon, est la seule chose qui bouge : il montre où l'on en est et ce qui avance.</p>
+      <div class="tete-actions">
+        <a class="btn btn-primaire" href="#logo">Voir le logo</a>
+        <a class="btn btn-secondaire" href="logo/setrag-logo.svg" download>Télécharger le SVG</a>
+      </div>
+    </div>
+    <figure class="logo-scene">
+      <div class="lottie-logo" id="lt-logo" data-lottie="logo-anime" aria-label="Logo SETRAG animé : la voie se pose, le ruban la parcourt et souligne le nom"></div>
+      <button class="doc-bouton rejouer" data-rejouer="#lt-logo"><i data-i="rotate-ccw"></i><span>Rejouer</span></button>
+    </figure>
+  </section>
+
+  <!-- ================================================================ 01 -->
+  <section class="doc-section" id="concept">
+    <h2><span class="n">01</span>Le concept</h2>
+    <p class="doc-intro">Trois éléments, trois rôles. On ne les mélange pas : la voie ne bouge pas, le ruban ne structure rien, le S n'apparaît qu'aux grands moments.</p>
+    <div class="doc-grille g3">
+      <div class="doc-carte concept">
+        <div class="concept-vis"><span class="voie" style="max-width:220px"></span></div>
+        <h3>La voie</h3>
+        <p>Deux rails, des traverses. Elle relie deux informations : une heure de départ et une heure d'arrivée, deux étapes, deux moitiés de billet. Neutre, en gris de ligne, elle ne se voit que si on la cherche.</p>
+      </div>
+      <div class="doc-carte concept">
+        <div class="concept-vis"><span class="voie attente" style="max-width:220px"><span class="ruban"></span></span></div>
+        <h3>Le ruban</h3>
+        <p>Vert, jaune, bleu : le drapeau, toujours dans ce sens, le bleu en tête. Il glisse sur la voie pour dire « vous êtes ici », « ça avance », « c'est choisi ». C'est la seule couleur vive qui bouge à l'écran.</p>
+      </div>
+      <div class="doc-carte concept">
+        <div class="concept-vis"><span data-logo="symbole" style="height:84px;display:block"></span></div>
+        <h3>Le S</h3>
+        <p>La voie entière, en orange. Il signe : logo, icône d'app, démarrage, états vides. Dans l'interface, on n'en montre que des tronçons droits.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 02 -->
+  <section class="doc-section" id="logo">
+    <h2><span class="n">02</span>Le logo</h2>
+    <p class="doc-intro">La voie épurée : le logo historique redessiné en aplats, dans les couleurs du site setrag.eramet.com. Le mot est dessiné dans la police de l'interface, Schibsted Grotesk 800 italique. Le ruban souligne tout le nom, S compris : c'est la position où il se pose à la fin de l'animation.</p>
+
+    <h3 class="doc-h3">Le logo animé</h3>
+    <div class="anim-logo">
+      <div class="planche planche-blanc">
+        <div class="lottie-logo" id="lt-logo-2" data-lottie="logo-anime" aria-hidden="true"></div>
+        <button class="doc-bouton rejouer" data-rejouer="#lt-logo-2"><i data-i="rotate-ccw"></i><span>Rejouer</span></button>
+      </div>
+      <ol class="temps">
+        <li><span class="tabular">0,0 – 0,8 s</span><b>La voie se pose</b>Les traverses, puis les rails, d'un bout à l'autre du S.</li>
+        <li><span class="tabular">0,6 – 1,6 s</span><b>Le ruban la parcourt</b>Il entre par le haut, du gabarit d'un train, et suit les rails en accélérant.</li>
+        <li><span class="tabular">1,6 – 2,4 s</span><b>Il sort et se couche</b>Au pied du S, il s'affine, fait demi-tour et file sous le nom.</li>
+        <li><span class="tabular">1,8 – 2,6 s</span><b>Les lettres se lèvent</b>Chacune apparaît quand le ruban passe sous elle.</li>
+        <li><span class="tabular">2,5 – 2,9 s</span><b>La signature</b>Société d'Exploitation du Transgabonais, en fondu.</li>
+      </ol>
+    </div>
+    <div class="regles" style="margin-top:var(--s-5)">
+      <div class="oui"><h4>Où il joue</h4><ul>
+        <li>Au démarrage à froid de l'app voyageur, une fois. Pas au retour au premier plan.</li>
+        <li>À l'ouverture de la billetterie installée (PWA), sur l'écran de démarrage.</li>
+        <li>Vidéos, écrans en gare, ouverture des présentations.</li>
+      </ul></div>
+      <div class="non"><h4>Où il ne joue pas</h4><ul>
+        <li>En boucle, ou à chaque changement de page.</li>
+        <li>Dans l'en-tête d'un site : le logo y est fixe.</li>
+        <li>Si l'utilisateur a demandé moins d'animations : on affiche l'image finale.</li>
+      </ul></div>
+    </div>
+
+    <h3 class="doc-h3">Construction</h3>
+    <div class="construction">
+      <div class="planche planche-blanc construction-vis">
+        <div class="cote-zone"><span data-logo="complet"></span></div>
+      </div>
+      <dl class="cotes">
+        <div><dt>Module <i class="m">x</i></dt><dd>Hauteur des capitales de ETRAG. Tout se mesure en x.</dd></div>
+        <div><dt>Le S</dt><dd>2,5 x de haut. Son pied repose sur la ligne de base du mot.</dd></div>
+        <div><dt>Le ruban</dt><dd>0,1 x d'épaisseur, 0,2 x sous la ligne de base, du pied du S à la fin du G.</dd></div>
+        <div><dt>La signature</dt><dd>Même longueur que le ruban, 0,12 x sous lui.</dd></div>
+        <div><dt>Zone de protection</dt><dd>0,5 x tout autour (pointillés). Rien n'y entre, pas même un autre logo.</dd></div>
+      </dl>
+    </div>
+
+    <h3 class="doc-h3">Déclinaisons</h3>
+    <div class="doc-grille g4 declinaisons">
+      <figure><div class="planche planche-blanc"><span data-logo="complet"></span></div><figcaption><b>Complet</b>Documents, site, e-mails. 200 px de large au moins. <a href="logo/setrag-logo.svg" download>SVG</a></figcaption></figure>
+      <figure><div class="planche planche-blanc"><span data-logo="compact"></span></div><figcaption><b>Compact</b>En-têtes d'app et de site. 96 px au moins. <a href="logo/setrag-logo-compact.svg" download>SVG</a></figcaption></figure>
+      <figure><div class="planche planche-blanc"><span data-logo="symbole-ruban" class="petit-logo"></span></div><figcaption><b>Symbole et ruban</b>Formats carrés, avatar de réseau social. <a href="logo/setrag-symbole-ruban.svg" download>SVG</a></figcaption></figure>
+      <figure><div class="planche planche-sunk"><span data-logo="icone" class="icone-app"></span></div><figcaption><b>Icône d'app</b>Symbole épaissi : tient à 29 pt. <a href="logo/setrag-icone-app.svg" download>SVG</a></figcaption></figure>
+    </div>
+
+    <h3 class="doc-h3">Sur chaque fond</h3>
+    <div class="doc-grille g3 fonds">
+      <div class="planche planche-blanc"><span class="etiquette">Couleur · fond clair</span><span data-logo="complet"></span></div>
+      <div class="planche planche-encre"><span class="etiquette">Négatif · fond encre</span><span data-logo="complet" data-theme="negatif"></span></div>
+      <div class="planche planche-bleu"><span class="etiquette">Sur le bleu SETRAG</span><span data-logo="complet" data-theme="sur-bleu"></span></div>
+      <div class="planche planche-blanc"><span class="etiquette">Une couleur · impression noire, tampons</span><span data-logo="complet" data-theme="mono-encre"></span></div>
+      <div class="planche fond-photo"><span class="etiquette">Blanc · sur photo sombre</span><span data-logo="complet" data-theme="mono-blanc"></span></div>
+      <div class="planche planche-blanc fond-orange-interdit"><span class="etiquette">Jamais sur orange</span><span data-logo="complet"></span><span class="barre-rouge" aria-hidden="true"></span></div>
+    </div>
+
+    <h3 class="doc-h3">À ne pas faire</h3>
+    <div class="doc-grille g4 interdits">
+      <figure><div class="planche planche-blanc"><span data-logo="compact" class="deforme"></span></div><figcaption>Déformer ou étirer.</figcaption></figure>
+      <figure><div class="planche planche-blanc"><span data-logo="compact" class="s-rouge"></span></div><figcaption>Remettre le S en rouge : c'est la couleur des erreurs.</figcaption></figure>
+      <figure><div class="planche planche-blanc"><span data-logo="compact" class="sans-ruban"></span></div><figcaption>Retirer le ruban, ou le déplacer au-dessus du nom.</figcaption></figure>
+      <figure><div class="planche planche-blanc"><span data-logo="compact" class="penche"></span></div><figcaption>Faire pivoter, ajouter une ombre ou un contour.</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 03 -->
+  <section class="doc-section" id="couleurs">
+    <h2><span class="n">03</span>Couleurs</h2>
+    <p class="doc-intro">Deux familles. Celle de l'interface existe déjà dans <code>tokens.css</code>. Celle de la marque est réservée au logo, au ruban et à deux usages repris du site : le bandeau d'information, jaune sur bleu, et les pastilles de mise en avant, bleu sur jaune.</p>
+    <div class="proportions" aria-label="Proportions des couleurs à l'écran">
+      <span style="flex:60;background:var(--c-canvas)">Neutres · 60 %</span>
+      <span style="flex:22;background:var(--c-accent);color:#fff">Bleu · 22 %</span>
+      <span style="flex:10;background:var(--brand-encre);color:#fff">Encre · 10 %</span>
+      <span style="flex:5;background:var(--brand-ruban)"></span>
+      <span style="flex:3;background:var(--brand-orange)"></span>
+    </div>
+    <p class="doc-legende">Sur un écran type : le ruban et l'orange ne dépassent jamais 8 % de la surface.</p>
+
+    <h3 class="doc-h3">Marque</h3>
+    <div class="doc-grille g3 nuancier">
+      <figure class="nuance"><span style="background:var(--brand-orange)"></span><figcaption><b>Orange SETRAG</b><code>--brand-orange</code><span class="tabular">#FA6414 · oklch(0.686 0.199 42.3)</span><em>Le S uniquement. Jamais pour un statut.</em></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--brand-bleu)"></span><figcaption><b>Bleu SETRAG</b><code>--c-accent</code><span class="tabular">#0F50A0 · oklch(0.441 0.144 257)</span><em>Le mot, l'interface, le bouton principal.</em></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--brand-ruban)"></span><figcaption><b>Ruban</b><code>--brand-ruban</code><span class="tabular">vert → jaune → bleu, interpolé en oklch</span><em>Ce qui glisse. Décor, jamais une information seule.</em></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--brand-jaune)"></span><figcaption><b>Jaune</b><code>--brand-jaune</code><span class="tabular">#FCDF49 · oklch(0.902 0.164 97.9)</span><em>Ruban ; texte sur bleu (6,3:1) ; pastilles.</em></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--brand-vert)"></span><figcaption><b>Vert Gabon</b><code>--brand-vert</code><span class="tabular">#009E60 · oklch(0.615 0.146 157)</span><em>Ruban seulement : le succès garde son propre vert.</em></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--brand-indigo)"></span><figcaption><b>Indigo</b><code>--brand-indigo</code><span class="tabular">#1A003B · oklch(0.189 0.103 295.7)</span><em>Titres éditoriaux : e-mails, PDF, pages institutionnelles.</em></figcaption></figure>
+    </div>
+
+    <h3 class="doc-h3">Interface</h3>
+    <div class="doc-grille g4 nuancier compact">
+      <figure class="nuance"><span style="background:var(--c-canvas);border-bottom:1px solid var(--c-line)"></span><figcaption><b>Fond</b><code>--c-canvas</code></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--c-surface);border-bottom:1px solid var(--c-line)"></span><figcaption><b>Surface</b><code>--c-surface</code></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--c-line-strong)"></span><figcaption><b>Ligne · rails</b><code>--c-line-strong</code></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--c-ink)"></span><figcaption><b>Encre</b><code>--c-ink</code></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--c-success)"></span><figcaption><b>À l'heure, validé</b><code>--c-success</code></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--c-warning)"></span><figcaption><b>Retard</b><code>--c-warning</code></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--c-danger)"></span><figcaption><b>Annulé, erreur</b><code>--c-danger</code></figcaption></figure>
+      <figure class="nuance"><span style="background:var(--c-info)"></span><figcaption><b>Information</b><code>--c-info</code></figcaption></figure>
+    </div>
+    <div class="regles" style="margin-top:var(--s-5)">
+      <div class="oui"><h4>Associations sûres</h4><ul>
+        <li>Jaune sur bleu SETRAG : 5,9:1, tout texte (bandeau d'information).</li>
+        <li>Bleu sur jaune : pastille « Meilleur prix », « Promo ».</li>
+        <li>Orange sur encre : 5,7:1, le S du billet et des écrans sombres.</li>
+      </ul></div>
+      <div class="non"><h4>À proscrire</h4><ul>
+        <li>Texte orange sur blanc (3:1) sous 24 px.</li>
+        <li>Texte sur le ruban, ou ruban en fond de bouton.</li>
+        <li>Une couleur seule pour dire un statut : toujours une icône et un mot.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 04 -->
+  <section class="doc-section" id="typo">
+    <h2><span class="n">04</span>Typographie</h2>
+    <p class="doc-intro">Deux familles, déjà servies en local par <code>@fontsource</code>. Le mot-symbole est dessiné dans la police de l'interface : le logo et les écrans parlent la même langue.</p>
+    <div class="doc-grille g3 specimens">
+      <div class="doc-carte"><p class="spec-nom">Schibsted Grotesk</p><p class="spec-grand">Aa</p><p>Tout le texte d'interface, du titre à la légende. Graisses 400, 500, 600, 700.</p></div>
+      <div class="doc-carte"><p class="spec-nom">Schibsted Grotesk 800 italique</p><p class="spec-grand mot">ETRAG</p><p>Réservée au mot-symbole. Jamais pour un titre d'écran : l'italique n'existe pas ailleurs.</p></div>
+      <div class="doc-carte"><p class="spec-nom">IBM Plex Mono</p><p class="spec-grand mono">07:40</p><p>Heures, durées, points kilométriques, références de billet. Les chiffres s'alignent d'une ligne à l'autre.</p></div>
+    </div>
+    <div class="echelle">
+      <div><span>Display · 49</span><p style="font:var(--t-display)">Owendo → Franceville</p></div>
+      <div><span>Titre 1 · 39</span><p style="font:var(--t-h1)">Vos billets</p></div>
+      <div><span>Titre 2 · 31</span><p style="font:var(--t-h2)">Choisissez votre classe</p></div>
+      <div><span>Titre 3 · 25</span><p style="font:var(--t-h3)">Express 201</p></div>
+      <div><span>Titre 4 · 20</span><p style="font:var(--t-h4)">Moyen de paiement</p></div>
+      <div><span>Texte · 16</span><p style="font:var(--t-body)">Votre train partira 12 min plus tard. Votre place est conservée.</p></div>
+      <div><span>Petit · 14</span><p style="font:var(--t-small)">Places tenues 15 minutes pendant le paiement.</p></div>
+      <div><span>Légende · 12</span><p style="font:var(--t-caption)">PK 338 · Booué</p></div>
+      <div><span>Heure · mono 25</span><p class="tabular" style="font:var(--t-time)">07:40 → 19:25</p></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 05 -->
+  <section class="doc-section" id="motif">
+    <h2><span class="n">05</span>La voie et le ruban dans l'interface</h2>
+    <p class="doc-intro">Dans les écrans, la voie est droite, grise et fine ; le ruban y glisse pour un état précis. Chaque usage ci-dessous est un composant : il se construit une fois, dans <code>packages/ui</code> et <code>packages/mobile-ui</code>.</p>
+    <div class="doc-grille g3 motifs">
+      <div class="doc-carte motif">
+        <div class="motif-vis"><div class="trajet-heures mini"><div class="trajet-pt"><b>07:40</b></div><div class="trajet-milieu"><span class="voie"><span class="ruban" style="--p:1"></span></span><small>11 h 45</small></div><div class="trajet-pt fin"><b>19:25</b></div></div></div>
+        <h3>Trajet</h3><p>La voie relie départ et arrivée. Le ruban la remplit quand le trajet est choisi.</p>
+      </div>
+      <div class="doc-carte motif">
+        <div class="motif-vis"><div class="chargeur"><span class="voie attente"><span class="ruban"></span></span><p>Recherche des trains…</p></div></div>
+        <h3>Attente</h3><p>Une rame passe, 1,6 s, sans fin. Seulement pour une attente de plus d'une seconde, toujours avec une phrase.</p>
+      </div>
+      <div class="doc-carte motif">
+        <div class="motif-vis"><ol class="etapes mini" style="--n:4"><span class="ruban" style="--p:.667"></span><li class="etape faite"><span class="gare"></span>Trajet</li><li class="etape faite"><span class="gare"></span>Voyageurs</li><li class="etape ici"><span class="gare"></span>Paiement</li><li class="etape"><span class="gare"></span>Billet</li></ol></div>
+        <h3>Étapes</h3><p>Chaque étape est une gare. Le ruban avance jusqu'à la suivante ; le numéro d'étape reste écrit.</p>
+      </div>
+      <div class="doc-carte motif">
+        <div class="motif-vis"><nav class="nav" data-glisse="a"><a aria-current="page">Réserver</a><a>Billets</a><a>Suivi</a><span class="indicateur"></span></nav></div>
+        <h3>Onglets</h3><p>L'onglet courant porte un ruban de 3 px, qui glisse vers le nouvel onglet. Cliquez pour voir.</p>
+      </div>
+      <div class="doc-carte motif">
+        <div class="motif-vis sombre"><div class="billet mini-billet emis"><div class="billet-coupe" style="--fond-coupe:var(--c-surface)"><span class="voie sur-encre"><span class="ruban"></span></span></div></div></div>
+        <h3>Découpe du billet</h3><p>La voie remplace les pointillés. À l'émission, le ruban la traverse une fois.</p>
+      </div>
+      <div class="doc-carte motif">
+        <div class="motif-vis"><span data-s-attente class="s-attente"></span></div>
+        <h3>État vide</h3><p>Le S en gris, la rame à quai en haut : rien ne roule encore. Jamais animé.</p>
+      </div>
+    </div>
+    <h3 class="doc-h3">Cotes de la voie d'interface</h3>
+    <table class="specs">
+      <thead><tr><th>Élément</th><th>Web</th><th>Mobile</th><th>Couleur</th></tr></thead>
+      <tbody>
+        <tr><td>Rails</td><td class="tabular">2 × 1,5 px, entraxe 6,5 px</td><td class="tabular">2 × 1,5 pt</td><td><code>--c-line-strong</code></td></tr>
+        <tr><td>Traverses</td><td class="tabular">2 px tous les 7 px, 14 px de long</td><td class="tabular">idem en pt</td><td><code>--c-line</code></td></tr>
+        <tr><td>Ruban sur la voie</td><td class="tabular">8 px de haut, rayon 4</td><td class="tabular">8 pt</td><td><code>--brand-ruban</code></td></tr>
+        <tr><td>Ruban indicateur</td><td class="tabular">3 px, sous l'onglet</td><td class="tabular">3 pt, au-dessus de l'onglet</td><td><code>--brand-ruban</code></td></tr>
+        <tr><td>Rame d'attente</td><td class="tabular">34 % de la voie</td><td class="tabular">34 %</td><td>ruban, bleu en tête</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================================================================ 06 -->
+  <section class="doc-section" id="icones">
+    <h2><span class="n">06</span>Icônes</h2>
+    <p class="doc-intro">Lucide, déjà utilisée par <code>lucide-react</code> et <code>lucide-react-native</code> : trait de 2 px sur une grille de 24, extrémités arrondies. Une icône accompagne un mot ; elle ne le remplace que dans la barre d'onglets, où le libellé reste affiché.</p>
+    <div class="grille-icones">
+      <figure><i data-i="train-front"></i><figcaption>Train</figcaption></figure>
+      <figure><i data-i="ticket"></i><figcaption>Billet</figcaption></figure>
+      <figure><i data-i="route"></i><figcaption>Trajet</figcaption></figure>
+      <figure><i data-i="map-pin"></i><figcaption>Gare</figcaption></figure>
+      <figure><i data-i="clock"></i><figcaption>Horaire</figcaption></figure>
+      <figure><i data-i="clock-alert"></i><figcaption>Retard</figcaption></figure>
+      <figure><i data-i="circle-x"></i><figcaption>Annulé</figcaption></figure>
+      <figure><i data-i="circle-check"></i><figcaption>À l'heure</figcaption></figure>
+      <figure><i data-i="armchair"></i><figcaption>Classe</figcaption></figure>
+      <figure><i data-i="users"></i><figcaption>Voyageurs</figcaption></figure>
+      <figure><i data-i="baby"></i><figcaption>Enfant</figcaption></figure>
+      <figure><i data-i="luggage"></i><figcaption>Bagage</figcaption></figure>
+      <figure><i data-i="dog"></i><figcaption>Animal</figcaption></figure>
+      <figure><i data-i="package"></i><figcaption>Colis</figcaption></figure>
+      <figure><i data-i="smartphone"></i><figcaption>Mobile Money</figcaption></figure>
+      <figure><i data-i="credit-card"></i><figcaption>Carte</figcaption></figure>
+      <figure><i data-i="wallet"></i><figcaption>Wallet</figcaption></figure>
+      <figure><i data-i="wifi-off"></i><figcaption>Hors réseau</figcaption></figure>
+      <figure><i data-i="bell"></i><figcaption>Alerte</figcaption></figure>
+      <figure><i data-i="triangle-alert"></i><figcaption>Info trafic</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 07 -->
+  <section class="doc-section" id="ton">
+    <h2><span class="n">07</span>Le ton</h2>
+    <p class="doc-intro">Ce qu'on écrit compte autant que ce qu'on montre. Des phrases courtes, un fait, puis ce que ça change pour le voyageur.</p>
+    <div class="doc-grille g2 ton">
+      <div class="doc-carte"><p class="non-dit">« Incident d'exploitation »</p><p class="dit">« Votre train partira 12 min plus tard. Votre place est conservée. »</p></div>
+      <div class="doc-carte"><p class="non-dit">« Transaction en cours de traitement »</p><p class="dit">« Validez le paiement sur votre téléphone. Vos places sont tenues 15 minutes. »</p></div>
+      <div class="doc-carte"><p class="non-dit">« Erreur 503 »</p><p class="dit">« Pas de réseau. Vos billets restent consultables. »</p></div>
+      <div class="doc-carte"><p class="non-dit">« Aucun résultat »</p><p class="dit">« Pas de train ce jour-là. Le prochain part samedi à 07:40. »</p></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 08 -->
+  <section class="doc-section" id="tokens">
+    <h2><span class="n">08</span>Tokens à ajouter</h2>
+    <p class="doc-intro">Un bloc « Marque » et un bloc « Mouvement » dans <code>packages/ui/src/styles/tokens.css</code>, puis leur portage en sRGB dans <code>packages/mobile-ui/src/tokens</code>. Rien d'autre ne change dans la charte existante.</p>
+    <pre class="doc-code"><span class="c">/* — Marque — réservée au logo, au ruban et à leurs dérivés : jamais pour un statut. */</span>
+--brand-orange: oklch(0.686 0.199 42.3);   <span class="c">/* #FA6414 · le S */</span>
+--brand-jaune:  oklch(0.902 0.164 97.9);   <span class="c">/* #FCDF49 · ruban, texte sur bleu */</span>
+--brand-vert:   oklch(0.615 0.146 157);    <span class="c">/* #009E60 · ruban */</span>
+--brand-indigo: oklch(0.189 0.103 295.7);  <span class="c">/* #1A003B · titres éditoriaux */</span>
+--brand-ruban:  linear-gradient(90deg in oklch, var(--brand-vert), var(--brand-jaune) 50%, var(--c-accent));
+
+<span class="c">/* — Mouvement — complète --ease et --dur-fast|base|slow. */</span>
+--dur-micro: 90ms;      <span class="c">/* réponse au doigt */</span>
+--dur-glisse: 480ms;    <span class="c">/* le ruban se déplace */</span>
+--dur-boucle: 1600ms;   <span class="c">/* un passage de rame */</span>
+--ease-glisse: cubic-bezier(0.45, 0, 0.2, 1);  <span class="c">/* départ progressif, arrivée douce */</span></pre>
+  </section>
+</main>
+
+<footer class="doc-pied">
+  <span>SETRAG — charte graphique. Page de travail : <code>docs/charte-setrag/</code>. Horaires et prix des maquettes fictifs.</span>
+  <span>Fichiers : <a href="logo/">logo/</a> · <a href="lottie/">lottie/</a></span>
+</footer>
+</body>
+</html>

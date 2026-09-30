@@ -1,9 +1,18 @@
-import { PaymentWaiting } from "@/components/after-sale-screens"
+import type { Metadata } from "next"
+import { Suspense } from "react"
 
-export default function AttentePaiementPage() {
+import { SqueletteTunnel } from "@/fonctionnalites/tunnel/etapes"
+import { Attente } from "@/fonctionnalites/tunnel/paiement/attente"
+
+export const metadata: Metadata = {
+  title: "Paiement en cours",
+  robots: { index: false },
+}
+
+export default function PageAttente() {
   return (
-    <main className="mx-auto w-full max-w-4xl px-s-5 py-s-5 md:px-6 md:py-16">
-      <PaymentWaiting />
-    </main>
+    <Suspense fallback={<SqueletteTunnel />}>
+      <Attente />
+    </Suspense>
   )
 }

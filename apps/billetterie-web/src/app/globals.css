@@ -1,1 +1,8 @@
 @import "@workspace/ui/globals.css";
+
+/* Web app installable : pas de surbrillance grise au toucher, pas de rebond
+   qui ferait apparaître le fond du navigateur derrière la barre d'onglets. */
+html {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}

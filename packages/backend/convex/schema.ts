@@ -173,6 +173,54 @@ export const messagingChannel = v.union(
   v.literal("apple_messages")
 )
 
+/**
+ * Bouton d'un message sortant : soit un rappel opaque renvoyé au webhook
+ * (`data`), soit un lien ouvert par le client de messagerie (`url`).
+ */
+export const messagingButton = v.union(
+  v.object({ label: v.string(), data: v.string() }),
+  v.object({ label: v.string(), url: v.string() })
+)
+
+/** Civilité imprimée sur un billet : `M` (monsieur) ou `F` (madame). */
+export const gender = v.union(v.literal("M"), v.literal("F"))
+
+/** Nature d'une note de Ruban (voir `model/memoire.ts`). */
+export const assistantMemoryCategory = v.union(
+  v.literal("preference"),
+  v.literal("trajet"),
+  v.literal("compagnon"),
+  v.literal("contrainte"),
+  v.literal("rappel"),
+  v.literal("autre")
+)
+
+/**
+ * État d'une réponse de Ruban écrite au fil du flux (`assistantMessages`).
+ * Absent sur les messages terminés d'avant le flux : ils valent `termine`.
+ */
+export const assistantMessageStatus = v.union(
+  v.literal("en_cours"),
+  v.literal("termine"),
+  v.literal("erreur")
+)
+
+/**
+ * Un appel d'outil d'un tour de Ruban, gardé pour être rejoué au modèle aux
+ * tours suivants (`ai/rejeu.ts`). La sortie est la version projetée — celle
+ * que le modèle a lue —, réduite et bornée ; elle est absente pour une action
+ * à confirmer, dont l'état se relit dans `assistantToolExecutions`.
+ * `actorKey` désigne l'acteur qui l'a obtenue (`compte:<id>` ou `invite`).
+ */
+export const assistantToolCallRecord = v.object({
+  callId: v.string(),
+  toolName: v.string(),
+  inputJson: v.string(),
+  outputJson: v.optional(v.string()),
+  status: v.union(v.literal("ok"), v.literal("approval_required")),
+  actorKey: v.string(),
+})
+
 /* ════════════════════════ Objets composés réutilisés ════════════════════ */
 
 /** Ventilation fiscale portée par toute vente (CDC §7.1.1, §7.8). */
@@ -214,6 +262,16 @@ const fareTrace = v.object({
 export default defineSchema({
   /* ══════════════════ Identités & habilitations ═════════════════════════ */
 
+  /**
+   * Identités de connexion d'un compte supprimé. Le temps que sa session
+   * expire, un jeton encore valide ne doit pas recréer de profil.
+   */
+  identitesSupprimees: defineTable({
+    authId: v.string(),
+    userId: v.id("users"),
+    supprimeeLe: v.number(),
+  }).index("by_authId", ["authId"]),
+
   users: defineTable({
     /** Identifiant fourni par Better Auth. */
     authId: v.string(),
@@ -221,6 +279,13 @@ export default defineSchema({
     phone: v.optional(v.string()),
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
+    /**
+     * Civilité du titulaire, facultative : le compte porte le voyageur
+     * « Moi » (voir `model/titulaire.ts`). Demandée une fois, à la fin de
+     * l'inscription, dans le profil ou par Ruban ; absente sur les comptes
+     * plus anciens, qui fonctionnent sans.
+     */
+    gender: v.optional(gender),
     role,
     /** Matricule interne, pour le personnel. */
     matricule: v.optional(v.string()),
@@ -361,6 +426,7 @@ export default defineSchema({
     ])
     .index("by_status", ["status"])
     .index("by_train_date", ["trainId", "serviceDate"])
+    .index("by_service_date", ["serviceDate", "departureAt"])
     .index("by_booklet", ["bookletId"])
     .index("by_schedule", ["scheduleId"]),
 
@@ -1175,7 +1241,18 @@ export default defineSchema({
   messagingIdentities: defineTable({
     channel: messagingChannel,
     externalUserId: v.string(),
+    /**
+     * Compte SETRAG relié, posé uniquement quand la personne appuie sur
+     * « Démarrer » dans SA messagerie avec un jeton tiré depuis le site
+     * (`messaging.linking.startFromSite`, puis `/start <jeton>`). C'est lui
+     * qui donne son acteur à la conversation du fil ; l'identifiant externe
+     * n'en est jamais un.
+     *
+     * À l'effacement du compte, `externalUserId` est remplacé par une
+     * empreinte non réversible et `displayName` vidé.
+     */
     userId: v.optional(v.id("users")),
+    linkedAt: v.optional(v.number()),
     displayName: v.optional(v.string()),
     locale: v.optional(v.string()),
     createdAt: v.number(),
@@ -1183,6 +1260,34 @@ export default defineSchema({
   })
     .index("by_channel_and_external_user", ["channel", "externalUserId"])
     .index("by_user", ["userId"]),
+
+  /**
+   * Demandes de liaison d'une messagerie, émises depuis le site par un
+   * voyageur connecté (`messaging.linking.startFromSite`).
+   *
+   * Le jeton part dans le lien `https://t.me/<bot>?start=<jeton>` et n'est
+   * jamais stocké : seule son empreinte SHA-256 l'est. Une demande sert une
+   * seule fois, expire au bout de dix minutes, et un compte n'en a jamais plus
+   * de trois en cours. Un cron efface les demandes échues.
+   */
+  messagingLinkRequests: defineTable({
+    userId: v.id("users"),
+    channel: messagingChannel,
+    tokenHash: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("used"),
+      v.literal("expired")
+    ),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    usedAt: v.optional(v.number()),
+    /** Identité de messagerie reliée par cette demande. */
+    identityId: v.optional(v.id("messagingIdentities")),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_user_and_status", ["userId", "status"])
+    .index("by_expires_at", ["expiresAt"]),
 
   messagingThreads: defineTable({
     channel: messagingChannel,
@@ -1219,6 +1324,11 @@ export default defineSchema({
     ),
     text: v.optional(v.string()),
     actionToken: v.optional(v.string()),
+    /**
+     * Empreinte du jeton de liaison reçu avec `/start <jeton>`. Le jeton
+     * lui-même n'est conservé ni ici, ni dans `text`, ni dans `rawPayload`.
+     */
+    linkTokenHash: v.optional(v.string()),
     providerInteractionId: v.optional(v.string()),
     displayName: v.optional(v.string()),
     locale: v.optional(v.string()),
@@ -1275,14 +1385,7 @@ export default defineSchema({
     text: v.optional(v.string()),
     documentUrl: v.optional(v.string()),
     filename: v.optional(v.string()),
-    buttons: v.optional(
-      v.array(
-        v.object({
-          label: v.string(),
-          data: v.string(),
-        })
-      )
-    ),
+    buttons: v.optional(v.array(messagingButton)),
     status: v.union(
       v.literal("pending"),
       v.literal("sending"),
@@ -1338,6 +1441,15 @@ export default defineSchema({
       v.union(v.literal("openai"), v.literal("anthropic"), v.literal("google"))
     ),
     model: v.optional(v.string()),
+    /**
+     * Réponse de Ruban écrite au fil du flux : `en_cours` pendant qu'elle
+     * s'écrit (le texte grandit par écritures regroupées), `erreur` si le
+     * fournisseur a échoué en route — le texte partiel reste. Absent :
+     * message terminé.
+     */
+    status: v.optional(assistantMessageStatus),
+    /** Libellé montré au voyageur quand la réponse a échoué. */
+    error: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_conversation_and_created_at", ["conversationId", "createdAt"])
@@ -1357,12 +1469,18 @@ export default defineSchema({
       v.literal("failed")
     ),
     resultJson: v.optional(v.string()),
+    /**
+     * Appels d'outils du tour, rejoués au modèle aux tours suivants (sortie
+     * projetée et bornée, acteur qui l'a obtenue). Effacés avec le tour.
+     */
+    toolCalls: v.optional(v.array(assistantToolCallRecord)),
     error: v.optional(v.string()),
     attempts: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_conversation_and_request", ["conversationId", "requestId"])
+    .index("by_conversation_and_created_at", ["conversationId", "createdAt"])
     .index("by_status_and_updated_at", ["status", "updatedAt"]),
 
   assistantToolExecutions: defineTable({
@@ -1404,6 +1522,29 @@ export default defineSchema({
   })
     .index("by_conversation_and_created_at", ["conversationId", "createdAt"])
     .index("by_status_and_created_at", ["status", "createdAt"]),
+
+  /**
+   * Ce que Ruban retient d'un compte : des faits courts et durables
+   * (préférences, trajets habituels, compagnons, contraintes, rappels),
+   * partagés entre le site, l'application et les messageries reliées.
+   *
+   * Jamais pour un invité. Filtrés côté serveur (`model/memoire.ts`),
+   * bornés à `NOTES_PAR_COMPTE_MAX` par compte, visibles et effaçables par
+   * le voyageur (« Ce que Ruban retient »), effacés avec le compte.
+   */
+  assistantMemories: defineTable({
+    userId: v.id("users"),
+    category: assistantMemoryCategory,
+    content: v.string(),
+    /** Clé de dédoublonnage : le contenu mis à plat. */
+    contentKey: v.string(),
+    /** Voie par laquelle la note a été prise (voir `ConversationActor`). */
+    source: v.union(v.literal("session"), v.literal("messaging")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_and_updated_at", ["userId", "updatedAt"])
+    .index("by_user_and_content_key", ["userId", "contentKey"]),
 
   /* ═══════════════════════ Indicateurs pré-agrégés ═══════════════════════ */
 

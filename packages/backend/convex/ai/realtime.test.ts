@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { api, internal } from "../_generated/api"
 import schema from "../schema"
 import { modules } from "../test.setup"
+import { safetyIdentifierFor } from "./conversations"
 import { canonicalToolInput } from "./tools"
 
 const GUEST_KEY = "guest-session-key-0123456789-abcdef"
+const SERVER_SECRET = "better-auth-secret-de-test-0123456789-abcdef"
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -68,6 +70,7 @@ describe("sessions vocales OpenAI Realtime", () => {
     vi.stubEnv("AI_REALTIME_MODEL", "gpt-realtime-test")
     vi.stubEnv("AI_REALTIME_VOICE", "coral")
     vi.stubEnv("AI_REALTIME_VAD", "semantic_vad")
+    vi.stubEnv("BETTER_AUTH_SECRET", SERVER_SECRET)
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         value: "ek_test_ephemeral",
@@ -123,7 +126,17 @@ describe("sessions vocales OpenAI Realtime", () => {
     const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe("https://api.openai.com/v1/realtime/client_secrets")
     expect(init.headers.Authorization).toBe("Bearer sk-test-realtime")
+    // Empreinte HMAC de la clé de limitation, jamais la clé elle-même.
+    const conversationDoc = await t.run((ctx) =>
+      ctx.db.get(conversation.conversationId)
+    )
+    expect(init.headers["OpenAI-Safety-Identifier"]).toBe(
+      safetyIdentifierFor(conversationDoc!.guestKeyHash)
+    )
     expect(init.headers["OpenAI-Safety-Identifier"]).toMatch(/^[a-f0-9]{64}$/)
+    expect(init.headers["OpenAI-Safety-Identifier"]).not.toBe(
+      conversationDoc!.guestKeyHash
+    )
     const request = JSON.parse(init.body as string)
     expect(request).toMatchObject({
       expires_after: { anchor: "created_at", seconds: 600 },
@@ -207,7 +220,16 @@ describe("sessions vocales OpenAI Realtime", () => {
     )
     expect(request.session.instructions).toContain("+241060000000")
     expect(request.session.instructions).toContain(
-      "Ne redemande jamais une information déjà présente"
+      "ne la redemande jamais et ne demande jamais la permission de l'utiliser"
+    )
+    // À l'oral, pas de carte : un seul « Je réserve ? » récapitulatif.
+    expect(request.session.instructions).toContain(
+      "demande une seule fois « Je réserve ? »"
+    )
+    expect(request.session.instructions).not.toContain("Confirmez sur la carte")
+    // La civilité manque au profil : c'est la seule chose à demander.
+    expect(request.session.instructions).toContain(
+      '"missingForTicket":["gender"]'
     )
   })
 

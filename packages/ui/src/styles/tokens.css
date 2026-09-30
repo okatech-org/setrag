@@ -1,5 +1,5 @@
 /* ============================================================================
-   SETRAG — design system voyage · v1.1.0
+   SETRAG — design system voyage · v2.0.0 (charte « voie et ruban »)
    Tokens importés du projet Claude Design « SETRAG Design System ».
    Accent = bleu du logo #0F52A0 → oklch(0.441 0.144 257).
    Source de vérité : ne pas modifier une valeur ici sans la répercuter côté
@@ -105,6 +105,27 @@
 
   /* — Cibles tactiles — */
   --target-min: 44px;
+
+  /* — Mouvement : le ruban glisse comme un train (départ progressif, arrivée
+     en douceur). Complète --ease et --dur-fast|base|slow. — */
+  --dur-micro: 90ms;
+  --dur-glisse: 480ms;
+  --dur-boucle: 1600ms;
+  --ease-glisse: cubic-bezier(0.45, 0, 0.2, 1);
+  --ease-sortie: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* — Marque — réservée au logo, au ruban et à leurs dérivés : jamais pour un
+   statut. Valeurs indépendantes du thème (couleurs du site setrag.eramet.com
+   et du drapeau gabonais). Le ruban lui-même est déclaré dans globals.css,
+   par portée de thème, car il relit --c-accent. */
+:root {
+  --brand-orange: oklch(0.686 0.199 42.3); /* #FA6414 · le S */
+  --brand-jaune: oklch(0.902 0.164 97.9); /* #FCDF49 · ruban, texte sur bleu */
+  --brand-vert: oklch(0.615 0.146 157); /* #009E60 · ruban */
+  --brand-indigo: oklch(0.189 0.103 295.7); /* #1A003B · titres éditoriaux */
+  --brand-bleu: oklch(0.441 0.144 257); /* bleu SETRAG, quel que soit le thème */
+  --brand-encre: oklch(0.22 0.025 257); /* fond du billet, du bouton Ruban */
 }
 
 /* Mode sombre — opt-in explicite via [data-theme="dark"], comme la source.

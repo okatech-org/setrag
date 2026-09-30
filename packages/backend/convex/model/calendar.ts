@@ -45,6 +45,15 @@ export function toServiceDate(timestamp: number): ServiceDate {
   return `${year}-${month}-${day}`
 }
 
+/** Heure locale de Libreville d'un horodatage, au format `HH:MM`. */
+export function toLocalTime(timestamp: number): string {
+  assertTimestamp(timestamp)
+  const local = new Date(timestamp + LIBREVILLE_UTC_OFFSET_MINUTES * MS_PER_MINUTE)
+  const hours = String(local.getUTCHours()).padStart(2, "0")
+  const minutes = String(local.getUTCMinutes()).padStart(2, "0")
+  return `${hours}:${minutes}`
+}
+
 /**
  * Horodatage d'un instant local, exprimé en date de service et heure locale.
  * `time` est au format `HH:MM`.

@@ -93,7 +93,7 @@ describe("seed des dessertes de démonstration", () => {
     expect(inbound[0]?.hasAvailability).toBe(true)
   })
 
-  it("maintient automatiquement une date vendable à J+62", async () => {
+  it("maintient automatiquement une date vendable à six mois", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-07-28T08:00:00.000Z"))
     vi.stubEnv("DEMO_ACCOUNTS_ENABLED", "true")

@@ -7,7 +7,7 @@ import {
   getAssistantTools,
   type AssistantToolDefinition,
 } from "./contracts"
-import { hashGuestKey } from "./conversations"
+import { safetyIdentifierFor } from "./conversations"
 import { assistantRateLimiter } from "./rateLimiter"
 import {
   canonicalToolInput,
@@ -187,28 +187,30 @@ export const mintVoiceToken = action({
     const instructions = `${buildAssistantInstructions(
       access.conversation.assistantId,
       new Date().toISOString(),
-      access.travelerContext
+      access.travelerContext,
+      null,
+      "voix"
     )}
 
 # Rôle vocal
-Conduis le voyageur jusqu'à une réservation prête à payer, avec le moins de paroles possible.
+Conduis le voyageur jusqu'à une réservation prête à payer, avec le moins de paroles possible, comme un bon agent de gare : tu cherches, tu proposes, tu ne demandes qu'un seul feu vert.
 
 # Verbosité
 - Réponse directe : une phrase courte.
-- Question : une seule question courte à la fois.
-- Résultat d'outil : donne uniquement le résultat utile et la prochaine question.
+- Question : une seule question courte à la fois, et seulement pour une information indispensable (gare de départ, gare d'arrivée, date).
+- Résultat d'outil : donne uniquement le résultat utile et la prochaine étape.
 - Ne reformule pas tout ce que le voyageur vient de dire.
 - Pas de préambule pour une recherche rapide, une correction, un refus ou une confirmation.
 - L'interface affiche les horaires, le prix et le voyageur : ne récite pas toutes ces données oralement.
 
 # Parcours de réservation
-1. Recueille seulement le départ, l'arrivée, la date et le nombre de voyageurs manquants.
-2. Recherche les trains et propose au maximum trois choix avec heure et prix utile.
-3. Une fois le train, la classe, les voyageurs et le téléphone connus, calcule le devis.
-4. Résume en une phrase le trajet et le montant, puis demande exactement une fois : « Je réserve ? »
+1. Ne demande que le départ, l'arrivée ou la date s'ils manquent. Pour le reste, fais l'hypothèse et dis-la : un voyageur connecté qui dit « réserve-moi un billet » voyage seul, avec son téléphone comme contact, en 2e classe sauf préférence connue.
+2. Recherche les trains et retiens le plus adapté, en citant au plus une alternative.
+3. Utilise directement le profil et les voyageurs enregistrés : ne demande jamais la permission de t'en servir.
+4. Calcule le devis, puis résume en une phrase le trajet, l'horaire, la classe, le voyageur (« pour vous, Prénom Nom ») et le montant, et demande exactement une fois : « Je réserve ? »
 5. Un « oui », « je confirme », « vas-y », « réserve », « fais la réservation » ou équivalent autorise la réservation. Si l'utilisateur avait déjà donné cet ordre après le récapitulatif, considère l'autorisation comme acquise.
 6. Dès cette autorisation, appelle create_booking dans le même tour. Ne demande jamais une deuxième confirmation et ne parle jamais de confirmation dans l'interface.
-7. Après le succès, annonce seulement que la réservation est créée et invite le voyageur à payer dans l'interface.
+7. Après le succès, annonce que la réservation est créée et que la prochaine étape est le paiement, dans l'interface.
 
 # Limites
 - N'appelle jamais create_booking avant une autorisation vocale explicite.
@@ -220,8 +222,10 @@ Conduis le voyageur jusqu'à une réservation prête à payer, avec le moins de 
       profileHydrated: access.travelerContext !== null,
       hasPhone: Boolean(access.travelerContext?.profile.phone),
       savedPassengerCount: access.travelerContext?.savedPassengers.length ?? 0,
+      noteCount: access.travelerContext?.memories?.length ?? 0,
     })
     const realtimeTools = tools
+    const safetyIdentifier = safetyIdentifierFor(access.rateLimitKey)
     const response = await fetch(
       "https://api.openai.com/v1/realtime/client_secrets",
       {
@@ -229,7 +233,9 @@ Conduis le voyageur jusqu'à une réservation prête à payer, avec le moins de 
         headers: {
           Authorization: `Bearer ${cfg.apiKey}`,
           "Content-Type": "application/json",
-          "OpenAI-Safety-Identifier": hashGuestKey(access.rateLimitKey),
+          ...(safetyIdentifier
+            ? { "OpenAI-Safety-Identifier": safetyIdentifier }
+            : {}),
         },
         body: JSON.stringify({
           expires_after: { anchor: "created_at", seconds: 600 },

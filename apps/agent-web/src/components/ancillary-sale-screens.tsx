@@ -1057,7 +1057,9 @@ export function SpecialTransportPageClient({
             })
             setResult(`Expédition ${sold.shipmentNumber} enregistrée`)
           } else {
-            const trip = liveTrips?.[0]
+            // La recherche renvoie aussi les dessertes supprimées, marquées :
+            // on ne rattache jamais un transport à l'une d'elles.
+            const trip = liveTrips?.find((t) => t.trip.status !== "annule")
             if (!trip) throw new Error("Aucune desserte disponible demain.")
             const sold = await sellFuneral({
               tripId: trip.trip._id,

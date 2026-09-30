@@ -48,6 +48,18 @@ crons.interval(
 )
 
 /**
+ * Efface les demandes de liaison de messagerie échues. Une demande ne vit que
+ * dix minutes : l'empreinte d'un jeton qui ne peut plus servir n'a pas à être
+ * gardée.
+ */
+crons.interval(
+  "purge messaging link requests",
+  { hours: 1 },
+  internal.messaging.linking.purgeExpiredRequests,
+  {}
+)
+
+/**
  * Contrôle de santé d'exploitation.
  *
  * Toutes les quatre heures : assez souvent pour qu'une anomalie critique soit

@@ -245,3 +245,70 @@ describe("Grilles tarifaires — détail et cycle de vie", () => {
     ).rejects.toThrow(/existe déjà/)
   })
 })
+
+describe("Réductions publiques (publicDiscounts)", () => {
+  it("ne renvoie que les réductions actives de la grille active, triées par taux décroissant", async () => {
+    const t = convexTest(schema, modules)
+    const { client, scheduleId } = await draftFixture(t)
+    await client.mutation(api.functions.fareSchedules.upsertBase, {
+      scheduleId,
+      ...BASE,
+    })
+    await t.run((ctx) =>
+      Promise.all([
+        ctx.db.insert("discounts", {
+          scheduleId,
+          code: "ENFANT",
+          label: "Enfant",
+          ratePct: 50,
+          minAge: 4,
+          maxAge: 11,
+          requiresProof: false,
+          isActive: true,
+        }),
+        ctx.db.insert("discounts", {
+          scheduleId,
+          code: "MILITAIRE",
+          label: "Militaire",
+          ratePct: 10,
+          requiresProof: true,
+          isActive: true,
+        }),
+        ctx.db.insert("discounts", {
+          scheduleId,
+          code: "PROMOTIONNEL",
+          label: "Promotion échue",
+          ratePct: 20,
+          requiresProof: false,
+          isActive: false,
+        }),
+      ])
+    )
+    await client.mutation(api.functions.fareSchedules.submit, { scheduleId })
+    await client.mutation(api.functions.fareSchedules.approve, { scheduleId })
+
+    const discounts = await t.query(
+      api.functions.fareSchedules.publicDiscounts,
+      {}
+    )
+    // La réduction inactive (PROMOTIONNEL) est absente, et l'ordre suit le
+    // taux décroissant, pas l'ordre d'insertion.
+    expect(discounts.map((d) => d.code)).toEqual(["ENFANT", "MILITAIRE"])
+    expect(discounts[0]).toMatchObject({
+      code: "ENFANT",
+      ratePct: 50,
+      minAge: 4,
+      maxAge: 11,
+      requiresProof: false,
+    })
+  })
+
+  it("renvoie une liste vide sans grille tarifaire active", async () => {
+    const t = convexTest(schema, modules)
+    const discounts = await t.query(
+      api.functions.fareSchedules.publicDiscounts,
+      {}
+    )
+    expect(discounts).toEqual([])
+  })
+})

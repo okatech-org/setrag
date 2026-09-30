@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETRAG — mouvement</title>
+  <link rel="icon" href="logo/setrag-symbole.svg">
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shared/ui.css">
+  <link rel="stylesheet" href="shared/mobile.css">
+  <style>
+    .principes .doc-carte h3 { display: flex; gap: var(--s-2); align-items: baseline; }
+    .principes .doc-carte h3 span { font: 600 13px var(--font-mono); color: var(--brand-orange); }
+    .courbes { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: var(--s-4); }
+    .courbes .specs td { padding: 8px 6px; white-space: nowrap; }
+    .courbe { display: grid; gap: var(--s-3); }
+    .courbe svg { width: 100%; height: 150px; background: var(--c-surface-sunk); border-radius: var(--r-md); }
+    .piste { position: relative; height: 18px; border-radius: 9px; background: var(--c-surface-sunk); overflow: hidden; }
+    .piste i { position: absolute; left: 3px; top: 3px; width: 40px; height: 12px; border-radius: 6px; background: var(--brand-ruban); }
+    .piste.va i { left: calc(100% - 43px); }
+    .catalogue { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-4); }
+    .demo { display: grid; grid-template-rows: 150px auto; background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-lg); overflow: hidden; }
+    .demo-scene { position: relative; display: grid; place-items: center; padding: var(--s-4); background: var(--c-surface-sunk); overflow: hidden; }
+    .demo-corps { padding: var(--s-4) var(--s-5) var(--s-5); display: grid; gap: var(--s-2); align-content: start; }
+    .demo-corps h3 { font: 700 16px var(--font-ui); display: flex; align-items: center; gap: var(--s-2); }
+    .demo-corps h3 .doc-bouton { margin-left: auto; min-height: 32px; padding: 0 12px; font-size: 13px; }
+    .demo-corps p { font: var(--t-small); color: var(--c-ink-muted); }
+    .demo-corps dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font: var(--t-caption); margin-top: var(--s-1); }
+    .demo-corps dt { color: var(--c-ink-muted); }
+    .demo-corps dd { font-family: var(--font-mono); font-weight: 500; }
+    /* Démos */
+    .rouleau { display: inline-flex; height: 30px; overflow: hidden; font: 600 22px/30px var(--font-mono); }
+    .rouleau span { display: block; transition: translate 240ms var(--ease); }
+    .rouleau.bouge span { translate: 0 -30px; }
+    .tag-anime { transition: background var(--dur-base) var(--ease), color var(--dur-base) var(--ease); }
+    .scene-filet { position: absolute; inset: 16px; background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-md); overflow: hidden; }
+    .scene-filet .barre { height: 34px; border-bottom: 1px solid var(--c-line); display: flex; align-items: center; padding: 0 12px; gap: 8px; }
+    .scene-filet .barre i { width: 48px; height: 8px; border-radius: 4px; background: var(--c-surface-sunk); }
+    .scene-filet .filet { top: 34px; display: none; }
+    .scene-filet.charge .filet { display: block; }
+    .scene-liste { width: 100%; display: grid; gap: 6px; }
+    .scene-liste div { height: 22px; border-radius: 6px; background: var(--c-surface); border: 1px solid var(--c-line); }
+    .scene-toast { position: absolute; left: 16px; right: 16px; bottom: 14px; translate: 0 90px; transition: translate 200ms var(--ease); }
+    .scene-toast.vu { translate: 0 0; }
+    .scene-bandeau { position: absolute; left: 0; right: 0; top: 0; translate: 0 -60px; transition: translate 200ms var(--ease); font-size: 12.5px; padding: 9px 14px; }
+    .scene-bandeau.vu { translate: 0 0; }
+    .scene-feuille { position: absolute; left: 30px; right: 30px; bottom: 0; height: 110px; background: var(--c-canvas); border-radius: 16px 16px 0 0; box-shadow: var(--sh-lg); translate: 0 120px; transition: translate 320ms var(--ease); display: grid; justify-items: center; align-content: start; padding-top: 8px; gap: 10px; }
+    .scene-feuille .poignee { width: 36px; height: 4px; border-radius: 2px; background: var(--c-line-strong); }
+    .scene-feuille i { width: 70%; height: 10px; border-radius: 5px; background: var(--c-surface-sunk); }
+    .scene-feuille.vu { translate: 0 0; }
+    .scene-tirer { width: 80%; display: grid; gap: 10px; justify-items: center; }
+    .scene-tirer .voie { width: 0; transition: width 600ms var(--ease-glisse); }
+    .scene-tirer.tire .voie { width: 100%; }
+    .scene-tirer small { font: var(--t-caption); color: var(--c-ink-muted); }
+    .presse { transition: transform var(--dur-micro) var(--ease); }
+    .presse.appui { transform: scale(0.98); }
+    .lotties { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-4); }
+    .lot { background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-lg); overflow: hidden; }
+    .lot .lottie { height: 190px; background: #fff; border-bottom: 1px solid var(--c-line); }
+    .lot.sombre .lottie { background: #131B26; }
+    .lot .demo-corps dd { font-size: 12px; }
+  </style>
+  <script src="vendor/lottie_light.min.js"></script>
+  <script type="module" src="shared/app.js"></script>
+</head>
+<body>
+<header class="doc-barre">
+  <a class="doc-logo" href="index.html" data-logo="compact" data-titre="SETRAG — charte graphique"></a>
+  <nav aria-label="Pages de la charte">
+    <a href="index.html">Charte</a>
+    <a href="mouvement.html">Mouvement</a>
+    <a href="composants.html">Composants</a>
+    <a href="web.html">Web</a>
+    <a href="mobile.html">Mobile</a>
+    <a href="widgets.html">Widgets &amp; Live</a>
+    <a href="assistant.html">Assistant</a>
+  </nav>
+  <button class="doc-bouton" id="theme" aria-pressed="false"><i data-i="moon"></i><span>Thème sombre</span></button>
+</header>
+
+<main class="doc">
+  <section class="doc-tete">
+    <div>
+      <p class="doc-sur">Mouvement · web, mobile, hors de l'app</p>
+      <h1>Des animations qu'on ne remarque pas</h1>
+      <p class="doc-chapo">Une animation SETRAG répond à un geste, montre une progression ou confirme un résultat. Elle ne décore pas. On doit la sentir sans la voir : si quelqu'un la remarque, elle est trop longue ou mal placée.</p>
+    </div>
+    <div class="doc-carte">
+      <h3>La règle de base</h3>
+      <p>Le ruban est la seule chose colorée qui bouge. Il glisse comme un train : il démarre doucement, file, puis s'arrête en douceur. Tout le reste de l'interface se contente de fondus courts.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================ 01 -->
+  <section class="doc-section">
+    <h2><span class="n">01</span>Principes</h2>
+    <div class="doc-grille g4 principes">
+      <div class="doc-carte"><h3><span>1</span>Une chose à la fois</h3><p>Deux éléments ne bougent jamais ensemble. Si le ruban glisse, le contenu attend ou se contente d'un fondu.</p></div>
+      <div class="doc-carte"><h3><span>2</span>Au doigt, tout de suite</h3><p>Réponse au toucher en 90 ms. Aucun geste n'attend la fin d'une animation pour être pris en compte.</p></div>
+      <div class="doc-carte"><h3><span>3</span>L'information d'abord</h3><p>Un prix, une heure, un statut s'affichent tout de suite. L'animation accompagne l'information, elle ne la retient pas.</p></div>
+      <div class="doc-carte"><h3><span>4</span>Les boucles pour attendre</h3><p>Une animation ne tourne en boucle que pendant une attente réelle, avec une phrase qui dit ce qu'on attend.</p></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 02 -->
+  <section class="doc-section">
+    <h2><span class="n">02</span>Durées et courbes</h2>
+    <p class="doc-intro">Six durées, deux courbes. Cliquez une courbe pour voir le ruban la parcourir.</p>
+    <div class="courbes">
+      <div class="doc-carte courbe" data-courbe="--ease">
+        <h3>Réponse · <code>--ease</code></h3>
+        <svg viewBox="-6 -6 112 112" preserveAspectRatio="none"><path d="M0 100 C20 20 20 0 100 0" fill="none" stroke="var(--c-accent)" stroke-width="2.5"/></svg>
+        <div class="piste"><i style="transition:left 320ms var(--ease)"></i></div>
+        <p><code>cubic-bezier(0.2, 0.8, 0.2, 1)</code> — part vite, se pose. Fondus, entrées, feuilles, pastilles.</p>
+      </div>
+      <div class="doc-carte courbe" data-courbe="--ease-glisse">
+        <h3>Glissement · <code>--ease-glisse</code></h3>
+        <svg viewBox="-6 -6 112 112" preserveAspectRatio="none"><path d="M0 100 C45 100 20 0 100 0" fill="none" stroke="var(--brand-orange)" stroke-width="2.5"/></svg>
+        <div class="piste"><i style="transition:left 480ms var(--ease-glisse)"></i></div>
+        <p><code>cubic-bezier(0.45, 0, 0.2, 1)</code> — démarre doucement, file, freine. Tout ce que fait le ruban.</p>
+      </div>
+      <div class="doc-carte">
+        <h3>Durées</h3>
+        <table class="specs" style="margin-top:var(--s-2)">
+          <tbody>
+            <tr><td><code>--dur-micro</code></td><td class="tabular">90 ms</td><td>pression, case</td></tr>
+            <tr><td><code>--dur-fast</code></td><td class="tabular">120 ms</td><td>survol, couleur</td></tr>
+            <tr><td><code>--dur-base</code></td><td class="tabular">200 ms</td><td>fondu, entrée, pastille</td></tr>
+            <tr><td><code>--dur-slow</code></td><td class="tabular">320 ms</td><td>feuille, segmenté</td></tr>
+            <tr><td><code>--dur-glisse</code></td><td class="tabular">480 ms</td><td>le ruban se déplace</td></tr>
+            <tr><td><code>--dur-boucle</code></td><td class="tabular">1 600 ms</td><td>un passage de rame</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 03 -->
+  <section class="doc-section">
+    <h2><span class="n">03</span>Le catalogue</h2>
+    <p class="doc-intro">Quinze animations, pas une de plus. Chacune a un rôle, une durée, une courbe. « Jouer » les rejoue.</p>
+    <div class="catalogue">
+      <div class="demo" id="d-presse"><div class="demo-scene"><span class="btn btn-primaire btn-lg presse">Rechercher</span></div><div class="demo-corps"><h3>Pression<button class="doc-bouton" data-jouer="presse">Jouer</button></h3><p>Le bouton s'enfonce sous le doigt.</p><dl><dt>Durée</dt><dd>90 ms · retour 160 ms</dd><dt>Effet</dt><dd>échelle 0,98</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene"><nav class="nav" data-glisse="a"><a aria-current="page">Réserver</a><a>Billets</a><a>Suivi</a><span class="indicateur"></span></nav></div><div class="demo-corps"><h3>Onglet</h3><p>Le ruban glisse vers l'onglet choisi. Cliquez les onglets.</p><dl><dt>Durée</dt><dd>480 ms · --ease-glisse</dd><dt>Contenu</dt><dd>fondu 120 ms, sans glissement</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene" data-demo="trajets" style="padding:var(--s-3)"><article class="trajet m" style="width:100%;padding:12px"><div class="trajet-heures"><div class="trajet-pt"><b>07:40</b></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>11 h 45</small></div><div class="trajet-pt fin"><b>19:25</b></div></div></article></div><div class="demo-corps"><h3>Trajet choisi</h3><p>Le ruban remplit la voie entre les heures. Touchez la carte.</p><dl><dt>Durée</dt><dd>480 ms · --ease-glisse</dd><dt>Avec</dt><dd>bordure accent, 200 ms</dd></dl></div></div>
+
+      <div class="demo" data-demo="etapes" data-depart="1"><div class="demo-scene"><ol class="etapes" style="--n:4;width:100%"><span class="ruban"></span><li class="etape"><span class="gare"></span>Trajet</li><li class="etape"><span class="gare"></span>Voyageurs</li><li class="etape"><span class="gare"></span>Paiement</li><li class="etape"><span class="gare"></span>Billet</li></ol></div><div class="demo-corps"><h3>Étape suivante<button class="doc-bouton" data-suivant>Jouer</button></h3><p>Le ruban avance jusqu'à la gare suivante, qui s'allume à l'arrivée.</p><dl><dt>Durée</dt><dd>480 ms · --ease-glisse</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene"><button class="btn btn-primaire btn-lg" data-demo="en-cours">Payer 48 750 XAF</button></div><div class="demo-corps"><h3>Bouton en attente</h3><p>Le libellé ne change pas ; une rame passe sous le texte tant que l'action tourne. Cliquez le bouton.</p><dl><dt>Boucle</dt><dd>1 600 ms · --ease-glisse</dd><dt>Seuil</dt><dd>après 300 ms seulement</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene"><div class="chargeur" style="width:100%"><span class="voie attente"><span class="ruban"></span></span><p>Recherche des trains…</p></div></div><div class="demo-corps"><h3>Attente longue</h3><p>Recherche, validation Mobile Money : une rame passe, avec une phrase.</p><dl><dt>Boucle</dt><dd>1 600 ms</dd><dt>Seuil</dt><dd>au-delà de 1 s ; avant, squelettes</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene"><div class="scene-filet" id="d-filet"><div class="barre"><i></i><i></i><i></i></div><span class="filet"></span></div></div><div class="demo-corps"><h3>Changement de page (web)<button class="doc-bouton" data-jouer="filet">Jouer</button></h3><p>Le ruban traverse le filet du haut pendant le chargement de la page suivante.</p><dl><dt>Seuil</dt><dd>après 150 ms de chargement</dd><dt>Boucle</dt><dd>1 600 ms</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene"><div class="scene-liste apparait" id="d-liste"><div style="--i:0"></div><div style="--i:1"></div><div style="--i:2"></div><div style="--i:3"></div></div></div><div class="demo-corps"><h3>Arrivée des résultats<button class="doc-bouton" data-jouer="liste">Jouer</button></h3><p>Les cartes montent de 6 px en cascade courte. Au-delà de la sixième, elles sont déjà là.</p><dl><dt>Durée</dt><dd>200 ms · décalage 28 ms</dd></dl></div></div>
+
+      <div class="demo" data-billet><div class="demo-scene" style="padding:var(--s-3)"><div class="billet" style="width:100%;padding:var(--s-3) var(--s-4)"><div class="billet-coupe" style="--fond-coupe:var(--c-surface-sunk)"><span class="voie sur-encre"><span class="ruban"></span></span></div><div class="billet-grille"><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>32</b></div><div><span>Quai</span><b>1</b></div><div><span>Classe</span><b>2e</b></div></div></div></div><div class="demo-corps"><h3>Billet émis<button class="doc-bouton" data-demo="emission">Jouer</button></h3><p>Le ruban traverse la découpe, une fois ; le téléphone vibre légèrement.</p><dl><dt>Durée</dt><dd>720 ms · --ease-glisse</dd><dt>Haptique</dt><dd>impact léger, à l'arrivée</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene"><div style="display:flex;gap:12px;align-items:center"><span class="rouleau" id="d-rouleau"><span>+12<br>+15</span></span><span class="tag tag-retard tag-anime" id="d-tag"><i data-i="clock-alert"></i>Retard</span></div></div><div class="demo-corps"><h3>Retard mis à jour<button class="doc-bouton" data-jouer="rouleau">Jouer</button></h3><p>Le nouveau chiffre remplace l'ancien en roulant vers le haut. Pas de clignotement, pas de secousse.</p><dl><dt>Durée</dt><dd>240 ms · --ease</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene" style="place-items:stretch;padding:var(--s-3) var(--s-5)"><div class="arrets" data-rame="25,28,31,34"><span class="voie-v" style="top:20px;bottom:20px"></span><span class="rame" style="height:20px"></span><div class="arret passe" style="min-height:40px"><span class="h">12:14</span><span class="pt"></span><span class="nom">Lopé</span></div><div class="arret maj" style="min-height:40px"><span class="h">13:07</span><span class="pt"></span><span class="nom">Booué</span></div><div class="arret" style="min-height:40px"><span class="h">15:50</span><span class="pt"></span><span class="nom">Lastourville</span></div></div></div><div class="demo-corps"><h3>Rame du suivi</h3><p>La rame avance d'un cran à chaque mise à jour du statut, puis s'arrête.</p><dl><dt>Durée</dt><dd>1 200 ms · --ease-glisse</dd><dt>Rythme</dt><dd>à la mise à jour, jamais en continu</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene" id="d-messages"><div class="bandeau-trafic scene-bandeau"><i data-i="triangle-alert"></i><span><b>Travaux</b> samedi : départs +25 min.</span></div><div class="toast scene-toast"><i data-i="circle-check"></i>Billets ajoutés à Wallet</div></div><div class="demo-corps"><h3>Bandeau et toast<button class="doc-bouton" data-jouer="messages">Jouer</button></h3><p>Le bandeau descend du haut, le toast monte du bas. Ils partent plus vite qu'ils n'arrivent.</p><dl><dt>Entrée</dt><dd>200 ms · --ease</dd><dt>Sortie</dt><dd>160 ms · --ease-sortie</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene"><div class="scene-feuille" id="d-feuille"><span class="poignee"></span><i></i><i></i><i></i></div></div><div class="demo-corps"><h3>Feuille (mobile)<button class="doc-bouton" data-jouer="feuille">Jouer</button></h3><p>Choix de la gare, filtres : la feuille monte et se pose, sans rebond.</p><dl><dt>Durée</dt><dd>320 ms · --ease</dd><dt>Voile</dt><dd>fondu 200 ms</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene"><div class="scene-tirer" id="d-tirer"><span class="voie"><span class="ruban"></span></span><small>Tirez pour actualiser</small></div></div><div class="demo-corps"><h3>Tirer pour actualiser<button class="doc-bouton" data-jouer="tirer">Jouer</button></h3><p>La voie se déroule avec le doigt ; au relâchement, une rame passe pendant l'actualisation.</p><dl><dt>Suivi</dt><dd>suit le doigt, sans durée</dd><dt>Puis</dt><dd>rame 1 600 ms jusqu'à la réponse</dd></dl></div></div>
+
+      <div class="demo"><div class="demo-scene" style="background:#fff;padding:var(--s-3)"><div class="lottie" id="lt-cat" data-lottie="logo-anime-compact" style="width:100%;height:100%"></div></div><div class="demo-corps"><h3>Logo animé<button class="doc-bouton" data-rejouer="#lt-cat">Jouer</button></h3><p>Au démarrage à froid de l'app, une fois. Voir la charte pour sa chorégraphie.</p><dl><dt>Durée</dt><dd>3,3 s · Lottie</dd><dt>Sortie</dt><dd>dès 2,4 s si l'app est prête</dd></dl></div></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 04 -->
+  <section class="doc-section">
+    <h2><span class="n">04</span>Fichiers Lottie</h2>
+    <p class="doc-intro">Générés par <code>outils/lottie.mjs</code> depuis la géométrie exacte du logo : ils sont identiques au SVG. Les calques sont nommés (<code>traverses</code>, <code>rails</code>, <code>ruban</code>, <code>mot</code>, <code>signature</code>) pour être recolorés par <code>colorFilters</code> dans <code>lottie-react-native</code>.</p>
+    <div class="lotties">
+      <div class="lot"><div class="lottie" id="lt-1" data-lottie="logo-anime"></div><div class="demo-corps"><h3>logo-anime<button class="doc-bouton" data-rejouer="#lt-1">Jouer</button></h3><dl><dt>Durée</dt><dd>3,3 s</dd><dt>Poids</dt><dd>124 Ko · ≈ 30 Ko compressé</dd><dt>Usage</dt><dd>démarrage de l'app</dd></dl></div></div>
+      <div class="lot sombre"><div class="lottie" id="lt-2" data-lottie="logo-anime-negatif"></div><div class="demo-corps"><h3>logo-anime-negatif<button class="doc-bouton" data-rejouer="#lt-2">Jouer</button></h3><dl><dt>Durée</dt><dd>3,3 s</dd><dt>Usage</dt><dd>démarrage en thème sombre</dd></dl></div></div>
+      <div class="lot"><div class="lottie" id="lt-3" data-lottie="symbole-anime"></div><div class="demo-corps"><h3>symbole-anime<button class="doc-bouton" data-rejouer="#lt-3">Jouer</button></h3><dl><dt>Durée</dt><dd>2,8 s</dd><dt>Poids</dt><dd>36 Ko</dd><dt>Usage</dt><dd>formats carrés, vidéos courtes</dd></dl></div></div>
+      <div class="lot"><div class="lottie" id="lt-4" data-lottie="chargement-voie" data-loop style="padding:0 30px"></div><div class="demo-corps"><h3>chargement-voie</h3><dl><dt>Boucle</dt><dd>1,6 s</dd><dt>Poids</dt><dd>3 Ko</dd><dt>Usage</dt><dd>attente longue sur mobile</dd></dl></div></div>
+      <div class="lot"><div class="lottie" id="lt-5" data-lottie="chargement-s" data-loop></div><div class="demo-corps"><h3>chargement-s</h3><dl><dt>Boucle</dt><dd>2,2 s</dd><dt>Poids</dt><dd>33 Ko</dd><dt>Usage</dt><dd>premier chargement plein écran</dd></dl></div></div>
+      <div class="lot"><div class="lottie" id="lt-6" data-lottie="logo-anime-compact"></div><div class="demo-corps"><h3>logo-anime-compact<button class="doc-bouton" data-rejouer="#lt-6">Jouer</button></h3><dl><dt>Durée</dt><dd>3,3 s</dd><dt>Poids</dt><dd>48 Ko</dd><dt>Usage</dt><dd>sans signature, petits écrans</dd></dl></div></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 05 -->
+  <section class="doc-section">
+    <h2><span class="n">05</span>Moins d'animations</h2>
+    <p class="doc-intro">Quand le système demande de réduire les animations (<code>prefers-reduced-motion</code>, <code>AccessibilityInfo.isReduceMotionEnabled</code>), rien ne glisse. L'information reste identique.</p>
+    <table class="specs">
+      <thead><tr><th>Animation</th><th>Réduite</th></tr></thead>
+      <tbody>
+        <tr><td>Logo animé</td><td>Image finale du logo, affichée directement</td></tr>
+        <tr><td>Ruban qui glisse (onglets, jours, trajet, étapes)</td><td>Le ruban apparaît à sa place, en fondu de 120 ms</td></tr>
+        <tr><td>Rame d'attente, bouton en attente</td><td>Ruban fixe au milieu de la voie, la phrase d'attente reste</td></tr>
+        <tr><td>Billet émis</td><td>La découpe est remplie d'emblée ; la vibration reste</td></tr>
+        <tr><td>Arrivée des résultats, bandeau, toast, feuille</td><td>Fondu seul, sans déplacement</td></tr>
+        <tr><td>Rame du suivi</td><td>Saute d'une position à l'autre</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================================================================ 06 -->
+  <section class="doc-section">
+    <h2><span class="n">06</span>Mise en œuvre</h2>
+    <div class="doc-grille g3">
+      <div class="doc-carte"><h3>Web</h3><p>Transitions CSS sur <code>transform</code>, <code>opacity</code> et une propriété enregistrée <code>--p</code> (<code>@property</code>) pour le remplissage du ruban. Aucune dépendance, sauf <code>lottie-web</code> chargé à la demande pour le logo de la PWA.</p></div>
+      <div class="doc-carte"><h3>Mobile</h3><p>Reanimated : <code>withTiming(v, { duration: 480, easing: Easing.bezier(0.45, 0, 0.2, 1) })</code>. <code>lottie-react-native</code> pour le logo et les chargements, <code>expo-haptics</code> pour l'émission du billet.</p></div>
+      <div class="doc-carte"><h3>Hors de l'app</h3><p>Live Activities et widgets : pas d'animation propre. Le système anime les changements de valeur ; on se contente de publier la nouvelle position du ruban.</p></div>
+    </div>
+    <div class="regles" style="margin-top:var(--s-5)">
+      <div class="oui"><h4>Toujours</h4><ul>
+        <li>Animer <code>transform</code> et <code>opacity</code>, à 60 images par seconde.</li>
+        <li>Laisser l'écran utilisable pendant l'animation.</li>
+        <li>Tester en « moins d'animations » avant chaque livraison.</li>
+      </ul></div>
+      <div class="non"><h4>Jamais</h4><ul>
+        <li>Rebond, élastique, secousse sur une erreur.</li>
+        <li>Parallaxe, animation déclenchée au défilement, confettis.</li>
+        <li>Roue qui tourne : l'attente, c'est la voie.</li>
+      </ul></div>
+    </div>
+  </section>
+</main>
+
+<footer class="doc-pied">
+  <span>SETRAG — mouvement. Démonstrations en CSS et Lottie, sans dépendance.</span>
+  <span><a href="composants.html">Composants →</a></span>
+</footer>
+
+<script type="module">
+  const $ = (s) => document.querySelector(s)
+  const rejoue = (el, cls, ms) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); if (ms) setTimeout(() => el.classList.remove(cls), ms) }
+  const jeux = {
+    presse: () => { const b = $("#d-presse .presse"); b.classList.add("appui"); setTimeout(() => b.classList.remove("appui"), 160) },
+    filet: () => rejoue($("#d-filet"), "charge", 2400),
+    liste: () => { const l = $("#d-liste"); l.classList.remove("apparait"); void l.offsetWidth; l.classList.add("apparait") },
+    rouleau: () => {
+      const r = $("#d-rouleau"), t = $("#d-tag")
+      r.classList.toggle("bouge")
+    },
+    messages: () => { const m = $("#d-messages"); const b = m.querySelector(".scene-bandeau"), t = m.querySelector(".scene-toast"); b.classList.add("vu"); setTimeout(() => t.classList.add("vu"), 400); setTimeout(() => { b.classList.remove("vu"); t.classList.remove("vu") }, 3000) },
+    feuille: () => { const f = $("#d-feuille"); f.classList.toggle("vu") },
+    tirer: () => { const t = $("#d-tirer"); t.classList.remove("tire"); t.querySelector(".voie").classList.remove("attente"); void t.offsetWidth; t.classList.add("tire"); setTimeout(() => t.querySelector(".voie").classList.add("attente"), 620); setTimeout(() => { t.querySelector(".voie").classList.remove("attente"); t.classList.remove("tire") }, 3800) },
+  }
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-jouer]"); if (b) jeux[b.dataset.jouer]?.() })
+  document.querySelectorAll("[data-courbe]").forEach((c) => c.addEventListener("click", () => c.querySelector(".piste").classList.toggle("va")))
+  // Démarrage : les démos à état montrent leur état initial visible.
+  setTimeout(() => $("#d-feuille").classList.add("vu"), 600)
+</script>
+</body>
+</html>

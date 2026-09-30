@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETRAG — widgets, Live Activities et notifications</title>
+  <link rel="icon" href="logo/setrag-symbole.svg">
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shared/ui.css">
+  <link rel="stylesheet" href="shared/mobile.css">
+  <link rel="stylesheet" href="shared/widgets.css">
+  <script type="module" src="shared/app.js"></script>
+</head>
+<body>
+<header class="doc-barre">
+  <a class="doc-logo" href="index.html" data-logo="compact" data-titre="SETRAG — charte graphique"></a>
+  <nav aria-label="Pages de la charte">
+    <a href="index.html">Charte</a>
+    <a href="mouvement.html">Mouvement</a>
+    <a href="composants.html">Composants</a>
+    <a href="web.html">Web</a>
+    <a href="mobile.html">Mobile</a>
+    <a href="widgets.html">Widgets &amp; Live</a>
+    <a href="assistant.html">Assistant</a>
+  </nav>
+  <button class="doc-bouton" id="theme" aria-pressed="false"><i data-i="moon"></i><span>Thème sombre</span></button>
+</header>
+
+<main class="doc">
+  <section class="doc-tete">
+    <div>
+      <p class="doc-sur">Hors de l'app · iOS, Android, Wallet</p>
+      <h1>Le voyage, sans ouvrir l'app</h1>
+      <p class="doc-chapo">Widgets, activité en direct, Dynamic Island, notifications et cartes Wallet. Partout le même dessin : la voie du trajet, les gares majeures, et le ruban qui avance jusqu'à la position estimée du train.</p>
+    </div>
+    <div class="doc-carte">
+      <h3>Ce qui nourrit ces surfaces</h3>
+      <p>Le statut de desserte que publie le backend Convex (planifié, à l'heure, retardé, supprimé, terminé), poussé par notification. Pas de GPS : la position est estimée d'après l'horaire et le retard annoncé, et l'heure de mise à jour est toujours affichée.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================ 01 -->
+  <section class="doc-section">
+    <h2><span class="n">01</span>Widgets de l'écran d'accueil</h2>
+    <p class="doc-intro">Trois tailles, un seul sujet : le prochain voyage. Le petit donne l'heure et le quai ; le moyen ajoute le trajet et la place ; le grand suit le voyage en cours, gare par gare.</p>
+    <div class="fond-accueil">
+      <span class="etiquette">iOS · écran d'accueil</span>
+      <div class="widgets-ios">
+        <div class="w w-petit">
+          <div class="w-tete"><span data-logo="symbole-petit" data-titre=""></span>Express 201</div>
+          <div class="w-heure">07:40<small>Owendo → Franceville</small></div>
+          <div class="w-pied"><span>Quai <b>1</b></span><span>dans <b>48 min</b></span></div>
+        </div>
+        <div class="w w-moyen">
+          <div class="w-tete"><span data-logo="symbole-petit" data-titre=""></span>Prochain train · ven. 2 oct.<span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></div>
+          <div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie pleine"><span class="ruban"></span></span><small>Express 201</small></div><div class="trajet-pt fin"><b>19:25</b><span>Franceville</span></div></div>
+          <div class="w-infos"><div><span>Quai</span><b>1</b></div><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>32</b></div><div><span>Embarq.</span><b>07:10</b></div></div>
+        </div>
+        <div class="w w-grand">
+          <div class="w-tete"><span data-logo="symbole-petit" data-titre=""></span>Express 201 · en route<span class="tag tag-retard"><i data-i="clock-alert"></i>+12 min</span></div>
+          <div class="la-corps" style="color:var(--c-ink)"><div><small style="color:var(--c-ink-muted)">Prochain arrêt</small><b style="font-size:26px">Booué · 13:07</b></div><div class="droite"><small style="color:var(--c-ink-muted)">Arrivée à Franceville</small><b>19:37</b></div></div>
+          <div class="arrets w-arrets" data-rame="72,76,80">
+            <span class="voie-v passee" style="top:22px;height:54px"></span>
+            <span class="voie-v" style="top:76px;bottom:22px"></span>
+            <span class="rame"></span>
+            <div class="arret passe"><span class="h">11:20</span><span class="pt"></span><span class="nom">Otoumbi</span></div>
+            <div class="arret passe"><span class="h">12:14</span><span class="pt"></span><span class="nom">Lopé</span></div>
+            <div class="arret maj"><span class="h">13:07</span><span class="pt"></span><span class="nom">Booué<small>PK 338</small></span></div>
+            <div class="arret"><span class="h">15:50</span><span class="pt"></span><span class="nom">Lastourville</span></div>
+            <div class="arret maj"><span class="h">19:37</span><span class="pt"></span><span class="nom">Franceville<small>PK 669</small></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="regles" style="margin-top:var(--s-5)">
+      <div class="oui"><h4>Règles</h4><ul>
+        <li>L'heure de départ est la plus grande information du widget, toujours en mono.</li>
+        <li>Un retard s'écrit en minutes, sur la pastille, et l'heure affichée devient l'heure réelle.</li>
+        <li>Toucher le widget ouvre le billet, pas l'accueil.</li>
+      </ul></div>
+      <div class="non"><h4>À éviter</h4><ul>
+        <li>Le logo complet : le symbole suffit, le nom de l'app est écrit sous le widget.</li>
+        <li>Une animation : un widget ne bouge qu'à sa mise à jour.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 02 -->
+  <section class="doc-section">
+    <h2><span class="n">02</span>Écran verrouillé et activité en direct</h2>
+    <p class="doc-intro">L'activité en direct démarre 2 heures avant le départ et s'arrête à l'arrivée. Avant le départ, elle compte les minutes ; pendant le voyage, le ruban avance sur la ligne à chaque mise à jour du statut, par à-coups de 1,2 s : c'est la seule animation, et c'est le système qui la joue.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran verrou">
+          <div class="statut"><span></span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="verrou-heure"><small>vendredi 2 octobre</small><b>6:52</b></div>
+          <div class="verrou-widgets">
+            <div class="lw lw-rond"><svg class="anneau" viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="none" stroke="oklch(1 0 0 / .25)" stroke-width="4"/><circle cx="28" cy="28" r="25" fill="none" stroke="#FCDF49" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="40 100"/></svg><b>48<small>min</small></b></div>
+            <div class="lw lw-rect"><b><i data-i="train-front"></i>07:40 · quai 1</b><span>Express 201 · Owendo</span></div>
+          </div>
+          <div class="la">
+            <div class="la-tete"><span data-logo="symbole-petit" data-titre="" class="sym"></span>Express 201 · Owendo → Franceville<span class="tag" style="background:oklch(0.36 0.07 146);color:oklch(0.93 0.07 146)">À l'heure</span></div>
+            <div class="la-corps"><div><small>Départ dans</small><b>48 min</b></div><div class="droite"><small>Quai 1 · voiture 4</small><b>place 32</b></div></div>
+            <div class="la-voie" style="--av:2%"><span class="voie"></span><span class="fait"></span><span class="g passe" style="left:0%"></span><span class="g" style="left:27.2%"></span><span class="g" style="left:50.5%"></span><span class="g" style="left:72.3%"></span><span class="g" style="left:100%"></span></div>
+            <div class="la-gares"><span>Owendo 07:40</span><span>Booué</span><span>Franceville 19:25</span></div>
+          </div>
+          <div class="barre-accueil" style="background:#fff"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Avant le départ</b> — le compte à rebours, le quai, la place.<span class="anim">les minutes changent, rien d'autre</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran verrou">
+          <div class="statut"><span></span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="verrou-heure"><small>vendredi 2 octobre</small><b>12:21</b></div>
+          <div class="verrou-widgets">
+            <div class="lw lw-rond"><svg class="anneau" viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="none" stroke="oklch(1 0 0 / .25)" stroke-width="4"/><circle cx="28" cy="28" r="25" fill="none" stroke="#FCDF49" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="46 100"/></svg><b>46<small>%</small></b></div>
+            <div class="lw lw-rect"><b><i data-i="map-pin"></i>Booué · 13:07</b><span>prochain arrêt · +12 min</span></div>
+          </div>
+          <div class="la">
+            <div class="la-tete"><span data-logo="symbole-petit" data-titre="" class="sym"></span>Express 201 · en route<span class="tag">+12 min</span></div>
+            <div class="la-corps"><div><small>Prochain arrêt</small><b>Booué 13:07</b></div><div class="droite"><small>Arrivée à Franceville</small><b>19:37</b></div></div>
+            <div class="la-voie" style="--av:46%"><span class="voie"></span><span class="fait"></span><span class="g passe" style="left:0%"></span><span class="g passe" style="left:27.2%"></span><span class="g" style="left:50.5%"></span><span class="g" style="left:72.3%"></span><span class="g" style="left:100%"></span></div>
+            <div class="la-gares"><span>Owendo</span><span>Booué</span><span>Franceville</span></div>
+            <p style="font:500 11.5px var(--font-ui);color:oklch(0.72 0.02 257)">Position estimée · mise à jour à 12:16</p>
+          </div>
+          <div class="barre-accueil" style="background:#fff"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Pendant le voyage</b> — le ruban est à la position estimée ; le retard est chiffré.<span class="anim">le ruban avance à chaque mise à jour (1,2 s)</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="iles" style="width:376px;height:796px;align-content:center">
+          <figure><div class="ile ile-compacte"><span data-logo="symbole-petit" data-titre="" class="sym"></span><b>13:07 · +12</b></div><figcaption>Compacte : symbole, prochain arrêt, retard</figcaption></figure>
+          <figure><div class="ile ile-minimale"><span data-logo="symbole-petit" data-titre=""></span></div><figcaption>Minimale : le symbole seul</figcaption></figure>
+          <figure><div class="ile ile-etendue" style="width:340px">
+            <div class="haut"><div style="display:flex;gap:10px;align-items:center"><span data-logo="symbole-petit" data-titre="" class="sym"></span><div><small>Prochain arrêt</small><b>Booué</b></div></div><div class="droite"><small>+12 min</small><b>13:07</b></div></div>
+            <div class="la-voie" style="--av:46%"><span class="voie"></span><span class="fait"></span><span class="g passe" style="left:0%"></span><span class="g passe" style="left:27.2%"></span><span class="g" style="left:50.5%"></span><span class="g" style="left:72.3%"></span><span class="g" style="left:100%"></span></div>
+            <div class="bas"><span>Owendo</span><span>Arrivée 19:37</span><span>Franceville</span></div>
+          </div><figcaption>Étendue : la ligne entière, le ruban à sa place</figcaption></figure>
+        </div>
+        <figcaption class="tel-legende"><b>Dynamic Island</b> — le jaune du drapeau pour l'heure du prochain arrêt.<span class="anim">transitions du système seulement</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 03 -->
+  <section class="doc-section">
+    <h2><span class="n">03</span>Android</h2>
+    <p class="doc-intro">Mêmes informations dans la grammaire Material : widget à grands rayons, et notification de progression d'Android 16. Ses segments sont les gares majeures, et le suiveur est le train.</p>
+    <div class="fond-android">
+      <div class="aw">
+        <div class="w-tete"><span data-logo="symbole-petit" data-titre=""></span>Prochain train · ven. 2 oct.<span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></div>
+        <div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie pleine"><span class="ruban"></span></span><small>Express 201</small></div><div class="trajet-pt fin"><b>19:25</b><span>Franceville</span></div></div>
+        <div class="w-infos"><div><span>Quai</span><b>1</b></div><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>32</b></div><div><span>Départ</span><b>48 min</b></div></div>
+      </div>
+      <div class="an">
+        <div class="an-tete"><span class="pastille"><span data-logo="symbole" data-theme="mono-blanc" data-titre=""></span></span>SETRAG · maintenant</div>
+        <b>Express 201 · prochain arrêt Booué, 13:07</b>
+        <p>12 min de retard. Arrivée prévue à Franceville à 19:37.</p>
+        <div class="progression"><span class="piste"></span><span class="fait" style="width:46%"></span><span class="seg" style="left:27.2%"></span><span class="seg" style="left:50.5%"></span><span class="seg" style="left:72.3%"></span><span class="suiveur" style="left:46%"><i data-i="train-front"></i></span></div>
+        <div class="actions"><span>Voir le billet</span><span>Suivre</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 04 -->
+  <section class="doc-section">
+    <h2><span class="n">04</span>Notifications</h2>
+    <p class="doc-intro">Quatre catégories, déjà prévues dans le backend : retard, rappel, achat, remboursement. Chaque message dit le fait, puis ce qui reste acquis. Le titre porte le train ou la gare, jamais « Information ».</p>
+    <div class="doc-grille g2" style="align-items:start">
+      <div class="fond-accueil" style="display:grid;justify-items:center">
+        <span class="etiquette">iOS · bannières</span>
+        <div class="notifs-ios" style="margin-top:var(--s-4)">
+          <div class="ni"><span class="app" data-logo="icone"></span><b>Express 201 · 12 min de retard</b><time>12:16</time><p>Arrivée prévue à Franceville à 19:37. Votre place est conservée.</p></div>
+          <div class="ni"><span class="app" data-logo="icone"></span><b>Embarquement à 07:10, quai 1</b><time>06:40</time><p>Express 201 pour Franceville. Votre billet est prêt, même sans réseau.</p></div>
+          <div class="ni"><span class="app" data-logo="icone"></span><b>2 billets émis</b><time>hier</time><p>Owendo → Franceville, vendredi 2 octobre. Réf. STG-7K4Q2P.</p></div>
+          <div class="ni"><span class="app" data-logo="icone"></span><b>Omnibus 405 supprimé</b><time>14 sept.</time><p>Remboursement de 12 000 XAF lancé sur votre compte Airtel Money.</p></div>
+        </div>
+      </div>
+      <table class="specs">
+        <thead><tr><th>Catégorie</th><th>Quand</th><th>Canal</th></tr></thead>
+        <tbody>
+          <tr><td>Retard, suppression</td><td>Dès que le statut de la desserte change</td><td>Push, SMS si l'app n'est pas installée</td></tr>
+          <tr><td>Rappel</td><td>30 min avant l'embarquement</td><td>Push</td></tr>
+          <tr><td>Achat</td><td>Paiement reçu, billets émis</td><td>Push, SMS du reçu</td></tr>
+          <tr><td>Remboursement</td><td>Lancé, puis effectué</td><td>Push, e-mail</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================================================================ 05 -->
+  <section class="doc-section">
+    <h2><span class="n">05</span>Cartes Wallet</h2>
+    <p class="doc-intro">Le composant <code>WalletPass</code> existe déjà ; voici son habillage. Fond encre comme le billet, libellés en orange sur Apple Wallet (5,7:1), le ruban en liseré sur Google Wallet. Le code est un Aztec : les deux Wallet le prennent en charge.</p>
+    <div class="passes">
+      <div class="pass pass-apple">
+        <div class="ligne-tete"><span data-logo="compact" data-theme="negatif"></span><div class="champ-p" style="text-align:right"><span>Départ</span><b>ven. 2 oct.</b></div></div>
+        <div class="primaires"><div><span style="display:block;font:600 10px var(--font-ui);color:#FA6414;letter-spacing:.06em">OWENDO</span><b>07:40</b><small>Quai 1</small></div><span class="fleche"><i data-i="arrow-right"></i></span><div class="fin"><span style="display:block;font:600 10px var(--font-ui);color:#FA6414;letter-spacing:.06em">FRANCEVILLE</span><b>19:25</b><small>Express 201</small></div></div>
+        <div class="champs"><div><span>Voyageur</span><b>N. Mboumba</b></div><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>32</b></div><div><span>Classe</span><b>2e</b></div></div>
+        <div class="code"><span data-aztec="23"></span><small>STG-7K4Q2P</small></div>
+      </div>
+      <div class="pass pass-google">
+        <div class="haut"><span data-logo="symbole-petit" data-titre=""></span><b>SETRAG · Express 201</b></div>
+        <div class="heros"></div>
+        <div class="corps">
+          <div class="gares"><div><b>OWE</b><small>Owendo · 07:40</small></div><span class="voie pleine"><span class="ruban"></span></span><div class="fin"><b>FCV</b><small>Franceville · 19:25</small></div></div>
+          <div class="grille"><div><span>Date</span><b>2 oct.</b></div><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>32</b></div><div><span>Quai</span><b>1</b></div></div>
+          <div class="code"><span data-aztec="23"></span><small>STG-7K4Q2P</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 06 -->
+  <section class="doc-section">
+    <h2><span class="n">06</span>Règles communes</h2>
+    <div class="regles">
+      <div class="oui"><h4>Toujours</h4><ul>
+        <li>L'heure de la dernière mise à jour, dès que la position est estimée.</li>
+        <li>L'heure réelle en premier ; l'heure prévue seulement si elle diffère.</li>
+        <li>Les codes de gare (OWE, FCV) là où la place manque ; le nom complet ailleurs.</li>
+        <li>Le symbole seul, jamais le logo complet, sous 48 pt.</li>
+      </ul></div>
+      <div class="non"><h4>Jamais</h4><ul>
+        <li>Une position sans donnée derrière : si le statut a plus de 15 min, on l'écrit.</li>
+        <li>Une couleur seule pour le retard : le chiffre « +12 min » est toujours écrit.</li>
+        <li>D'animation décorative : ces surfaces ne bougent qu'aux mises à jour.</li>
+      </ul></div>
+    </div>
+  </section>
+</main>
+
+<footer class="doc-pied">
+  <span>SETRAG — widgets et activité en direct. Données fictives.</span>
+  <span><a href="web.html">Billetterie web →</a></span>
+</footer>
+</body>
+</html>

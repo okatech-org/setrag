@@ -7,31 +7,33 @@ import { cn } from "@workspace/ui/lib/utils"
 /**
  * Bouton SETRAG.
  *
- * Règles du design system :
+ * Règles de la charte :
  * — hauteur d'action minimale 44 px (taille `md`, valeur par défaut) ;
  * — un seul bouton `primary` par écran : celui qui fait avancer le voyage ;
- * — rayon pill, libellé 600, anneau de focus jamais supprimé.
+ * — pastille, libellé 600, anneau de focus jamais supprimé ;
+ * — en attente, le libellé reste et le bouton garde sa taille : un ruban fin
+ *   passe sous le texte (voir `.st-en-cours`, marque.css).
  */
 const buttonVariants = cva(
-  "relative inline-flex shrink-0 items-center justify-center gap-2 rounded-pill border font-semibold whitespace-nowrap transition-colors duration-200 ease-setrag outline-none select-none disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
+  "relative isolate inline-flex shrink-0 items-center justify-center gap-2 overflow-hidden rounded-pill border font-semibold whitespace-nowrap transition-[background-color,border-color,color,transform] duration-[var(--dur-fast)] ease-setrag outline-none select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",
   {
     variants: {
       variant: {
-        primary:
-          "border-transparent bg-accent-base text-ink-inverse hover:bg-accent-hover active:bg-accent-active active:translate-y-px disabled:bg-line disabled:text-ink-muted",
-        secondary:
-          "border-[1.5px] border-ink bg-surface text-ink hover:bg-surface-sunk active:translate-y-px disabled:border-line disabled:text-ink-muted",
-        ghost:
-          "border-transparent bg-transparent text-accent-ink hover:bg-accent-soft active:translate-y-px disabled:text-ink-muted",
-        danger:
-          "border-transparent bg-danger text-ink-inverse hover:bg-danger-hover active:translate-y-px disabled:bg-line disabled:text-ink-muted",
+        primary: "border-transparent bg-accent-base text-ink-inverse hover:bg-accent-hover active:bg-accent-active",
+        secondary: "border-accent-line bg-surface text-accent-ink hover:bg-accent-soft",
+        ghost: "border-transparent bg-transparent text-accent-ink hover:bg-accent-soft",
+        danger: "border-danger/40 bg-surface text-danger-ink hover:bg-danger-soft",
+        /** Wallet d'Apple et de Google : noir, comme l'exigent leurs chartes. */
+        noir: "rounded-md border-transparent bg-black text-white hover:bg-black/85",
       },
       size: {
-        sm: "h-9 px-4 text-[14px]",
+        /* Plus compact que `md` par le texte et les marges, jamais par la hauteur :
+           une action fait 44 px au moins (règle SETRAG). */
+        sm: "h-11 px-4 text-[14px]",
         md: "h-11 px-5 text-[15px]",
-        lg: "h-13 px-7 text-[16px]",
-        /* Boutons ronds — flèches de calendrier, fermeture, inversion. */
-        "icon-sm": "size-9 p-0",
+        lg: "h-13 px-6 text-[16px]",
+        /* Boutons ronds — flèches, fermeture, inversion. */
+        "icon-sm": "size-11 p-0",
         icon: "size-11 p-0",
         "icon-lg": "size-13 p-0",
       },
@@ -46,13 +48,11 @@ const buttonVariants = cva(
   }
 )
 
-export interface ButtonProps
-  extends React.ComponentProps<"button">,
-    VariantProps<typeof buttonVariants> {
+export interface ButtonProps extends React.ComponentProps<"button">, VariantProps<typeof buttonVariants> {
   asChild?: boolean
-  /** Affiche la barre de progression indéterminée et neutralise le clic. */
+  /** Action en cours : le libellé reste, un ruban passe dessous, le clic est neutralisé. */
   loading?: boolean
-  /** Libellé de substitution pendant le chargement (« Recherche… »). */
+  /** Libellé de substitution pendant l'attente (« Recherche… »). */
   loadingLabel?: string
 }
 
@@ -66,20 +66,14 @@ function Button({
   loadingLabel,
   disabled,
   children,
+  onClick,
   ...props
 }: ButtonProps) {
-  const Comp = asChild ? Slot.Root : "button"
-
-  // En `asChild`, le contenu appartient à l'enfant : on ne l'enveloppe pas.
   if (asChild) {
     return (
-      <Comp
-        data-slot="button"
-        className={cn(buttonVariants({ variant, size, block, className }))}
-        {...props}
-      >
+      <Slot.Root data-slot="button" className={cn(buttonVariants({ variant, size, block, className }))} {...props}>
         {children}
-      </Comp>
+      </Slot.Root>
     )
   }
 
@@ -87,31 +81,16 @@ function Button({
     <button
       data-slot="button"
       data-loading={loading || undefined}
-      aria-disabled={disabled || undefined}
       aria-busy={loading || undefined}
-      // `disabled` seul : en chargement le bouton garde sa couleur pleine,
-      // sinon il vire au gris et le libellé tombe à 2,6:1.
       disabled={disabled}
-      onClick={loading ? undefined : props.onClick}
-      className={cn(buttonVariants({ variant, size, block, className }))}
+      // En attente, le clic est neutralisé — y compris la soumission du
+      // formulaire qu'un `type="submit"` déclencherait sans passer par onClick
+      // (clic ou touche Entrée) : sans cela, un code partirait deux fois.
+      onClick={loading ? (event) => event.preventDefault() : onClick}
+      className={cn(buttonVariants({ variant, size, block }), loading && "st-en-cours cursor-progress", className)}
       {...props}
     >
-      {loading ? (
-        <>
-          <span>{loadingLabel ?? children}</span>
-          <span
-            aria-hidden
-            className="h-[3px] w-[42px] overflow-hidden rounded-pill bg-current/35"
-          >
-            <span
-              data-motion="progress"
-              className="animate-progress-slide block h-full w-2/5 rounded-pill bg-current"
-            />
-          </span>
-        </>
-      ) : (
-        children
-      )}
+      {loading && loadingLabel ? loadingLabel : children}
     </button>
   )
 }

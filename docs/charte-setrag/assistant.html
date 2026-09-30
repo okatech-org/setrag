@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETRAG — Ruban, l'assistant</title>
+  <link rel="icon" href="logo/setrag-symbole.svg">
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shared/ui.css">
+  <link rel="stylesheet" href="shared/mobile.css">
+  <link rel="stylesheet" href="shared/web.css">
+  <link rel="stylesheet" href="shared/assistant.css">
+  <script type="module" src="shared/app.js"></script>
+  <script type="module" src="shared/assistant.js"></script>
+</head>
+<body>
+<header class="doc-barre">
+  <a class="doc-logo" href="index.html" data-logo="compact" data-titre="SETRAG — charte graphique"></a>
+  <nav aria-label="Pages de la charte">
+    <a href="index.html">Charte</a>
+    <a href="mouvement.html">Mouvement</a>
+    <a href="composants.html">Composants</a>
+    <a href="web.html">Web</a>
+    <a href="mobile.html">Mobile</a>
+    <a href="widgets.html">Widgets &amp; Live</a>
+    <a href="assistant.html">Assistant</a>
+  </nav>
+  <button class="doc-bouton" id="theme" aria-pressed="false"><i data-i="moon"></i><span>Thème sombre</span></button>
+</header>
+
+<main class="doc">
+  <section class="doc-tete">
+    <div>
+      <p class="doc-sur">Assistant · web, mobile, voix</p>
+      <h1>Ruban, l'assistant qui voyage avec vous</h1>
+      <p class="doc-chapo">Il répond, cherche un train, réserve, fait payer, modifie, annule et suit le voyage. À l'écrit ou à voix haute, dans une fenêtre sur le web et dans une feuille sur mobile. Son signe est le ruban du logo, posé en S, sans les rails : SETRAG pose la voie, Ruban roule dessus.</p>
+    </div>
+    <div class="scene-signe">
+      <span class="vis" id="signe-tete" data-signe="repos" data-fond="sombre" data-titre="Le signe de Ruban"></span>
+      <div class="selecteur" role="group" aria-label="État du signe">
+        <button data-changer-etat="repos" data-cible="#signe-tete" aria-pressed="true">Repos</button>
+        <button data-changer-etat="reflexion" data-cible="#signe-tete" aria-pressed="false">Réflexion</button>
+        <button data-changer-etat="ecoute" data-cible="#signe-tete" aria-pressed="false">Écoute</button>
+        <button data-changer-etat="parole" data-cible="#signe-tete" aria-pressed="false">Parole</button>
+        <button data-changer-etat="hors-ligne" data-cible="#signe-tete" aria-pressed="false">Hors réseau</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 01 -->
+  <section class="doc-section">
+    <h2><span class="n">01</span>Identité</h2>
+    <p class="doc-intro">Un nom, un signe, cinq états. Ruban n'a ni visage ni âge, et ne se fait jamais passer pour une personne. Le nom reste une proposition à valider avec SETRAG ; il ne change qu'à un endroit dans le code.</p>
+    <div class="duo">
+      <div class="planche planche-blanc"><span class="etiquette">Le logo : la voie</span><span data-logo="symbole"></span></div>
+      <span class="plus">+</span>
+      <div class="planche planche-encre"><span class="etiquette">Ruban : ce qui roule dessus</span><span data-signe="repos" data-fond="sombre"></span></div>
+    </div>
+    <div class="doc-grille g3" style="margin-top:var(--s-5)">
+      <div class="doc-carte"><h3>Le nom</h3><p>« Ruban » : l'élément qui bouge dans toute l'interface devient celui qui vous accompagne. Deux syllabes, faciles à dire en français, à retenir et à appeler à voix haute : « Ruban, mon train est à l'heure ? »</p></div>
+      <div class="doc-carte"><h3>Le signe</h3><p>Le tracé exact du S du logo, 14 d'épaisseur : le gabarit du train dans le logo animé. Extrémités rondes, dégradé vert → jaune → bleu du haut vers le bas. Jamais de rails, jamais d'orange : ceux-là appartiennent à SETRAG.</p></div>
+      <div class="doc-carte"><h3>Sur fond sombre</h3><p>Le bleu de fin s'éclaircit (<code>--c-accent-on-ink</code>) pour rester lisible. Le bouton flottant est toujours encre : c'est ce qui le rend reconnaissable sur n'importe quelle page claire.</p></div>
+    </div>
+
+    <h3 class="doc-h3">Les états du signe</h3>
+    <div class="etats-signe">
+      <div class="etat-signe"><span class="vis" data-signe="repos"></span><b>Repos</b><p>Rien ne bouge. C'est l'état du bouton flottant.</p><code>repos</code></div>
+      <div class="etat-signe"><span class="vis" data-signe="reflexion"></span><b>Réflexion</b><p>Une rame parcourt le S, 1,6 s. Seulement si la réponse tarde plus de 400 ms.</p><code>reflexion</code></div>
+      <div class="etat-signe"><span class="vis" data-signe="ecoute"></span><b>Écoute</b><p>L'épaisseur du ruban suit votre voix, lissée sur 80 ms.</p><code>ecoute</code></div>
+      <div class="etat-signe"><span class="vis" data-signe="parole"></span><b>Parole</b><p>L'épaisseur suit la voix de Ruban. Le texte s'écrit en même temps.</p><code>parole</code></div>
+      <div class="etat-signe"><span class="vis" data-signe="hors-ligne"></span><b>Hors réseau</b><p>Le ruban devient gris. Ruban a besoin du réseau pour répondre.</p><code>hors-ligne</code></div>
+    </div>
+
+    <h3 class="doc-h3">Le bouton flottant</h3>
+    <div class="planche planche-sunk" style="padding:var(--s-10) var(--s-6)">
+      <div class="fabs">
+        <figure><button class="r-fab statique" aria-label="Ouvrir Ruban"><span data-signe="repos" data-fond="sombre"></span></button><figcaption>Au repos<br>60 px web · 56 pt mobile</figcaption></figure>
+        <figure><button class="r-fab statique" aria-label="Ouvrir Ruban, 1 alerte"><span data-signe="repos" data-fond="sombre"></span><span class="point"></span></button><figcaption>Une alerte<br>votre train a du retard</figcaption></figure>
+        <figure><button class="r-fab statique etendu"><span data-signe="repos" data-fond="sombre"></span>Demander à Ruban</button><figcaption>Étendu<br>premières visites, pages d'aide</figcaption></figure>
+        <figure><button class="r-fab statique" aria-label="Fermer Ruban"><i data-i="chevron-down" style="color:#fff"></i></button><figcaption>Fenêtre ouverte<br>le bouton la referme</figcaption></figure>
+        <figure data-theme="dark" style="padding:18px;border-radius:20px;background:var(--c-canvas)"><button class="r-fab statique" aria-label="Ouvrir Ruban"><span data-signe="repos" data-fond="sombre"></span></button><figcaption>Thème sombre</figcaption></figure>
+      </div>
+    </div>
+    <div class="regles" style="margin-top:var(--s-5)">
+      <div class="oui"><h4>Placement</h4><ul>
+        <li>Web : en bas à droite, à 24 px des bords, sur toutes les pages.</li>
+        <li>Mobile : au-dessus de la barre d'onglets, à droite. Un appui long ouvre directement la voix.</li>
+        <li>Masqué pendant le paiement, sur le billet plein écran et quand le clavier est ouvert.</li>
+      </ul></div>
+      <div class="non"><h4>À éviter</h4><ul>
+        <li>L'animer au repos, le faire rebondir pour attirer l'attention.</li>
+        <li>Le mettre en bleu SETRAG : il se confondrait avec le bouton principal de l'écran.</li>
+        <li>Remplacer le signe par une bulle de discussion ou des étincelles.</li>
+      </ul></div>
+    </div>
+
+    <h3 class="doc-h3">Sa façon de parler</h3>
+    <div class="traits">
+      <div class="doc-carte"><h3>Concret</h3><p>L'heure, le prix, le quai. Puis ce que ça change.</p><p class="exemple">« L'Express 201 part à 07:40, quai 1. Vous arrivez à Booué à 12:55. »</p></div>
+      <div class="doc-carte"><h3>Bref</h3><p>Deux phrases, puis une carte. On détaille si on le lui demande.</p><p class="exemple">« Deux trains arrivent avant 14 h. Le plus rapide est l'Express 201. »</p></div>
+      <div class="doc-carte"><h3>Honnête</h3><p>Il dit d'où vient l'information, et quand il ne sait pas.</p><p class="exemple">« Je n'ai pas encore l'horaire de samedi : les travaux ne sont pas terminés. »</p></div>
+      <div class="doc-carte"><h3>Poli, sans familiarité</h3><p>Il vouvoie, ne plaisante pas avec un retard, ne met pas d'émoji.</p><p class="exemple">« Votre train a 12 min de retard. Votre place est conservée. »</p></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 02 -->
+  <section class="doc-section">
+    <h2><span class="n">02</span>Sur le web : une fenêtre, et une page</h2>
+    <p class="doc-intro">Le bouton flottant ouvre une fenêtre de 400 × 640 px, ancrée en bas à droite, qui voit la page en cours : Ruban sait quel trajet vous regardez. La fenêtre s'agrandit en page dédiée, <code>/assistant</code>, avec l'historique à gauche et la réservation en cours à droite.</p>
+
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga</span></div>
+        <div class="site" style="min-height:560px">
+          <header class="s-tete"><span data-logo="compact"></span><nav class="nav" data-glisse="a"><a aria-current="page">Réserver</a><a>Mes réservations</a><a>Suivi des trains</a><a>Tarifs</a><a>Aide</a><span class="indicateur"></span></nav><div class="droite"><span class="avatar">NM</span></div></header>
+          <div class="s-hero"><div class="s-hero-int">
+            <div><h1>Owendo–Franceville, et 21 gares entre les deux.</h1><p class="chapo">Réservez en Mobile Money, recevez votre billet par SMS, lisez-le sans réseau.</p></div>
+            <div class="recherche-h"><div class="gares2 recherche-gares" style="overflow:visible"><div class="bloc-champ" style="border-radius:var(--r-md)"><small>Départ</small><b>Owendo</b></div><div class="bloc-champ" style="border-radius:var(--r-md);padding-left:32px"><small>Arrivée</small><b>Franceville</b></div><button class="inverser" aria-label="Inverser"><i data-i="arrow-left-right"></i></button></div><div class="bloc-champ"><small>Aller</small><b>Ven. 2 octobre</b></div><div class="bloc-champ"><small>Voyageurs</small><b>1 adulte, 1 enfant</b></div><span class="btn btn-primaire btn-lg"><i data-i="search"></i>Rechercher</span></div>
+          </div></div>
+          <div class="r-bulle"><span class="fermer"><i data-i="x"></i></span><b>Bonjour, je suis Ruban.</b>Je peux chercher un train, suivre un retard ou modifier une réservation. Écrivez-moi, ou parlez-moi.</div>
+          <button class="r-fab" aria-label="Ouvrir Ruban"><span data-signe="repos" data-fond="sombre"></span></button>
+        </div>
+      </div>
+      <figcaption><b>Première visite</b><span>La bulle ne s'affiche qu'une fois ; ensuite, le bouton seul.</span><span class="anim">la bulle monte en 200 ms, 3 s après l'arrivée sur la page</span></figcaption>
+    </figure>
+
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga/resultats</span></div>
+        <div class="site" style="min-height:840px">
+          <header class="s-tete"><span data-logo="compact"></span><nav class="nav" data-glisse="a"><a aria-current="page">Réserver</a><a>Mes réservations</a><a>Suivi des trains</a><a>Tarifs</a><a>Aide</a><span class="indicateur"></span></nav><div class="droite"><span class="avatar">NM</span></div></header>
+          <div class="s-contenu" style="max-width:none;margin:0;padding-right:480px">
+            <div class="s-resume">Owendo → Franceville <small>· 2 voyageurs</small></div>
+            <div class="jours" style="--n:5" data-glisse=".jour"><div class="jour" aria-pressed="false"><small>Jeu. 1</small><b>32 500</b><span>2 trains</span></div><div class="jour" aria-pressed="true"><small>Ven. 2</small><b>24 000</b><span>3 trains</span></div><div class="jour meilleur" aria-pressed="false"><small>Sam. 3</small><b>24 000</b><span>meilleur prix</span></div><div class="jour" aria-pressed="false"><small>Dim. 4</small><b>32 500</b><span>2 trains</span></div><div class="jour complet" aria-pressed="false"><small>Lun. 5</small><b>—</b><span>complet</span></div><span class="indicateur"></span></div>
+            <div class="s-liste">
+              <article class="trajet"><div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>11 h 45 · 6 arrêts</small></div><div class="trajet-pt fin"><b>19:25</b><span>Franceville</span></div></div><div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Express 201</span></div><div class="trajet-prix"><small>dès</small><b>32 500 XAF</b></div></article>
+              <article class="trajet"><div class="trajet-heures"><div class="trajet-pt"><b>18:10</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>13 h 20 · 22 arrêts</small></div><div class="trajet-pt fin"><b>07:30<sup>+1</sup></b><span>Franceville</span></div></div><div class="trajet-infos"><span class="tag tag-neutre"><i data-i="train-front"></i>Omnibus 403</span><span class="tag tag-marque">Meilleur prix</span></div><div class="trajet-prix"><small>dès</small><b>24 000 XAF</b></div></article>
+            </div>
+          </div>
+          <div class="r-panneau">
+            <div class="r-tete"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div><b>Ruban</b><small>Voit : Owendo → Franceville, ven. 2 oct.</small></div><div class="actions"><span class="r-action" title="Ouvrir en grand"><i data-i="maximize-2"></i></span><span class="r-action" title="Fermer"><i data-i="x"></i></span></div></div>
+            <div class="r-fil bas">
+              <div class="r-moi">Lequel est le moins cher en 1re classe ?</div>
+              <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+                <p data-flux>En 1re classe vendredi, l'Omnibus 403 est le moins cher : 36 000 XAF, contre 48 000 XAF pour l'Express 201. Il arrive le lendemain matin, à 07:30.</p>
+                <div class="r-carte"><div class="r-carte-tete"><i data-i="train-front"></i>1re classe · ven. 2 oct.</div><div class="r-carte-corps" data-demo="trajets">
+                  <div class="r-trajet trajet"><div class="trajet-heures"><div class="trajet-pt"><b>18:10</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>13 h 20</small></div><div class="trajet-pt fin"><b>07:30<sup>+1</sup></b><span>Franceville</span></div></div><span class="prix">36 000<small>Omnibus 403</small></span></div>
+                  <div class="r-trajet trajet"><div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>11 h 45</small></div><div class="trajet-pt fin"><b>19:25</b><span>Franceville</span></div></div><span class="prix">48 000<small>Express 201</small></span></div>
+                </div></div>
+                <div class="r-puces"><span class="r-puce">Prendre l'Omnibus 403</span><span class="r-puce">Et samedi ?</span></div>
+              </div></div>
+            </div>
+            <div class="r-saisie"><div class="rang"><div class="r-champ"><span class="indice">Écrivez à Ruban…</span><span class="r-rond"><i data-i="mic"></i></span></div><span class="r-rond encre" title="Parler à Ruban"><span data-signe="repos" data-fond="sombre"></span></span></div><p class="r-mention">Ruban peut se tromper. Il ne vous demandera jamais votre code secret.</p></div>
+          </div>
+          <button class="r-fab" aria-label="Fermer Ruban"><i data-i="chevron-down" style="color:#fff"></i></button>
+        </div>
+      </div>
+      <figcaption><b>Fenêtre flottante</b><span>Ruban voit la recherche en cours : pas besoin de lui répéter le trajet.</span><span class="anim">la réponse s'écrit au fil de la lecture ; touchez un trajet : le ruban remplit sa voie</span></figcaption>
+    </figure>
+
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga/assistant</span></div>
+        <div class="site" style="min-height:0">
+          <header class="s-tete"><span data-logo="compact"></span><nav class="nav" data-glisse="a"><a>Réserver</a><a>Mes réservations</a><a>Suivi des trains</a><a>Tarifs</a><a aria-current="page">Ruban</a><span class="indicateur"></span></nav><div class="droite"><span class="avatar">NM</span></div></header>
+          <div class="r-page">
+            <aside class="r-historique">
+              <span class="btn btn-secondaire"><i data-i="square-pen"></i>Nouvelle conversation</span>
+              <p class="m-etiquette" style="margin-top:var(--s-2)">Aujourd'hui</p>
+              <div class="r-conv on">Booué vendredi, avec Enzo<small>Paiement en cours</small></div>
+              <div class="r-conv">Mon train est à l'heure ?<small>Express 201</small></div>
+              <p class="m-etiquette" style="margin-top:var(--s-2)">Septembre</p>
+              <div class="r-conv">Bagages pour Franceville<small>14 sept.</small></div>
+              <div class="r-conv">Remboursement Omnibus 405<small>14 sept.</small></div>
+            </aside>
+            <div class="r-centre">
+              <div class="r-fil bas">
+                <div class="r-moi">Je dois être à Booué vendredi avant 14 h, avec mon fils de 8 ans.</div>
+                <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+                  <p>Deux trains arrivent à Booué avant 14 h. J'ai repris Enzo depuis vos voyageurs enregistrés : il voyage au tarif enfant.</p>
+                  <div class="r-carte faite"><div class="r-carte-tete"><i data-i="train-front"></i>Trajets · ven. 2 oct.</div><div class="r-fait" style="padding-top:12px"><i data-i="circle-check"></i>Choisi : Express 201, 07:40 → 12:55</div></div>
+                </div></div>
+                <div class="r-moi">L'express, en 2e.</div>
+                <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+                  <p>Je lance le paiement Airtel Money au 07 •• •• 56.</p>
+                  <div class="r-carte"><div class="r-carte-tete"><i data-i="smartphone"></i>Paiement · Airtel Money<span class="fin tabular">26 250 XAF</span></div><div class="r-carte-corps">
+                    <div class="r-attente"><b>Validez sur votre téléphone</b><p>Tapez votre code secret Airtel Money pour confirmer. Je ne vous le demanderai jamais ici.</p><span class="voie attente"><span class="ruban"></span></span></div>
+                    <div class="tenue"><i data-i="timer"></i>Places tenues encore <b data-rebours="13:48"></b></div>
+                  </div><div class="r-carte-pied"><span class="btn btn-secondaire">Je n'ai rien reçu</span><span class="btn btn-fantome">Payer autrement</span></div></div>
+                </div></div>
+              </div>
+              <div class="r-saisie"><div class="rang"><div class="r-champ"><span class="indice">Écrivez à Ruban…</span><span class="r-rond"><i data-i="mic"></i></span></div><span class="r-rond encre" title="Parler à Ruban"><span data-signe="repos" data-fond="sombre"></span></span></div><p class="r-mention">Ruban peut se tromper. Il ne vous demandera jamais votre code secret.</p></div>
+            </div>
+            <aside class="r-contexte">
+              <h4>Réservation en cours</h4>
+              <div class="recap">
+                <div class="recap-tete"><b>Owendo → Booué</b><span>Ven. 2 oct. · 07:40 → 12:55 · Express 201</span></div>
+                <div class="recap-corps">
+                  <div class="recap-l"><span>Vous · adulte · 2e</span><span class="tabular">17 500</span></div>
+                  <div class="recap-l remise"><span>Enzo, 8 ans · −50 %</span><span class="tabular">8 750</span></div>
+                  <div class="recap-total"><span>Total</span><span>26 250 XAF</span></div>
+                </div>
+              </div>
+              <p class="doc-note">Tout ce que Ruban prépare s'affiche ici. Rien n'est payé sans votre validation sur le téléphone.</p>
+              <h4>Voyageurs enregistrés</h4>
+              <div class="liste"><div class="ligne"><span class="avatar">NM</span><span>Nadia · adulte</span></div><div class="ligne"><span class="avatar"><i data-i="baby" style="width:18px;height:18px"></i></span><span>Enzo · 8 ans</span></div></div>
+            </aside>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Page dédiée</b><code>/assistant</code><span>La conversation au centre, l'historique à gauche, ce qui est en train de se réserver à droite.</span><span class="anim">une rame passe tant que le paiement attend</span></figcaption>
+    </figure>
+
+    <figure class="ecran-web">
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i>billetterie.setrag.ga/mesreservations</span></div>
+        <div class="site" style="min-height:840px">
+          <header class="s-tete"><span data-logo="compact"></span><nav class="nav" data-glisse="a"><a>Réserver</a><a aria-current="page">Mes réservations</a><a>Suivi des trains</a><a>Tarifs</a><a>Aide</a><span class="indicateur"></span></nav><div class="droite"><span class="avatar">NM</span></div></header>
+          <div class="s-contenu" style="max-width:none;margin:0;padding-right:480px">
+            <h2 style="font:var(--t-h2)">Mes réservations</h2>
+            <table class="s-table">
+              <thead><tr><th>Trajet</th><th>Date</th><th>État</th></tr></thead>
+              <tbody>
+                <tr class="on"><td><b>Owendo → Booué</b><small>Express 201 · réf. STG-4H8N2Q</small></td><td class="tabular">ven. 2 oct.<small>07:40</small></td><td><span class="tag tag-ok"><i data-i="circle-check"></i>Confirmée</span></td></tr>
+                <tr><td><b>Franceville → Owendo</b><small>Express 202 · réf. STG-9M2A7C</small></td><td class="tabular">dim. 11 oct.<small>06:30</small></td><td><span class="tag tag-retard"><i data-i="hourglass"></i>Paiement en attente</span></td></tr>
+                <tr><td><b>Owendo → Ndjolé</b><small>Omnibus 405 · réf. STG-3P8L1D</small></td><td class="tabular">lun. 14 sept.<small>06:15</small></td><td><span class="tag tag-info"><i data-i="rotate-ccw"></i>Remboursée</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="r-panneau">
+            <div class="r-tete"><span class="r-avatar"><span data-signe="parole" data-fond="sombre"></span></span><div><b>Ruban</b><small><span class="direct" style="color:var(--c-accent-ink)">Conversation à voix haute</span></small></div><div class="actions"><span class="r-action"><i data-i="maximize-2"></i></span><span class="r-action"><i data-i="x"></i></span></div></div>
+            <div class="r-fil bas">
+              <div class="r-moi vocal"><i data-i="mic"></i>Décale mon voyage à Booué à samedi.</div>
+              <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+                <p>Samedi, l'Express 201 arrive à Booué à 13:20 : 25 min de plus, à cause des travaux. Voici le changement.</p>
+                <div class="r-carte"><div class="r-carte-tete"><i data-i="calendar-clock"></i>Modifier · STG-4H8N2Q</div><div class="r-carte-corps">
+                  <div class="r-avant-apres"><div class="avant"><small>Avant</small><b>Ven. 2 oct.</b><span>07:40 → 12:55</span></div><i data-i="arrow-right"></i><div class="apres"><small>Après</small><b>Sam. 3 oct.</b><span>07:40 → 13:20</span></div></div>
+                  <div class="recap-l"><span>2 voyageurs · 2e classe</span><span class="tabular">+0 XAF</span></div>
+                </div><div class="r-carte-pied"><span class="btn btn-secondaire">Garder vendredi</span><span class="btn btn-primaire">Passer à samedi</span></div></div>
+              </div></div>
+            </div>
+            <div class="r-saisie"><div class="r-barre-vocale"><span class="sg" data-signe="parole" data-fond="sombre"></span><span class="texte">Ruban vous répond… parlez pour l'interrompre.</span><span class="r-rond"><i data-i="mic-off"></i></span><span class="r-rond stop"><i data-i="x"></i></span></div></div>
+          </div>
+          <button class="r-fab" aria-label="Fermer Ruban"><i data-i="chevron-down" style="color:#fff"></i></button>
+        </div>
+      </div>
+      <figcaption><b>À voix haute, sur le web</b><span>La barre de saisie devient une barre vocale ; la carte reste à confirmer d'un clic.</span><span class="anim">le ruban de la barre suit la voix de Ruban</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- ================================================================ 03 -->
+  <section class="doc-section">
+    <h2><span class="n">03</span>Sur mobile : une feuille, puis tout l'écran</h2>
+    <p class="doc-intro">Sur mobile, une fenêtre flottante manquerait de place : Ruban s'ouvre dans une feuille. Elle a trois hauteurs. À mi-écran, elle propose des raccourcis. Tirée vers le haut, elle montre la conversation. En plein écran, c'est la page de Ruban. Le bouton flottant reste au-dessus de la barre d'onglets ; un appui long lance directement la voix.</p>
+
+    <h3 class="doc-h3">Ouvrir Ruban</h3>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:41</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre logo"><span data-logo="compact"></span><div class="actions"><span class="action"><i data-i="bell"></i></span></div></div>
+          <div class="m-corps">
+            <p class="m-grand-titre">Où allez-vous ?</p>
+            <div class="recherche m-recherche"><div class="recherche-gares"><div class="bloc-champ"><small>Départ</small><b>Owendo</b></div><div class="bloc-champ"><small>Arrivée</small><b>Booué</b></div><button class="inverser" aria-label="Inverser"><i data-i="arrow-up-down"></i></button></div><div class="ligne2"><div class="bloc-champ coins"><small>Aller</small><b>Ven. 2 oct.</b></div><div class="bloc-champ coins"><small>Voyageurs</small><b>2</b></div></div></div>
+            <span class="btn btn-primaire btn-lg btn-bloc">Rechercher</span>
+            <p class="titre-section">Prochain voyage <a>Tout voir</a></p>
+            <div class="prochain"><div class="prochain-tete"><span>Express 201 · ven. 2 oct.</span><span class="tag tag-ok"><i data-i="circle-check"></i>À l'heure</span></div><div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie pleine"><span class="ruban"></span></span><small>5 h 15</small></div><div class="trajet-pt fin"><b>12:55</b><span>Booué</span></div></div></div>
+          </div>
+          <div class="r-bulle m"><span class="fermer"><i data-i="x"></i></span><b>Bonjour, je suis Ruban.</b>Posez-moi une question, ou demandez-moi de réserver.</div>
+          <button class="r-fab m" aria-label="Ouvrir Ruban"><span data-signe="repos" data-fond="sombre"></span></button>
+          <nav class="onglets-m" data-glisse="a"><a aria-current="page"><i data-i="house"></i>Accueil</a><a><i data-i="ticket"></i>Billets</a><a><i data-i="circle-user-round"></i>Compte</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Le bouton</b> — au-dessus des onglets, à droite. La bulle, une fois.<span class="anim">aucun au repos ; appui long : la voix</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut" style="color:#fff"><span class="tabular">9:41</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre logo"><span data-logo="compact"></span></div>
+          <div class="m-corps"><p class="m-grand-titre">Où allez-vous ?</p></div>
+          <div class="voile"></div>
+          <div class="r-feuille moyenne">
+            <span class="poignee"></span>
+            <div class="r-tete"><span class="r-avatar"><span class="trace" data-signe="repos" data-fond="sombre"></span></span><div><b>Ruban</b><small>Assistant SETRAG</small></div><div class="actions"><span class="r-action"><i data-i="maximize-2"></i></span><span class="r-action"><i data-i="x"></i></span></div></div>
+            <div class="r-accueil">
+              <h2>Bonjour Nadia, que puis-je faire ?</h2>
+              <div class="r-puces grandes">
+                <span class="r-puce"><i data-i="ticket"></i>Réserver un trajet</span>
+                <span class="r-puce"><i data-i="route"></i>Suivre mon train</span>
+                <span class="r-puce"><i data-i="calendar-clock"></i>Changer une réservation</span>
+                <span class="r-puce"><i data-i="luggage"></i>Bagages, animaux</span>
+              </div>
+            </div>
+            <div class="r-saisie" style="margin-top:auto"><div class="rang"><div class="r-champ"><span class="indice">Écrivez à Ruban…</span><span class="r-rond"><i data-i="mic"></i></span></div><span class="r-rond encre"><span data-signe="repos" data-fond="sombre"></span></span></div></div>
+          </div>
+          <div class="barre-accueil" style="z-index:7"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Feuille à mi-hauteur</b> — quatre raccourcis, le champ, la voix.<span class="anim">la feuille monte en 320 ms ; le signe se trace, une fois par session</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut" style="color:#fff"><span class="tabular">9:42</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="voile"></div>
+          <div class="r-feuille grande">
+            <span class="poignee"></span>
+            <div class="r-tete"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div><b>Ruban</b><small>Assistant SETRAG</small></div><div class="actions"><span class="r-action"><i data-i="maximize-2"></i></span><span class="r-action"><i data-i="x"></i></span></div></div>
+            <div class="r-fil bas">
+              <div class="r-moi">Je dois être à Booué vendredi avant 14 h, avec mon fils de 8 ans.</div>
+              <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+                <p data-flux>Deux trains arrivent à Booué avant 14 h. J'ai repris Enzo depuis vos voyageurs : il voyage au tarif enfant.</p>
+                <div class="r-carte"><div class="r-carte-tete"><i data-i="train-front"></i>Trajets · ven. 2 oct.</div><div class="r-carte-corps" data-demo="trajets">
+                  <div class="r-trajet trajet"><div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>5 h 15</small></div><div class="trajet-pt fin"><b>12:55</b><span>Booué</span></div></div><span class="prix">17 500<small>Express 201</small></span></div>
+                  <div class="r-trajet trajet"><div class="trajet-heures"><div class="trajet-pt"><b>04:50</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>7 h 40</small></div><div class="trajet-pt fin"><b>12:30</b><span>Booué</span></div></div><span class="prix">13 000<small>Omnibus 401</small></span></div>
+                </div></div>
+                <div class="r-puces"><span class="r-puce">L'Express 201</span><span class="r-puce">En 1re classe ?</span></div>
+              </div></div>
+            </div>
+            <div class="r-saisie"><div class="rang"><div class="r-champ"><span class="indice">Écrivez à Ruban…</span><span class="r-rond"><i data-i="mic"></i></span></div><span class="r-rond encre"><span data-signe="repos" data-fond="sombre"></span></span></div></div>
+          </div>
+          <div class="barre-accueil" style="z-index:7"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Feuille haute</b> — la conversation, l'écran d'avant reste deviné derrière.<span class="anim">la réponse s'écrit mot à mot ; les cartes montent de 6 px</span></figcaption>
+      </figure>
+    </div>
+
+    <h3 class="doc-h3">Réserver et payer dans la conversation</h3>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:43</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-down"></i></span><span class="r-avatar" style="width:32px;height:32px"><span data-signe="repos" data-fond="sombre"></span></span><span class="titre">Ruban<small>Booué vendredi, avec Enzo</small></span><div class="actions"><span class="action"><i data-i="history"></i></span></div></div>
+          <div class="r-fil bas">
+            <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte"><div class="r-carte faite"><div class="r-carte-tete"><i data-i="train-front"></i>Trajets · ven. 2 oct.</div><div class="r-fait" style="padding-top:12px"><i data-i="circle-check"></i>Choisi : Express 201</div></div></div></div>
+            <div class="r-moi">L'express, en 2e.</div>
+            <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+              <p>C'est noté. Je tiens vos deux places pendant 15 minutes.</p>
+              <div class="r-carte"><div class="r-carte-tete"><i data-i="ticket"></i>Réservation<span class="fin tabular" data-rebours="14:58"></span></div><div class="r-carte-corps">
+                <div class="trajet-heures"><div class="trajet-pt"><b style="font-size:20px">07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie pleine"><span class="ruban"></span></span><small>Express 201</small></div><div class="trajet-pt fin"><b style="font-size:20px">12:55</b><span>Booué</span></div></div>
+                <div class="recap-l"><span>Vous · adulte · 2e</span><span class="tabular">17 500</span></div>
+                <div class="recap-l remise"><span>Enzo, 8 ans · −50 %</span><span class="tabular">8 750</span></div>
+                <div class="recap-total"><span>Total</span><span>26 250 XAF</span></div>
+              </div><div class="r-carte-pied"><span class="btn btn-secondaire court">Modifier</span><span class="btn btn-primaire">Payer 26 250 XAF</span></div></div>
+            </div></div>
+          </div>
+          <div class="r-saisie" style="padding-bottom:30px"><div class="rang"><div class="r-champ"><span class="indice">Écrivez à Ruban…</span><span class="r-rond"><i data-i="mic"></i></span></div><span class="r-rond encre"><span data-signe="repos" data-fond="sombre"></span></span></div></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Plein écran</b> — la carte de réservation porte le seul bouton principal du fil.<span class="anim">le compte à rebours défile ; la carte précédente devient un résumé</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:44</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-down"></i></span><span class="r-avatar" style="width:32px;height:32px"><span data-signe="repos" data-fond="sombre"></span></span><span class="titre">Ruban<small>Booué vendredi, avec Enzo</small></span></div>
+          <div class="r-fil bas">
+            <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte"><div class="r-carte faite"><div class="r-carte-tete"><i data-i="ticket"></i>Réservation</div><div class="r-fait" style="padding-top:12px"><i data-i="circle-check"></i>Prête · 26 250 XAF</div></div></div></div>
+            <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+              <p>Je lance le paiement Airtel Money au 07 •• •• 56.</p>
+              <div class="r-carte"><div class="r-carte-tete"><i data-i="smartphone"></i>Paiement<span class="fin tabular">26 250 XAF</span></div><div class="r-carte-corps">
+                <div class="r-moyen"><span class="marque">AIRTEL</span><div>Airtel Money<small>+241 07 •• •• 56</small></div><a>Changer</a></div>
+                <div class="r-attente"><b>Validez sur votre téléphone</b><p>Tapez votre code secret Airtel Money pour confirmer. Je ne vous le demanderai jamais ici.</p><span class="voie attente"><span class="ruban"></span></span></div>
+                <div class="tenue"><i data-i="timer"></i>Places tenues encore <b data-rebours="13:31"></b></div>
+              </div><div class="r-carte-pied"><span class="btn btn-secondaire">Je n'ai rien reçu</span></div></div>
+            </div></div>
+          </div>
+          <div class="r-saisie" style="padding-bottom:30px"><div class="rang"><div class="r-champ"><span class="indice">Écrivez à Ruban…</span><span class="r-rond"><i data-i="mic"></i></span></div><span class="r-rond encre"><span data-signe="repos" data-fond="sombre"></span></span></div></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Paiement dans le fil</b> — la validation se fait sur le téléphone, avec le code Mobile Money.<span class="anim">une rame passe tant que l'opérateur n'a pas répondu</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">9:45</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-down"></i></span><span class="r-avatar" style="width:32px;height:32px"><span data-signe="repos" data-fond="sombre"></span></span><span class="titre">Ruban<small>Booué vendredi, avec Enzo</small></span></div>
+          <div class="r-fil bas">
+            <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte"><div class="r-carte faite"><div class="r-carte-tete"><i data-i="smartphone"></i>Paiement</div><div class="r-fait" style="padding-top:12px"><i data-i="circle-check"></i>Payé · 26 250 XAF · Airtel Money</div></div></div></div>
+            <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+              <p>C'est payé. Vos deux billets sont prêts, lisibles même sans réseau.</p>
+              <div class="billet billet-mini" data-emission-auto>
+                <div class="billet-trajet"><div><b>07:40</b><span>Owendo</span></div><div class="milieu">ven. 2 oct.<span class="voie sur-encre pleine"><span class="ruban"></span></span>Express 201</div><div><b>12:55</b><span>Booué</span></div></div>
+                <div class="billet-coupe" style="--fond-coupe:var(--c-canvas);grid-column:1/-1"><span class="voie sur-encre"><span class="ruban"></span></span></div>
+                <span class="qui"><b>2 billets</b> · voiture 4, places 32-33</span><span class="ouvrir"><i data-i="qr-code"></i></span>
+              </div>
+              <div class="r-puces"><span class="r-puce"><i data-i="wallet"></i>Ajouter à Wallet</span><span class="r-puce"><i data-i="bell-plus"></i>Me prévenir en cas de retard</span></div>
+            </div></div>
+          </div>
+          <div class="r-saisie" style="padding-bottom:30px"><div class="rang"><div class="r-champ"><span class="indice">Écrivez à Ruban…</span><span class="r-rond"><i data-i="mic"></i></span></div><span class="r-rond encre"><span data-signe="repos" data-fond="sombre"></span></span></div></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Billets émis</b> — le billet arrive dans le fil, et dans l'onglet Billets.<span class="anim">le ruban traverse la découpe, une fois ; vibration légère</span></figcaption>
+      </figure>
+    </div>
+
+    <h3 class="doc-h3">À voix haute</h3>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran r-vocal">
+          <div class="statut"><span class="tabular">10:12</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="r-vocal-corps">
+            <span class="r-vocal-etat">Je vous écoute</span>
+            <span class="r-grand-signe" data-signe="ecoute" data-fond="sombre"></span>
+            <p class="r-transcription">Finalement, je voudrais partir <span class="suite">samedi plutôt que vendredi…</span></p>
+          </div>
+          <div class="r-commandes"><span class="r-cmd" title="Couper le micro"><i data-i="mic-off"></i></span><span class="r-cmd" title="Écrire"><i data-i="keyboard"></i></span><span class="r-cmd raccrocher" title="Terminer"><i data-i="x"></i></span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Écoute</b> — vos mots s'écrivent pendant que vous parlez.<span class="anim">l'épaisseur du ruban suit votre voix</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran r-vocal">
+          <div class="statut"><span class="tabular">10:12</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="r-vocal-corps">
+            <span class="r-vocal-etat">Je cherche</span>
+            <span class="r-grand-signe" data-signe="reflexion" data-fond="sombre" style="color:#fff"></span>
+            <p class="r-transcription">Finalement, je voudrais partir samedi plutôt que vendredi.</p>
+            <p class="r-sous-titre">Je regarde les trains de samedi pour Booué…</p>
+          </div>
+          <div class="r-commandes"><span class="r-cmd"><i data-i="mic-off"></i></span><span class="r-cmd"><i data-i="keyboard"></i></span><span class="r-cmd raccrocher"><i data-i="x"></i></span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Réflexion</b> — Ruban dit ce qu'il fait pendant qu'il cherche.<span class="anim">une rame parcourt le S, 1,6 s</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran r-vocal">
+          <div class="statut"><span class="tabular">10:13</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="r-vocal-corps">
+            <span class="r-vocal-etat">Ruban répond</span>
+            <span class="r-grand-signe petit" data-signe="parole" data-fond="sombre"></span>
+            <p class="r-sous-titre">Samedi, l'Express 201 arrive à Booué à 13 h 20 : vingt-cinq minutes de plus, à cause des travaux. Je fais le changement ?</p>
+            <div class="r-plateau">
+              <div class="r-avant-apres"><div class="avant"><small>Avant</small><b>Ven. 2 oct.</b><span>07:40 → 12:55</span></div><i data-i="arrow-right"></i><div class="apres"><small>Après</small><b>Sam. 3 oct.</b><span>07:40 → 13:20</span></div></div>
+              <div style="display:flex;gap:8px"><span class="btn btn-secondaire" style="flex:1">Garder vendredi</span><span class="btn btn-primaire" style="flex:1">Changer</span></div>
+            </div>
+          </div>
+          <div class="r-commandes"><span class="r-cmd"><i data-i="mic-off"></i></span><span class="r-cmd"><i data-i="keyboard"></i></span><span class="r-cmd raccrocher"><i data-i="x"></i></span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Réponse</b> — dite, écrite, et une carte à toucher : on peut aussi dire « oui, change ».<span class="anim">l'épaisseur du ruban suit la voix de Ruban</span></figcaption>
+      </figure>
+    </div>
+
+    <h3 class="doc-h3">Au quotidien</h3>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">12:21</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-down"></i></span><span class="r-avatar" style="width:32px;height:32px"><span data-signe="repos" data-fond="sombre"></span></span><span class="titre">Ruban<small>Mon train est à l'heure ?</small></span></div>
+          <div class="r-fil bas">
+            <div class="r-moi">Mon train est à l'heure ?</div>
+            <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+              <p>Votre Express 201 roule avec 12 min de retard depuis Lopé. Vous arriverez à Booué vers 13:07. Votre place est conservée.</p>
+              <div class="r-carte"><div class="r-carte-tete"><i data-i="route"></i>Express 201<span class="tag tag-retard fin"><i data-i="clock-alert"></i>+12 min</span></div><div class="r-carte-corps">
+                <div class="arrets" data-rame="72,76,80">
+                  <span class="voie-v passee" style="top:22px;height:54px"></span><span class="voie-v" style="top:76px;bottom:22px"></span><span class="rame" style="height:22px"></span>
+                  <div class="arret passe" style="min-height:44px"><span class="h">11:20</span><span class="pt"></span><span class="nom">Otoumbi</span></div>
+                  <div class="arret passe" style="min-height:44px"><span class="h">12:14</span><span class="pt"></span><span class="nom">Lopé</span></div>
+                  <div class="arret maj" style="min-height:44px"><span class="h">13:07<s>12:55</s></span><span class="pt"></span><span class="nom">Booué</span><span class="tag tag-accent">Vous</span></div>
+                </div>
+                <p class="r-source"><i data-i="info"></i>D'après le statut publié à 12:16.</p>
+              </div></div>
+              <div class="r-puces"><span class="r-puce"><i data-i="bell-plus"></i>Me prévenir avant Booué</span><span class="r-puce">Prévenir un proche</span></div>
+            </div></div>
+          </div>
+          <div class="r-saisie" style="padding-bottom:30px"><div class="rang"><div class="r-champ"><span class="indice">Écrivez à Ruban…</span><span class="r-rond"><i data-i="mic"></i></span></div><span class="r-rond encre"><span data-signe="repos" data-fond="sombre"></span></span></div></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Suivre son train</b> — la réponse cite sa source et son heure.<span class="anim">la rame avance à chaque mise à jour</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:02</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-down"></i></span><span class="r-avatar" style="width:32px;height:32px"><span data-signe="repos" data-fond="sombre"></span></span><span class="titre">Ruban<small>Annulation</small></span></div>
+          <div class="r-fil bas">
+            <div class="r-moi">Enzo ne vient plus. Annule son billet.</div>
+            <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+              <p>Je peux annuler le billet d'Enzo. Le vôtre reste valable. Voici ce que ça donne :</p>
+              <div class="r-carte danger"><div class="r-carte-tete"><i data-i="circle-x"></i>Annuler 1 billet</div><div class="r-carte-corps">
+                <div class="recap-l"><span><b style="color:var(--c-ink)">Enzo, 8 ans</b> · place 33</span></div>
+                <div class="recap-l"><span>Owendo → Booué · ven. 2 oct.</span></div>
+                <div class="recap-l remise"><span>Remboursement</span><span class="tabular">8 750 XAF</span></div>
+                <p class="r-source"><i data-i="info"></i>Sur votre compte Airtel Money, selon les conditions du tarif.</p>
+              </div><div class="r-carte-pied"><span class="btn btn-secondaire">Garder</span><span class="btn btn-danger">Annuler le billet</span></div></div>
+            </div></div>
+          </div>
+          <div class="r-saisie" style="padding-bottom:30px"><div class="rang"><div class="r-champ"><span class="indice">Écrivez à Ruban…</span><span class="r-rond"><i data-i="mic"></i></span></div><span class="r-rond encre"><span data-signe="repos" data-fond="sombre"></span></span></div></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Annuler</b> — le bouton rouge dit exactement ce qu'il fait.<span class="anim">aucun : une annulation ne s'anime pas</span></figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:05</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-down"></i></span><span class="r-avatar" style="width:32px;height:32px"><span data-signe="repos" data-fond="sombre"></span></span><span class="titre">Ruban<small>Service client</small></span></div>
+          <div class="r-fil bas">
+            <div class="r-moi">Je voudrais parler à quelqu'un.</div>
+            <div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte">
+              <p>Bien sûr. Je transmets notre échange au service client : vous n'aurez rien à répéter.</p>
+              <div class="r-carte"><div class="r-carte-tete"><i data-i="headset"></i>Service client SETRAG</div>
+                <div class="liste" style="border:0;border-radius:0">
+                  <div class="ligne"><i data-i="phone-call"></i><span>Être rappelé<small>au 07 •• •• 56</small></span><span class="fin"><i data-i="chevron-right"></i></span></div>
+                  <div class="ligne"><i data-i="message-square"></i><span>Écrire un message<small>réponse par SMS</small></span><span class="fin"><i data-i="chevron-right"></i></span></div>
+                  <div class="ligne"><i data-i="map-pin"></i><span>Aller au guichet<small>gare d'Owendo</small></span><span class="fin"><i data-i="chevron-right"></i></span></div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+          <div class="r-saisie" style="padding-bottom:30px"><div class="rang"><div class="r-champ"><span class="indice">Écrivez à Ruban…</span><span class="r-rond"><i data-i="mic"></i></span></div><span class="r-rond encre"><span data-signe="repos" data-fond="sombre"></span></span></div></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Passer la main</b> — à tout moment, sans avoir à insister.<span class="anim">aucun</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 04 -->
+  <section class="doc-section">
+    <h2><span class="n">04</span>Les cartes d'action</h2>
+    <p class="doc-intro">Ruban répond par deux phrases, puis par une carte : ce sont les composants de l'app, ramenés dans le fil. Une carte a au plus deux boutons. Une fois traitée, elle se replie en une ligne de résumé : dans le fil, seule la dernière carte est active.</p>
+    <div class="cartes-catalogue">
+      <figure><div class="r-carte"><div class="r-carte-tete"><i data-i="train-front"></i>Trajets</div><div class="r-carte-corps" data-demo="trajets"><div class="r-trajet trajet choisi"><div class="trajet-heures"><div class="trajet-pt"><b>07:40</b><span>Owendo</span></div><div class="trajet-milieu"><span class="voie"><span class="ruban"></span></span><small>5 h 15</small></div><div class="trajet-pt fin"><b>12:55</b><span>Booué</span></div></div><span class="prix">17 500<small>Express 201</small></span></div></div></div><figcaption><b>Trajets</b>Trois au plus ; toucher en choisit un.</figcaption></figure>
+      <figure><div class="r-carte"><div class="r-carte-tete"><i data-i="ticket"></i>Réservation<span class="fin tabular" data-rebours="14:58"></span></div><div class="r-carte-corps"><div class="recap-l"><span>Vous · adulte · 2e</span><span class="tabular">17 500</span></div><div class="recap-l remise"><span>Enzo, 8 ans · −50 %</span><span class="tabular">8 750</span></div><div class="recap-total"><span>Total</span><span>26 250 XAF</span></div></div><div class="r-carte-pied"><span class="btn btn-secondaire">Modifier</span><span class="btn btn-primaire">Payer</span></div></div><figcaption><b>Réservation</b>Le récapitulatif et la tenue des places.</figcaption></figure>
+      <figure><div class="r-carte"><div class="r-carte-tete"><i data-i="smartphone"></i>Paiement<span class="fin tabular">26 250 XAF</span></div><div class="r-carte-corps"><div class="r-attente"><b>Validez sur votre téléphone</b><span class="voie attente"><span class="ruban"></span></span></div></div></div><figcaption><b>Paiement</b>Mobile Money : validation sur le téléphone. Carte : formulaire sécurisé, hors du fil.</figcaption></figure>
+      <figure><div class="r-carte"><div class="r-carte-tete"><i data-i="calendar-clock"></i>Modifier</div><div class="r-carte-corps"><div class="r-avant-apres"><div class="avant"><small>Avant</small><b>Ven. 2 oct.</b><span>07:40</span></div><i data-i="arrow-right"></i><div class="apres"><small>Après</small><b>Sam. 3 oct.</b><span>07:40</span></div></div></div><div class="r-carte-pied"><span class="btn btn-secondaire">Garder</span><span class="btn btn-primaire">Changer</span></div></div><figcaption><b>Modification</b>Avant, après, et ce que ça coûte.</figcaption></figure>
+      <figure><div class="r-carte faite"><div class="r-carte-tete"><i data-i="ticket"></i>Réservation</div><div class="r-fait" style="padding-top:12px"><i data-i="circle-check"></i>Payé · 26 250 XAF · Airtel Money</div></div><figcaption><b>Carte traitée</b>Repliée en une ligne, sans bouton.</figcaption></figure>
+      <figure><div style="display:grid;gap:12px"><div class="r-pense"><span class="r-avatar"><span data-signe="reflexion" data-fond="sombre" style="color:#fff"></span></span>Je cherche les trains de samedi pour Booué…</div><div class="r-puces"><span class="r-puce">L'Express 201</span><span class="r-puce">En 1re ?</span><span class="r-puce">Autres horaires</span></div></div><figcaption><b>Réflexion et suggestions</b>Ruban dit ce qu'il fait ; trois suggestions au plus.</figcaption></figure>
+      <figure><div class="r-carte"><div class="r-hors-ligne"><span class="grand" data-signe="hors-ligne"></span><b>Ruban a besoin du réseau</b><p>Vos billets restent consultables dans l'onglet Billets.</p></div></div><figcaption><b>Hors réseau</b>Le signe gris, et ce qui marche encore.</figcaption></figure>
+      <figure><div class="r-carte danger"><div class="r-carte-tete"><i data-i="circle-x"></i>Annuler 1 billet</div><div class="r-carte-corps"><div class="recap-l remise"><span>Remboursement</span><span class="tabular">8 750 XAF</span></div></div><div class="r-carte-pied"><span class="btn btn-secondaire">Garder</span><span class="btn btn-danger">Annuler le billet</span></div></div><figcaption><b>Annulation</b>Bordure rouge, verbe exact sur le bouton.</figcaption></figure>
+      <figure><div class="r-ia"><span class="r-avatar"><span data-signe="repos" data-fond="sombre"></span></span><div class="r-texte"><p id="flux-demo" data-flux>Un animal accompagné voyage avec son propre titre de transport. Je peux l'ajouter à votre réservation de vendredi.</p><button class="doc-bouton" data-rejouer-flux="#flux-demo" style="justify-self:start;min-height:32px">Rejouer</button></div></div><figcaption><b>Réponse écrite</b>Au fil de la lecture, 14 mots par seconde.</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 05 -->
+  <section class="doc-section">
+    <h2><span class="n">05</span>La voix</h2>
+    <p class="doc-intro">Parler à Ruban, c'est la même conversation, à voix haute. Tout ce qu'il dit s'écrit à l'écran, et les cartes s'affichent comme à l'écrit. Le micro du champ sert à dicter un message ; le bouton au signe lance la conversation à voix haute.</p>
+    <div class="flux-vocal">
+      <div class="doc-carte"><span class="vis" data-signe="ecoute"></span><h3>Il écoute</h3><p>Vos mots s'écrivent pendant que vous parlez. Une pause de 1 s termine la phrase.</p></div>
+      <div class="doc-carte"><span class="vis" data-signe="reflexion"></span><h3>Il cherche</h3><p>Il dit ce qu'il fait : « Je regarde les trains de samedi. » Jamais plus de 3 s sans un mot.</p></div>
+      <div class="doc-carte"><span class="vis" data-signe="parole"></span><h3>Il répond</h3><p>Phrases courtes. Les heures en toutes lettres : « sept heures quarante ». Le texte suit à l'écran.</p></div>
+      <div class="doc-carte"><span class="vis" data-signe="ecoute"></span><h3>Vous l'interrompez</h3><p>Parlez pendant qu'il répond : il s'arrête et vous écoute. Pas de bouton à chercher.</p></div>
+    </div>
+    <div class="regles" style="margin-top:var(--s-5)">
+      <div class="oui"><h4>À voix haute</h4><ul>
+        <li>Une réservation, une modification ou une annulation se confirment d'un toucher, ou d'un « oui » dit après la relecture du récapitulatif.</li>
+        <li>Le paiement se valide toujours sur le téléphone, avec le code Mobile Money.</li>
+        <li>Une voix posée, en français. Elle se choisit avec SETRAG et se teste auprès de voyageurs.</li>
+      </ul></div>
+      <div class="non"><h4>Jamais à voix haute</h4><ul>
+        <li>Un numéro de carte, un code secret, un code SMS : Ruban ne les demande pas.</li>
+        <li>Un montant sans le répéter à l'écran.</li>
+        <li>Une réponse plus longue que trois phrases : il propose d'en dire plus.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 06 -->
+  <section class="doc-section">
+    <h2><span class="n">06</span>La confiance</h2>
+    <p class="doc-intro">Un assistant qui fait payer doit être plus prudent qu'un écran. Ruban prépare, le voyageur décide : aucune action qui coûte de l'argent ou change une réservation ne part sans un geste du voyageur.</p>
+    <div class="doc-grille g2">
+      <table class="specs">
+        <thead><tr><th>Action</th><th>Ce qui la déclenche</th></tr></thead>
+        <tbody>
+          <tr><td>Chercher, répondre, suivre</td><td>La question, rien de plus</td></tr>
+          <tr><td>Tenir des places</td><td>Le choix d'un trajet ; libérées seules après 15 min</td></tr>
+          <tr><td>Payer en Mobile Money</td><td>Le bouton « Payer », puis le code sur le téléphone</td></tr>
+          <tr><td>Payer par carte</td><td>Le formulaire de paiement sécurisé, qui s'ouvre hors du fil</td></tr>
+          <tr><td>Modifier une réservation</td><td>Le bouton de la carte avant / après</td></tr>
+          <tr><td>Annuler, se faire rembourser</td><td>Le bouton rouge, qui nomme le billet</td></tr>
+        </tbody>
+      </table>
+      <div class="regles" style="grid-template-columns:1fr">
+        <div class="oui"><h4>Ruban peut</h4><ul>
+          <li>Chercher des trains, des tarifs, des réductions, et tenir des places.</li>
+          <li>Réserver, lancer un paiement, afficher et envoyer un billet.</li>
+          <li>Suivre un train et prévenir en cas de retard.</li>
+          <li>Modifier ou annuler, dans les conditions du tarif.</li>
+          <li>Passer la main au service client, avec l'historique.</li>
+        </ul></div>
+        <div class="non"><h4>Ruban ne fait jamais</h4><ul>
+          <li>Demander un code secret, un code SMS ou un numéro de carte.</li>
+          <li>Payer, modifier ou annuler sans un geste du voyageur.</li>
+          <li>Inventer un horaire, un prix ou une position de train.</li>
+          <li>Se faire passer pour une personne.</li>
+        </ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 07 -->
+  <section class="doc-section">
+    <h2><span class="n">07</span>Le mouvement de Ruban</h2>
+    <table class="specs">
+      <thead><tr><th>Moment</th><th>Mouvement</th><th>Durée</th></tr></thead>
+      <tbody>
+        <tr><td>Ouvrir la fenêtre ou la feuille</td><td>Montée depuis le bouton, sans rebond ; voile en fondu</td><td class="tabular">320 ms · --ease</td></tr>
+        <tr><td>Première ouverture de la session</td><td>Le signe se trace une fois dans l'en-tête</td><td class="tabular">700 ms · --ease-glisse</td></tr>
+        <tr><td>Ruban réfléchit</td><td>Une rame parcourt le S, seulement au-delà de 400 ms</td><td class="tabular">1 600 ms · boucle</td></tr>
+        <tr><td>La réponse arrive</td><td>Le texte s'écrit mot à mot ; la carte monte de 6 px</td><td class="tabular">14 mots/s · 200 ms</td></tr>
+        <tr><td>Écoute, parole</td><td>L'épaisseur du ruban suit la voix</td><td class="tabular">lissage 80 ms</td></tr>
+        <tr><td>Une carte est traitée</td><td>Elle se replie en une ligne de résumé</td><td class="tabular">200 ms · --ease</td></tr>
+        <tr><td>Alerte (retard)</td><td>Un point jaune apparaît sur le bouton, sans rebond</td><td class="tabular">200 ms, fondu</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================================================================ 08 -->
+  <section class="doc-section">
+    <h2><span class="n">08</span>Sous le capot</h2>
+    <p class="doc-intro">Ruban n'a pas de passe-droit : il appelle les mêmes fonctions Convex que l'interface, avec la session du voyageur. Les actions sensibles sont en deux temps : Ruban prépare un brouillon, et seul le bouton de la carte le valide.</p>
+    <div class="archi">
+      <div class="bloc"><b>Interfaces</b><ul><li>Fenêtre et page <code>/assistant</code> sur la billetterie</li><li>Feuille et plein écran dans l'app</li><li>Voix : transcription et synthèse</li></ul></div>
+      <span class="fleche"><i data-i="arrow-left-right"></i></span>
+      <div class="bloc ruban"><b>Ruban</b><ul><li>Un modèle de langage qui appelle des outils</li><li>Le contexte : page en cours, voyageurs, réservations</li><li>Répond en texte et en cartes</li></ul></div>
+      <span class="fleche"><i data-i="arrow-left-right"></i></span>
+      <div class="bloc"><b>Backend Convex</b><ul><li>Recherche, tenue des places, réservation, paiement Mobile Money, statut des dessertes</li><li>Brouillon d'action, puis confirmation par le bouton</li><li>Chaque action tracée dans le journal d'audit</li></ul></div>
+    </div>
+  </section>
+</main>
+
+<footer class="doc-pied">
+  <span>SETRAG — Ruban, l'assistant. Nom et voix à valider avec SETRAG ; données fictives.</span>
+  <span><a href="mobile.html">App voyageur →</a></span>
+</footer>
+</body>
+</html>

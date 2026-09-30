@@ -182,15 +182,16 @@ async function issueTicket(
     destinationStationId: fx.fcv,
     serviceClass: "DEUXIEME",
     passengers: [{ lastName: "MBADINGA", firstName: "Paul", gender: "M" }],
-    contactPhone: "+241 06 11 22 33",
+    contactPhone: "+241 66 11 22 33",
   })
   await t.mutation(api.functions.bookings.confirm, {
     reference: r.reference,
+    contactPhone: "+241 66 11 22 33",
     method: "airtel_money",
   })
   const vue = await t.query(api.functions.bookings.getByReference, {
     reference: r.reference,
-    contactPhone: "+241 06 11 22 33",
+    contactPhone: "+241 66 11 22 33",
   })
   return vue!.tickets[0]!
 }
@@ -400,11 +401,11 @@ describe("Vérification du code-barres", () => {
       destinationStationId: fx.fcv,
       serviceClass: "DEUXIEME",
       passengers: [{ lastName: "ONDO", firstName: "Alice", gender: "F" }],
-      contactPhone: "+241 06 44 55 66",
+      contactPhone: "+241 66 44 55 66",
     })
     const vue = await t.query(api.functions.bookings.getByReference, {
       reference: r0.reference,
-      contactPhone: "+241 06 44 55 66",
+      contactPhone: "+241 66 44 55 66",
     })
     const { ctx } = await asAgent(t, "controleur_train", fx.pos)
 

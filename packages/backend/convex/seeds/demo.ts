@@ -128,8 +128,15 @@ const DEMO_TRAVELLERS = [
   },
 ] as const
 
-/** Horizon glissant : deux mois complets, marge incluse. */
-export const DEMO_TRIP_HORIZON_DAYS = 62
+/**
+ * Horizon glissant : six mois de dessertes, pour qu'un jeu de démonstration
+ * ait toujours des trains à chercher, quelle que soit la date. La vente, elle,
+ * suit la fenêtre d'exploitation (31 jours) côté billetterie.
+ */
+export const DEMO_TRIP_HORIZON_DAYS = 183
+
+/** Borne haute d'un peuplement manuel (`run`), en jours. */
+const HORIZON_MAX_JOURS = 200
 
 /**
  * Toutes les gares de la ligne, dans l'ordre Owendo → Franceville.
@@ -287,9 +294,9 @@ export const run = internalMutation({
 
     /* ── Livret horaire actif ─────────────────────────────────────────── */
     const days = args.days ?? DEMO_TRIP_HORIZON_DAYS
-    if (!Number.isInteger(days) || days < 1 || days > 92) {
+    if (!Number.isInteger(days) || days < 1 || days > HORIZON_MAX_JOURS) {
       throw new Error(
-        `Horizon invalide : ${days} jour(s), attendu entre 1 et 92.`
+        `Horizon invalide : ${days} jour(s), attendu entre 1 et ${HORIZON_MAX_JOURS}.`
       )
     }
     const today = toServiceDate(Date.now())
@@ -500,7 +507,7 @@ export const populateTripsDay = internalMutation({
 })
 
 /**
- * Maintient l'horizon à J+62. Sans cela, le jeu de démonstration perdrait un
+ * Maintient l'horizon à J+183. Sans cela, le jeu de démonstration perdrait un
  * jour de recherche disponible chaque nuit après son amorçage.
  */
 export const topUpTripHorizon = internalMutation({

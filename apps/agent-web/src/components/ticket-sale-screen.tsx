@@ -258,14 +258,18 @@ export function TripSearchResults({
           </div>
 
           <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 lg:justify-end">
-            {Object.entries(result.availableByClass).map(
-              ([serviceClass, available]) => (
-                <Badge
-                  key={serviceClass}
-                  variant={available > 0 ? "success" : "secondary"}
-                >
-                  {serviceClass.toLowerCase()} · {available}
-                </Badge>
+            {result.cancelled ? (
+              <Badge variant="destructive">Supprimée</Badge>
+            ) : (
+              Object.entries(result.availableByClass).map(
+                ([serviceClass, available]) => (
+                  <Badge
+                    key={serviceClass}
+                    variant={available > 0 ? "success" : "secondary"}
+                  >
+                    {serviceClass.toLowerCase()} · {available}
+                  </Badge>
+                )
               )
             )}
             <Button
@@ -756,6 +760,7 @@ export function TicketSalePageClient() {
             trainNumber: string
             trainType: string
             serviceDate: string
+            status: string
           }
           departureAt: number
           arrivalAt: number
@@ -776,6 +781,7 @@ export function TicketSalePageClient() {
           distanceKm: result.distanceKm,
           availableByClass: result.availableByClass,
           hasAvailability: result.hasAvailability,
+          cancelled: result.trip.status === "annule",
         })
       )
   const quote: CounterSaleQuote | undefined =

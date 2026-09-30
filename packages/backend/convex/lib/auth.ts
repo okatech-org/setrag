@@ -34,10 +34,41 @@ export async function getUser(
 export async function requireUser(
   ctx: QueryCtx | MutationCtx,
 ): Promise<Doc<"users">> {
-  const user = await getUser(ctx)
+  return assertActiveUser(await getUser(ctx))
+}
+
+/**
+ * Même contrat que `requireUser`, appliqué à un profil déjà résolu.
+ *
+ * Les fonctions internes qui agissent pour un acteur désigné par le serveur
+ * (assistant, messagerie) passent par ici : un acteur absent ou désactivé est
+ * refusé avec les mêmes messages qu'un appel web.
+ */
+export function assertActiveUser(user: Doc<"users"> | null): Doc<"users"> {
   if (!user) throw new Error("Non authentifié")
   if (!user.isActive) throw new Error("Compte désactivé")
   return user
+}
+
+/**
+ * Charge l'acteur désigné par du code serveur de confiance.
+ *
+ * `undefined` signifie « visiteur » ; un identifiant fourni mais introuvable
+ * est une incohérence et lève, plutôt que de rétrograder silencieusement
+ * l'appel en visiteur. Un compte désactivé est refusé avec le message de
+ * `requireUser` : l'assistant ne doit pas agir pour un compte que le site
+ * refuserait. À n'utiliser QUE dans des fonctions internes : une fonction
+ * publique qui accepterait un `userId` du client permettrait à n'importe qui
+ * d'agir pour n'importe quel compte.
+ */
+export async function loadActor(
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<"users"> | undefined,
+): Promise<Doc<"users"> | null> {
+  if (userId === undefined) return null
+  const user = await ctx.db.get(userId)
+  if (!user) throw new Error("Compte introuvable")
+  return assertActiveUser(user)
 }
 
 /** Exige explicitement l'un des rôles fournis. */
@@ -64,14 +95,23 @@ export async function requirePermission(
   resource: ProtectedResource,
   permission: Permission,
 ): Promise<Doc<"users">> {
-  const user = await requireUser(ctx)
-  if (!can(user.role, resource, permission)) {
+  return assertPermission(await getUser(ctx), resource, permission)
+}
+
+/** Même contrat que `requirePermission`, appliqué à un profil déjà résolu. */
+export function assertPermission(
+  user: Doc<"users"> | null,
+  resource: ProtectedResource,
+  permission: Permission,
+): Doc<"users"> {
+  const active = assertActiveUser(user)
+  if (!can(active.role, resource, permission)) {
     throw new Error(
-      `Accès refusé : ${user.role} ne peut pas « ${permission} » sur ` +
+      `Accès refusé : ${active.role} ne peut pas « ${permission} » sur ` +
         `« ${resource} »`,
     )
   }
-  return user
+  return active
 }
 
 /**

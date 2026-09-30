@@ -1,15 +1,20 @@
+import type { Metadata } from "next"
 import { Suspense } from "react"
 
-import { SkeletonLines } from "@workspace/ui/components/empty-state"
+import { Connexion } from "@/fonctionnalites/connexion/connexion"
 
-import { OtpScreen } from "@/components/after-sale-screens"
+export const metadata: Metadata = {
+  title: "Connexion",
+  description:
+    "Connectez-vous à la billetterie SETRAG avec un code reçu par SMS ou par e-mail, sans mot de passe.",
+}
 
-export default function ConnexionPage() {
+export default function PageConnexion() {
   return (
-    <main className="mx-auto w-full max-w-3xl px-s-5 py-s-6 md:px-6 md:py-14">
-      <Suspense fallback={<SkeletonLines lines={5} />}>
-        <OtpScreen />
-      </Suspense>
-    </main>
+    // L'adresse de retour se lit dans la requête : `useSearchParams` exige un
+    // Suspense pour que la page reste pré-rendue.
+    <Suspense>
+      <Connexion />
+    </Suspense>
   )
 }

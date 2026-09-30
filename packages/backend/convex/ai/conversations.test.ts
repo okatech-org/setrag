@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 import { convexTest } from "convex-test"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { api, internal } from "../_generated/api"
 import schema from "../schema"
 import { modules } from "../test.setup"
@@ -142,6 +142,8 @@ describe("conversations IA", () => {
         lastName: "Mba",
         phone: "+241060000000",
         email: "paul@example.ga",
+        gender: null,
+        missingForTicket: ["gender"],
       },
       savedPassengers: [
         {
@@ -151,7 +153,64 @@ describe("conversations IA", () => {
           phone: null,
         },
       ],
+      memories: [],
     })
+  })
+
+  it("prend la civilité du titulaire au profil, sinon à sa propre fiche", async () => {
+    const t = convexTest(schema, modules)
+    const userId = await t.run((ctx) =>
+      ctx.db.insert("users", {
+        authId: "traveler-own-card",
+        firstName: "Berny",
+        lastName: "ITOUTOU",
+        phone: "+241077235494",
+        role: "voyageur",
+        identitySource: "local",
+        isActive: true,
+      })
+    )
+    // Compte ancien : pas de civilité au profil, mais une fiche à son nom.
+    await t.run((ctx) =>
+      ctx.db.insert("savedPassengers", {
+        userId,
+        firstName: "Berny",
+        lastName: "Itoutou",
+        gender: "M",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      })
+    )
+    const traveler = t.withIdentity({ subject: "traveler-own-card" })
+    const created = await traveler.mutation(api.ai.conversations.create, {
+      guestKey: GUEST_KEY,
+    })
+    expect(created.attachedToAccount).toBe(true)
+    const access = await traveler.query(
+      internal.ai.conversations.accessContext,
+      { conversationId: created.conversationId }
+    )
+    expect(access.travelerContext?.profile).toMatchObject({
+      gender: "M",
+      missingForTicket: [],
+    })
+
+    await t.run((ctx) => ctx.db.patch(userId, { gender: "F" }))
+    const apres = await traveler.query(
+      internal.ai.conversations.accessContext,
+      { conversationId: created.conversationId }
+    )
+    expect(apres.travelerContext?.profile.gender).toBe("F")
+  })
+
+  it("dit à l'interface qu'une conversation née avant le profil reste à rattacher", async () => {
+    const t = convexTest(schema, modules)
+    // Session ouverte, profil applicatif pas encore créé (inscription en cours).
+    const sansProfil = t.withIdentity({ subject: "traveler-not-yet" })
+    const created = await sansProfil.mutation(api.ai.conversations.create, {
+      guestKey: GUEST_KEY,
+    })
+    expect(created.attachedToAccount).toBe(false)
   })
 
   it("mémorise un tour avec une clé d'idempotence", async () => {
@@ -260,5 +319,129 @@ describe("conversations IA", () => {
         guestKey: GUEST_KEY,
       })
     ).rejects.toThrow(/conversation est terminée/)
+  })
+})
+
+describe("appels d'outils gardés pour le rejeu", () => {
+  async function conversationDuCompte() {
+    const t = convexTest(schema, modules)
+    const userId = await t.run((ctx) =>
+      ctx.db.insert("users", {
+        authId: "traveler-rejeu-rgpd",
+        firstName: "Ariane",
+        role: "voyageur",
+        identitySource: "local",
+        isActive: true,
+      })
+    )
+    const ariane = t.withIdentity({ subject: "traveler-rejeu-rgpd" })
+    const { conversationId } = await ariane.mutation(
+      api.ai.conversations.create,
+      { guestKey: GUEST_KEY }
+    )
+    await t.run(async (ctx) => {
+      const now = Date.now()
+      await ctx.db.insert("assistantMessages", {
+        conversationId,
+        role: "user",
+        requestId: "rgpd-1",
+        content: "Mes billets ?",
+        createdAt: now,
+      })
+      await ctx.db.insert("assistantMessages", {
+        conversationId,
+        role: "assistant",
+        requestId: "rgpd-1",
+        content: "Vous avez un billet pour Franceville.",
+        status: "termine",
+        createdAt: now + 1,
+      })
+      await ctx.db.insert("assistantTurns", {
+        conversationId,
+        requestId: "rgpd-1",
+        status: "completed",
+        resultJson: "{}",
+        toolCalls: [
+          {
+            callId: "tickets-1",
+            toolName: "list_my_tickets",
+            inputJson: "{}",
+            outputJson: JSON.stringify([{ reference: "SET-2026-0042" }]),
+            status: "ok",
+            actorKey: `compte:${userId}`,
+          },
+        ],
+        attempts: 1,
+        createdAt: now,
+        updatedAt: now,
+      })
+    })
+    return { t, ariane, userId, conversationId }
+  }
+
+  it("les rejoue au compte qui les a obtenus, et à lui seul", async () => {
+    const { t, userId, conversationId } = await conversationDuCompte()
+    const lire = async (actorKey: string) =>
+      JSON.parse(
+        await t.query(internal.ai.conversations.modelHistory, {
+          conversationId,
+          actorKey,
+          availableTools: ["list_my_tickets"],
+        })
+      ) as Array<{ role: string; calls?: Array<{ callId: string }> }>
+
+    const pourLeCompte = await lire(`compte:${userId}`)
+    expect(pourLeCompte.map((entree) => entree.role)).toEqual([
+      "user",
+      "tools",
+      "assistant",
+    ])
+    expect(pourLeCompte[1]!.calls![0]!.callId).toBe("tickets-1")
+    expect((await lire("invite")).map((entree) => entree.role)).toEqual([
+      "user",
+      "assistant",
+    ])
+  })
+
+  it("les exporte avec la conversation et les efface avec le compte", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+    try {
+      const { t, ariane } = await conversationDuCompte()
+      const exporte = await ariane.query(
+        api.functions.customers.exportMyData,
+        {}
+      )
+      expect(exporte.assistantConversations).toEqual([
+        expect.objectContaining({
+          messages: [
+            expect.objectContaining({ role: "user", content: "Mes billets ?" }),
+            expect.objectContaining({
+              role: "assistant",
+              content: "Vous avez un billet pour Franceville.",
+            }),
+          ],
+          toolCalls: [
+            expect.objectContaining({
+              toolName: "list_my_tickets",
+              output: JSON.stringify([{ reference: "SET-2026-0042" }]),
+            }),
+          ],
+          truncated: false,
+        }),
+      ])
+
+      await ariane.mutation(api.functions.customers.deleteMyAccount, {
+        confirmation: "SUPPRIMER",
+      })
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+      const restant = await t.run(async (ctx) => ({
+        tours: await ctx.db.query("assistantTurns").collect(),
+        messages: await ctx.db.query("assistantMessages").collect(),
+        conversations: await ctx.db.query("assistantConversations").collect(),
+      }))
+      expect(restant).toEqual({ tours: [], messages: [], conversations: [] })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

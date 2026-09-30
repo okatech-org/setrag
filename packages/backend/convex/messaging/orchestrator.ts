@@ -1,15 +1,53 @@
 import { v } from "convex/values"
-import { api, internal } from "../_generated/api"
+import { internal } from "../_generated/api"
 import { internalAction, type ActionCtx } from "../_generated/server"
 import type { Id } from "../_generated/dataModel"
 import { toolResolutionMessage } from "../ai/chat"
 import {
+  APPROVAL_TTL_MS,
   CHANNEL_CAPABILITIES,
+  commandFromText,
   deriveApprovalToken,
   deriveChannelSecret,
+  linkSettingsUrl,
   splitMessage,
+  type MessagingChannel,
   type OutboundButton,
 } from "./contracts"
+import type { LinkFromStartResult } from "./linking"
+
+/*
+ * Tous les appels à l'assistant passent par ses variantes internes
+ * `…FromThread` : c'est le fil, et l'identité qui lui est reliée, qui
+ * établissent l'acteur. Un fil non relié reste invité ; un fil relié agit
+ * pour le compte qui a émis le lien de liaison depuis le site.
+ *
+ * Le fil ne produit jamais de jeton de liaison : il explique comment relier
+ * le compte depuis le site, et le site renvoie ici avec `/start <jeton>`.
+ */
+
+const START_TEXT =
+  "Mbolo ! Je suis Ruban, l’assistant de la SETRAG. Je peux rechercher un train, calculer un prix et préparer une réservation. Pour retrouver vos billets, envoyez /connexion. Où souhaitez-vous aller ?"
+const HELP_TEXT =
+  "Je peux rechercher un trajet, calculer un devis, réserver des places et retrouver un billet. Écrivez simplement votre demande, par exemple : « Je veux aller de Libreville à Franceville vendredi ».\n\n/connexion — relier votre compte SETRAG pour retrouver vos billets\n/deconnexion — délier votre compte\n/nouveau — commencer une nouvelle conversation"
+const HOW_TO_LINK_TEXT =
+  "Pour relier cette conversation à votre compte SETRAG, connectez-vous sur le site, ouvrez « Messageries reliées » dans votre compte et appuyez sur « Relier Telegram ». Dans Telegram, appuyez ensuite sur Démarrer."
+const ALREADY_LINKED_TEXT =
+  "Votre compte SETRAG est déjà relié à cette conversation. Envoyez /deconnexion pour le délier."
+const LINK_BUTTON_LABEL = "Relier depuis le site"
+
+const LINK_RESULT_TEXT: Record<
+  Exclude<LinkFromStartResult["statut"], "relie">,
+  string
+> = {
+  deja_relie: ALREADY_LINKED_TEXT,
+  invalide:
+    "Ce lien de liaison n’est pas valable ou a déjà servi. Sur le site, dans « Messageries reliées », appuyez de nouveau sur « Relier Telegram ».",
+  expire:
+    "Ce lien de liaison a expiré. Sur le site, dans « Messageries reliées », appuyez de nouveau sur « Relier Telegram ».",
+  relie_ailleurs:
+    "Cette conversation est déjà reliée à un autre compte SETRAG. Envoyez /deconnexion, puis ouvrez de nouveau le lien du site.",
+}
 
 function safeError(error: unknown): string {
   return (
@@ -53,7 +91,7 @@ function extractDocuments(
 async function enqueueText(
   ctx: ActionCtx,
   args: {
-    channel: "telegram" | "whatsapp" | "messenger" | "apple_messages"
+    channel: MessagingChannel
     threadId: Id<"messagingThreads">
     sourceEventId: Id<"messagingEvents">
     text: string
@@ -69,9 +107,47 @@ async function enqueueText(
     threadId: args.threadId,
     sourceEventId: args.sourceEventId,
     texts,
-    buttons: args.buttons,
+    buttons: args.buttons && args.buttons.length > 0 ? args.buttons : undefined,
     documents: args.documents,
   })
+}
+
+/**
+ * Le lien vers la page du site où l'on relie une messagerie, sans jeton. Il
+ * devient un bouton si le canal sait l'afficher (et si l'adresse est en
+ * HTTPS, exigence des boutons Telegram) ; sinon il est écrit dans le texte.
+ */
+function withLinkSettings(
+  channel: MessagingChannel,
+  text: string
+): { text: string; buttons: OutboundButton[] } {
+  const url = linkSettingsUrl()
+  if (CHANNEL_CAPABILITIES[channel].urlButtons && url.startsWith("https://")) {
+    return { text, buttons: [{ label: LINK_BUTTON_LABEL, url }] }
+  }
+  return { text: `${text}\n\n${url}`, buttons: [] }
+}
+
+/**
+ * Explique comment relier le fil à un compte, ou rappelle qu'il l'est déjà.
+ * `text` précède l'explication (réponse du modèle à `request_sign_in`).
+ */
+async function explainLinking(
+  ctx: ActionCtx,
+  args: {
+    channel: MessagingChannel
+    threadId: Id<"messagingThreads">
+    text?: string
+  }
+): Promise<{ text: string; buttons: OutboundButton[] }> {
+  const state = await ctx.runQuery(internal.messaging.linking.threadLinkState, {
+    threadId: args.threadId,
+  })
+  if (state.relie) return { text: ALREADY_LINKED_TEXT, buttons: [] }
+  return withLinkSettings(
+    args.channel,
+    args.text ? `${args.text}\n\n${HOW_TO_LINK_TEXT}` : HOW_TO_LINK_TEXT
+  )
 }
 
 async function processApprovalAction(
@@ -79,7 +155,6 @@ async function processApprovalAction(
   args: {
     threadId: Id<"messagingThreads">
     conversationId: Id<"assistantConversations">
-    guestKey: string
     actionToken: string
   }
 ): Promise<string> {
@@ -111,11 +186,14 @@ async function processApprovalAction(
 
   try {
     if (decision === "reject") {
-      const rejected = await ctx.runAction(api.ai.chat.rejectToolCall, {
-        conversationId: args.conversationId,
-        guestKey: args.guestKey,
-        callId: claimed.approval.callId,
-      })
+      const rejected = await ctx.runAction(
+        internal.ai.chat.rejectToolCallFromThread,
+        {
+          conversationId: args.conversationId,
+          threadId: args.threadId,
+          callId: claimed.approval.callId,
+        }
+      )
       await ctx.runMutation(internal.messaging.core.resolveApproval, {
         approvalId: claimed.approval._id,
         succeeded: true,
@@ -123,11 +201,14 @@ async function processApprovalAction(
       return rejected.message
     }
 
-    const approved = await ctx.runAction(api.ai.chat.approveToolCall, {
-      conversationId: args.conversationId,
-      guestKey: args.guestKey,
-      callId: claimed.approval.callId,
-    })
+    const approved = await ctx.runAction(
+      internal.ai.chat.approveToolCallFromThread,
+      {
+        conversationId: args.conversationId,
+        threadId: args.threadId,
+        callId: claimed.approval.callId,
+      }
+    )
     if (approved.status !== "ok") {
       throw new Error(
         approved.status === "error"
@@ -209,8 +290,15 @@ export const processEvent = internalAction({
       let documents:
         Array<{ url: string; filename: string; caption?: string }> | undefined
 
-      if (event.type === "command") {
-        switch (event.text) {
+      const command =
+        event.type === "command"
+          ? event.text
+          : event.type === "text" && event.text
+            ? commandFromText(event.text)
+            : undefined
+
+      if (command !== undefined) {
+        switch (command) {
           case "/nouveau":
             thread = await ctx.runMutation(
               internal.messaging.core.resetThread,
@@ -220,13 +308,51 @@ export const processEvent = internalAction({
               "Une nouvelle conversation vient de commencer. Où souhaitez-vous voyager ?"
             break
           case "/aide":
-            responseText =
-              "Je peux rechercher un trajet, calculer un devis, réserver des places et retrouver un billet. Écrivez simplement votre demande, par exemple : « Je veux aller de Libreville à Franceville vendredi »."
+            responseText = HELP_TEXT
             break
-          case "/start":
-          default:
+          case "/connexion": {
+            const offer = await explainLinking(ctx, {
+              channel: event.channel,
+              threadId: thread._id,
+            })
+            responseText = offer.text
+            buttons = offer.buttons
+            break
+          }
+          case "/deconnexion": {
+            const unlinked = await ctx.runMutation(
+              internal.messaging.linking.unlinkThread,
+              { threadId: thread._id, guestKey }
+            )
+            responseText = unlinked.unlinked
+              ? "Votre compte SETRAG n’est plus relié à cette conversation. Une nouvelle conversation commence ; envoyez /connexion pour le relier à nouveau."
+              : "Aucun compte SETRAG n’est relié à cette conversation. Envoyez /connexion pour savoir comment en relier un."
+            break
+          }
+          case "/start": {
+            // « Démarrer » depuis le lien du site : `/start <jeton>`. Le jeton
+            // n'arrive ici que sous forme d'empreinte.
+            if (!event.linkTokenHash) {
+              responseText = START_TEXT
+              break
+            }
+            const linked = await ctx.runMutation(
+              internal.messaging.linking.linkFromStart,
+              { threadId: thread._id, tokenHash: event.linkTokenHash }
+            )
             responseText =
-              "Mbolo 👋 Je suis l’assistant voyageur SETRAG. Je peux vous aider à rechercher un train, obtenir un prix et préparer une réservation. Où souhaitez-vous aller ?"
+              linked.statut === "relie"
+                ? linked.message
+                : LINK_RESULT_TEXT[linked.statut]
+            if (linked.statut === "invalide" || linked.statut === "expire") {
+              const offer = withLinkSettings(event.channel, responseText)
+              responseText = offer.text
+              buttons = offer.buttons
+            }
+            break
+          }
+          default:
+            responseText = START_TEXT
             break
         }
       } else if (event.type === "unsupported") {
@@ -236,16 +362,18 @@ export const processEvent = internalAction({
         responseText = await processApprovalAction(ctx, {
           threadId: thread._id,
           conversationId: thread.conversationId,
-          guestKey,
           actionToken: event.actionToken,
         })
       } else if (event.type === "text" && event.text) {
-        const result = await ctx.runAction(api.ai.chat.sendMessage, {
-          conversationId: thread.conversationId,
-          guestKey,
-          requestId: `${event.channel}:${event.externalEventId}`,
-          content: event.text,
-        })
+        const result = await ctx.runAction(
+          internal.ai.chat.sendMessageFromThread,
+          {
+            conversationId: thread.conversationId,
+            threadId: thread._id,
+            requestId: `${event.channel}:${event.externalEventId}`,
+            content: event.text,
+          }
+        )
         responseText = result.message
         documents = extractDocuments(result.clientActions)
         if (result.pendingApprovals.length > 0) {
@@ -261,7 +389,7 @@ export const processEvent = internalAction({
               token,
               callId: approval.callId,
               toolName: approval.toolName,
-              expiresAt: Date.now() + 15 * 60 * 1_000,
+              expiresAt: Date.now() + APPROVAL_TTL_MS,
             })
             buttons.push(
               {
@@ -271,6 +399,21 @@ export const processEvent = internalAction({
               { label: "Annuler", data: `reject:${token}` }
             )
           }
+        }
+        if (
+          result.clientActions.some(
+            (action) => action.type === "request_sign_in"
+          )
+        ) {
+          // Dans un fil, « se connecter » veut dire relier le compte depuis
+          // le site : aucun jeton ne part d'ici.
+          const offer = await explainLinking(ctx, {
+            channel: event.channel,
+            threadId: thread._id,
+            text: responseText,
+          })
+          responseText = offer.text
+          buttons = [...(buttons ?? []), ...offer.buttons]
         }
       } else {
         responseText = "Je n’ai pas compris ce message."
