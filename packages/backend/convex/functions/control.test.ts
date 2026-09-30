@@ -238,6 +238,96 @@ describe("Manifeste embarqué", () => {
       ctx.query(api.functions.control.manifest, { tripId: fx.tripId })
     ).rejects.toThrow(/Accès refusé/)
   })
+
+  it("porte la voiture de chaque titre, déduite de sa place", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    const billet = await issueTicket(t, fx)
+    const { ctx } = await asAgent(t, "controleur_train", fx.pos)
+    await ctx.mutation(api.functions.cash.openSession, { openingFloatXaf: 0 })
+    // Vendu au guichet : le titre a une place mais aucun repère de voiture.
+    await ctx.mutation(api.functions.sales.createCounterSale, {
+      tripId: fx.tripId,
+      originStationId: fx.owe,
+      destinationStationId: fx.fcv,
+      serviceClass: "DEUXIEME",
+      passengers: [{ lastName: "NZE", firstName: "Antoinette", gender: "F" }],
+      method: "especes",
+    })
+    const stockes = await t.run(async (c) => c.db.query("tickets").collect())
+    expect(stockes.every((s) => s.coachLabel === undefined)).toBe(true)
+
+    const m = await ctx.query(api.functions.control.manifest, {
+      tripId: fx.tripId,
+    })
+    expect(m.tickets).toHaveLength(2)
+    expect(m.tickets.map((x) => x.coachLabel)).toEqual(["V1", "V1"])
+
+    const lot = await ctx.query(api.functions.control.manifestTickets, {
+      tripId: fx.tripId,
+    })
+    expect(lot.tickets.every((x) => x.coachLabel === "V1")).toBe(true)
+
+    // Le titre lui-même n'est pas réécrit : la voiture se lit, elle ne se
+    // recopie pas.
+    const relu = await t.run(async (c) => c.db.get(billet._id))
+    expect(relu?.coachLabel).toBeUndefined()
+  })
+
+  it("embarque la composition du train, voitures dans l'ordre de la rame", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await seedTrip(t)
+    await t.run(async (c) => {
+      const vip = await c.db.insert("coaches", {
+        trainId: fx.trainId,
+        label: "V0",
+        serviceClass: "VIP",
+        rowCount: 1,
+        columnCount: 2,
+        seatCount: 2,
+        standingCapacity: 0,
+        position: 0,
+      })
+      await c.db.insert("seats", {
+        coachId: vip,
+        trainId: fx.trainId,
+        label: "1B",
+        row: 1,
+        column: 2,
+        isActive: false,
+      })
+      await c.db.insert("seats", {
+        coachId: vip,
+        trainId: fx.trainId,
+        label: "1A",
+        row: 1,
+        column: 1,
+        isActive: true,
+      })
+    })
+    const { ctx } = await asAgent(t, "controleur_train", fx.pos)
+
+    const m = await ctx.query(api.functions.control.manifest, {
+      tripId: fx.tripId,
+      includeTickets: false,
+    })
+    expect(m.composition.map((c) => c.label)).toEqual(["V0", "V1"])
+    expect(m.composition[1]).toMatchObject({
+      serviceClass: "DEUXIEME",
+      rowCount: 2,
+      columnCount: 2,
+      seatCount: 4,
+      standingCapacity: 0,
+    })
+    expect(m.composition[1]!.seats.map((s) => s.label)).toEqual([
+      "1A",
+      "1B",
+      "2A",
+      "2B",
+    ])
+    // Une place retirée du service n'apparaît pas au plan.
+    expect(m.composition[0]!.seats).toEqual([{ label: "1A", row: 1, column: 1 }])
+  })
 })
 
 /* ═══════════════════ Vérification du code-barres ═════════════════════════ */

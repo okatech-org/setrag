@@ -93,10 +93,23 @@ export const manifest = query({
       .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
       .collect()
 
+    const voitures = withTickets
+      ? await coachLabelsOf(ctx, embarquables)
+      : new Map<Id<"tickets">, string>()
+
     return {
       trip,
       stops: stations,
-      tickets: withTickets ? embarquables.map(embarkTicket) : [],
+      tickets: withTickets
+        ? embarquables.map((t) => embarkTicket(t, voitures.get(t._id)))
+        : [],
+      /**
+       * Composition du train : voitures dans l'ordre de la rame, avec leur
+       * plan de places. Le terminal en tire la progression par voiture et le
+       * plan d'une voiture ; sans elle, il ne connaîtrait que les voitures
+       * où un titre a été vendu.
+       */
+      composition: await embarkComposition(ctx, trip.trainId),
       /** Nombre total de titres à embarquer, connu avant tout téléchargement. */
       ticketCount: embarquables.length,
       subscriptions: await embarkSubscriptions(ctx, trip.departureAt),
@@ -140,20 +153,86 @@ const EMBARQUABLES: readonly string[] = [
   "rembourse",
 ]
 
-/** Projection d'un titre telle qu'elle voyage dans le manifeste. */
-function embarkTicket(t: Doc<"tickets">) {
+/**
+ * Projection d'un titre telle qu'elle voyage dans le manifeste.
+ *
+ * `coachLabel` n'est renseigné sur aucun titre vendu au guichet ou en ligne :
+ * la vente attribue une place, pas une voiture. Le repère est donc lu sur la
+ * voiture de la place quand le titre ne le porte pas (`coachLabelsOf`).
+ */
+function embarkTicket(t: Doc<"tickets">, coachLabel?: string) {
   return {
     _id: t._id,
     number: t.number,
     passenger: t.passenger,
     serviceClass: t.serviceClass,
     seatLabel: t.seatLabel,
-    coachLabel: t.coachLabel,
+    coachLabel: t.coachLabel ?? coachLabel,
     fromStopIndex: t.fromStopIndex,
     toStopIndex: t.toStopIndex,
     status: t.status,
     barcodePayload: t.barcodePayload,
   }
+}
+
+/**
+ * Voiture de chaque titre, déduite de sa place.
+ *
+ * Lecture seule : le titre n'est pas réécrit. Une desserte n'a que quelques
+ * voitures, d'où le cache par voiture — une place lue par titre, une voiture
+ * lue une fois.
+ */
+async function coachLabelsOf(
+  ctx: QueryCtx,
+  tickets: Doc<"tickets">[]
+): Promise<Map<Id<"tickets">, string>> {
+  const parVoiture = new Map<Id<"coaches">, string | undefined>()
+  const labels = new Map<Id<"tickets">, string>()
+  for (const ticket of tickets) {
+    if (ticket.coachLabel || !ticket.seatId) continue
+    const seat = await ctx.db.get(ticket.seatId)
+    if (!seat) continue
+    if (!parVoiture.has(seat.coachId)) {
+      parVoiture.set(seat.coachId, (await ctx.db.get(seat.coachId))?.label)
+    }
+    const label = parVoiture.get(seat.coachId)
+    if (label) labels.set(ticket._id, label)
+  }
+  return labels
+}
+
+/**
+ * Composition du train d'une desserte, dans l'ordre de la rame.
+ *
+ * Les places inactives sont omises : le plan les montre comme des vides, et
+ * aucun titre ne peut y être assis.
+ */
+async function embarkComposition(ctx: QueryCtx, trainId: Id<"trains">) {
+  const [coaches, seats] = await Promise.all([
+    ctx.db
+      .query("coaches")
+      .withIndex("by_train", (q) => q.eq("trainId", trainId))
+      .collect(),
+    ctx.db
+      .query("seats")
+      .withIndex("by_train", (q) => q.eq("trainId", trainId))
+      .collect(),
+  ])
+  return coaches
+    .sort((a, b) => a.position - b.position)
+    .map((coach) => ({
+      label: coach.label,
+      serviceClass: coach.serviceClass,
+      position: coach.position,
+      rowCount: coach.rowCount,
+      columnCount: coach.columnCount,
+      seatCount: coach.seatCount,
+      standingCapacity: coach.standingCapacity,
+      seats: seats
+        .filter((s) => s.coachId === coach._id && s.isActive)
+        .sort((a, b) => a.row - b.row || a.column - b.column)
+        .map((s) => ({ label: s.label, row: s.row, column: s.column })),
+    }))
 }
 
 /**
@@ -242,10 +321,13 @@ export const manifestTickets = query({
       .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
       .paginate({ cursor: args.cursor ?? null, numItems })
 
+    const embarquables = page.page.filter((t) =>
+      EMBARQUABLES.includes(t.status)
+    )
+    const voitures = await coachLabelsOf(ctx, embarquables)
+
     return {
-      tickets: page.page
-        .filter((t) => EMBARQUABLES.includes(t.status))
-        .map(embarkTicket),
+      tickets: embarquables.map((t) => embarkTicket(t, voitures.get(t._id))),
       cursor: page.continueCursor,
       isDone: page.isDone,
     }
@@ -428,7 +510,9 @@ export const verifyTicket = query({
           passenger: ticket.passenger,
           serviceClass: ticket.serviceClass,
           seatLabel: ticket.seatLabel,
-          coachLabel: ticket.coachLabel,
+          coachLabel:
+            ticket.coachLabel ??
+            (await coachLabelsOf(ctx, [ticket])).get(ticket._id),
           fromStopIndex: ticket.fromStopIndex,
           toStopIndex: ticket.toStopIndex,
           status: ticket.status,
