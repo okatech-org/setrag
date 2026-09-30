@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 
-import { DashboardScreen } from "@/components/dashboard-screen"
+import { Tournee } from "@/fonctionnalites/tournee/tournee"
 
 export const metadata: Metadata = { title: "Tournée" }
 
 export default function TourneePage() {
-  return <DashboardScreen />
+  return <Tournee />
 }

@@ -1,10 +1,19 @@
 @import "@workspace/ui/globals.css";
 
+/* ============================================================================
+   Contrôle à bord — pièces propres au terminal.
+
+   Tout le reste vient de la charte (`@workspace/ui`). Ce qui est ici n'existe
+   que parce que le terrain l'exige : bandeau de service, textures des
+   verdicts, rame des voitures, contraste renforcé. Aucune valeur de couleur
+   en dur : uniquement les variables de la charte.
+   ============================================================================ */
+
 html {
   background: var(--c-canvas);
-  /* Le terminal se tient à une main, en mouvement : rien ne doit se
-     sélectionner ni rebondir sous le doigt pendant un contrôle. */
   -webkit-text-size-adjust: 100%;
+  /* Le terminal se tient d'une main, en marche : rien ne doit rebondir sous
+     le doigt pendant un contrôle. */
   overscroll-behavior-y: none;
 }
 
@@ -17,60 +26,108 @@ body {
    une surface d'action, pas un document à copier. */
 button,
 [role="button"],
+[role="radio"],
 nav {
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Un `fieldset` porte `min-inline-size: min-content` dans la feuille de style
-   du navigateur : il refuse donc de rétrécir sous la largeur de son contenu,
-   et un groupe de trois boutons déborde de l'écran au lieu de se resserrer.
-   On lui rend le comportement d'un bloc ordinaire. */
+/* Un `fieldset` refuse sinon de rétrécir sous la largeur de son contenu. */
 fieldset {
   min-inline-size: 0;
 }
 
-/* Respiration en tête d'écran.
-   iOS réserve lui-même la barre d'état (`statusBarStyle: default`), si bien
-   que `env(safe-area-inset-top)` y vaut zéro : sans le `max()`, le titre
-   viendrait buter contre la barre système en application installée. La valeur
-   plancher vaut donc aussi pour le navigateur de bureau. */
-.safe-top {
-  padding-top: max(env(safe-area-inset-top, 0px), 1rem);
+/* ─────────────────────────── Bandeau de service ─────────────────────────── */
+
+/* Envoi en cours : une rame passe sous le bandeau, le temps de l'envoi. */
+.bandeau-envoi::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 34%;
+  border-radius: 3px;
+  background: var(--brand-ruban);
+  animation: st-rame var(--dur-boucle) var(--ease-glisse) infinite;
 }
 
-/* En bas, l'indicateur d'accueil iOS mange une bande qu'il faut dégager,
-   sans quoi la barre d'onglets tombe sous le doigt. */
-.safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
+/* ─────────────────────────────── Verdicts ─────────────────────────────── */
+
+/* À vérifier : un liseré de tirets sous le bandeau, comme un ruban de
+   chantier. La forme (triangle) et le mot portent l'information. */
+.verdict-vigilance::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 7px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--c-warning) 0 18px,
+    transparent 18px 30px
+  );
 }
 
-/* Balayage du viseur : le seul repère visuel indiquant que la caméra lit. */
-@keyframes cm-sweep {
-  0% {
-    transform: translateY(0);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  85% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(220px);
-    opacity: 0;
-  }
+/* Refusé : des hachures, lisibles en niveaux de gris comme au soleil. */
+.verdict-refus {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--c-danger) 11%, transparent) 0 11px,
+      transparent 11px 22px
+    ),
+    var(--c-danger-soft);
 }
 
-.cm-sweep {
-  animation: cm-sweep 2.6s ease-in-out infinite;
+/* ────────────────────────────── La rame ────────────────────────────── */
+
+/* Sous chaque voiture, le ruban dit la part contrôlée (`--p`, 0 → 1). */
+.rame-voiture::before,
+.rame-voiture::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 5px;
+}
+.rame-voiture::before {
+  right: 0;
+  background: var(--c-line);
+}
+.rame-voiture::after {
+  width: calc(var(--p, 0) * 100%);
+  background: var(--brand-ruban);
+  transition: width var(--dur-glisse) var(--ease-glisse);
+}
+
+/* Viseur : l'image sombre d'une caméra, dans les tokens du thème sombre. */
+.viseur-fond {
+  background: radial-gradient(
+    120% 90% at 50% 40%,
+    var(--c-surface),
+    var(--c-surface-sunk) 70%
+  );
+}
+
+/* ─────────────────────── Contraste renforcé ─────────────────────── */
+
+/* Plein soleil sur le quai : bordures plus sombres, textes secondaires passés
+   en encre. Redéclaré sous chaque portée de thème, car une variable se résout
+   là où elle est déclarée. Les tirets restent des tirets : ils portent un
+   sens (place sans titre, aucune identité, référence provisoire). */
+[data-contraste="renforce"],
+[data-contraste="renforce"] [data-theme] {
+  --c-ink-muted: var(--c-ink);
+  --c-line: var(--c-ink-faint);
+  --c-line-strong: var(--c-ink-faint);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cm-sweep {
+  .bandeau-envoi::after {
     animation: none;
-    opacity: 0.6;
+    left: 33%;
   }
 }

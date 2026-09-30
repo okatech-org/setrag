@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 
-import { LoginScreen } from "@/components/login-screen"
+import { Connexion } from "@/fonctionnalites/connexion/connexion"
 
 export const metadata: Metadata = {
   title: "Connexion",
 }
 
 export default function ConnexionPage() {
-  return <LoginScreen />
+  return <Connexion />
 }

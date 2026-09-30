@@ -1,9 +1,14 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 
-import { ManifestScreen } from "@/components/manifest-screen"
+import { DonneesEmbarquees } from "@/fonctionnalites/donnees/donnees-embarquees"
 
-export const metadata: Metadata = { title: "Manifeste embarqué" }
+export const metadata: Metadata = { title: "Données embarquées" }
 
 export default function ManifestePage() {
-  return <ManifestScreen />
+  return (
+    <Suspense fallback={null}>
+      <DonneesEmbarquees />
+    </Suspense>
+  )
 }
