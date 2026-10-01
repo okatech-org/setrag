@@ -137,9 +137,9 @@ export function FeuilleAffichage({
           />
           <Note>
             Pendant la tournée, l&apos;écran ne se met pas en veille entre deux
-            voyageurs ; il s&apos;éteint au verrouillage du terminal. Cela use
-            davantage la batterie : coupez-le si le terminal doit tenir la
-            journée sans recharge.
+            voyageurs ; la veille reprend dès que le terminal se verrouille.
+            Cela use davantage la batterie : coupez-le si le terminal doit tenir
+            la journée sans recharge.
           </Note>
         </section>
       </div>
