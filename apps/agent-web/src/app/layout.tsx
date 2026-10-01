@@ -11,9 +11,13 @@ export const metadata: Metadata = {
   },
   description:
     "Portail SETRAG : vente au guichet, back-office, modules d’entreprise et pilotage de la Direction générale.",
+  // Le symbole de la charte, comme la billetterie (le S en voie ferrée).
   icons: {
-    icon: { url: "/setrag-logo.png", type: "image/png" },
-    apple: "/setrag-logo.png",
+    icon: [
+      { url: "/marque/setrag-symbole.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
   },
   robots: { index: false, follow: false },
 }

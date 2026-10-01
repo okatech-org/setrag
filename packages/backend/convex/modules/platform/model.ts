@@ -518,13 +518,23 @@ async function activationDecision(
   siteId?: Id<"sites">
 ) {
   const environment = currentPlatformEnvironment()
-  const activations = await ctx.db
-    .query("moduleActivations")
-    .withIndex("by_environment_module", (query) =>
-      query.eq("environment", environment).eq("moduleCode", module.code)
+  // Les activations de cet utilisateur, puis celles sans utilisateur (site,
+  // environnement) : jamais celles des autres comptes. Relire tout le module
+  // pour chaque personne rendait la matrice d'administration quadratique.
+  const [propres, communes] = await Promise.all(
+    [userId, undefined].map((cible) =>
+      ctx.db
+        .query("moduleActivations")
+        .withIndex("by_environment_module_user", (query) =>
+          query
+            .eq("environment", environment)
+            .eq("moduleCode", module.code)
+            .eq("userId", cible)
+        )
+        .collect()
     )
-    .collect()
-  return resolveModuleActivation(activations, {
+  )
+  return resolveModuleActivation([...propres!, ...communes!], {
     userId,
     siteId,
     defaultEnabled: module.defaultEnabled,

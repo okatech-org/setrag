@@ -12,6 +12,7 @@ import {
 import { assertCan } from "../modules/platform/model"
 import { scanResult, serviceClass } from "../schema"
 import { performSale } from "./sales"
+import { numeroIncident } from "./referentiels"
 import { segmentMask } from "../model/inventory"
 import { pricingBounds, storedPricingRule } from "../model/pricing"
 import { verifyScope, type ScopeVerdict } from "../model/barcode"
@@ -1296,6 +1297,7 @@ export const syncIncidents = mutation({
       }
 
       const id = await ctx.db.insert("incidents", {
+        number: await numeroIncident(ctx, incident.reportedAt),
         reporterId: actor._id,
         tripId: incident.tripId,
         stationId: incident.stationId,

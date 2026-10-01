@@ -2,6 +2,7 @@ import { v } from "convex/values"
 
 import { query } from "../../_generated/server"
 import { requireUser } from "../../lib/auth"
+import { APP_ROLES } from "../../model/permissions"
 import { evaluateModuleAccess, latestModuleAccessGrant } from "./model"
 import {
   MODULE_MANIFEST,
@@ -90,7 +91,19 @@ export const listModuleAccessAdministration = query({
     if (administeredModules.length === 0) {
       throw new Error("Accès refusé : aucun module administrable.")
     }
-    const userDocuments = await ctx.db.query("users").collect()
+    // Le personnel seulement, lu rôle par rôle : un voyageur n'a aucun accès
+    // modulaire, et parcourir toute la clientèle dépasserait vite la limite
+    // de lecture d'une requête.
+    const userDocuments = (
+      await Promise.all(
+        APP_ROLES.filter((role) => role !== "voyageur").map((role) =>
+          ctx.db
+            .query("users")
+            .withIndex("by_role", (q) => q.eq("role", role))
+            .collect()
+        )
+      )
+    ).flat()
     const users = userDocuments.map((user) => ({
       userId: user._id,
       email: user.email,

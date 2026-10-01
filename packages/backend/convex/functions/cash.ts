@@ -4,6 +4,18 @@ import { internal } from "../_generated/api"
 import { audit, requirePermission } from "../lib/auth"
 import { paymentMethod } from "../schema"
 import { toServiceDate } from "../model/calendar"
+import {
+  attenduParMoyen,
+  compteEnCaisse,
+  ecartCaisse,
+  totalBilletage,
+  validerBilletage,
+} from "../model/caisse"
+
+/** Billetage saisi au guichet : une ligne par coupure. */
+const billetage = v.array(
+  v.object({ denomination: v.number(), count: v.number() })
+)
 
 /**
  * Sessions de caisse et journée comptable.
@@ -66,9 +78,25 @@ export const listAccountingDays = query({
   },
 })
 
-/** Ouvre la session de caisse du vendeur courant. */
+/**
+ * Ouvre la session de caisse du vendeur courant.
+ *
+ * Le billetage du fonds, s'il est fourni, fait foi : son total doit égaler le
+ * fonds déclaré. Le carnet de secours remis avec la caisse borne les souches
+ * que l'on ressaisira si le réseau tombe.
+ */
 export const openSession = mutation({
-  args: { openingFloatXaf: v.number() },
+  args: {
+    openingFloatXaf: v.number(),
+    openingBreakdown: v.optional(billetage),
+    emergencyBooklet: v.optional(
+      v.object({
+        number: v.string(),
+        firstNumber: v.string(),
+        lastNumber: v.string(),
+      })
+    ),
+  },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "caisse", "creer")
     if (!actor.pointOfSaleId) {
@@ -76,6 +104,28 @@ export const openSession = mutation({
     }
     if (!Number.isFinite(args.openingFloatXaf) || args.openingFloatXaf < 0) {
       throw new Error(`Fond de caisse invalide : ${args.openingFloatXaf}`)
+    }
+    if (args.openingBreakdown) {
+      validerBilletage(args.openingBreakdown)
+      const compte = totalBilletage(args.openingBreakdown)
+      if (compte !== args.openingFloatXaf) {
+        throw new Error(
+          `Billetage de ${compte} XAF pour un fonds déclaré de ` +
+            `${args.openingFloatXaf} XAF : recomptez le fonds`
+        )
+      }
+    }
+    const carnet = args.emergencyBooklet
+      ? {
+          number: args.emergencyBooklet.number.trim(),
+          firstNumber: args.emergencyBooklet.firstNumber.trim(),
+          lastNumber: args.emergencyBooklet.lastNumber.trim(),
+        }
+      : undefined
+    if (carnet && (!carnet.number || !carnet.firstNumber || !carnet.lastNumber)) {
+      throw new Error(
+        "Carnet de secours incomplet : numéro, première et dernière souche"
+      )
     }
 
     const ouverte = await ctx.db
@@ -112,6 +162,8 @@ export const openSession = mutation({
       accountingDayId: day._id,
       openedAt: Date.now(),
       openingFloatXaf: args.openingFloatXaf,
+      openingBreakdown: args.openingBreakdown?.filter((l) => l.count > 0),
+      emergencyBooklet: carnet,
       expectedByMethod: [],
       status: "ouverte",
     })
@@ -120,7 +172,11 @@ export const openSession = mutation({
       action: "caisse.ouvrir",
       entityTable: "cashSessions",
       entityId: id,
-      after: { openingFloatXaf: args.openingFloatXaf },
+      after: {
+        openingFloatXaf: args.openingFloatXaf,
+        openingBreakdown: args.openingBreakdown,
+        emergencyBooklet: carnet,
+      },
     })
     return id
   },
@@ -138,10 +194,14 @@ export const mySession = query({
       .first()
     if (!session) return null
 
-    const sales = await ctx.db
-      .query("sales")
-      .withIndex("by_cash_session", (q) => q.eq("cashSessionId", session._id))
-      .collect()
+    // Les places tenues pendant une saisie ou un paiement mobile portent la
+    // session, mais n'ont rien encaissé : elles restent hors des totaux.
+    const sales = (
+      await ctx.db
+        .query("sales")
+        .withIndex("by_cash_session", (q) => q.eq("cashSessionId", session._id))
+        .collect()
+    ).filter(compteEnCaisse)
 
     return {
       session,
@@ -150,6 +210,8 @@ export const mySession = query({
       totalReceived: sales.reduce((sum, s) => sum + s.amounts.received, 0),
       cancellations: sales.filter((s) => s.kind === "annulation").length,
       refunds: sales.filter((s) => s.kind === "remboursement").length,
+      /** Attendu net par moyen, hors fonds de caisse. */
+      expectedByMethod: attenduParMoyen(sales),
     }
   },
 })
@@ -208,10 +270,12 @@ export const sellerDashboard = query({
       }
     }
 
-    const sales = await ctx.db
-      .query("sales")
-      .withIndex("by_cash_session", (q) => q.eq("cashSessionId", session._id))
-      .collect()
+    const sales = (
+      await ctx.db
+        .query("sales")
+        .withIndex("by_cash_session", (q) => q.eq("cashSessionId", session._id))
+        .collect()
+    ).filter(compteEnCaisse)
     const ordered = [...sales].sort(
       (left, right) => right._creationTime - left._creationTime
     )
@@ -270,10 +334,16 @@ export const sellerDashboard = query({
  */
 export const closeSession = mutation({
   args: {
+    /**
+     * Compté par moyen, hors fonds de caisse : les espèces valent le
+     * billetage moins le fonds d'ouverture.
+     */
     countedByMethod: v.array(
       v.object({ method: paymentMethod, amountXaf: v.number() })
     ),
     varianceReason: v.optional(v.string()),
+    /** Billetage des espèces comptées, fonds compris. */
+    closingBreakdown: v.optional(billetage),
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "caisse", "modifier")
@@ -284,18 +354,39 @@ export const closeSession = mutation({
       .first()
     if (!session) throw new Error("Aucune session de caisse ouverte")
 
-    const sales = await ctx.db
-      .query("sales")
-      .withIndex("by_cash_session", (q) => q.eq("cashSessionId", session._id))
-      .collect()
+    if (args.closingBreakdown) {
+      validerBilletage(args.closingBreakdown)
+      const especesComptees = args.countedByMethod
+        .filter((c) => c.method === "especes")
+        .reduce((sum, c) => sum + c.amountXaf, 0)
+      const billete = totalBilletage(args.closingBreakdown)
+      if (billete - session.openingFloatXaf !== especesComptees) {
+        throw new Error(
+          `Billetage de ${billete} XAF incohérent avec les espèces déclarées ` +
+            `(${especesComptees} XAF hors fonds de ${session.openingFloatXaf} XAF)`
+        )
+      }
+    }
 
-    // Théorique : ce que le système a enregistré, tous modes confondus.
-    const expectedTotal = sales.reduce((sum, s) => sum + s.amounts.received, 0)
+    // Les places tenues sans règlement n'ont rien encaissé.
+    const sales = (
+      await ctx.db
+        .query("sales")
+        .withIndex("by_cash_session", (q) => q.eq("cashSessionId", session._id))
+        .collect()
+    ).filter(compteEnCaisse)
+
+    // Théorique : ce que le système a enregistré, moyen par moyen.
+    const expectedByMethod = attenduParMoyen(sales)
+    const expectedTotal = expectedByMethod.reduce(
+      (sum, e) => sum + e.amountXaf,
+      0
+    )
     const countedTotal = args.countedByMethod.reduce(
       (sum, c) => sum + c.amountXaf,
       0
     )
-    const varianceXaf = Math.round((countedTotal - expectedTotal) * 100) / 100
+    const varianceXaf = ecartCaisse(expectedByMethod, args.countedByMethod)
 
     if (varianceXaf !== 0 && !args.varianceReason?.trim()) {
       throw new Error(
@@ -306,10 +397,17 @@ export const closeSession = mutation({
 
     await ctx.db.patch(session._id, {
       closedAt: Date.now(),
-      expectedByMethod: [{ method: "especes", amountXaf: expectedTotal }],
+      expectedByMethod:
+        expectedByMethod.length > 0
+          ? expectedByMethod.map(({ method, amountXaf }) => ({
+              method,
+              amountXaf,
+            }))
+          : [{ method: "especes", amountXaf: 0 }],
       countedByMethod: args.countedByMethod,
+      closingBreakdown: args.closingBreakdown?.filter((l) => l.count > 0),
       varianceXaf,
-      varianceReason: args.varianceReason,
+      varianceReason: args.varianceReason?.trim() || undefined,
       status: "cloturee",
     })
 
@@ -323,10 +421,12 @@ export const closeSession = mutation({
         countedTotal,
         varianceXaf,
         reason: args.varianceReason,
+        expectedByMethod,
+        countedByMethod: args.countedByMethod,
       },
     })
 
-    return { varianceXaf, expectedTotal, countedTotal }
+    return { varianceXaf, expectedTotal, countedTotal, sessionId: session._id }
   },
 })
 

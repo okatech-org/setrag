@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETRAG — portail agent</title>
+  <link rel="icon" href="logo/setrag-symbole.svg">
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shared/ui.css">
+  <link rel="stylesheet" href="shared/web.css">
+  <link rel="stylesheet" href="shared/agent.css">
+  <script src="vendor/lottie_light.min.js"></script>
+  <!-- agent.js pose le prototype avant qu'app.js ne monte logos, codes et rubans. -->
+  <script type="module" src="shared/agent.js"></script>
+  <script type="module" src="shared/app.js"></script>
+</head>
+<body>
+<header class="doc-barre">
+  <a class="doc-logo" href="index.html" data-logo="compact" data-titre="SETRAG — charte graphique"></a>
+  <nav aria-label="Pages de la charte">
+    <a href="index.html">Charte</a>
+    <a href="mouvement.html">Mouvement</a>
+    <a href="composants.html">Composants</a>
+    <a href="web.html">Web</a>
+    <a href="mobile.html">Mobile</a>
+    <a href="agent.html">Agent</a>
+    <a href="controleur.html">Contrôleur</a>
+    <a href="widgets.html">Widgets &amp; Live</a>
+    <a href="assistant.html">Assistant</a>
+  </nav>
+  <button class="doc-bouton" id="theme" aria-pressed="false"><i data-i="moon"></i><span>Thème sombre</span></button>
+</header>
+
+<main class="doc">
+  <section class="doc-tete">
+    <div>
+      <p class="doc-sur">Portail agent · web · prototype navigable · maquettes à valider</p>
+      <h1>Le portail agent, du guichet à la gestion</h1>
+      <p class="doc-chapo">Les écrans de <code>apps/agent-web</code> redessinés dans la charte « la voie et le ruban ». Même marque que la billetterie, mêmes composants, même ruban ; mais un poste de travail : on y passe la journée, souvent au clavier, avec un voyageur qui attend de l'autre côté de la vitre.</p>
+    </div>
+    <div class="doc-carte">
+      <h3>Ce que couvre la maquette</h3>
+      <p>Le portail de vente (connexion, ouverture de caisse, vente d'un billet en quatre étapes, bagage, colis, après-vente, ventes papier, clôture) et le portail de gestion (quinze écrans du cahier des charges, plus le journal d'audit). Tout est cliquable : vendez un billet, remboursez-en un, clôturez la caisse, validez un livret.</p>
+      <p style="margin-top:var(--s-3)">Données : mêmes trains, horaires et prix que la billetterie (Express 201, 07:40, 32 500 XAF en 2e). Barèmes, réductions, rapports et rôles du cahier des charges. Noms et montants fictifs. L'espace Direction générale a sa propre maquette (<code>docs/direction-generale.md</code>).</p>
+    </div>
+  </section>
+
+  <!-- ================================================================ 01 -->
+  <section class="doc-section" id="prototype">
+    <h2><span class="n">01</span>Le prototype</h2>
+    <p class="doc-intro">Changez de rôle pour voir le menu se restreindre : la vendeuse ne voit que le guichet, l'administratrice que la gestion, le chef de gare un peu des deux. Au guichet, le clavier suffit : <kbd>B</kbd> vend un billet, <kbd>Entrée</kbd> passe à l'étape suivante, <kbd>E</kbd> <kbd>A</kbd> <kbd>M</kbd> choisissent le moyen de paiement, les chiffres saisissent le montant reçu.</p>
+    <div class="ag-scene">
+      <div class="ag-commandes">
+        <b>Voir en tant que</b>
+        <div class="segment" id="ag-roles" data-glisse="span:not(.indicateur)">
+          <span aria-pressed="true" data-role="vendeur">Vendeuse guichet</span>
+          <span aria-pressed="false" data-role="chef">Chef de gare</span>
+          <span aria-pressed="false" data-role="admin">Administratrice</span>
+          <span class="indicateur"></span>
+        </div>
+        <span class="sep"></span>
+        <button class="coche-l" id="ag-reseau" aria-pressed="false"><span class="interrupteur"></span>Couper le réseau</button>
+        <div class="droite"><button class="btn btn-fantome btn-sm" id="ag-reinit"><i data-i="rotate-ccw"></i>Recommencer</button></div>
+      </div>
+      <div class="navigateur">
+        <div class="navigateur-barre"><i></i><i></i><i></i><span class="url"><i data-i="lock"></i><span id="ag-url">agent.setrag.ga/vente</span></span></div>
+        <div class="site ag-site" id="ag-app"></div>
+      </div>
+      <div class="ag-plan" id="ag-plan"></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 02 -->
+  <section class="doc-section">
+    <h2><span class="n">02</span>Ce que la charte change au back-office</h2>
+    <p class="doc-intro">Le portail actuel empile des cartes et des tableaux shadcn. La charte lui donne une structure de poste de travail et le même vocabulaire que la billetterie : la voie pour ce qui se remplit, le ruban pour ce qui avance, l'encre pour ce qui fait foi.</p>
+    <div class="doc-grille g3">
+      <div class="doc-carte"><h3>Le ruban dit où l'on est</h3><p>Il glisse le long du menu latéral, sous les onglets, sur les étapes de la vente. Il traverse la barre du haut à chaque changement d'écran : c'est le seul indicateur de chargement.</p></div>
+      <div class="doc-carte"><h3>La voie se remplit</h3><p>Remplissage d'un train, part d'un canal, quota consommé : une voie dont le ruban avance. Toujours accompagnée du chiffre, jamais seule.</p></div>
+      <div class="doc-carte"><h3>L'encre fait foi</h3><p>Ce qui engage la caisse est posé sur fond encre, chiffres en jaune : encaissé du jour, monnaie à rendre, espèces attendues, départs. Le reste vit sur surface blanche.</p></div>
+      <div class="doc-carte"><h3>Le plan de voiture se lit sans couleur</h3><p>Place vendue : hachures et numéro barré. Bloquée : cadenas et bord en tirets. Choisie : le rang du voyageur, en toutes lettres. Aucune place ne se distingue par sa seule teinte.</p></div>
+      <div class="doc-carte"><h3>Un seul bouton principal</h3><p>Au guichet, il vit dans la barre collée en bas, avec le total et sa touche. En gestion, c'est la décision attendue : valider, approuver, viser, rejouer. Les autres actions restent secondaires.</p></div>
+      <div class="doc-carte"><h3>Les chiffres sont en mono</h3><p>Heures, montants, numéros de billet, de vente, de souche : IBM Plex Mono, chiffres tabulaires. Une colonne de montants s'aligne sans effort, un numéro se dicte sans erreur.</p></div>
+    </div>
+
+    <h3 class="doc-h3">Pièces et composants</h3>
+    <table class="specs">
+      <thead><tr><th>Pièce</th><th>Où</th><th>À créer ou adapter dans <code>packages/ui</code></th></tr></thead>
+      <tbody>
+        <tr><td>Menu latéral à ruban</td><td>Tout le portail</td><td><code>Sidebar</code> shadcn, indicateur vertical <code>--brand-ruban-v</code>, entrées de 44 px, compteurs d'attente</td></tr>
+        <tr><td>Barre de vente</td><td>Tunnel du guichet</td><td>Nouveau <code>ActionBar</code> collé en bas : résumé, total en mono, bouton principal avec sa touche</td></tr>
+        <tr><td>Case de classe</td><td>Recherche de desserte</td><td>Variante dense de <code>TripCard</code> : prix, places restantes, voie de remplissage</td></tr>
+        <tr><td>Plan de voiture</td><td>Choix des places, gestion des places</td><td>Nouveau <code>SeatMap</code> : états libre, vendue, bloquée, choisie, rang du voyageur</td></tr>
+        <tr><td>Pavé et rendu monnaie</td><td>Encaissement</td><td>Nouveaux <code>Keypad</code> et <code>ChangeDue</code>, saisie clavier native</td></tr>
+        <tr><td>Billetage</td><td>Ouverture et clôture de caisse</td><td>Nouveau <code>CashCount</code> : coupures, quantités, total, écart</td></tr>
+        <tr><td>Indicateur chiffré</td><td>Accueil, gestion</td><td><code>Stat</code> : libellé, valeur mono, évolution avec flèche et texte, voie optionnelle</td></tr>
+        <tr><td>Tableau dense</td><td>Gestion, après-vente</td><td><code>Table</code> : lignes de 44 px, montants alignés à droite en mono, ligne sélectionnée marquée d'un filet</td></tr>
+        <tr><td>Cycle de vie</td><td>Livrets, tarifs</td><td>Nouveau <code>Lifecycle</code> : états en gares, ruban sur les étapes franchies</td></tr>
+        <tr><td>Tiroir et dialogue</td><td>Après-vente, remboursement</td><td><code>Sheet</code> et <code>Dialog</code> shadcn, pied grisé portant les actions</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================================================================ 03 -->
+  <section class="doc-section">
+    <h2><span class="n">03</span>Clavier au guichet</h2>
+    <p class="doc-intro">Le cahier des charges demande des raccourcis complets et un achat en moins de cinq minutes. Une vente simple se fait sans la souris ; chaque touche est affichée sur le bouton qu'elle déclenche.</p>
+    <div class="g-2" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s-4)">
+      <table class="specs">
+        <thead><tr><th>Touche</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>B</kbd> <kbd>G</kbd> <kbd>C</kbd> <kbd>R</kbd></td><td>Billet, bagage, colis, après-vente, depuis n'importe quel écran du guichet</td></tr>
+          <tr><td><kbd>Entrée</kbd></td><td>Étape suivante de la vente ; encaisser à la dernière</td></tr>
+          
+          <tr><td><kbd>Échap</kbd></td><td>Fermer un tiroir ou un dialogue</td></tr>
+        </tbody>
+      </table>
+      <table class="specs">
+        <thead><tr><th>Touche</th><th>À l'encaissement</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>E</kbd> <kbd>A</kbd> <kbd>M</kbd> <kbd>T</kbd> <kbd>L</kbd> <kbd>K</kbd></td><td>Espèces, Airtel Money, Moov Money, TPE, Click&amp;Pay, en compte</td></tr>
+          <tr><td><kbd>0</kbd>…<kbd>9</kbd></td><td>Montant reçu, rendu calculé à la frappe</td></tr>
+          <tr><td><kbd>⌫</kbd></td><td>Effacer le dernier chiffre</td></tr>
+          <tr><td><kbd>N</kbd></td><td>Nouvelle vente, depuis la confirmation</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================================================================ 04 -->
+  <section class="doc-section">
+    <h2><span class="n">04</span>À trancher avec SETRAG</h2>
+    <p class="doc-intro">Ce que la maquette propose sans que le cahier des charges ou le portail actuel le fixe.</p>
+    <div class="doc-grille g2">
+      <div class="doc-carte"><h3>Pénalités de remboursement</h3><p>Le CDC les dit paramétrables sans donner de barème. La maquette propose 10 % à plus de 2 h du départ, 25 % en deçà, rien après le départ sauf train supprimé.</p></div>
+      <div class="doc-carte"><h3>Prestations spéciales</h3><p>TAA (auto accompagnée), transport funéraire, affrètement : le portail actuel a une page à part. À décider : une entrée de menu dédiée, ou un quatrième produit sur l'accueil du guichet.</p></div>
+      <div class="doc-carte"><h3>Plan de voiture ou placement automatique</h3><p>La maquette montre le plan à chaque vente, avec un bouton « Placer côte à côte ». Aux heures de pointe, le placement automatique par défaut ferait gagner une étape.</p></div>
+      <div class="doc-carte"><h3>Visa du chef de gare</h3><p>Proposé dès 1 XAF d'écart. SETRAG voudra peut-être un seuil de tolérance, avec visa au-delà seulement.</p></div>
+      <div class="doc-carte"><h3>Imprimante de guichet</h3><p>Billet thermique 80 mm avec code Aztec signé, lisible hors ligne par le terminal de bord. À confirmer avec le parc réellement installé dans les 22 gares.</p></div>
+      <div class="doc-carte"><h3>Nationalité au manifeste</h3><p>Exigée par l'état « places vendues » du CDC, mais pas saisie au guichet aujourd'hui. À ajouter aux champs voyageur, ou à retirer de l'état.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer class="doc-pied">
+  <span>SETRAG — charte graphique. Page de travail : <code>docs/charte-setrag/</code>. Horaires, noms et montants des maquettes fictifs.</span>
+  <span>Fichiers : <a href="logo/">logo/</a> · <a href="lottie/">lottie/</a></span>
+</footer>
+</body>
+</html>

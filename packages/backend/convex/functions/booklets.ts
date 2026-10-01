@@ -387,7 +387,11 @@ export const submit = mutation({
         ? applyTransition(booklet.status, "reprendre")
         : booklet.status
     const status = applyTransition(editableStatus, "soumettre")
-    await ctx.db.patch(args.bookletId, { status })
+    await ctx.db.patch(args.bookletId, {
+      status,
+      submittedBy: actor._id,
+      submittedAt: Date.now(),
+    })
     await audit(ctx, {
       actorId: actor._id,
       action: "livret.soumettre",

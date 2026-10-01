@@ -108,7 +108,7 @@ describe("tableau de bord financier", () => {
     expect(screen.getByText("GABON-FISCAL · v3")).toBeInTheDocument()
     expect(screen.getByText("TVA au taux normal")).toBeInTheDocument()
     expect(screen.getByText(formatBasisPoints(1800))).toBeInTheDocument()
-    expect(screen.getAllByText(/123.450.000.FCFA/)).toHaveLength(2)
+    expect(screen.getAllByText(/123.450.000.XAF/)).toHaveLength(2)
     expect(screen.getByText("OD-2026-0007")).toBeInTheDocument()
     expect(
       screen.getByRole("link", { name: "Code général des impôts du Gabon" })

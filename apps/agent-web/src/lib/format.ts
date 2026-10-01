@@ -11,8 +11,9 @@ const time = new Intl.DateTimeFormat("fr-FR", {
   timeZone: "Africa/Libreville",
 })
 
+/** Montant en XAF, comme le veut la charte (`docs/design-system.md`). */
 export function formatXaf(value: number) {
-  return xaf.format(value).replace("XAF", "FCFA")
+  return xaf.format(value)
 }
 
 export function formatTime(value: number | Date) {

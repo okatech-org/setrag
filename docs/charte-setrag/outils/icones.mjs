@@ -12,7 +12,15 @@ minus wifi-off wifi sun wallet refresh-cw house route lock phone mail settings l
 package moon globe list map star timer hourglass scan-line badge-percent receipt file-text circle-help languages
 accessibility snowflake utensils navigation ellipsis copy external-link eye pencil trash-2 circle-x circle-alert
 id-card signal battery-full circle-user-round clock-alert qr-code history rotate-ccw calendar-clock message-square
-mic mic-off arrow-up maximize-2 minimize-2 keyboard headset phone-call square-pen square bell-plus`
+mic mic-off arrow-up maximize-2 minimize-2 keyboard headset phone-call square-pen square bell-plus
+scan cloud-off cloud-check cloud-upload flashlight vibrate volume-2 banknote list-checks camera camera-off
+list-ordered octagon-x ban signal-zero square-dashed copy-check text-cursor-input user-search clipboard-list
+heart-pulse wrench user-x shield-alert key-round image-plus send check-check hand sun-medium battery-medium
+circle-dot gauge
+layout-dashboard printer building-2 chart-column trending-up trending-down book-open tags layers store user-cog
+plug filter lock-open file-spreadsheet coins undo-2 badge-check circle-pause calculator weight truck flag activity
+database server arrow-down-to-line hand-coins file-check ticket-x percent command log-in book-marked calendar-range
+arrow-up-right arrow-down-right lock-keyhole panel-left`
   .split(/\s+/)
   .filter(Boolean)
 

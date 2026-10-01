@@ -25,11 +25,17 @@ export const MANAGEMENT_DESTINATIONS = [
   { href: "/gestion/places", resource: "places" },
   { href: "/gestion/points-de-vente", resource: "referentiel" },
   { href: "/gestion/voyageurs", resource: "donnees_voyageurs" },
+  // Après-vente du réseau : annulations, remboursements et duplicatas qui
+  // dépassent le guichet (le remboursement exige un encadrant).
+  { href: "/gestion/apres-vente", resource: "remboursements" },
   { href: "/gestion/recettes", resource: "journee_comptable" },
   { href: "/gestion/comptabilite", resource: "journal_comptable" },
   { href: "/gestion/rapports", resource: "rapports" },
   { href: "/gestion/incidents", resource: "incidents" },
   { href: "/gestion/utilisateurs", resource: "utilisateurs" },
+  // Le journal d'audit suit la gouvernance des comptes : qui gère les accès
+  // voit ce que les comptes ont fait.
+  { href: "/gestion/audit", resource: "utilisateurs" },
   { href: "/gestion/parametrage", resource: "parametrage" },
   { href: "/gestion/integrations", resource: "integrations" },
 ] as const satisfies readonly {

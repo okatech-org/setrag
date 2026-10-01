@@ -18,15 +18,23 @@ export interface PositionIndicateur {
   w: number
 }
 
-export function useIndicateur<T extends HTMLElement>(cle: unknown) {
+/**
+ * `axe="y"` mesure l'élément courant dans la hauteur (menu latéral) : `x` porte
+ * alors le décalage vertical et `w` la hauteur.
+ */
+export function useIndicateur<T extends HTMLElement>(cle: unknown, axe: "x" | "y" = "x") {
   const ref = React.useRef<T>(null)
   const [position, setPosition] = React.useState<PositionIndicateur | null>(null)
   const [anime, setAnime] = React.useState(false)
 
   const mesurer = React.useCallback(() => {
     const actif = ref.current?.querySelector<HTMLElement>('[data-actif="true"]')
-    setPosition(actif ? { x: actif.offsetLeft, w: actif.offsetWidth } : null)
-  }, [])
+    // Un élément masqué (groupe replié, droit absent) n'a pas de boîte.
+    if (!actif || !actif.offsetParent) return setPosition(null)
+    setPosition(
+      axe === "x" ? { x: actif.offsetLeft, w: actif.offsetWidth } : { x: actif.offsetTop, w: actif.offsetHeight }
+    )
+  }, [axe])
 
   React.useLayoutEffect(() => {
     mesurer()
@@ -112,6 +120,45 @@ export function NavRuban({
         largeur={largeur}
         className={cn(cote === "bas" ? "bottom-0" : "-top-px rounded-t-none", indicateurClassName)}
       />
+    </nav>
+  )
+}
+
+export interface NavRubanVerticalProps extends React.ComponentProps<"nav"> {
+  /** Clé de l'élément courant : sa modification fait glisser le ruban. */
+  actif: unknown
+  /** Retrait en haut et en bas de l'élément courant. */
+  retrait?: number
+  indicateurClassName?: string
+}
+
+/**
+ * Menu vertical dont l'entrée courante porte le ruban sur son bord gauche.
+ * Même geste que les onglets : le ruban glisse d'une entrée à l'autre.
+ */
+export function NavRubanVertical({
+  actif,
+  retrait = 8,
+  indicateurClassName,
+  className,
+  children,
+  ...props
+}: NavRubanVerticalProps) {
+  const { ref, position, anime } = useIndicateur<HTMLElement>(actif, "y")
+  return (
+    <nav ref={ref} className={cn("relative", className)} {...props}>
+      {children}
+      {position ? (
+        <span
+          aria-hidden
+          className={cn(
+            "bg-ruban-v pointer-events-none absolute top-0 left-0 w-1 rounded-r-[3px]",
+            anime && "transition-[translate,height] duration-[var(--dur-glisse)] ease-[var(--ease-glisse)]",
+            indicateurClassName
+          )}
+          style={{ height: Math.max(position.w - 2 * retrait, 0), translate: `0 ${position.x + retrait}px` }}
+        />
+      ) : null}
     </nav>
   )
 }

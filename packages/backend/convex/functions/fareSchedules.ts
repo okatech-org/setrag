@@ -240,7 +240,11 @@ export const submit = mutation({
       throw new Error("Grille vide : ajoutez au moins une base tarifaire")
     }
     const status = applyTransition(schedule.status, "soumettre")
-    await ctx.db.patch(schedule._id, { status })
+    await ctx.db.patch(schedule._id, {
+      status,
+      submittedBy: actor._id,
+      submittedAt: Date.now(),
+    })
     await audit(ctx, {
       actorId: actor._id,
       action: "tarif.grille.soumettre",
@@ -260,6 +264,17 @@ export const approve = mutation({
     const schedule = await ctx.db.get(args.scheduleId)
     if (!schedule) throw new Error("Grille tarifaire introuvable")
     const status = applyTransition(schedule.status, "valider")
+    // Séparation des tâches : qui a rédigé ou soumis une grille ne l'approuve
+    // pas. Un prix opposable engage la recette ; il faut deux signatures.
+    if (
+      schedule.createdBy === actor._id ||
+      schedule.submittedBy === actor._id
+    ) {
+      throw new Error(
+        "Séparation des tâches : la grille doit être approuvée par un " +
+          "second administrateur, distinct de son auteur."
+      )
+    }
 
     const bases = await ctx.db
       .query("fareBases")

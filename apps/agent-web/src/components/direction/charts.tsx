@@ -133,7 +133,7 @@ export function BarSeries({
             <summary className="text-small flex min-h-target cursor-pointer items-center font-semibold">
               Voir le tableau : {tableCaption.toLowerCase()}
             </summary>
-            <div className="overflow-x-auto pt-2">
+            <div className="relative overflow-x-auto pt-2">
               <table className="w-full text-left text-sm">
                 <caption className="sr-only">{tableCaption}</caption>
                 <thead className="text-ink-muted">
@@ -210,7 +210,7 @@ export function BreakdownBars({
       count={rows.length > 0 ? formatXaf(total) : undefined}
     >
       {rows.length > 0 ? (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">{tableCaption}</caption>
             <thead className="sr-only">

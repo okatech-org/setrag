@@ -62,7 +62,7 @@ export function ContinuityPanel({ summary }: { summary: ContinuitySummary }) {
           Aucune politique approuvée n’est disponible dans le registre.
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <Table>
             <TableCaption className="sr-only">
               Politiques de continuité, objectifs et preuves d’exercice

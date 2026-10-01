@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { IncidentDetail } from "./incident-detail"
@@ -14,86 +14,80 @@ vi.mock("@workspace/api/hooks", () => ({
   useMutation: () => mutation,
 }))
 
-vi.mock("./portal-guard", () => ({
-  usePortalSession: () => ({
-    profile: { user: { role: "admin_fonctionnel" } },
-  }),
+vi.mock("./gestion/referentiels/droits", () => ({
+  useDroitsGestion: () => ({ role: "chef_gare", may: () => true, chargement: false, lectureModule: false, utilisateur: null }),
 }))
 
 vi.mock("./management-detail-shell", () => ({
-  ManagementDetailShell: ({
-    title,
-    children,
-  }: {
-    title: string
-    children: React.ReactNode
-  }) => (
+  ManagementDetailShell: ({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) => (
     <main>
       <h1>{title}</h1>
+      <div>{actions}</div>
       {children}
     </main>
   ),
 }))
 
-describe("fiches incidents et procès-verbaux", () => {
-  beforeEach(() => mutation.mockClear())
+const agent = { id: "u1", nom: "Roger Nzamba", court: "R. Nzamba", matricule: "C-044", role: "controleur_train" }
 
-  it("affiche l'incident et exige une note pour changer son état", async () => {
+describe("fiches incidents et procès-verbaux", () => {
+  beforeEach(() => {
+    mutation.mockReset()
+    mutation.mockResolvedValue(undefined)
+  })
+
+  it("affiche l'incident, sa chronologie, et exige une cause pour le clore", async () => {
     queryState.value = {
       incident: {
         _id: "incident-1",
-        clientId: "INC-2026-001",
+        clientId: "terminal-1",
+        number: "INC-2026-0081",
         category: "technique",
         severity: "important",
-        description: "Porte bloquée",
+        description: "Lecteur de billets indisponible en V3",
+        location: "Entre Ntoum et Andem",
         photoStorageIds: [],
-        status: "ouvert",
-        reportedAt: Date.UTC(2026, 6, 28, 8),
+        status: "en_cours",
+        reportedAt: Date.UTC(2026, 9, 1, 7, 14),
         offline: false,
       },
-      reporter: { firstName: "Jean", lastName: "Obame" },
-      trip: { trainNumber: "TR-201" },
-      station: { code: "OWD", name: "Owendo" },
-      resolver: null,
+      reference: "INC-2026-0081",
+      desserte: null,
+      station: null,
+      declarant: agent,
+      resolveur: null,
       photoUrls: [],
+      historique: [
+        {
+          id: "log-1",
+          action: "incident.statut",
+          createdAt: Date.UTC(2026, 9, 1, 7, 20),
+          acteur: agent,
+          after: JSON.stringify({ status: "en_cours", note: "Bascule sur saisie manuelle" }),
+        },
+      ],
     }
 
     render(<IncidentDetail incidentId="incident-1" />)
-    expect(
-      screen.getByRole("heading", { name: "Incident INC-2026-001" })
-    ).toBeInTheDocument()
-    expect(screen.getByText("Porte bloquée")).toBeInTheDocument()
-    expect(
-      [...screen.getByLabelText("Nouvel état").querySelectorAll("option")].map(
-        (option) => option.value
-      )
-    ).toEqual(["", "en_cours", "resolu"])
+    expect(screen.getByRole("heading", { name: "INC-2026-0081" })).toBeInTheDocument()
+    expect(screen.getByText("Entre Ntoum et Andem")).toBeInTheDocument()
+    expect(screen.getByText(/Bascule sur saisie manuelle/)).toBeInTheDocument()
+    expect(screen.getByText("Signalé depuis le terminal")).toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText("Nouvel état"), {
-      target: { value: "en_cours" },
-    })
-    fireEvent.click(
-      screen.getByRole("button", { name: "Enregistrer le changement" })
-    )
-    expect(screen.getByLabelText("Note obligatoire")).toBeRequired()
-    expect(mutation).not.toHaveBeenCalled()
-
-    fireEvent.change(screen.getByLabelText("Note obligatoire"), {
-      target: { value: "Intervention de la maintenance demandée." },
-    })
-    fireEvent.click(
-      screen.getByRole("button", { name: "Enregistrer le changement" })
-    )
+    expect(screen.getByLabelText("Cause")).toBeRequired()
+    fireEvent.change(screen.getByLabelText("Cause"), { target: { value: "materiel" } })
+    fireEvent.change(screen.getByLabelText("Note de clôture"), { target: { value: "Terminal de relève remis à Ndjolé" } })
+    fireEvent.click(screen.getByRole("button", { name: "Clore l’incident" }))
     await waitFor(() =>
       expect(mutation).toHaveBeenCalledWith({
         incidentId: "incident-1",
-        status: "en_cours",
-        resolutionNote: "Intervention de la maintenance demandée.",
+        cause: "materiel",
+        note: "Terminal de relève remis à Ndjolé",
       })
     )
   })
 
-  it("affiche le procès-verbal et trace son traitement", async () => {
+  it("encaisse un procès-verbal au guichet, référence exigée hors espèces", async () => {
     queryState.value = {
       penalty: {
         _id: "penalty-1",
@@ -101,47 +95,35 @@ describe("fiches incidents et procès-verbaux", () => {
         status: "emis",
         amountXaf: 25_000,
         reason: "sans_titre",
-        issuedAt: Date.UTC(2026, 6, 28, 8),
-        offender: {
-          firstName: "Paul",
-          lastName: "Moussavou",
-          declined: false,
-        },
+        issuedAt: Date.UTC(2026, 9, 1, 7, 31),
+        offender: { firstName: "Marc", lastName: "Tchibinda", phone: "+241 65 •• •• 72", declined: false },
         offline: true,
       },
-      agent: { firstName: "Jean", lastName: "Obame" },
-      trip: { trainNumber: "TR-201" },
-      ticket: null,
-      payment: null,
-      resolver: null,
+      desserte: null,
+      billet: null,
+      paiement: null,
+      agent,
+      resolveur: null,
+      historique: [],
     }
 
     render(<PenaltyDetail penaltyId="penalty-1" />)
-    expect(
-      screen.getByRole("heading", { name: "PV-000142" })
-    ).toBeInTheDocument()
-    expect(screen.getByText("Absence de titre")).toBeInTheDocument()
-    expect(
-      [...screen.getByLabelText("Nouvel état").querySelectorAll("option")].map(
-        (option) => option.value
-      )
-    ).toEqual(["", "paye", "conteste", "annule"])
+    expect(screen.getByRole("heading", { name: "PV-000142" })).toBeInTheDocument()
+    expect(screen.getAllByText("Voyageur sans titre").length).toBeGreaterThan(0)
+    expect(screen.getByText("+241 65 •• •• 72")).toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText("Nouvel état"), {
-      target: { value: "conteste" },
-    })
-    fireEvent.change(screen.getByLabelText("Motif ou note obligatoire"), {
-      target: { value: "Le voyageur conteste les faits." },
-    })
-    fireEvent.click(
-      screen.getByRole("button", { name: "Enregistrer le changement" })
-    )
-
+    fireEvent.click(screen.getByRole("button", { name: /Encaisser 25/ }))
+    const dialogue = await screen.findByRole("dialog")
+    fireEvent.change(within(dialogue).getByLabelText("Moyen de paiement"), { target: { value: "airtel_money" } })
+    expect(within(dialogue).getByLabelText("Référence de la transaction")).toBeRequired()
+    fireEvent.change(within(dialogue).getByLabelText("Référence de la transaction"), { target: { value: "AM-77810" } })
+    fireEvent.click(screen.getByRole("button", { name: "Encaisser" }))
     await waitFor(() =>
       expect(mutation).toHaveBeenCalledWith({
         penaltyId: "penalty-1",
-        status: "conteste",
-        resolutionNote: "Le voyageur conteste les faits.",
+        method: "airtel_money",
+        reference: "AM-77810",
+        note: undefined,
       })
     )
   })

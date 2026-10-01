@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 
-import { ManagementPageClient } from "@/components/management-screens"
+import { TableauDeBord } from "@/components/gestion/pilotage/tableau-de-bord"
 
-export const metadata: Metadata = { title: "Gestion · Vue d’ensemble" }
+export const metadata: Metadata = { title: "Gestion · Tableau de bord" }
 
 export default function ManagementHomePage() {
-  return <ManagementPageClient section="tableau-de-bord" />
+  return <TableauDeBord />
 }

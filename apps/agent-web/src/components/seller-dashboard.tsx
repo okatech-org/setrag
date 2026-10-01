@@ -1,568 +1,564 @@
 "use client"
 
 import {
-  Archive,
-  CarFront,
-  ChevronRight,
-  Clock3,
+  Banknote,
+  CircleCheck,
+  Coins,
+  History,
   Luggage,
-  PackageOpen,
-  Receipt,
+  Package,
+  RotateCcw,
+  Search,
   Ticket,
-  TriangleAlert,
+  TrainFront,
+  type LucideIcon,
 } from "lucide-react"
+import type { Route } from "next"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react"
-import { toast } from "sonner"
-import { useConvex } from "convex/react"
+import { useEffect, useState } from "react"
 
-import { authClient } from "@workspace/api/auth-client"
-import { useAction, useAuth, useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
-import { Badge } from "@workspace/ui/components/badge"
-import { Button } from "@workspace/ui/components/button"
-import { Card } from "@workspace/ui/components/card"
-import { Field, Input } from "@workspace/ui/components/field"
-import { InlineMessage } from "@workspace/ui/components/inline-message"
+import { EmptyState, SkeletonLines } from "@workspace/ui/components/empty-state"
+import { BandeauTrafic } from "@workspace/ui/voyage/bandeau-trafic"
+import { PastilleDesserte } from "@workspace/ui/voyage/statut"
 import { cn } from "@workspace/ui/lib/utils"
 
-import { useOnlineStatus } from "@/hooks/use-online-status"
-import { DEMO_DASHBOARD, type SellerDashboardData } from "@/lib/agent-data"
 import {
-  formatTime,
-  formatXaf,
-  productLabel,
-  sellerDisplayName,
-} from "@/lib/format"
-import { SellerShell } from "./seller-shell"
+  EnTetePage,
+  Indicateur,
+  Indicateurs,
+  LienBouton,
+  Panneau,
+} from "@/components/charte"
+import { signalerNavigation } from "@/coquille/filet-navigation"
+import { useToucheRaccourci } from "@/coquille/raccourcis"
+import {
+  dateCourte,
+  heure,
+  jourDeService,
+  libelleProduit,
+  montant,
+  montantSigne,
+  nomTrain,
+  xaf,
+} from "@/lib/agent-data"
 
-const E2E_MODE =
-  process.env.NODE_ENV !== "production" &&
-  process.env.NEXT_PUBLIC_E2E_MODE === "1"
+import {
+  CadreGuichet,
+  ChargementEcran,
+  LimiteErreur,
+  useGuichet,
+} from "./guichet/cadre"
+import { useLecture, type Accueil, type Contexte } from "./guichet/donnees"
+import { CaisseFermee, HorsReseau, Touche } from "./guichet/elements"
 
-interface ProductShortcutProps {
-  icon: ReactNode
-  title: string
-  description: string
-  shortcut: string
-  primary?: boolean
-  disabled?: boolean
-  onSelect: () => void
-}
+/* ═════════════════════════════ Raccourcis ═════════════════════════════════ */
 
-export function ProductShortcut({
-  icon,
-  title,
-  description,
-  shortcut,
-  primary,
-  disabled,
-  onSelect,
-}: ProductShortcutProps) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onSelect}
-      className={cn(
-        "group min-h-28 rounded-md border p-4 text-left transition-colors",
-        "disabled:cursor-not-allowed disabled:opacity-55",
-        primary
-          ? "border-transparent bg-accent-base text-ink-inverse hover:bg-accent-hover"
-          : "border-line bg-surface text-ink hover:border-accent-base hover:bg-accent-soft"
-      )}
-    >
-      <span className="mb-3 flex items-center gap-3">
-        <span
-          className={cn(
-            "flex size-9 items-center justify-center rounded-sm",
-            primary ? "bg-white/15" : "bg-surface-sunk text-accent-ink"
-          )}
-        >
-          {icon}
-        </span>
-        <span className="text-h4 flex-1">{title}</span>
-        <kbd
-          className={cn(
-            "text-caption rounded-xs border px-2 py-1 font-mono",
-            primary
-              ? "border-white/25 bg-white/10"
-              : "border-line-strong bg-surface-sunk"
-          )}
-        >
-          {shortcut}
-        </kbd>
-      </span>
-      <span
+// La touche de chaque tuile est celle du menu, telle que l'agent l'a réglée.
+const RACCOURCIS: readonly {
+  href: string
+  titre: string
+  aide: string
+  icone: LucideIcon
+  vente: boolean
+}[] = [
+  {
+    href: "/vente/billet",
+    titre: "Vendre un billet",
+    aide: "Trajet, places, voyageurs, encaissement",
+    icone: Ticket,
+    vente: true,
+  },
+  {
+    href: "/vente/bagage",
+    titre: "Bagage",
+    aide: "Rattaché à un billet, 30 kg au plus",
+    icone: Luggage,
+    vente: true,
+  },
+  {
+    href: "/vente/colis",
+    titre: "Colis express",
+    aide: "Tarif par zone et palier de poids",
+    icone: Package,
+    vente: true,
+  },
+  {
+    href: "/vente/operations",
+    titre: "Après-vente",
+    aide: "Duplicata, annulation, remboursement",
+    icone: RotateCcw,
+    vente: false,
+  },
+]
+
+export function RaccourciProduit({
+  href,
+  titre,
+  aide,
+  icone: Icone,
+  principal,
+  indisponible,
+}: {
+  href: string
+  titre: string
+  aide: string
+  icone: LucideIcon
+  principal?: boolean
+  /** Raison écrite de l'indisponibilité (caisse fermée, réseau perdu). */
+  indisponible?: string
+}) {
+  const touche = useToucheRaccourci(href)
+  const classes = cn(
+    "relative grid min-h-32 content-start gap-2 rounded-md border p-4 text-left transition-[border-color,box-shadow,transform] duration-[var(--dur-fast)]",
+    principal
+      ? "border-accent-base bg-accent-base text-ink-inverse"
+      : "border-line bg-surface text-ink hover:border-accent-line hover:shadow-[var(--sh-md)]",
+    indisponible ? "cursor-not-allowed opacity-55" : "active:scale-[0.99]"
+  )
+  const contenu = (
+    <>
+      <Icone
+        aria-hidden
+        className={cn(
+          "size-7 stroke-[1.8]",
+          principal ? "text-ink-inverse/80" : "text-accent-ink"
+        )}
+      />
+      <b className="pr-8 text-[17px] font-bold">{titre}</b>
+      <small
         className={cn(
           "text-small",
-          primary ? "text-white/80" : "text-ink-muted"
+          principal ? "text-ink-inverse/80" : "text-ink-muted"
         )}
       >
-        {description}
-      </span>
-    </button>
+        {indisponible ?? aide}
+      </small>
+      {touche ? (
+        <Touche surAccent={principal} className="absolute top-4 right-4">
+          {touche}
+        </Touche>
+      ) : null}
+      {principal ? (
+        <span
+          aria-hidden
+          className="bg-ruban absolute right-4 bottom-3 left-4 h-1 rounded-[2px]"
+        />
+      ) : null}
+    </>
   )
-}
-
-export function OpenCashForm({
-  onOpen,
-}: {
-  onOpen: (openingFloatXaf: number) => Promise<void>
-}) {
-  const [value, setValue] = useState("0")
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState("")
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const openingFloatXaf = Number(value)
-    if (!Number.isFinite(openingFloatXaf) || openingFloatXaf < 0) {
-      setError("Saisissez un fond de caisse positif ou nul.")
-      return
-    }
-    setPending(true)
-    setError("")
-    try {
-      await onOpen(openingFloatXaf)
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "La caisse n’a pas pu être ouverte."
-      )
-    } finally {
-      setPending(false)
-    }
+  if (indisponible) {
+    return (
+      <div
+        role="link"
+        aria-disabled="true"
+        aria-label={`${titre} — ${indisponible}`}
+        className={classes}
+      >
+        {contenu}
+      </div>
+    )
   }
-
   return (
-    <Card className="border-warning bg-warning-soft p-5 shadow-none">
-      <form className="grid gap-4 sm:grid-cols-[1fr_auto]" onSubmit={submit}>
-        <div className="sm:col-span-2">
-          <InlineMessage
-            tone="warning"
-            title="Aucune session de caisse ouverte."
-          >
-            La vente reste bloquée jusqu’à la déclaration du fond de caisse.
-          </InlineMessage>
-        </div>
-        <Field
-          label="Fond de caisse (FCFA)"
-          htmlFor="opening-float"
-          error={error}
-          hint="Le montant est horodaté et inscrit au journal d’audit."
-        >
-          <Input
-            id="opening-float"
-            name="openingFloatXaf"
-            type="number"
-            min={0}
-            step={500}
-            inputMode="numeric"
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-          />
-        </Field>
-        <Button
-          type="submit"
-          className="self-start sm:mt-[25px]"
-          size="lg"
-          loading={pending}
-          loadingLabel="Ouverture…"
-        >
-          Ouvrir ma caisse
-        </Button>
-      </form>
-    </Card>
+    <Link
+      href={href as Route}
+      className={classes}
+      onClick={() => signalerNavigation()}
+    >
+      {contenu}
+    </Link>
   )
 }
 
-interface SellerDashboardScreenProps {
-  data: SellerDashboardData
-  online: boolean
-  onOpenCash: (openingFloatXaf: number) => Promise<void>
-  onNavigate: (href: string) => void
-  onReprint?: (saleId: string) => Promise<void>
-  onSignOut?: () => void
-}
+/* ══════════════════════════════ Écran ═════════════════════════════════════ */
 
 export function SellerDashboardScreen({
-  data,
-  online,
-  onOpenCash,
-  onNavigate,
-  onReprint,
-  onSignOut,
-}: SellerDashboardScreenProps) {
-  const saleReady = online && data.session !== null
-  const [reprinting, setReprinting] = useState("")
-  const [reprintMessage, setReprintMessage] = useState<{
-    tone: "success" | "danger"
-    text: string
-  } | null>(null)
-
-  const shortcuts = useMemo(
-    () => [
-      {
-        icon: <Ticket />,
-        title: "Billet voyageur",
-        description: "Rechercher une desserte et attribuer les places.",
-        shortcut: "F1",
-        href: "/vente/billet",
-        ready: true,
-        primary: true,
-      },
-      {
-        icon: <Luggage />,
-        title: "Bagage",
-        description: "Enregistrer un bagage rattaché à un billet.",
-        shortcut: "F2",
-        href: "/vente/bagage",
-        ready: true,
-      },
-      {
-        icon: <PackageOpen />,
-        title: "Colis express",
-        description: "Créer une expédition autonome avec suivi.",
-        shortcut: "F3",
-        href: "/vente/colis",
-        ready: true,
-      },
-      {
-        icon: <CarFront />,
-        title: "Auto accompagné",
-        description: "Transporter un véhicule avec son propriétaire.",
-        shortcut: "F4",
-        href: "/vente/prestation-speciale?type=auto",
-        ready: true,
-      },
-      {
-        icon: <Archive />,
-        title: "Transport funéraire",
-        description: "Enregistrer la prestation et ses justificatifs.",
-        shortcut: "F5",
-        href: "/vente/prestation-speciale?type=funeraire",
-        ready: true,
-      },
-    ],
-    []
-  )
-
-  useEffect(() => {
-    function handleShortcut(event: KeyboardEvent) {
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement
-      ) {
-        return
-      }
-      const shortcut = shortcuts.find(
-        (item) => item.shortcut === event.key.toUpperCase()
-      )
-      if (!shortcut || !shortcut.ready || !saleReady) return
-      event.preventDefault()
-      onNavigate(shortcut.href)
-    }
-    window.addEventListener("keydown", handleShortcut)
-    return () => window.removeEventListener("keydown", handleShortcut)
-  }, [onNavigate, saleReady, shortcuts])
+  contexte,
+  accueil,
+  enLigne,
+  onOuvrirOperation,
+}: {
+  contexte: Contexte
+  accueil: Accueil | undefined
+  enLigne: boolean
+  onOuvrirOperation: (id: string) => void
+}) {
+  const caisse = contexte.session
+  const blocage = !enLigne
+    ? "Réseau perdu : carnet de secours"
+    : !caisse
+      ? "Caisse fermée : ouvrez-la d'abord"
+      : undefined
+  const prenom = contexte.seller.firstName ?? "à vous"
+  const station = contexte.pointOfSale.stationName ?? contexte.pointOfSale.name
 
   return (
-    <SellerShell
-      seller={data.seller}
-      pointOfSale={data.pointOfSale}
-      session={data.session}
-      online={online}
-      onSignOut={onSignOut}
-    >
-      <div className="mx-auto grid max-w-[1440px] gap-6">
-        {!online ? (
-          <InlineMessage tone="warning" title="Connexion au central perdue.">
-            Aucune vente électronique ne peut être émise. Passez au mode dégradé
-            papier et ressaisissez les titres après le retour du réseau.
-          </InlineMessage>
-        ) : null}
+    <>
+      <EnTetePage
+        surtitre={`${contexte.pointOfSale.name} · ${dateCourte(jourDeService(), true)}`}
+        titre={`Bonjour ${prenom}`}
+        description={
+          caisse
+            ? `Caisse ouverte à ${heure(caisse.openedAt)} avec ${xaf(caisse.openingFloatXaf)}. Les chiffres se mettent à jour à chaque vente.`
+            : "La caisse est fermée : ouvrez-la avec son fonds pour commencer à vendre."
+        }
+        actions={
+          <LienBouton href="/vente/operations">
+            <Search aria-hidden />
+            Rechercher une opération
+          </LienBouton>
+        }
+      />
+      {!enLigne ? <HorsReseau /> : null}
+      {!caisse ? <CaisseFermee /> : null}
 
-        <header className="flex flex-wrap items-end gap-4">
-          <div className="min-w-0 flex-1">
-            <span className="text-mono-label text-accent-ink">AW-V-01</span>
-            <h1 className="text-h2 mt-1">
-              Bonjour,{" "}
-              {sellerDisplayName(data.seller.firstName, data.seller.lastName)}
-            </h1>
-            <p className="text-small mt-2 flex flex-wrap items-center gap-2 text-ink-muted">
-              {data.session ? (
-                <>
-                  <Clock3 className="size-4" />
-                  Caisse ouverte à {formatTime(data.session.openedAt)}
-                  <span aria-hidden>·</span>
-                  fond {formatXaf(data.session.openingFloatXaf)}
-                </>
-              ) : (
-                "Ouvrez votre caisse pour commencer les ventes."
-              )}
-            </p>
-          </div>
-          <Badge
-            variant={data.session ? "success" : "warning"}
-            className="px-3 py-1.5"
-          >
-            {data.session ? "Caisse ouverte" : "Caisse fermée"}
-          </Badge>
-        </header>
+      {(accueil?.trafic ?? []).map((t) => (
+        <BandeauTrafic
+          key={t.tripId}
+          arrondi
+          titre={
+            t.status === "annule"
+              ? `${nomTrain(t.trainType, t.trainNumber)} du ${dateCourte(t.serviceDate)} : supprimé.`
+              : `${nomTrain(t.trainType, t.trainNumber)} : départ à ${heure(t.departAt + t.delayMinutes * 60_000)} au lieu de ${heure(t.departAt)}.`
+          }
+        >
+          {t.status === "annule"
+            ? "Proposez un autre train ; le remboursement se fait sans pénalité."
+            : "Prévenez les voyageurs au guichet ; les billets restent valables."}
+        </BandeauTrafic>
+      ))}
 
-        {data.session ? (
-          <section
-            aria-label="Indicateurs de la caisse"
-            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-          >
-            {[
-              {
-                value: data.metrics.salesCount.toLocaleString("fr-FR"),
-                label: "ventes du jour",
-              },
-              {
-                value: formatXaf(data.metrics.totalReceived),
-                label: "encaissés",
-              },
-              {
-                value: data.metrics.cancellations.toLocaleString("fr-FR"),
-                label: "annulations",
-              },
-              {
-                value: `−${formatXaf(data.metrics.refunded)}`,
-                label: "remboursés",
-              },
-            ].map((metric) => (
-              <Card key={metric.label} className="gap-1 p-4 shadow-none">
-                <strong className="tabular text-h3">{metric.value}</strong>
-                <span className="text-small text-ink-muted">
-                  {metric.label}
-                </span>
-              </Card>
-            ))}
-          </section>
-        ) : (
-          <OpenCashForm onOpen={onOpenCash} />
-        )}
+      <nav
+        aria-label="Produits du guichet"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        {RACCOURCIS.map((r, index) => (
+          <RaccourciProduit
+            key={r.href}
+            {...r}
+            principal={index === 0}
+            indisponible={r.vente ? blocage : undefined}
+          />
+        ))}
+      </nav>
 
-        <section className="grid gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-mono-label text-ink-muted">Nouvelle vente</h2>
-            {!data.session ? (
-              <span className="text-caption flex items-center gap-2 text-warning-ink">
-                <TriangleAlert className="size-4" />
-                caisse requise
-              </span>
-            ) : null}
-          </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {shortcuts.map((shortcut) => (
-              <ProductShortcut
-                key={shortcut.shortcut}
-                {...shortcut}
-                disabled={!saleReady || !shortcut.ready}
-                onSelect={() => onNavigate(shortcut.href)}
-              />
-            ))}
-          </div>
-          <p className="text-caption text-ink-muted">
-            Chaque prestation est enregistrée dans la caisse et le journal
-            d’audit du point de vente.
-          </p>
-        </section>
-
-        <section className="grid gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-mono-label text-ink-muted">
-              Dernières opérations
-            </h2>
-            <span className="text-caption text-ink-muted">
-              {data.lastOperations.length} affichée(s)
-            </span>
-          </div>
-          {reprintMessage ? (
-            <InlineMessage
-              tone={reprintMessage.tone}
-              title={reprintMessage.text}
+      {accueil === undefined ? (
+        <ChargementEcran libelle="Chargement des indicateurs…" />
+      ) : (
+        <>
+          <Indicateurs>
+            <Indicateur
+              fort
+              libelle="Encaissé aujourd'hui"
+              icone={Coins}
+              valeur={montant(accueil.indicateurs.encaisse)}
+              unite="XAF"
+              evolution={{
+                sens: "neutre",
+                texte: `${accueil.indicateurs.operations} opération${accueil.indicateurs.operations > 1 ? "s" : ""}`,
+              }}
             />
-          ) : null}
+            <Indicateur
+              libelle="Billets émis"
+              icone={Ticket}
+              valeur={accueil.indicateurs.billets}
+              evolution={{
+                sens: "neutre",
+                texte: `dont ${accueil.indicateurs.enfants} enfant${accueil.indicateurs.enfants > 1 ? "s" : ""}`,
+              }}
+            />
+            <Indicateur
+              libelle="Espèces attendues"
+              icone={Banknote}
+              valeur={montant(accueil.indicateurs.especesAttendues)}
+              unite="XAF"
+              evolution={{ sens: "neutre", texte: "fonds compris" }}
+            />
+            <Indicateur
+              libelle="Annulations et remboursements"
+              icone={RotateCcw}
+              valeur={accueil.indicateurs.sorties}
+              evolution={{
+                sens: "neutre",
+                texte: accueil.indicateurs.sorties
+                  ? `${montantSigne(accueil.indicateurs.sortiesMontant)} XAF`
+                  : "aucun aujourd'hui",
+              }}
+            />
+          </Indicateurs>
 
-          <div className="overflow-x-auto rounded-md border border-line bg-surface">
-            <table className="text-small w-full min-w-[720px] border-collapse">
-              <thead className="text-caption bg-surface-sunk text-left text-ink-muted">
-                <tr>
-                  <th className="px-4 py-3 font-medium">N°</th>
-                  <th className="px-4 py-3 font-medium">Prestation</th>
-                  <th className="px-4 py-3 font-medium">Heure</th>
-                  <th className="px-4 py-3 text-right font-medium">Montant</th>
-                  <th className="px-4 py-3 text-right font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.lastOperations.map((operation) => (
-                  <tr
-                    key={operation.id}
-                    className="border-t border-line first:border-t-0"
-                  >
-                    <td className="tabular px-4 py-3 font-semibold">
-                      {operation.number}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="flex items-center gap-2">
-                        <Receipt className="size-4 text-accent-ink" />
-                        {productLabel(operation.product)}
-                      </span>
-                    </td>
-                    <td className="tabular px-4 py-3 text-ink-muted">
-                      {formatTime(operation.createdAt)}
-                    </td>
-                    <td className="tabular px-4 py-3 text-right">
-                      {formatXaf(operation.amountXaf)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        loading={reprinting === operation.id}
-                        loadingLabel="Préparation…"
-                        disabled={
-                          !online ||
-                          operation.product !== "billet" ||
-                          !onReprint
-                        }
-                        title={
-                          operation.product !== "billet"
-                            ? "Seuls les billets disposent d’un duplicata imprimable."
-                            : undefined
-                        }
-                        onClick={async () => {
-                          if (!onReprint) return
-                          setReprinting(operation.id)
-                          setReprintMessage(null)
-                          try {
-                            await onReprint(operation.id)
-                            setReprintMessage({
-                              tone: "success",
-                              text: `Duplicata de ${operation.number} généré et tracé.`,
-                            })
-                          } catch (cause) {
-                            setReprintMessage({
-                              tone: "danger",
-                              text:
-                                cause instanceof Error
-                                  ? cause.message
-                                  : "La réimpression a échoué.",
-                            })
-                          } finally {
-                            setReprinting("")
-                          }
-                        }}
-                      >
-                        Réimprimer
-                        <ChevronRight />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-                {data.lastOperations.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-4 py-10 text-center text-ink-muted"
-                    >
-                      Aucune opération dans cette session.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
+          {/* Sur grand écran, départs et opérations occupent toute la hauteur
+              restante ; chaque liste défile dans son bloc. */}
+          <div className="grid gap-4 xl:min-h-[320px] xl:flex-1 xl:basis-0 xl:grid-cols-2">
+            <ProchainsDeparts accueil={accueil} station={station} />
+            <DernieresOperations
+              accueil={accueil}
+              onOuvrir={onOuvrirOperation}
+            />
           </div>
-        </section>
-      </div>
-    </SellerShell>
+        </>
+      )}
+    </>
+  )
+}
+
+/** Heure de Libreville, rafraîchie à la minute ; vide avant hydratation. */
+function useHorloge() {
+  const [maintenant, setMaintenant] = useState<number | null>(null)
+  useEffect(() => {
+    let minuteur = 0
+    const battre = () => {
+      const t = Date.now()
+      setMaintenant(t)
+      minuteur = window.setTimeout(battre, 60_000 - (t % 60_000) + 250)
+    }
+    battre()
+    return () => window.clearTimeout(minuteur)
+  }, [])
+  return maintenant === null ? "" : heure(maintenant)
+}
+
+/**
+ * Prochains départs, comme le tableau d'affichage en gare : fond encre, heures
+ * en jaune, horloge de Libreville. Fond encre dans les deux thèmes : les
+ * pastilles y prennent les teintes du thème sombre.
+ */
+function ProchainsDeparts({
+  accueil,
+  station,
+}: {
+  accueil: Accueil
+  station: string
+}) {
+  const horloge = useHorloge()
+  return (
+    <section
+      data-theme="dark"
+      aria-label={`Prochains départs de ${station}`}
+      className="flex min-h-0 flex-col overflow-hidden rounded-lg bg-brand-encre text-[oklch(0.97_0.006_257)]"
+    >
+      <header className="flex items-center gap-3 border-b border-[oklch(0.32_0.02_257)] px-5 py-3.5">
+        <TrainFront aria-hidden className="size-5" />
+        <h2 className="text-[16px] font-bold">
+          Prochains départs de {station}
+        </h2>
+        {horloge ? (
+          <span className="tabular ml-auto text-[18px] font-semibold text-brand-jaune">
+            {horloge}
+          </span>
+        ) : null}
+      </header>
+      {accueil.departs.length === 0 ? (
+        <div className="grid justify-items-center gap-3 px-5 py-8 text-center">
+          <b className="text-[16px]">
+            Plus aucun départ aujourd&apos;hui ni demain
+          </b>
+          <p className="text-[14px] text-[oklch(0.78_0.016_257)]">
+            Les dessertes des jours suivants se vendent depuis la vente de
+            billet.
+          </p>
+          <LienBouton href="/vente/billet">Vendre un billet</LienBouton>
+        </div>
+      ) : (
+        <div className="relative min-h-0 flex-1 overflow-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="text-left text-[11.5px] font-semibold tracking-[0.06em] text-[oklch(0.7_0.02_257)] uppercase">
+                <th scope="col" className="px-5 pt-2.5 pb-1.5">
+                  Départ
+                </th>
+                <th scope="col" className="px-2 pt-2.5 pb-1.5">
+                  Destination
+                </th>
+                <th scope="col" className="px-2 pt-2.5 pb-1.5 text-center">
+                  2e
+                </th>
+                <th scope="col" className="px-2 pt-2.5 pb-1.5 text-center">
+                  1re
+                </th>
+                <th scope="col" className="px-5 pt-2.5 pb-1.5">
+                  État
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {accueil.departs.map((d) => (
+                <tr
+                  key={d.tripId}
+                  className="border-t border-[oklch(0.28_0.02_257)] align-middle"
+                >
+                  <td className="w-[96px] py-3 pl-5">
+                    <span className="tabular block text-[20px] font-semibold text-brand-jaune">
+                      {heure(d.departAt)}
+                    </span>
+                    <small className="block text-[12px] text-[oklch(0.7_0.02_257)]">
+                      {dateCourte(d.serviceDate)}
+                    </small>
+                  </td>
+                  <td className="px-2 py-3">
+                    <b className="block text-[16px] font-bold">
+                      {d.destination ?? "—"}
+                    </b>
+                    <small className="block text-[12.5px] text-[oklch(0.72_0.02_257)]">
+                      {nomTrain(d.trainType, d.trainNumber)}
+                    </small>
+                  </td>
+                  {(["DEUXIEME", "PREMIERE"] as const).map((classe) => (
+                    <td
+                      key={classe}
+                      className="tabular w-[64px] px-2 py-3 text-center text-[18px] font-semibold"
+                    >
+                      {d.disponibles[classe] ?? "—"}
+                    </td>
+                  ))}
+                  <td className="py-3 pr-5 pl-2">
+                    <PastilleDesserte
+                      statut={d.status}
+                      retard={d.delayMinutes}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="border-t border-[oklch(0.28_0.02_257)] px-5 py-2.5 text-[12.5px] text-[oklch(0.7_0.02_257)]">
+            Places libres jusqu&apos;au terminus, en 2e et 1re classe.
+          </p>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function DernieresOperations({
+  accueil,
+  onOuvrir,
+}: {
+  accueil: Accueil
+  onOuvrir: (id: string) => void
+}) {
+  return (
+    <Panneau
+      titre="Dernières opérations"
+      icone={History}
+      plein
+      className="flex min-h-0 flex-col"
+      actions={
+        <Link
+          href={"/vente/operations" as Route}
+          className="inline-flex min-h-11 items-center text-[13px] font-semibold text-accent-ink hover:underline"
+        >
+          Tout voir
+        </Link>
+      }
+    >
+      {accueil.operations.length === 0 ? (
+        <EmptyState
+          illustration={
+            <CircleCheck aria-hidden className="size-10 text-ink-faint" />
+          }
+          title="Aucune opération dans cette caisse"
+          description="La première vente apparaîtra ici, avec son numéro."
+        />
+      ) : (
+        <div className="relative min-h-0 flex-1 overflow-auto">
+          <table className="w-full min-w-[480px] border-collapse text-[14px]">
+            <thead>
+              <tr className="bg-surface-sunk text-left text-[11.5px] font-semibold tracking-[0.05em] text-ink-muted uppercase">
+                <th scope="col" className="px-3.5 py-2.5">
+                  N°
+                </th>
+                <th scope="col" className="px-3.5 py-2.5">
+                  Produit
+                </th>
+                <th scope="col" className="px-3.5 py-2.5 text-right">
+                  Montant
+                </th>
+                <th scope="col" className="px-3.5 py-2.5 text-right">
+                  Heure
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {accueil.operations.map((o) => (
+                <tr
+                  key={o.id}
+                  tabIndex={0}
+                  onClick={() => onOuvrir(o.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault()
+                      onOuvrir(o.id)
+                    }
+                  }}
+                  className="cursor-pointer border-t border-line hover:bg-surface-sunk focus-visible:bg-surface-sunk"
+                >
+                  <td className="tabular px-3.5 py-2.5 text-[12.5px] whitespace-nowrap">
+                    {o.numero.replace(/^([A-Z])-[A-Z-]+-\d{8}-/, "$1-")}
+                  </td>
+                  <td className="px-3.5 py-2.5">
+                    <b className="block font-semibold">
+                      {libelleProduit(o.produit, o.kind)}
+                    </b>
+                    <small className="text-[12.5px] text-ink-muted">
+                      {o.client ?? o.trajet ?? "—"}
+                    </small>
+                  </td>
+                  <td className="px-3.5 py-2.5 text-right font-mono tabular-nums">
+                    {montantSigne(o.montant)}
+                  </td>
+                  <td className="px-3.5 py-2.5 text-right font-mono tabular-nums">
+                    {heure(o.heure)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panneau>
   )
 }
 
 export function SellerDashboardPageClient() {
-  const router = useRouter()
-  const convex = useConvex()
-  const online = useOnlineStatus()
-  const { isAuthenticated, isLoading } = useAuth()
-  const liveDashboard = useQuery(
-    api.functions.cash.sellerDashboard,
-    E2E_MODE || !isAuthenticated ? "skip" : {}
+  const { contexte, enLigne } = useGuichet()
+  return (
+    <CadreGuichet
+      contexte={contexte}
+      className="xl:flex xl:h-[calc(100dvh-7rem)] xl:flex-col"
+    >
+      {contexte ? (
+        <LimiteErreur titre="L'accueil n'a pas pu être chargé.">
+          <AccueilConnecte contexte={contexte} enLigne={enLigne} />
+        </LimiteErreur>
+      ) : (
+        <div className="grid gap-4">
+          <SkeletonLines />
+          <ChargementEcran libelle="Chargement de l'espace vendeur…" />
+        </div>
+      )}
+    </CadreGuichet>
   )
-  const openSession = useMutation(api.functions.cash.openSession)
-  const reprintTicket = useMutation(api.functions.sales.reprintTicket)
-  const ticketPdf = useAction(api.functions.documents.ticketPdf)
-  const [demoDashboard, setDemoDashboard] =
-    useState<SellerDashboardData>(DEMO_DASHBOARD)
-  const dashboard = E2E_MODE
-    ? demoDashboard
-    : (liveDashboard as SellerDashboardData | undefined)
+}
 
-  useEffect(() => {
-    if (!E2E_MODE && !isLoading && !isAuthenticated) {
-      router.replace("/connexion")
-    }
-  }, [isAuthenticated, isLoading, router])
-
-  if (!dashboard) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center bg-canvas">
-        <p role="status" className="text-small text-ink-muted">
-          Chargement de l’espace vendeur…
-        </p>
-      </main>
-    )
-  }
-
+function AccueilConnecte({
+  contexte,
+  enLigne,
+}: {
+  contexte: Contexte
+  enLigne: boolean
+}) {
+  const router = useRouter()
+  const accueil = useLecture(api.functions.guichet.accueil, {})
   return (
     <SellerDashboardScreen
-      data={dashboard}
-      online={online}
-      onNavigate={(href) => router.push(href)}
-      onReprint={async (saleId) => {
-        if (E2E_MODE) {
-          window.print()
-          return
-        }
-        const detail = await convex.query(api.functions.sales.get, {
-          saleId: saleId as never,
-        })
-        const ticket = detail.tickets.find(
-          (candidate) => candidate.status === "valide"
-        )
-        if (!ticket) throw new Error("Aucun billet valide à réimprimer.")
-        await reprintTicket({ ticketId: ticket._id })
-        const { url } = await ticketPdf({
-          ticketId: ticket._id,
-          force: true,
-        })
-        window.open(url, "_blank", "noopener,noreferrer")
-      }}
-      onOpenCash={async (openingFloatXaf) => {
-        if (E2E_MODE) {
-          setDemoDashboard((current) => ({
-            ...current,
-            session: {
-              id: "cash-e2e",
-              openedAt: Date.now(),
-              openingFloatXaf,
-            },
-          }))
-        } else {
-          await openSession({ openingFloatXaf })
-        }
-        toast.success("Caisse ouverte. Les ventes sont maintenant autorisées.")
-      }}
-      onSignOut={async () => {
-        if (!E2E_MODE) await authClient.signOut()
-        router.replace("/connexion")
+      contexte={contexte}
+      accueil={accueil}
+      enLigne={enLigne}
+      onOuvrirOperation={(id) => {
+        signalerNavigation()
+        router.push(`/vente/operations?op=${id}` as Route)
       }}
     />
   )

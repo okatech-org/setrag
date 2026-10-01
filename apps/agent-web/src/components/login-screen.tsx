@@ -1,7 +1,6 @@
 "use client"
 
 import { Building2, KeyRound, ShieldCheck, Wifi } from "lucide-react"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { FormEvent, useEffect, useState } from "react"
 
@@ -11,6 +10,7 @@ import { api } from "@workspace/backend/generated"
 import { Button } from "@workspace/ui/components/button"
 import { Field, Input } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
+import { Logo, LogoAnime } from "@workspace/ui/marque"
 
 import {
   DemoAccountPicker,
@@ -115,77 +115,45 @@ export function LoginScreen({
 
   return (
     <>
-      <main className="grid min-h-dvh min-w-0 bg-surface lg:grid-cols-[minmax(360px,0.9fr)_minmax(520px,1.1fr)]">
-        <section
-          data-theme="dark"
-          className="relative hidden overflow-hidden bg-[oklch(0.24_0.058_257)] p-10 text-ink lg:flex lg:flex-col lg:justify-between"
-        >
-          <div
-            aria-hidden
-            className="absolute -top-28 -right-36 size-96 rounded-full border border-white/10"
-          />
-          <div
-            aria-hidden
-            className="absolute right-12 bottom-24 size-48 rounded-full border border-white/10"
-          />
-
-          <Image
-            src="/setrag-logo.png"
-            alt="SETRAG"
-            width={150}
-            height={54}
-            priority
-            className="relative h-12 w-auto self-start rounded-sm bg-white px-3 py-2"
-          />
-
-          <div className="relative grid max-w-lg gap-5">
-            <span className="text-mono-label text-accent-on-ink">
-              SETRAG Enterprise OS
-            </span>
-            <h1 className="text-h1 text-ink">
-              Le portail opérationnel du Transgabonais.
-            </h1>
-            <p className="text-body-lg max-w-md text-ink-muted">
-              Pilotez circulation, fret, matériel, infrastructures, finances,
-              ressources humaines et collaboration selon votre périmètre.
-            </p>
-            <div className="text-small mt-4 grid gap-3 text-ink-muted">
-              <span className="flex items-center gap-3">
-                <ShieldCheck className="size-5 text-success" />
-                Accès nominatif et actions auditées
-              </span>
-              <span className="flex items-center gap-3">
-                <Building2 className="size-5 text-accent-on-ink" />
-                Session liée au rôle, au site et au périmètre
-              </span>
-              <span className="flex items-center gap-3">
-                <Wifi className="size-5 text-info" />
-                État réseau visible en permanence
-              </span>
-            </div>
+      <main className="grid min-h-dvh min-w-0 bg-canvas lg:grid-cols-[minmax(380px,1.05fr)_minmax(480px,1fr)]">
+        {/* Le logo se pose, le ruban le parcourt : la marque, sans décor. */}
+        <section className="relative hidden flex-col justify-between border-r border-line bg-surface px-12 py-10 lg:flex">
+          <span className="text-[12px] font-semibold tracking-[0.08em] text-ink-faint uppercase">
+            Portail agent
+          </span>
+          <div className="grid justify-items-center gap-8">
+            <LogoAnime variante="complet" fond="clair" className="w-full max-w-[440px]" />
+            <ul className="grid gap-3 text-[14px] text-ink-muted">
+              <li className="flex items-center gap-3">
+                <ShieldCheck aria-hidden className="size-[18px] text-accent-ink" />
+                Accès nominatif, chaque action tracée au journal d’audit
+              </li>
+              <li className="flex items-center gap-3">
+                <Building2 aria-hidden className="size-[18px] text-accent-ink" />
+                Session liée au rôle, au poste et au périmètre
+              </li>
+              <li className="flex items-center gap-3">
+                <Wifi aria-hidden className="size-[18px] text-accent-ink" />
+                État du réseau affiché en permanence
+              </li>
+            </ul>
           </div>
-
-          <p className="text-caption relative text-ink-faint">
-            Accès réservé au personnel et aux partenaires habilités.
+          <p className="text-[12.5px] text-ink-faint">
+            Vente au guichet, gestion, exploitation et supervision du Transgabonais.
           </p>
         </section>
 
-        <section className="flex min-w-0 items-center justify-center bg-canvas px-4 py-8 sm:px-10 sm:py-10">
-          <div className="grid w-full max-w-md min-w-0 gap-7">
-            <Image
-              src="/setrag-logo.png"
-              alt="SETRAG"
-              width={138}
-              height={50}
-              priority
-              className="h-12 w-auto lg:hidden"
-            />
+        <section className="flex min-w-0 items-center justify-center px-4 py-10 sm:px-10">
+          <div className="grid w-full max-w-[440px] min-w-0 gap-6">
+            <Logo variante="compact" title="SETRAG" className="h-10 justify-self-start lg:hidden" />
 
-            <div className="grid gap-2">
-              <span className="text-mono-label text-accent-ink">AW-00</span>
-              <h2 className="text-h2">Connexion</h2>
-              <p className="text-ink-muted">
-                Utilisez votre identité SETRAG ou partenaire habilitée.
+            <div className="grid gap-1.5">
+              <span className="text-[12px] font-medium tracking-[0.08em] text-accent-ink uppercase">
+                Espace réservé au personnel
+              </span>
+              <h1 className="text-[32px] leading-tight font-bold tracking-[-0.01em]">Ouvrir une session</h1>
+              <p className="text-small text-ink-muted">
+                Votre identité SETRAG ou celle de votre organisation partenaire habilitée.
               </p>
             </div>
 
@@ -195,30 +163,30 @@ export function LoginScreen({
               </InlineMessage>
             ) : null}
 
-            <Button
-              type="button"
-              size="lg"
-              block
-              onClick={startSso}
-              className="h-auto min-h-13 min-w-0 justify-center px-4 py-3 text-center whitespace-normal"
-            >
-              <ShieldCheck />
-              Se connecter avec mon compte SETRAG
-            </Button>
+            <div className="grid gap-2">
+              <Button
+                type="button"
+                size="lg"
+                block
+                onClick={startSso}
+                className="h-auto min-h-13 min-w-0 justify-center px-4 py-3 text-center whitespace-normal"
+              >
+                <ShieldCheck />
+                Se connecter avec mon compte SETRAG
+              </Button>
+              <p className="text-[12.5px] text-ink-muted">
+                Connexion unique par l’annuaire de l’entreprise (Entra ID).
+              </p>
+            </div>
 
-            <div className="flex items-center gap-4" aria-hidden>
+            <div className="flex items-center gap-3 text-[12px] text-ink-faint" aria-hidden>
               <span className="h-px flex-1 bg-line" />
-              <span className="text-caption text-ink-muted">
-                compte de repli
-              </span>
+              ou, avec votre compte de repli
               <span className="h-px flex-1 bg-line" />
             </div>
 
-            <form className="grid gap-5" onSubmit={submit}>
-              <Field
-                label="Adresse e-mail professionnelle"
-                htmlFor="agent-email"
-              >
+            <form className="grid gap-4" onSubmit={submit}>
+              <Field label="Adresse e-mail professionnelle" htmlFor="agent-email">
                 <Input
                   id="agent-email"
                   name="email"
@@ -264,9 +232,9 @@ export function LoginScreen({
               </InlineMessage>
             ) : null}
 
-            <div className="text-caption flex flex-wrap justify-between gap-3 border-t border-line pt-5 text-ink-muted">
+            <div className="flex flex-wrap justify-between gap-3 border-t border-line pt-4 text-[12.5px] text-ink-muted">
               <span>Besoin d’aide ? Support DSI · poste 2210</span>
-              <span className="font-mono">v0.1.0</span>
+              <span className="tabular">v0.1.0</span>
             </div>
           </div>
         </section>

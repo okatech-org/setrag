@@ -806,7 +806,7 @@ export function ActivitiesVolet({
                   ? NUMBER_FORMATTER.format(data.passenger.revenueNet)
                   : undefined
               }
-              unit="FCFA"
+              unit="XAF"
             />
             <MetricCard
               label="Remplissage siège-km"
@@ -904,7 +904,7 @@ export function ActivitiesVolet({
                           {NUMBER_FORMATTER.format(trip.ticketCount)}
                         </TableCell>
                         <TableCell className="text-right font-mono tabular-nums">
-                          {NUMBER_FORMATTER.format(trip.revenueTtc)} FCFA
+                          {NUMBER_FORMATTER.format(trip.revenueTtc)} XAF
                         </TableCell>
                       </TableRow>
                     ))}

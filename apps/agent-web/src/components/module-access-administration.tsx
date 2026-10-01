@@ -282,13 +282,10 @@ export function ModuleAccessMatrix({ data }: { data: AdministrationData }) {
             />
           </Field>
 
-          <Field
-            label="Motif du changement"
-            htmlFor="module-access-reason"
-            hint="Obligatoire et inscrit au journal d’audit."
-          >
+          <Field label="Motif du changement" htmlFor="module-access-reason">
             <Textarea
               id="module-access-reason"
+              aria-describedby="module-access-reason-aide"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               placeholder="Précisez la demande, la décision ou le ticket associé…"
@@ -313,6 +310,10 @@ export function ModuleAccessMatrix({ data }: { data: AdministrationData }) {
             Enregistrer ({changes.size})
           </Button>
         </div>
+        {/* Sous la ligne : dans le champ, l'aide décalerait la recherche et le bouton. */}
+        <p id="module-access-reason-aide" className="text-xs text-ink-muted">
+          Le motif est obligatoire et inscrit au journal d’audit.
+        </p>
         <p className="text-xs text-ink-muted" aria-live="polite">
           {changes.size === 0
             ? "Aucune modification en attente."
@@ -508,7 +509,7 @@ export function ModuleAccessAdministration() {
       title="Administration des accès modulaires"
       subtitle="Direction des Systèmes d’Information & Projets Métiers"
       actions={
-        <Badge variant="outline" className="border-[#D39E00]/60 text-[#0F2C59]">
+        <Badge variant="outline" className="border-warning/60 text-ink">
           <Settings2 aria-hidden />
           Administration système
         </Badge>
@@ -516,7 +517,7 @@ export function ModuleAccessAdministration() {
     >
       <div className="grid gap-5">
         <div className="flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3">
-          <span className="rounded-lg bg-[#0F2C59]/10 p-2 text-[#0F2C59]">
+          <span className="rounded-lg bg-accent-soft p-2 text-accent-ink">
             <ShieldCheck aria-hidden className="size-5" />
           </span>
           <div>

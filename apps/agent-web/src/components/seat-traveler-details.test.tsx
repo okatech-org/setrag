@@ -1,85 +1,71 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
+import { getFunctionName } from "convex/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NewSeatBlock } from "./new-seat-block"
+import { PlacesQuotas } from "./gestion/referentiels/places"
 import { SeatBlockDetail } from "./seat-block-detail"
 import { TravelerTicketDetail } from "./traveler-ticket-detail"
 
-const { action, mutation, push, queryState } = vi.hoisted(() => ({
+const { action, mutation, reponses, replace } = vi.hoisted(() => ({
   action: vi.fn().mockResolvedValue({ url: "https://example.test/billet.pdf" }),
   mutation: vi.fn().mockResolvedValue(undefined),
-  push: vi.fn(),
-  queryState: { value: undefined as unknown },
+  reponses: { parFonction: {} as Record<string, unknown> },
+  replace: vi.fn(),
 }))
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push: vi.fn(), replace }),
+  usePathname: () => "/gestion/places",
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 vi.mock("@workspace/api/hooks", () => ({
-  useQuery: (_reference: unknown, args: unknown) => {
-    if (
-      queryState.value &&
-      typeof queryState.value === "object" &&
-      "options" in queryState.value
-    ) {
-      const state = queryState.value as {
-        options: unknown
-        selected: unknown
-      }
-      return args && typeof args === "object" && "tripId" in args
-        ? state.selected
-        : state.options
-    }
-    return queryState.value
-  },
+  useQuery: (reference: Parameters<typeof getFunctionName>[0], args: unknown) =>
+    args === "skip" ? undefined : reponses.parFonction[getFunctionName(reference)],
   useMutation: () => mutation,
   useAction: () => action,
 }))
 
+vi.mock("./gestion/referentiels/droits", () => ({
+  useDroitsGestion: () => ({ role: "chef_gare", may: () => true, chargement: false, lectureModule: false, utilisateur: null }),
+}))
+
 vi.mock("./portal-guard", () => ({
-  usePortalSession: () => ({
-    profile: { user: { role: "admin_fonctionnel" } },
-  }),
+  usePortalSession: () => ({ profile: { user: { _id: "u1", firstName: "Serge", lastName: "Ndong", role: "chef_gare" } } }),
+}))
+
+vi.mock("./seller-shell", () => ({
+  SellerShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
 vi.mock("./management-detail-shell", () => ({
-  ManagementDetailShell: ({
-    title,
-    children,
-  }: {
-    title: string
-    children: React.ReactNode
-  }) => (
+  ManagementDetailShell: ({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) => (
     <main>
       <h1>{title}</h1>
+      <div>{actions}</div>
       {children}
     </main>
   ),
 }))
 
-describe("gestion des places et voyageurs", () => {
+const serge = { id: "u1", nom: "Serge Ndong", court: "S. Ndong", matricule: "G-044", role: "chef_gare" }
+
+describe("places, quotas et voyageurs", () => {
   beforeEach(() => {
     mutation.mockReset()
     mutation.mockResolvedValue(undefined)
-    action.mockClear()
-    push.mockClear()
+    reponses.parFonction = {}
   })
 
-  it("libère un blocage avec une note tracée", async () => {
-    queryState.value = {
-      block: {
-        _id: "block-1",
-        reason: "maintenance",
-        comment: "Sellerie à réparer",
-        isActive: true,
-      },
-      trip: { trainNumber: "TR-201", serviceDate: "2026-08-15" },
-      seat: { label: "1A" },
-      coach: { label: "B2" },
-      creator: { firstName: "Mireille", lastName: "Nzeng" },
+  it("débloque une place avec une note, et montre qui l'a bloquée", async () => {
+    reponses.parFonction["functions/management:getSeatBlock"] = {
+      block: { _id: "block-1", _creationTime: Date.UTC(2026, 9, 1, 9, 51), reason: "protocole", comment: "Délégation ministérielle", isActive: true },
+      trip: { _id: "trip-1", trainNumber: "E201", serviceDate: "2026-10-02" },
+      seat: { label: "3A" },
+      coach: { label: "V1" },
+      creator: { firstName: "Serge", lastName: "Ndong", matricule: "G-044" },
       releaser: null,
-      occupancy: { serviceClass: "DEUXIEME" },
+      occupancy: { serviceClass: "VIP" },
       blockedSegments: [0, 1],
       stops: [
         { stop: { sequence: 0 }, station: { name: "Owendo" } },
@@ -89,123 +75,119 @@ describe("gestion des places et voyageurs", () => {
     }
     render(<SeatBlockDetail blockId="block-1" />)
     expect(screen.getByText("Owendo → Franceville")).toBeInTheDocument()
-    expect(
-      screen.getByLabelText("Note de libération obligatoire")
-    ).toBeRequired()
+    expect(screen.getAllByText("Serge Ndong · G-044").length).toBeGreaterThan(0)
 
-    fireEvent.change(screen.getByLabelText("Note de libération obligatoire"), {
-      target: { value: "Siège réparé et contrôlé" },
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Lever le blocage" }))
-    await waitFor(() =>
-      expect(mutation).toHaveBeenCalledWith({
-        blockId: "block-1",
-        note: "Siège réparé et contrôlé",
-      })
-    )
+    fireEvent.click(screen.getByRole("button", { name: "Débloquer la place" }))
+    const dialogue = await screen.findByRole("dialog")
+    fireEvent.change(within(dialogue).getByLabelText("Note de déblocage"), { target: { value: "Délégation partie" } })
+    fireEvent.click(screen.getByRole("button", { name: "Débloquer" }))
+    await waitFor(() => expect(mutation).toHaveBeenCalledWith({ blockId: "block-1", note: "Délégation partie" }))
   })
 
-  it("crée un vrai blocage depuis le plan d'inventaire", async () => {
-    mutation.mockResolvedValue("block-2")
-    const trip = {
-      _id: "trip-1",
-      trainNumber: "TR-201",
-      serviceDate: "2026-08-15",
+  it("figure l'occupation sans la couleur seule et bloque plusieurs places d'un coup", async () => {
+    const desserte = {
+      id: "trip-1",
+      trainNumber: "E201",
+      trainName: "Express 201",
+      serviceDate: "2026-10-02",
+      heureDepart: "07:40",
+      origine: { name: "Owendo" },
+      destination: { name: "Franceville" },
+      isOpenForSale: true,
+      status: "planifie",
+      delayMinutes: 0,
     }
-    const selected = {
-      trip,
-      seats: [
+    reponses.parFonction["functions/referentiels:dessertes"] = [desserte]
+    reponses.parFonction["functions/referentiels:occupation"] = {
+      desserte,
+      arrets: [
+        { sequence: 0, station: { name: "Owendo" } },
+        { sequence: 1, station: { name: "Franceville" } },
+      ],
+      voitures: [
         {
-          seat: { _id: "seat-1", label: "1A" },
-          coach: { label: "B2" },
-          occupancy: { serviceClass: "DEUXIEME" },
+          id: "c1",
+          label: "V1",
+          serviceClass: "DEUXIEME",
+          places: [
+            { id: "s1", label: "1A", etat: "vendue" },
+            { id: "s2", label: "1B", etat: "libre" },
+            { id: "s3", label: "1C", etat: "libre" },
+            { id: "s4", label: "1D", etat: "bloquee" },
+          ],
         },
       ],
-      stops: [
-        {
-          stop: { _id: "stop-0", sequence: 0 },
-          station: { code: "OWE", name: "Owendo" },
-        },
-        {
-          stop: { _id: "stop-1", sequence: 1 },
-          station: { code: "FCV", name: "Franceville" },
-        },
+      totaux: { vendue: 1, libre: 2, bloquee: 1, quota: 0, tenue: 0 },
+      capacite: 4,
+      reserveParClasse: { VIP: 0, PREMIERE: 0, DEUXIEME: 0 },
+      disponiblesParClasse: { VIP: null, PREMIERE: null, DEUXIEME: 2 },
+      blocages: [
+        { id: "b1", place: "V1 · 1D", serviceClass: "DEUXIEME", reason: "maintenance", comment: "Tablette", portion: "Tout le parcours", isActive: true, creePar: serge, creeLe: Date.UTC(2026, 9, 1, 9), liberePar: null, libereLe: null },
       ],
+      quotas: [],
+      agences: [],
     }
-    queryState.value = {
-      options: { trips: [trip], selected: null },
-      selected: { trips: [trip], selected },
-    }
-    render(<NewSeatBlock />)
-    fireEvent.change(screen.getByLabelText("Desserte"), {
-      target: { value: "trip-1" },
-    })
-    fireEvent.change(screen.getByLabelText("Place"), {
-      target: { value: "seat-1" },
-    })
-    fireEvent.change(screen.getByLabelText("Motif détaillé obligatoire"), {
-      target: { value: "Maintenance sellerie" },
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Bloquer la place" }))
+    render(<PlacesQuotas ouvrirBlocage />)
+    expect(screen.getByText(/1 vendues, 2 libres, 1 bloquées/)).toBeInTheDocument()
+    expect(screen.getAllByText("Bloquée (hachures)").length).toBeGreaterThan(0)
 
+    const dialogue = await screen.findByRole("dialog")
+    fireEvent.change(within(dialogue).getByLabelText("Motif détaillé"), { target: { value: "Réservation protocole" } })
+    fireEvent.click(within(dialogue).getByRole("button", { name: "1B" }))
+    fireEvent.click(within(dialogue).getByRole("button", { name: "1C" }))
+    expect(within(dialogue).getByRole("button", { name: "1B" })).toHaveAttribute("aria-pressed", "true")
+    fireEvent.click(screen.getByRole("button", { name: "Bloquer 2 places" }))
     await waitFor(() =>
       expect(mutation).toHaveBeenCalledWith({
         tripId: "trip-1",
-        seatId: "seat-1",
+        seatIds: ["s2", "s3"],
         fromStopIndex: 0,
         toStopIndex: 1,
-        reason: "maintenance",
-        comment: "Maintenance sellerie",
+        reason: "exploitation",
+        comment: "Réservation protocole",
       })
     )
-    expect(push).toHaveBeenCalledWith("/gestion/places/block-2")
   })
 
-  it("affiche le billet sans proposer de suppression transactionnelle", async () => {
-    queryState.value = {
+  it("masque les téléphones du billet et n'en affiche un qu'avec un motif tracé", async () => {
+    reponses.parFonction["functions/referentiels:billetVoyageur"] = {
       ticket: {
-        number: "B-001",
-        passenger: {
-          firstName: "Ariane",
-          lastName: "Moussavou",
-          gender: "F",
-        },
+        _id: "ticket-1",
+        number: "B-4801-1",
         status: "valide",
-        coachLabel: "B2",
-        seatLabel: "1A",
-        isStanding: false,
         serviceClass: "DEUXIEME",
-        unitPriceTtc: 20_000,
+        coachLabel: "V2",
+        seatLabel: "7C",
+        isStanding: false,
+        unitPriceTtc: 28_100,
         duplicateCount: 0,
+        usedAt: null,
+        fare: { distanceKm: 648, chargeableKm: 648, ratePerKm: 43.42, discountPct: 0, appliedRules: [], roundingStep: 100 },
+        passager: { lastName: "Ella Nguema", firstName: "Paul", gender: "M", nationality: "Gabonaise" },
+        telephone: "+241 77 •• •• 21",
+        urgence: null,
       },
-      sale: {
-        number: "V-001",
-        contactPhone: "+24106123456",
-        contactEmail: "ariane@example.ga",
-      },
-      trip: { trainNumber: "TR-201", serviceDate: "2026-08-15" },
-      origin: { name: "Owendo" },
+      vente: { number: "V-OWE-0001", channel: "guichet", soldAt: Date.UTC(2026, 9, 1, 8), status: "confirmee", contactTelephone: null, contactEmail: null, vendeur: serge, pointOfSale: null },
+      desserte: null,
+      origine: { name: "Owendo" },
       destination: { name: "Franceville" },
-      customer: null,
-      scans: [],
-      baggages: [],
-      payments: [],
-      seat: { label: "1A" },
+      paiements: [],
+      controles: [],
+      bagages: [],
+      historique: [],
     }
-    vi.spyOn(window, "confirm").mockReturnValue(true)
+    mutation.mockResolvedValue({ telephone: "+241 77 12 34 21", urgence: null, contact: null })
     render(<TravelerTicketDetail ticketId="ticket-1" />)
+    expect(screen.getByRole("heading", { name: "ELLA NGUEMA Paul" })).toBeInTheDocument()
+    expect(screen.getByText("+241 77 •• •• 21")).toBeInTheDocument()
+    expect(screen.queryByText("+241 77 12 34 21")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /supprimer/i })).not.toBeInTheDocument()
 
-    expect(
-      screen.getByRole("heading", { name: "Ariane Moussavou" })
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", { name: /supprimer/i })
-    ).not.toBeInTheDocument()
-    fireEvent.click(
-      screen.getByRole("button", { name: "Émettre un duplicata tracé" })
-    )
-    await waitFor(() =>
-      expect(mutation).toHaveBeenCalledWith({ ticketId: "ticket-1" })
-    )
+    fireEvent.click(screen.getByRole("button", { name: "Afficher le téléphone en entier" }))
+    const dialogue = await screen.findByRole("dialog")
+    fireEvent.change(within(dialogue).getByLabelText("Motif de l'affichage"), { target: { value: "Retard de 2 h, prévenir le voyageur" } })
+    fireEvent.click(screen.getByRole("button", { name: "Afficher" }))
+    await waitFor(() => expect(mutation).toHaveBeenCalledWith({ ticketId: "ticket-1", motif: "Retard de 2 h, prévenir le voyageur" }))
+    expect(await screen.findByText(/\+241 77 12 34 21/)).toBeInTheDocument()
   })
 })

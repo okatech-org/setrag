@@ -81,4 +81,16 @@ crons.interval(
   {}
 )
 
+/**
+ * Quotas d'agence échus : le reliquat revient à la vente générale. La
+ * libération est planifiée à la création de chaque quota ; ce balayage
+ * horaire rattrape celles qui auraient été manquées.
+ */
+crons.interval(
+  "release expired agency quotas",
+  { hours: 1 },
+  internal.functions.referentiels.libererQuotasEchus,
+  {}
+)
+
 export default crons

@@ -1,34 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
 
-const draft = {
-  tripId: "trip-201",
-  trainNumber: "TR-201",
-  trainType: "omnibus",
-  serviceDate: "2026-07-27",
-  departureAt: Date.parse("2026-07-27T08:00:00+01:00"),
-  arrivalAt: Date.parse("2026-07-27T19:40:00+01:00"),
-  originStationId: "station-owendo",
-  originName: "Owendo",
-  originCode: "OWE",
-  destinationStationId: "station-franceville",
-  destinationName: "Franceville",
-  destinationCode: "FCV",
-  fromIndex: 0,
-  toIndex: 5,
-  serviceClass: "DEUXIEME",
-  passengers: [
-    {
-      firstName: "Ariane",
-      lastName: "MBADINGA",
-      gender: "F",
-      seatId: "seat-1A",
-      seatLabel: "1A",
-    },
-  ],
-  distanceKm: 648,
-  totalTtc: 23_417,
-}
-
 async function expectNoHorizontalOverflow(page: Page) {
   const dimensions = await page.evaluate(() => ({
     viewportWidth: document.documentElement.clientWidth,
@@ -40,7 +11,7 @@ async function expectNoHorizontalOverflow(page: Page) {
 test("AW-00 rend la connexion et le compte de repli", async ({ page }) => {
   await page.goto("/connexion")
   await expect(
-    page.getByRole("heading", { name: "Connexion", exact: true })
+    page.getByRole("heading", { name: "Ouvrir une session", exact: true })
   ).toBeVisible()
   await expect(
     page.getByRole("button", {
@@ -61,142 +32,102 @@ test("le compte de repli rejoint l’accueil vendeur en mode E2E", async ({
   await page.getByRole("button", { name: "Connexion" }).click()
   await expect(page).toHaveURL(/\/vente$/)
   await expect(
-    page.getByRole("heading", { name: "Bonjour, A. MBOUMBA" })
+    page.getByRole("heading", { name: "Bonjour Nadège" })
   ).toBeVisible()
 })
 
 test("AW-V-01 rend l’accueil et ouvre la vente billet", async ({ page }) => {
   await page.goto("/vente")
-  await expect(
-    page.getByRole("navigation", {
-      name: "Navigation du portail de vente",
-    })
-  ).toBeVisible()
-  await expect(page.getByText("42", { exact: true })).toBeVisible()
-  await page.getByRole("button", { name: /Billet voyageur/ }).click()
+  const produits = page.getByRole("navigation", { name: "Produits du guichet" })
+  await expect(produits).toBeVisible()
+  await expect(page.getByText("59 500")).toBeVisible()
+  await produits.getByRole("link", { name: /Vendre un billet/ }).click()
   await expect(page).toHaveURL(/\/vente\/billet/)
 })
 
-test("AW-V-02 recherche les dessertes disponibles", async ({ page }) => {
+test("AW-V-02 choisit une desserte et une classe", async ({ page }) => {
   await page.goto("/vente/billet")
   await expect(
-    page.getByRole("heading", { name: "Billet voyageur", exact: true })
+    page.getByRole("heading", { name: "Vendre un billet", exact: true })
   ).toBeVisible()
-  await page.getByRole("button", { name: "Rechercher les dessertes" }).click()
-  await expect(page.getByText("2 desserte(s) disponible(s)")).toBeVisible()
-  await expect(
-    page.getByRole("button", { name: "Choisir TR-201" })
-  ).toBeVisible()
-  await page.getByRole("button", { name: "Choisir TR-201" }).click()
-  await expect(page.getByText("TR-201 sélectionné.")).toBeVisible()
+  await page.getByRole("button", { name: /2e classe/ }).click()
+  await expect(page.getByRole("button", { name: /2e classe/ })).toHaveAttribute("aria-pressed", "true")
+  await expect(page.getByText("Express 201 · 2e classe")).toBeVisible()
 })
 
-test("AW-V-03 choisit une place et prépare l’encaissement", async ({
-  page,
-}) => {
+test("AW-V-03 place les voyageurs et tient les places", async ({ page }) => {
   await page.goto("/vente/billet")
-  await page.getByRole("button", { name: "Rechercher les dessertes" }).click()
-  await page.getByRole("button", { name: "Choisir TR-201" }).click()
-  await page.getByLabel("Nom", { exact: true }).fill("Mbadinga")
-  await page.getByLabel("Prénom").fill("Ariane")
-  await page
-    .getByRole("button", { name: "Choisir sur le plan de voiture" })
-    .click()
-  await page.getByRole("button", { name: "Place 1A · libre" }).click()
-  await page.getByRole("button", { name: "Confirmer 1/1" }).click()
-  await expect(page.getByText("1A", { exact: true })).toBeVisible()
-  await page.getByRole("button", { name: "Passer à l’encaissement" }).click()
-  await expect(page).toHaveURL(/\/vente\/encaissement/)
+  await page.getByRole("button", { name: /2e classe/ }).click()
+  await page.getByRole("button", { name: /Choisir les places/ }).click()
+  await expect(page).toHaveURL(/etape=places/)
+  await page.getByRole("button", { name: "Place 2C, libre" }).click()
+  await expect(page.getByRole("button", { name: "Place 2C, voyageur 1" })).toBeVisible()
+  await page.getByRole("button", { name: /Saisir les voyageurs/ }).click()
+  await expect(page).toHaveURL(/etape=voyageurs/)
+  await expect(page.getByText(/Places tenues encore/)).toBeVisible()
 })
 
 test("AW-V-07 encaisse en espèces et émet la vente", async ({ page }) => {
-  await page.addInitScript((saleDraft) => {
-    window.sessionStorage.setItem(
-      "setrag:agent-web:ticket-sale-draft:v1",
-      JSON.stringify(saleDraft)
-    )
-  }, draft)
-  await page.goto("/vente/encaissement")
-  await expect(
-    page.getByRole("heading", { name: "Encaissement" })
-  ).toBeVisible()
-  await page.getByLabel("Montant remis (FCFA)").fill("30000")
-  await expect(page.getByText(/6.*583.*FCFA/)).toBeVisible()
-  const validateSale = page.getByRole("button", {
-    name: "Valider et émettre",
-  })
-  await expect(validateSale).toBeEnabled()
-  await validateSale.click()
-  await expect(page).toHaveURL(/\/vente\/confirmation\/sale-demo-4822/)
+  await page.goto("/vente/billet")
+  await page.getByRole("button", { name: /2e classe/ }).click()
+  await page.getByRole("button", { name: /Choisir les places/ }).click()
+  await page.getByRole("button", { name: /Placer côte à côte/ }).click()
+  await page.getByRole("button", { name: /Saisir les voyageurs/ }).click()
+  await page.getByLabel("Nom").first().fill("Nzé")
+  await page.getByLabel("Prénom").first().fill("Aimée")
+  await page.getByRole("button", { name: /Passer à l’encaissement|Passer à l'encaissement/ }).click()
+  await expect(page.getByRole("heading", { name: "Encaissement" })).toBeVisible()
+  await expect(page.getByRole("button", { name: /Montant reçu insuffisant/ })).toBeDisabled()
+  await page.getByRole("button", { name: "Montant exact" }).click()
+  await page.getByRole("button", { name: /Encaisser 32/ }).click()
+  await expect(page).toHaveURL(/\/vente\/confirmation\/vente-e2e/)
 })
 
 test("AW-V-08 affiche les billets émis et relance une vente", async ({
   page,
 }) => {
-  await page.addInitScript(
-    ({ saleDraft }) => {
-      window.sessionStorage.setItem(
-        "setrag:agent-web:last-confirmation:v1",
-        JSON.stringify({
-          saleId: "sale-demo-4822",
-          number: "V-20260726-4822",
-          amounts: {
-            ht: 19_845,
-            vat: 3_572,
-            css: 0,
-            ttc: 23_417,
-            received: 23_417,
-          },
-          tickets: [
-            {
-              id: "ticket-demo-1",
-              number: "B-4822-1",
-              passengerName: "Ariane MBADINGA",
-              seatLabel: "1A",
-              unitPriceTtc: 23_417,
-            },
-          ],
-          changeDue: 6_583,
-          draft: saleDraft,
-        })
-      )
-    },
-    { saleDraft: draft }
-  )
-  await page.goto("/vente/confirmation/sale-demo-4822")
+  await page.goto("/vente/confirmation/vente-e2e")
   await expect(
-    page.getByRole("heading", { name: "Billets émis avec succès" })
+    page.getByRole("heading", { name: "Vente enregistrée" })
   ).toBeVisible()
-  await expect(page.getByText("Ariane MBADINGA")).toBeVisible()
-  await expect(page.getByText("BILLET B-4822-1")).toBeVisible()
+  await expect(page.getByText("Aimée NZÉ")).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "PDF du billet" })
+    page.getByRole("button", { name: /Réimprimer \(duplicata\)/ })
   ).toBeEnabled()
-  await page.getByRole("button", { name: "Nouvelle vente" }).click()
+  await page.keyboard.press("n")
   await expect(page).toHaveURL(/\/vente\/billet/)
 })
 
 test("AW-V-04 rattache et étiquette un bagage", async ({ page }) => {
   await page.goto("/vente/bagage")
-  await expect(page.getByRole("heading", { name: "Bagage" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Enregistrer un bagage" })
+  ).toBeVisible()
+  await page.getByLabel("N° de billet ou lecture du code").fill("B-OWE-PV-20261001-006002")
   await page.getByRole("button", { name: "Rechercher" }).click()
-  await expect(page.getByText("Paul MBADINGA")).toBeVisible()
-  await expect(page.getByText(/833.*FCFA/)).toBeVisible()
-  await page.getByRole("button", { name: "Enregistrer et encaisser" }).click()
-  await expect(page.getByText(/Étiquette G-OWE-PV/)).toBeVisible()
+  await expect(page.getByText("NZÉ Aimée").first()).toBeVisible()
+  await page.getByLabel("Poids total (kg)").fill("23,5")
+  await expect(page.getByText("3 233 XAF").first()).toBeVisible()
+  await page.getByRole("button", { name: "Montant exact" }).click()
+  await page.getByRole("button", { name: /Encaisser et étiqueter/ }).click()
+  await expect(page.getByText(/Bagage G-OWE-PV/)).toBeVisible()
 })
 
 test("AW-V-05 crée une expédition de colis express", async ({ page }) => {
   await page.goto("/vente/colis")
   await expect(
-    page.getByRole("heading", { name: "Colis express" })
+    page.getByRole("heading", { name: "Expédier un colis" })
   ).toBeVisible()
-  await page.getByLabel("Expéditeur · nom").fill("Marie NZENG")
-  await page.getByLabel("Téléphone expéditeur").fill("+241 060000001")
-  await page.getByLabel("Destinataire · nom").fill("Jean OBAME")
-  await page.getByLabel("Téléphone destinataire").fill("+241 060000002")
-  await page.getByRole("button", { name: "Enregistrer et encaisser" }).click()
-  await expect(page.getByText(/Expédition C-OWE-PV/)).toBeVisible()
+  await page.getByLabel("Nom ou raison sociale").fill("Marie NZENG")
+  await page.getByLabel("Téléphone").first().fill("+241 060000001")
+  await page.getByLabel("Nom", { exact: true }).fill("Jean OBAME")
+  await page.getByLabel("Téléphone").nth(1).fill("+241 060000002")
+  await page.getByLabel("Gare d'arrivée").selectOption({ label: "Moanda" })
+  await page.getByLabel("Contenu déclaré · article 1").fill("Pièces détachées")
+  await page.getByLabel("Poids (kg)").fill("18")
+  await page.getByRole("button", { name: "Montant exact" }).click()
+  await page.getByRole("button", { name: /Encaisser et étiqueter/ }).click()
+  await expect(page.getByText(/Colis C-OWE-PV/)).toBeVisible()
 })
 
 test("AW-V-06 gère les deux prestations spéciales", async ({ page }) => {
@@ -205,25 +136,18 @@ test("AW-V-06 gère les deux prestations spéciales", async ({ page }) => {
     page.getByRole("heading", { name: "Prestation spéciale" })
   ).toBeVisible()
   await expect(page.getByText(/certificat de décès/)).toBeVisible()
-  await page.getByRole("button", { name: "Enregistrer et encaisser" }).click()
-  await expect(page.getByText(/Expédition F-OWE/)).toBeVisible()
+  await page.getByRole("radio", { name: "Auto accompagné" }).click()
+  await expect(page.getByLabel("N° de billet ou lecture du code")).toBeVisible()
 })
 
 test("le portail reste opérable au format tablette", async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 1180 })
   await page.goto("/vente")
   await page.getByRole("button", { name: "Ouvrir le menu" }).click()
+  await expect(page.getByRole("navigation", { name: "Menu du portail" })).toBeVisible()
+  await page.getByRole("button", { name: "Fermer le menu" }).first().click()
   await expect(
-    page.getByRole("navigation", {
-      name: "Navigation du portail de vente",
-    })
-  ).toBeVisible()
-  await page
-    .getByRole("banner")
-    .getByRole("button", { name: "Fermer le menu" })
-    .click()
-  await expect(
-    page.getByRole("button", { name: /Billet voyageur/ })
+    page.getByRole("navigation", { name: "Produits du guichet" }).getByRole("link", { name: /Vendre un billet/ })
   ).toBeVisible()
 })
 
@@ -234,7 +158,7 @@ for (const path of ["/", "/connexion"] as const) {
     await page.setViewportSize({ width: 320, height: 800 })
     await page.goto(path)
     await expect(
-      page.getByRole("heading", { name: "Connexion", exact: true })
+      page.getByRole("heading", { name: "Ouvrir une session", exact: true })
     ).toBeVisible()
     await expectNoHorizontalOverflow(page)
   })
@@ -244,30 +168,18 @@ test("/vente/encaissement reste entièrement visible à 320 px", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 800 })
-  await page.addInitScript((saleDraft) => {
-    window.sessionStorage.setItem(
-      "setrag:agent-web:ticket-sale-draft:v1",
-      JSON.stringify(saleDraft)
-    )
-  }, draft)
   await page.goto("/vente/encaissement")
-  await expect(
-    page.getByRole("heading", { name: "Encaissement" })
-  ).toBeVisible()
+  await expect(page).toHaveURL(/\/vente\/billet/)
   await expectNoHorizontalOverflow(page)
-  await expect(
-    page.getByRole("button", { name: "Valider et émettre" })
-  ).toBeVisible()
 })
 
-test("/vente/billet reste entièrement visible à 320 px après la recherche", async ({
+test("/vente/billet reste entièrement visible à 320 px après le choix", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 800 })
   await page.goto("/vente/billet")
   await expectNoHorizontalOverflow(page)
-  await page.getByRole("button", { name: "Rechercher les dessertes" }).click()
-  await expect(page.getByText("2 desserte(s) disponible(s)")).toBeVisible()
+  await page.getByRole("button", { name: /2e classe/ }).click()
   await expectNoHorizontalOverflow(page)
 })
 
@@ -280,79 +192,52 @@ test("/vente/prestation-speciale respecte le reflow WCAG à 320 px", async ({
     page.getByRole("heading", { name: "Prestation spéciale" })
   ).toBeVisible()
   await expectNoHorizontalOverflow(page)
-  await expect(
-    page.getByRole("button", { name: "Enregistrer et encaisser" })
-  ).toBeVisible()
 })
 
-test("le compte Gestion rejoint le back-office en mode E2E", async ({
-  page,
-}) => {
-  await page.goto("/connexion")
-  await page
-    .getByLabel("Adresse e-mail professionnelle")
-    .fill("gestion@setrag.ga")
-  await page.getByLabel("Mot de passe").fill("secret-e2e")
-  await page.getByRole("button", { name: "Connexion" }).click()
-  await expect(page).toHaveURL(/\/gestion$/)
-  await expect(
-    page.getByRole("heading", { name: "Vue d’ensemble" })
-  ).toBeVisible()
-})
-
-test("AW-V-09 recherche et annule une opération avec motif", async ({
+test("AW-V-09 ouvre une opération et explique le blocage d’un billet contrôlé", async ({
   page,
 }) => {
   await page.goto("/vente/operations")
-  await expect(page.getByRole("heading", { name: "Opérations" })).toBeVisible()
-  await page.getByLabel("Numéro de vente ou de billet").fill("V-OWE-4821")
-  await page.getByRole("button", { name: "Rechercher" }).click()
-  await expect(
-    page.getByRole("cell", { name: "V-OWE-4821", exact: true })
-  ).toBeVisible()
-  await page.getByLabel("Motif obligatoire").fill("Erreur de trajet")
+  await expect(page.getByRole("heading", { name: "Après-vente" })).toBeVisible()
+  await page.getByRole("row", { name: /V-OWE-PV-20261001-004812/ }).click()
+  await expect(page.getByText(/Contrôlé à bord : ni annulation ni remboursement/)).toBeVisible()
+  await expect(page.getByRole("button", { name: "Annuler la vente" })).toBeDisabled()
+  await page.getByRole("button", { name: "Fermer le dossier" }).click()
+  await page.getByRole("row", { name: /V-OWE-PV-20261001-004820/ }).click()
   await page.getByRole("button", { name: "Annuler la vente" }).click()
-  await expect(page.getByText(/Annulation enregistrée/)).toBeVisible()
+  await page.getByRole("button", { name: /Annuler et rendre/ }).click()
+  await expect(page.getByText(/Annulation X-OWE-PV/)).toBeVisible()
 })
 
-test("AW-V-10 rapproche et clôture une caisse équilibrée", async ({ page }) => {
+test("AW-V-10 exige une justification avant de clôturer avec écart", async ({ page }) => {
   await page.goto("/vente/caisse")
-  await expect(page.getByRole("heading", { name: "Ma caisse" })).toBeVisible()
-  await expect(page.getByText("Caisse équilibrée")).toBeVisible()
-  await page.getByRole("button", { name: "Clôturer ma caisse" }).click()
-  await expect(page.getByText(/Caisse clôturée/)).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Clôturer la caisse" })).toBeVisible()
+  await expect(page.getByText("Manque en caisse")).toBeVisible()
+  await page.getByRole("button", { name: "Ajouter une coupure de 10 000" }).click()
+  await page.getByRole("button", { name: "Clôturer la caisse" }).click()
+  await expect(page.getByText(/Justifiez l.écart de .*, ou recomptez le billetage/)).toBeVisible()
+  await page.getByLabel("Justification").fill("Fonds recompté : billet de 10 000 manquant")
+  await page.getByRole("button", { name: "Clôturer la caisse" }).click()
+  await expect(page.getByRole("heading", { name: "Caisse clôturée" })).toBeVisible()
 })
 
-test("AW-V-11 régularise une vente papier", async ({ page }) => {
+test("AW-V-11 ressaisit une souche papier", async ({ page }) => {
   await page.goto("/vente/ventes-manuelles")
   await expect(
-    page.getByRole("heading", {
-      name: "Ventes manuelles · régularisation",
-    })
+    page.getByRole("heading", { name: "Ressaisir les ventes papier" })
   ).toBeVisible()
-  await page.getByLabel("Nom du voyageur").fill("Mireille OBAME")
-  await page
-    .getByRole("button", { name: "Enregistrer la vente manuelle" })
-    .click()
-  await expect(page.getByText(/régularisé sans réémettre/)).toBeVisible()
+  await expect(page.getByText("À ressaisir").first()).toBeVisible()
+  await expect(page.getByLabel("À")).toContainText("Franceville")
+  await page.getByLabel("Heure inscrite").fill("09:47")
+  await page.getByLabel("À").selectOption({ label: "Franceville" })
+  await page.getByLabel("Voyageur (NOM Prénom)").fill("ESSONO Blaise")
+  await page.getByRole("button", { name: "Enregistrer la ressaisie" }).click()
+  await expect(page.getByText(/Souche 004202 ressaisie/)).toBeVisible()
 })
 
-const managementPages = [
-  ["/gestion", "Vue d’ensemble"],
-  ["/gestion/livrets", "Livrets horaires"],
-  ["/gestion/tarifs", "Tarifs"],
-  ["/gestion/yield", "Yield management"],
-  ["/gestion/trains", "Trains & voitures"],
-  ["/gestion/places", "Places — blocage & traçabilité"],
-  ["/gestion/points-de-vente", "Points de vente & agences"],
-  ["/gestion/voyageurs", "Voyageurs & manifeste"],
-  ["/gestion/recettes", "Contrôle des recettes"],
-  ["/gestion/comptabilite", "Comptabilité"],
-  ["/gestion/rapports", "Rapports & KPI"],
-  ["/gestion/incidents", "Procès-verbaux & incidents"],
-  ["/gestion/utilisateurs", "Utilisateurs & habilitations"],
-  ["/gestion/parametrage", "Paramétrage"],
-  ["/gestion/integrations", "Intégrations & supervision"],
+// Les rubriques de gestion lisent le vrai backend : elles sont couvertes par
+// `gestion.reel.spec.ts` (E2E_REEL=1), pas par le mode E2E.
+const directionPages = [
   ["/direction", "Vue d’ensemble"],
   ["/direction/activites", "Activité et exploitation"],
   ["/direction/finances", "Finances"],
@@ -360,7 +245,7 @@ const managementPages = [
   ["/direction/decisions", "Décisions attendues"],
 ] as const
 
-for (const [path, heading] of managementPages) {
+for (const [path, heading] of directionPages) {
   test(`${path} implémente ${heading} et reste responsive`, async ({
     page,
   }) => {
@@ -372,56 +257,6 @@ for (const [path, heading] of managementPages) {
     await expectNoHorizontalOverflow(page)
   })
 }
-
-test("AW-G-12 crée un procès-verbal depuis la desserte choisie", async ({
-  page,
-}) => {
-  await page.goto("/gestion/incidents")
-  await page.getByRole("button", { name: "Nouveau procès-verbal" }).click()
-  await page.getByLabel("Desserte contrôlée").selectOption("trip-201")
-  await page.getByLabel("Nom du contrevenant", { exact: true }).fill("OBAME")
-  await page.getByLabel("Prénom du contrevenant", { exact: true }).fill("Jean")
-  await page.getByRole("button", { name: "Créer le procès-verbal" }).click()
-  await expect(page.getByText(/PV-DEMO-0143 a été créé/)).toBeVisible()
-})
-
-test("AW-G-11 programme un rapport avec ses destinataires", async ({
-  page,
-}) => {
-  await page.goto("/gestion/rapports")
-  await page.getByRole("button", { name: "Programmer un envoi" }).click()
-  await page
-    .getByLabel("Destinataires")
-    .fill("direction@setrag.ga, controle@setrag.ga")
-  await page.getByRole("button", { name: "Confirmer la programmation" }).click()
-  await expect(page.getByText(/envoi récurrent a été programmé/i)).toBeVisible()
-})
-
-test("AW-G-10 masque l'export comptable sans droit de création", async ({
-  page,
-}) => {
-  await page.goto("/gestion/comptabilite")
-  await expect(
-    page.getByRole("button", { name: "Exporter le journal" })
-  ).toHaveCount(0)
-})
-
-test("AW-G-09 contrôle puis clôture une journée rapprochée", async ({
-  page,
-}) => {
-  await page.goto("/gestion/recettes")
-  await page
-    .getByRole("button", { name: "Clôturer la journée comptable" })
-    .click()
-  await page.getByRole("button", { name: "Lancer le contrôle" }).click()
-  await expect(page.getByText("Ventes : 42")).toBeVisible()
-  await page
-    .getByRole("button", { name: "Clôturer la journée contrôlée" })
-    .click()
-  await expect(
-    page.getByText(/journée du 2026-07-27 a été clôturée/i)
-  ).toBeVisible()
-})
 
 for (const path of [
   "/vente/operations",

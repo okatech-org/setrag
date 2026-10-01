@@ -203,7 +203,8 @@ const MATRIX: Readonly<Record<AppRole, ResourceGrants>> = {
 
   /* Vente au comptoir. */
   vendeur_guichet: {
-    ...moduleGrants(["voyageurs"], ["voyageurs"]),
+    // GED en lecture : les notes de service s'adressent à tout le personnel.
+    ...moduleGrants(["voyageurs", "ged"], ["voyageurs"]),
     ventes: READ_CREATE,
     annulations: READ_CREATE,
     remboursements: READ,
@@ -245,7 +246,7 @@ const MATRIX: Readonly<Record<AppRole, ResourceGrants>> = {
 
   /* Contrôle à bord. */
   controleur_train: {
-    ...moduleGrants(["voyageurs", "securite"], ["securite"]),
+    ...moduleGrants(["voyageurs", "securite", "ged"], ["securite"]),
     ventes: READ_CREATE,
     controles: READ_CREATE,
     proces_verbaux: READ_CREATE,
@@ -263,7 +264,9 @@ const MATRIX: Readonly<Record<AppRole, ResourceGrants>> = {
 
   /* Contrôle des recettes et clôture de journée. */
   controleur_recettes: {
-    ...moduleGrants(["voyageurs", "finance"], ["finance"]),
+    // Copilot : ses outils de lecture (caisses à viser, écarts) servent
+    // d'abord le contrôle des recettes.
+    ...moduleGrants(["voyageurs", "finance", "copilot"], ["finance"]),
     ventes: READ,
     annulations: READ,
     remboursements: ["consulter", "valider"],
@@ -455,7 +458,32 @@ const MATRIX: Readonly<Record<AppRole, ResourceGrants>> = {
     ["cotraf", "gmao", "infrastructure", "securite"],
     ["infrastructure"]
   ),
-  chef_vente: moduleGrants(["voyageurs", "finance", "copilot"], ["voyageurs"]),
+  /* Supervision de la billetterie et des arrêtés de caisse : lit toute la
+     vente, vise les caisses et les remboursements, ne vend pas lui-même. */
+  chef_vente: {
+    ...moduleGrants(["voyageurs", "finance", "copilot"], ["voyageurs"]),
+    ventes: READ,
+    annulations: READ,
+    remboursements: ["consulter", "valider"],
+    duplicatas: READ,
+    ventes_manuelles: READ,
+    caisse: ["consulter", "valider"],
+    journee_comptable: ["consulter", "valider"],
+    journal_comptable: READ,
+    referentiel: READ,
+    livrets_horaires: READ,
+    tarifs: READ,
+    yield: READ,
+    places: READ,
+    quotas_agences: READ_WRITE,
+    // Pas de données nominatives : la supervision se fait sur les agrégats.
+    controles: READ,
+    proces_verbaux: READ,
+    incidents: READ,
+    rapports: READ_CREATE,
+    parametrage: READ,
+    integrations: READ,
+  },
   gestionnaire_litiges_fret: moduleGrants(["fret", "finance", "ged"], ["fret"]),
   comptable_auxiliaire: moduleGrants(
     ["voyageurs", "fret", "finance", "ged"],

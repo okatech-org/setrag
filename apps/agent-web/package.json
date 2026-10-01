@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:once": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:reel": "E2E_REEL=1 playwright test -c playwright.reel.config.ts"
   },
   "dependencies": {
     "@convex-dev/better-auth": "^0.12.5",

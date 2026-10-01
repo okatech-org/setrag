@@ -107,6 +107,8 @@ const financeApi = (
 const FCFA_FORMATTER = new Intl.NumberFormat("fr-FR", {
   style: "currency",
   currency: "XAF",
+  // Le code « XAF », comme partout dans la charte, plutôt que le symbole.
+  currencyDisplay: "code",
   maximumFractionDigits: 0,
 })
 
@@ -216,8 +218,8 @@ function ConfigurationPanel({
   return (
     <Card className="border-line bg-surface">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base text-[#0F2C59]">
-          <Scale aria-hidden className="size-5 text-[#D39E00]" />
+        <CardTitle className="flex items-center gap-2 text-base text-ink">
+          <Scale aria-hidden className="size-5 text-ink-muted" />
           Référentiel comptable et fiscal
         </CardTitle>
       </CardHeader>
@@ -249,7 +251,7 @@ function ConfigurationPanel({
                 href={ruleSet.legalSourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="font-semibold text-[#0F2C59] underline-offset-4 hover:underline"
+                className="font-semibold text-accent-ink underline-offset-4 hover:underline"
               >
                 {ruleSet.legalSourceLabel}
               </a>
@@ -302,8 +304,8 @@ function JournalPanel({ journal }: { journal: FinanceOverviewDto["journal"] }) {
   return (
     <Card className="min-w-0 overflow-hidden border-line bg-surface">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base text-[#0F2C59]">
-          <BookOpenCheck aria-hidden className="size-5 text-[#D39E00]" />
+        <CardTitle className="flex items-center gap-2 text-base text-ink">
+          <BookOpenCheck aria-hidden className="size-5 text-ink-muted" />
           Journal comptable validé
         </CardTitle>
       </CardHeader>
@@ -330,7 +332,7 @@ function JournalPanel({ journal }: { journal: FinanceOverviewDto["journal"] }) {
         </div>
 
         {journal.latest.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <Table>
               <TableCaption>Derniers lots comptables validés.</TableCaption>
               <TableHeader>

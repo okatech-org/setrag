@@ -1,6 +1,6 @@
 import { v } from "convex/values"
-import { mutation, query } from "../_generated/server"
-import type { Doc } from "../_generated/dataModel"
+import { mutation, query, type MutationCtx } from "../_generated/server"
+import type { Doc, Id } from "../_generated/dataModel"
 import { audit, requirePermission } from "../lib/auth"
 import {
   buildJournalEntries,
@@ -61,102 +61,143 @@ export const generateJournal = mutation({
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "journal_comptable", "creer")
-
-    const day = await ctx.db.get(args.accountingDayId)
-    if (!day) throw new Error("Journée comptable introuvable")
-    if (day.status !== "cloturee") {
-      throw new Error(
-        "Journée comptable non clôturée : déversement prématuré",
-      )
-    }
-
-    const existing = await ctx.db
-      .query("journalEntries")
-      .withIndex("by_day", (q) => q.eq("accountingDayId", args.accountingDayId))
-      .collect()
-    if (existing.length > 0) {
-      throw new Error(
-        `Journal déjà engendré pour le ${day.date} (${existing.length} ` +
-          `écritures) : régénération refusée`,
-      )
-    }
-
-    const sales = await ctx.db
-      .query("sales")
-      .withIndex("by_accounting_day", (q) =>
-        q.eq("accountingDayId", args.accountingDayId),
-      )
-      .collect()
-
-    const accountable: AccountableSale[] = []
-    for (const sale of sales) {
-      accountable.push(await toAccountableSale(ctx, sale))
-    }
-
-    const entries = buildJournalEntries(accountable, {
-      financialSite: args.financialSite ?? DEFAULT_FINANCIAL_SITE,
-      costCenter: args.costCenter,
-    })
-
-    const validation = validateJournal(entries, day.totalTtc)
-    if (!validation.balanced) {
-      throw new Error(
-        `Journal déséquilibré, déversement refusé :\n` +
-          validation.anomalies
-            .map((a) => `  • ${a.pieceNumber} — ${a.reason}`)
-            .join("\n"),
-      )
-    }
-
-    for (const entry of entries) {
-      await ctx.db.insert("journalEntries", {
-        accountingDayId: args.accountingDayId,
-        journalCode: entry.journalCode,
-        pieceNumber: entry.pieceNumber,
-        saleDate: entry.saleDate,
-        financialSite: entry.financialSite,
-        pointOfSaleCode: entry.pointOfSaleCode,
-        analyticAccount: entry.analyticAccount,
-        costCenter: entry.costCenter,
-        ht: entry.ht,
-        vat: entry.vat,
-        css: entry.css,
-        ttc: entry.ttc,
-      })
-    }
-
-    // La transmission passe par la file : rien ne se perd si SAGE est
-    // indisponible, et le rejeu est possible depuis le back-office.
-    await ctx.db.insert("outboxEvents", {
-      type: "sage_export",
-      entityId: args.accountingDayId,
-      payload: serializeJournal(entries),
-      status: "en_attente",
-      attempts: 0,
-      createdAt: Date.now(),
-    })
-
-    await ctx.db.patch(args.accountingDayId, { exportStatus: "en_attente" })
-
-    await audit(ctx, {
-      actorId: actor._id,
-      action: "comptabilite.journal",
-      entityTable: "accountingDays",
-      entityId: args.accountingDayId,
-      after: {
-        date: day.date,
-        entries: entries.length,
-        totalTtc: validation.totalTtc,
-      },
-    })
-
-    return {
-      entries: entries.length,
-      totalTtc: validation.totalTtc,
-      byAccount: summarizeByAccount(entries),
-    }
+    return await engendrerJournal(ctx, args, actor._id)
   },
 })
+
+/**
+ * Corps de `generateJournal`, partagé avec l'amorçage de démonstration
+ * (`pilotage.amorcerJourneeDemo`) : mêmes contrôles, mêmes écritures.
+ */
+export async function engendrerJournal(
+  ctx: MutationCtx,
+  args: {
+    accountingDayId: Id<"accountingDays">
+    financialSite?: string
+    costCenter?: string
+  },
+  actorId: Id<"users"> | undefined,
+) {
+  const day = await ctx.db.get(args.accountingDayId)
+  if (!day) throw new Error("Journée comptable introuvable")
+  if (day.status !== "cloturee") {
+    throw new Error(
+      "Journée comptable non clôturée : déversement prématuré",
+    )
+  }
+
+  // Un écart de caisse se vise par le contrôle des recettes avant le
+  // déversement : une recette non visée n'a rien à faire en comptabilité.
+  const nonVisees = (
+    await ctx.db
+      .query("cashSessions")
+      .withIndex("by_day", (q) => q.eq("accountingDayId", args.accountingDayId))
+      .collect()
+  ).filter((s) => s.status === "cloturee" && (s.varianceXaf ?? 0) !== 0)
+  if (nonVisees.length > 0) {
+    throw new Error(
+      `${nonVisees.length} écart(s) de caisse non visé(s) par le contrôle ` +
+        `des recettes : déversement refusé`,
+    )
+  }
+
+  const existing = await ctx.db
+    .query("journalEntries")
+    .withIndex("by_day", (q) => q.eq("accountingDayId", args.accountingDayId))
+    .collect()
+  if (existing.length > 0) {
+    throw new Error(
+      `Journal déjà engendré pour le ${day.date} (${existing.length} ` +
+        `écritures) : régénération refusée`,
+    )
+  }
+
+  const sales = await ctx.db
+    .query("sales")
+    .withIndex("by_accounting_day", (q) =>
+      q.eq("accountingDayId", args.accountingDayId),
+    )
+    .collect()
+
+  const accountable: AccountableSale[] = []
+  for (const sale of sales) {
+    accountable.push(await toAccountableSale(ctx, sale))
+  }
+
+  const entries = buildJournalEntries(accountable, {
+    financialSite: args.financialSite ?? DEFAULT_FINANCIAL_SITE,
+    costCenter: args.costCenter,
+  })
+
+  const validation = validateJournal(entries, day.totalTtc)
+  if (!validation.balanced) {
+    throw new Error(
+      `Journal déséquilibré, déversement refusé :\n` +
+        validation.anomalies
+          .map((a) => `  • ${a.pieceNumber} — ${a.reason}`)
+          .join("\n"),
+    )
+  }
+
+  for (const entry of entries) {
+    await ctx.db.insert("journalEntries", {
+      accountingDayId: args.accountingDayId,
+      journalCode: entry.journalCode,
+      pieceNumber: entry.pieceNumber,
+      saleDate: entry.saleDate,
+      financialSite: entry.financialSite,
+      pointOfSaleCode: entry.pointOfSaleCode,
+      analyticAccount: entry.analyticAccount,
+      costCenter: entry.costCenter,
+      ht: entry.ht,
+      vat: entry.vat,
+      css: entry.css,
+      ttc: entry.ttc,
+    })
+  }
+
+  // La transmission passe par la file : rien ne se perd si SAGE est
+  // indisponible, et le rejeu est possible depuis le back-office.
+  await ctx.db.insert("outboxEvents", {
+    type: "sage_export",
+    entityId: args.accountingDayId,
+    payload: serializeJournal(entries),
+    status: "en_attente",
+    attempts: 0,
+    createdAt: Date.now(),
+  })
+
+  await ctx.db.patch(args.accountingDayId, {
+    exportStatus: "en_attente",
+    journalEntryCount: entries.length,
+    journalTotalTtc: validation.totalTtc,
+    journalRefundsTtc:
+      Math.round(
+        entries
+          .filter((e) => e.ttc < 0)
+          .reduce((sum, e) => sum + Math.abs(e.ttc), 0) * 100,
+      ) / 100,
+    journalGeneratedAt: Date.now(),
+  })
+
+  await audit(ctx, {
+    actorId,
+    action: "comptabilite.journal",
+    entityTable: "accountingDays",
+    entityId: args.accountingDayId,
+    after: {
+      date: day.date,
+      entries: entries.length,
+      totalTtc: validation.totalTtc,
+    },
+  })
+
+  return {
+    entries: entries.length,
+    totalTtc: validation.totalTtc,
+    byAccount: summarizeByAccount(entries),
+  }
+}
 
 /** Journal d'une journée, avec son récapitulatif par compte. */
 export const getJournal = query({

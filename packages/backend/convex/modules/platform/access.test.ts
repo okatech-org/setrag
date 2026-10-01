@@ -659,6 +659,13 @@ describe("Niveaux d'accès modulaires", () => {
     )
     expect(matrix.modules.map(({ code }) => code)).toEqual(["fret"])
     expect(matrix.users).toHaveLength(3)
+    // La clientèle n'entre pas dans la matrice : aucun accès modulaire à régler.
+    await asRole(t, "voyageur", "delegation")
+    const sansClientele = await delegated.client.query(
+      api.modules.platform.queries.listModuleAccessAdministration,
+      {}
+    )
+    expect(sansClientele.users).toHaveLength(3)
     expect(matrix.cells).toHaveLength(3)
 
     await expect(

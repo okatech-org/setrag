@@ -43,6 +43,22 @@ Convex packagé (`packages/backend`).
   serveur, et elle n'est effacée qu'à la déconnexion explicite
   (`seDeconnecter()`) ou en ligne — hors réseau, la session paraît absente sans
   l'être. Détails : [docs/billetterie-pwa.md](docs/billetterie-pwa.md).
+- **Portail agent** (`apps/agent-web`) : un seul cadre, `src/coquille/` —
+  menu latéral à ruban (`NavRubanVertical`), fil d'Ariane, caisse en direct,
+  raccourcis clavier. Le menu se déclare dans `coquille/navigation.ts` :
+  chaque entrée porte son icône et sa touche par défaut (sauf les accueils),
+  que l'agent change ou masque sur la page `/reglages` (bloc du compte en
+  haut à droite, ou « ? » ; table `agentPreferences`) ; une touche propre à
+  un écran passe avant celle du menu. `/reglages` est commune aux deux
+  portails (`PortalGuard portal="tous"`). Une entrée n'apparaît que si le rôle ouvre la page
+  (`portal-access.ts`) ET que le module de sa ressource est activé pour le
+  compte. Une nouvelle rubrique de gestion s'ajoute aux deux fichiers. Les
+  pages se composent avec `@/components/charte` (`EnTetePage`, `Indicateur`,
+  `Panneau`, `Fiche`, `Chronologie`, `TableauDonnees`) : aucune liste sans
+  dossier ni export CSV, aucune donnée en dur dans le front. Seuls les
+  systèmes externes (SAGE X3, opérateurs de paiement, SMS, annuaire, CNSS,
+  ARTF) sont simulés, et l'écran le dit. Maquette de référence :
+  `docs/charte-setrag/agent.html`.
 - **Direction générale** : espace de lecture consolidée sur `/direction`
   (cinq volets, provenance à six états, aucune action métier). Détails :
   [docs/direction-generale.md](docs/direction-generale.md).

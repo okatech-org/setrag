@@ -299,9 +299,31 @@ describe("Tableau de bord", () => {
       to: "2026-06-09",
     })
     expect(b.revenue.netTtc).toBe(1_500)
-    expect(b.comparedTo).toEqual({ from: "2026-06-08", to: "2026-06-08" })
+    expect(b.comparedTo).toEqual({ from: "2026-06-08", to: "2026-06-08", comparable: true })
     expect(b.revenue.variation.pct).toBe(50)
     expect(b.hasData).toBe(true)
+  })
+
+  it("ne calcule pas d'évolution sur une référence incomplète", async () => {
+    const t = convexTest(schema, modules)
+    // Référence : une seule journée mesurée sur trois. Période courante :
+    // trois journées. Comparer ferait croire à un triplement.
+    await seedDay(t, "2026-06-06", [{ kind: "vente", channel: "guichet", ttc: 1_000 }])
+    for (const date of ["2026-06-07", "2026-06-08", "2026-06-09"]) {
+      await seedDay(t, date, [{ kind: "vente", channel: "guichet", ttc: 1_000 }])
+    }
+    await t.mutation(internal.functions.rollup.backfillDailyMetrics, {})
+    await drainScheduler(t)
+
+    const ctx = await asUser(t, "responsable_kpi")
+    const b = await ctx.query(api.functions.reporting.dashboard, {
+      from: "2026-06-07",
+      to: "2026-06-09",
+    })
+    expect(b.comparedTo.comparable).toBe(false)
+    expect(b.revenue.variation.previous).toBe(1_000)
+    expect(b.revenue.variation.pct).toBeNull()
+    expect(b.volume.variation.pct).toBeNull()
   })
 
   it("dit qu'il n'a pas de données plutôt que d'afficher des zéros", async () => {

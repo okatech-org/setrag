@@ -1,7 +1,7 @@
 import { v } from "convex/values"
 import { mutation, query } from "../_generated/server"
 import type { Doc, Id } from "../_generated/dataModel"
-import type { MutationCtx } from "../_generated/server"
+import type { MutationCtx, QueryCtx } from "../_generated/server"
 import { audit, requirePermission } from "../lib/auth"
 import {
   activeFareSchedule,
@@ -502,6 +502,9 @@ export async function performSale(
       contactEmail: sale.contactEmail,
       deviceId: args.deviceId,
       amounts: recorded,
+      // Le moyen n'est connu qu'au règlement : une réservation le reçoit à
+      // sa confirmation.
+      paymentMethod: sale.mode === "hold" ? undefined : args.method,
       // Une réservation n'entre en comptabilité qu'une fois réglée.
       accountingDayId: sale.mode === "hold" ? undefined : accountingDay._id,
       cashSessionId: session?._id,
@@ -652,21 +655,40 @@ export async function performSale(
 /* ─────────────── Annulations, remboursements, duplicatas ───────────────── */
 
 /**
- * Session de caisse à laquelle rattacher une écriture d'annulation ou de
- * remboursement.
+ * D'où sort l'argent d'une annulation ou d'un remboursement.
  *
- * L'argent ressort du tiroir qui l'a encaissé : on vise donc la session de la
- * vente d'origine. Si elle est déjà clôturée, l'écriture reste non rattachée
- * — modifier une caisse close fausserait un comptage déjà validé. Le montant
- * reste dans les totaux de la journée comptable dans les deux cas.
+ * - `agent` : l'agent qui opère a une caisse ouverte ; il rend l'argent de
+ *   son tiroir, l'écriture entre dans SON rapprochement (vendeur qui annule
+ *   sa vente, chef de gare qui tient lui-même une caisse) ;
+ * - `origine` : l'agent n'a pas de caisse (encadrant), mais la caisse qui a
+ *   encaissé la vente est encore ouverte ; c'est elle qui paie, sur
+ *   l'autorisation de l'encadrant, qui reste l'auteur de l'écriture ;
+ * - `hors_caisse` : aucune caisse ouverte ne peut payer (caisse d'origine
+ *   clôturée, vente en ligne) ; l'écriture n'entre dans aucun rapprochement
+ *   de guichet — modifier une caisse close fausserait un comptage déjà
+ *   validé. Elle reste dans les totaux de la journée comptable et se règle
+ *   par la caisse centrale.
  */
-async function refundCashSession(
-  ctx: MutationCtx,
-  sale: Doc<"sales">
-): Promise<Id<"cashSessions"> | undefined> {
-  if (!sale.cashSessionId) return undefined
-  const session = await ctx.db.get(sale.cashSessionId)
-  return session?.status === "ouverte" ? session._id : undefined
+export type CaisseDeSortie = "agent" | "origine" | "hors_caisse"
+
+export async function caisseDeSortie(
+  ctx: QueryCtx | MutationCtx,
+  sale: Doc<"sales">,
+  actor: Doc<"users">
+): Promise<{ mode: CaisseDeSortie; sessionId?: Id<"cashSessions"> }> {
+  const propre = await ctx.db
+    .query("cashSessions")
+    .withIndex("by_seller", (q) => q.eq("sellerId", actor._id))
+    .filter((q) => q.eq(q.field("status"), "ouverte"))
+    .first()
+  if (propre) return { mode: "agent", sessionId: propre._id }
+  if (sale.cashSessionId) {
+    const origine = await ctx.db.get(sale.cashSessionId)
+    if (origine?.status === "ouverte") {
+      return { mode: "origine", sessionId: origine._id }
+    }
+  }
+  return { mode: "hors_caisse" }
 }
 
 /**
@@ -777,13 +799,186 @@ async function invalidateSaleDocuments(
 }
 
 /**
+ * Moyen par lequel l'argent d'une annulation ou d'un remboursement ressort.
+ *
+ * Au guichet, il sort du tiroir en espèces — le rapprochement de caisse le
+ * déduit des espèces attendues. Une vente en compte fait exception : l'avoir
+ * s'impute sur le compte du client conventionné, rien ne sort du tiroir.
+ */
+function reversalMethod(sale: Doc<"sales">): Doc<"sales">["paymentMethod"] {
+  return sale.paymentMethod === "en_compte" ? "en_compte" : "especes"
+}
+
+/** Allège l'encours d'un client conventionné du montant restitué. */
+async function creditCorporateAccount(
+  ctx: MutationCtx,
+  sale: Doc<"sales">,
+  amountTtc: number
+): Promise<void> {
+  if (sale.paymentMethod !== "en_compte" || !sale.corporateAccountId) return
+  const account = await ctx.db.get(sale.corporateAccountId)
+  if (!account) return
+  await ctx.db.patch(account._id, {
+    outstandingXaf: Math.max(0, account.outstandingXaf - amountTtc),
+  })
+}
+
+export interface CancelArgs {
+  saleId: Id<"sales">
+  ticketIds?: Id<"tickets">[]
+  reason: string
+}
+
+/**
  * Annule tout ou partie d'une vente.
  *
  * L'annulation ne supprime rien : elle crée une écriture liée en montants
  * négatifs et bascule les titres concernés à l'état « annulé ». Le CDC cite
  * l'indétectabilité des billets annulés comme une faille de fraude — la
  * traçabilité est donc le point central de cette fonction.
+ *
+ * Le contrôle d'accès reste à la charge de l'appelant.
  */
+export async function performCancel(
+  ctx: MutationCtx,
+  actor: Doc<"users">,
+  args: CancelArgs
+) {
+  if (args.reason.trim().length === 0) {
+    throw new Error("Un motif d'annulation est obligatoire")
+  }
+
+  const sale = await ctx.db.get(args.saleId)
+  if (!sale) throw new Error("Vente introuvable")
+  if (sale.kind !== "vente") {
+    throw new Error("Seule une vente peut être annulée")
+  }
+  if (sale.status !== "confirmee") {
+    throw new Error(`Vente « ${sale.status} » : annulation impossible`)
+  }
+
+  const tickets = await resolveTickets(ctx, args.saleId, args.ticketIds)
+
+  // Un titre déjà contrôlé à bord bloque l'annulation, et c'est le motif
+  // le plus utile à afficher au guichet — il est donc vérifié en premier.
+  const utilises = tickets.filter((t) => t.status === "utilise")
+  if (utilises.length > 0) {
+    throw new Error(
+      `${utilises.length} titre(s) déjà contrôlé(s) à bord : annulation ` +
+        `impossible`
+    )
+  }
+
+  const actifs = tickets.filter((t) => t.status === "valide")
+  if (actifs.length === 0) {
+    throw new Error("Aucun titre valide à annuler dans cette vente")
+  }
+
+  const trip = await ctx.db.get(actifs[0]!.tripId)
+  if (!trip) throw new Error("Desserte introuvable")
+
+  await releaseTicketsInventory(ctx, actifs, trip)
+  await invalidateSaleDocuments(ctx, sale, actifs)
+  for (const ticket of actifs) {
+    await ctx.db.patch(ticket._id, {
+      status: "annule",
+      pdfStorageId: undefined,
+    })
+  }
+
+  const annuleTtc = actifs.reduce((sum, t) => sum + t.unitPriceTtc, 0)
+  const schedule = await ctx.db
+    .query("fareSchedules")
+    .withIndex("by_status", (q) => q.eq("status", "actif"))
+    .first()
+  const positif = buildAmounts(
+    annuleTtc,
+    schedule?.vatPct ?? 0,
+    schedule?.cssPct ?? 0,
+    annuleTtc
+  )
+
+  const now = Date.now()
+  const serviceDate = toServiceDate(now)
+  const pointOfSale = sale.pointOfSaleId
+    ? await ctx.db.get(sale.pointOfSaleId)
+    : null
+  const code = pointOfSale?.code ?? "SYS"
+  const seq = await nextSequence(
+    ctx,
+    sequenceKey(code, serviceDate, "annulation")
+  )
+  const day = await currentAccountingDay(ctx)
+  const sortie = await caisseDeSortie(ctx, sale, actor)
+  const number = formatNumber("annulation", code, serviceDate, seq)
+
+  const cancellationId = await ctx.db.insert("sales", {
+    number,
+    kind: "annulation",
+    product: sale.product,
+    channel: sale.channel,
+    status: "confirmee",
+    pointOfSaleId: sale.pointOfSaleId,
+    sellerId: actor._id,
+    customerId: sale.customerId,
+    corporateAccountId: sale.corporateAccountId,
+    amounts: negateAmounts(positif),
+    paymentMethod: reversalMethod(sale),
+    accountingDayId: day._id,
+    cashSessionId: sortie.sessionId,
+    originSaleId: args.saleId,
+    refundReason: args.reason,
+    soldAt: now,
+    cancelledAt: now,
+  })
+  await creditCorporateAccount(ctx, sale, positif.ttc)
+
+  // La vente d'origine bascule seulement si tous ses titres sont annulés.
+  const restants = (
+    await ctx.db
+      .query("tickets")
+      .withIndex("by_sale", (q) => q.eq("saleId", args.saleId))
+      .collect()
+  ).filter((t) => t.status === "valide")
+  if (restants.length === 0) {
+    await ctx.db.patch(args.saleId, {
+      status: "annulee",
+      cancelledAt: now,
+    })
+  }
+
+  await ctx.db.patch(day._id, {
+    totalTtc: day.totalTtc - positif.ttc,
+    totalReceived: day.totalReceived - positif.received,
+  })
+
+  await audit(ctx, {
+    actorId: actor._id,
+    action: "vente.annuler",
+    entityTable: "sales",
+    entityId: args.saleId,
+    before: { status: sale.status, ttc: sale.amounts.ttc },
+    after: {
+      cancellationId,
+      number,
+      tickets: actifs.length,
+      reason: args.reason,
+      partial: restants.length > 0,
+      caisse: sortie.mode,
+    },
+  })
+
+  return {
+    cancellationId,
+    number,
+    cancelledTickets: actifs.length,
+    amountTtc: -positif.ttc,
+    partial: restants.length > 0,
+    paymentMethod: reversalMethod(sale),
+    caisse: sortie.mode,
+  }
+}
+
 export const cancel = mutation({
   args: {
     saleId: v.id("sales"),
@@ -792,139 +987,172 @@ export const cancel = mutation({
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "annulations", "creer")
-    if (args.reason.trim().length === 0) {
-      throw new Error("Un motif d'annulation est obligatoire")
-    }
-
-    const sale = await ctx.db.get(args.saleId)
-    if (!sale) throw new Error("Vente introuvable")
-    if (sale.kind !== "vente") {
-      throw new Error("Seule une vente peut être annulée")
-    }
-    if (sale.status !== "confirmee") {
-      throw new Error(`Vente « ${sale.status} » : annulation impossible`)
-    }
-
-    const tickets = await resolveTickets(ctx, args.saleId, args.ticketIds)
-
-    // Un titre déjà contrôlé à bord bloque l'annulation, et c'est le motif
-    // le plus utile à afficher au guichet — il est donc vérifié en premier.
-    const utilises = tickets.filter((t) => t.status === "utilise")
-    if (utilises.length > 0) {
-      throw new Error(
-        `${utilises.length} titre(s) déjà contrôlé(s) à bord : annulation ` +
-          `impossible`
-      )
-    }
-
-    const actifs = tickets.filter((t) => t.status === "valide")
-    if (actifs.length === 0) {
-      throw new Error("Aucun titre valide à annuler dans cette vente")
-    }
-
-    const trip = await ctx.db.get(actifs[0]!.tripId)
-    if (!trip) throw new Error("Desserte introuvable")
-
-    await releaseTicketsInventory(ctx, actifs, trip)
-    await invalidateSaleDocuments(ctx, sale, actifs)
-    for (const ticket of actifs) {
-      await ctx.db.patch(ticket._id, {
-        status: "annule",
-        pdfStorageId: undefined,
-      })
-    }
-
-    const annuleTtc = actifs.reduce((sum, t) => sum + t.unitPriceTtc, 0)
-    const schedule = await ctx.db
-      .query("fareSchedules")
-      .withIndex("by_status", (q) => q.eq("status", "actif"))
-      .first()
-    const positif = buildAmounts(
-      annuleTtc,
-      schedule?.vatPct ?? 0,
-      schedule?.cssPct ?? 0,
-      annuleTtc
-    )
-
-    const now = Date.now()
-    const serviceDate = toServiceDate(now)
-    const pointOfSale = sale.pointOfSaleId
-      ? await ctx.db.get(sale.pointOfSaleId)
-      : null
-    const code = pointOfSale?.code ?? "SYS"
-    const seq = await nextSequence(
-      ctx,
-      sequenceKey(code, serviceDate, "annulation")
-    )
-    const day = await currentAccountingDay(ctx)
-
-    const cancellationId = await ctx.db.insert("sales", {
-      number: formatNumber("annulation", code, serviceDate, seq),
-      kind: "annulation",
-      product: sale.product,
-      channel: sale.channel,
-      status: "confirmee",
-      pointOfSaleId: sale.pointOfSaleId,
-      sellerId: actor._id,
-      customerId: sale.customerId,
-      amounts: negateAmounts(positif),
-      accountingDayId: day._id,
-      cashSessionId: await refundCashSession(ctx, sale),
-      originSaleId: args.saleId,
-      refundReason: args.reason,
-      soldAt: now,
-      cancelledAt: now,
-    })
-
-    // La vente d'origine bascule seulement si tous ses titres sont annulés.
-    const restants = (
-      await ctx.db
-        .query("tickets")
-        .withIndex("by_sale", (q) => q.eq("saleId", args.saleId))
-        .collect()
-    ).filter((t) => t.status === "valide")
-    if (restants.length === 0) {
-      await ctx.db.patch(args.saleId, {
-        status: "annulee",
-        cancelledAt: now,
-      })
-    }
-
-    await ctx.db.patch(day._id, {
-      totalTtc: day.totalTtc - positif.ttc,
-      totalReceived: day.totalReceived - positif.received,
-    })
-
-    await audit(ctx, {
-      actorId: actor._id,
-      action: "vente.annuler",
-      entityTable: "sales",
-      entityId: args.saleId,
-      before: { status: sale.status, ttc: sale.amounts.ttc },
-      after: {
-        cancellationId,
-        tickets: actifs.length,
-        reason: args.reason,
-        partial: restants.length > 0,
-      },
-    })
-
-    return {
-      cancellationId,
-      cancelledTickets: actifs.length,
-      amountTtc: -positif.ttc,
-      partial: restants.length > 0,
-    }
+    return await performCancel(ctx, actor, args)
   },
 })
+
+export interface RefundArgs {
+  saleId: Id<"sales">
+  ticketIds?: Id<"tickets">[]
+  reason: string
+  penaltyPct: number
+}
 
 /**
  * Rembourse tout ou partie d'une vente, pénalité déduite.
  *
  * Le taux de pénalité vient du paramétrage d'exploitation (CDC §8.5), il
- * n'est jamais codé en dur : il est passé par l'appelant, qui l'a lu dans le
- * motif de remboursement choisi au guichet.
+ * n'est jamais codé en dur : l'appelant le lit dans le motif et le délai
+ * avant départ. Un titre contrôlé à bord a servi : il ne se rembourse plus.
+ *
+ * Le contrôle d'accès reste à la charge de l'appelant.
  */
+export async function performRefund(
+  ctx: MutationCtx,
+  actor: Doc<"users">,
+  args: RefundArgs
+) {
+  if (args.reason.trim().length === 0) {
+    throw new Error("Un motif de remboursement est obligatoire")
+  }
+
+  const sale = await ctx.db.get(args.saleId)
+  if (!sale) throw new Error("Vente introuvable")
+  if (sale.kind !== "vente") {
+    throw new Error("Seule une vente peut être remboursée")
+  }
+  if (sale.status === "remboursee") {
+    throw new Error("Vente déjà remboursée")
+  }
+
+  const tickets = await resolveTickets(ctx, args.saleId, args.ticketIds)
+  // Demandé explicitement, un titre contrôlé bloque tout : le guichet doit
+  // savoir pourquoi, plutôt que voir ce titre ignoré en silence.
+  if (args.ticketIds && args.ticketIds.length > 0) {
+    const utilises = tickets.filter((t) => t.status === "utilise")
+    if (utilises.length > 0) {
+      throw new Error(
+        `${utilises.length} titre(s) déjà contrôlé(s) à bord : ` +
+          `remboursement impossible`
+      )
+    }
+  }
+  const remboursables = tickets.filter((t) => t.status === "valide")
+  if (remboursables.length === 0) {
+    throw new Error(
+      tickets.some((t) => t.status === "utilise")
+        ? "Titre déjà contrôlé à bord : remboursement impossible"
+        : "Aucun titre remboursable dans cette vente"
+    )
+  }
+
+  const trip = await ctx.db.get(remboursables[0]!.tripId)
+  if (!trip) throw new Error("Desserte introuvable")
+
+  await releaseTicketsInventory(ctx, remboursables, trip)
+  await invalidateSaleDocuments(ctx, sale, remboursables)
+  for (const ticket of remboursables) {
+    await ctx.db.patch(ticket._id, {
+      status: "rembourse",
+      pdfStorageId: undefined,
+    })
+  }
+
+  const payeTtc = remboursables.reduce((sum, t) => sum + t.unitPriceTtc, 0)
+  const rembourseTtc = refundAmount(payeTtc, args.penaltyPct)
+
+  const schedule = await ctx.db
+    .query("fareSchedules")
+    .withIndex("by_status", (q) => q.eq("status", "actif"))
+    .first()
+  const positif = buildAmounts(
+    rembourseTtc,
+    schedule?.vatPct ?? 0,
+    schedule?.cssPct ?? 0,
+    rembourseTtc
+  )
+
+  const now = Date.now()
+  const serviceDate = toServiceDate(now)
+  const pointOfSale = sale.pointOfSaleId
+    ? await ctx.db.get(sale.pointOfSaleId)
+    : null
+  const code = pointOfSale?.code ?? "SYS"
+  const seq = await nextSequence(
+    ctx,
+    sequenceKey(code, serviceDate, "remboursement")
+  )
+  const day = await currentAccountingDay(ctx)
+  const sortie = await caisseDeSortie(ctx, sale, actor)
+  const number = formatNumber("remboursement", code, serviceDate, seq)
+
+  const refundId = await ctx.db.insert("sales", {
+    number,
+    kind: "remboursement",
+    product: sale.product,
+    channel: sale.channel,
+    status: "confirmee",
+    pointOfSaleId: sale.pointOfSaleId,
+    sellerId: actor._id,
+    customerId: sale.customerId,
+    corporateAccountId: sale.corporateAccountId,
+    amounts: negateAmounts(positif),
+    paymentMethod: reversalMethod(sale),
+    accountingDayId: day._id,
+    cashSessionId: sortie.sessionId,
+    originSaleId: args.saleId,
+    refundReason: args.reason,
+    penaltyPct: args.penaltyPct,
+    soldAt: now,
+  })
+  await creditCorporateAccount(ctx, sale, positif.ttc)
+
+  const restants = (
+    await ctx.db
+      .query("tickets")
+      .withIndex("by_sale", (q) => q.eq("saleId", args.saleId))
+      .collect()
+  ).filter((t) => t.status === "valide")
+  if (restants.length === 0) {
+    await ctx.db.patch(args.saleId, { status: "remboursee" })
+  }
+
+  await ctx.db.patch(day._id, {
+    totalTtc: day.totalTtc - positif.ttc,
+    totalReceived: day.totalReceived - positif.received,
+  })
+
+  await audit(ctx, {
+    actorId: actor._id,
+    action: "vente.rembourser",
+    entityTable: "sales",
+    entityId: args.saleId,
+    before: { paidTtc: payeTtc },
+    after: {
+      refundId,
+      number,
+      tickets: remboursables.length,
+      penaltyPct: args.penaltyPct,
+      refundedTtc: rembourseTtc,
+      reason: args.reason,
+      caisse: sortie.mode,
+    },
+  })
+
+  return {
+    refundId,
+    number,
+    refundedTickets: remboursables.length,
+    paidTtc: payeTtc,
+    penaltyPct: args.penaltyPct,
+    refundedTtc: rembourseTtc,
+    partial: restants.length > 0,
+    paymentMethod: reversalMethod(sale),
+    caisse: sortie.mode,
+  }
+}
+
+/** Rembourse une vente — pénalité fournie par l'appelant (paramétrage). */
 export const refund = mutation({
   args: {
     saleId: v.id("sales"),
@@ -934,119 +1162,7 @@ export const refund = mutation({
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "remboursements", "creer")
-    if (args.reason.trim().length === 0) {
-      throw new Error("Un motif de remboursement est obligatoire")
-    }
-
-    const sale = await ctx.db.get(args.saleId)
-    if (!sale) throw new Error("Vente introuvable")
-    if (sale.kind !== "vente") {
-      throw new Error("Seule une vente peut être remboursée")
-    }
-    if (sale.status === "remboursee") {
-      throw new Error("Vente déjà remboursée")
-    }
-
-    const tickets = await resolveTickets(ctx, args.saleId, args.ticketIds)
-    const remboursables = tickets.filter((t) => t.status === "valide")
-    if (remboursables.length === 0) {
-      throw new Error("Aucun titre remboursable dans cette vente")
-    }
-
-    const trip = await ctx.db.get(remboursables[0]!.tripId)
-    if (!trip) throw new Error("Desserte introuvable")
-
-    await releaseTicketsInventory(ctx, remboursables, trip)
-    await invalidateSaleDocuments(ctx, sale, remboursables)
-    for (const ticket of remboursables) {
-      await ctx.db.patch(ticket._id, {
-        status: "rembourse",
-        pdfStorageId: undefined,
-      })
-    }
-
-    const payeTtc = remboursables.reduce((sum, t) => sum + t.unitPriceTtc, 0)
-    const rembourseTtc = refundAmount(payeTtc, args.penaltyPct)
-
-    const schedule = await ctx.db
-      .query("fareSchedules")
-      .withIndex("by_status", (q) => q.eq("status", "actif"))
-      .first()
-    const positif = buildAmounts(
-      rembourseTtc,
-      schedule?.vatPct ?? 0,
-      schedule?.cssPct ?? 0,
-      rembourseTtc
-    )
-
-    const now = Date.now()
-    const serviceDate = toServiceDate(now)
-    const pointOfSale = sale.pointOfSaleId
-      ? await ctx.db.get(sale.pointOfSaleId)
-      : null
-    const code = pointOfSale?.code ?? "SYS"
-    const seq = await nextSequence(
-      ctx,
-      sequenceKey(code, serviceDate, "remboursement")
-    )
-    const day = await currentAccountingDay(ctx)
-
-    const refundId = await ctx.db.insert("sales", {
-      number: formatNumber("remboursement", code, serviceDate, seq),
-      kind: "remboursement",
-      product: sale.product,
-      channel: sale.channel,
-      status: "confirmee",
-      pointOfSaleId: sale.pointOfSaleId,
-      sellerId: actor._id,
-      customerId: sale.customerId,
-      amounts: negateAmounts(positif),
-      accountingDayId: day._id,
-      cashSessionId: await refundCashSession(ctx, sale),
-      originSaleId: args.saleId,
-      refundReason: args.reason,
-      penaltyPct: args.penaltyPct,
-      soldAt: now,
-    })
-
-    const restants = (
-      await ctx.db
-        .query("tickets")
-        .withIndex("by_sale", (q) => q.eq("saleId", args.saleId))
-        .collect()
-    ).filter((t) => t.status === "valide")
-    if (restants.length === 0) {
-      await ctx.db.patch(args.saleId, { status: "remboursee" })
-    }
-
-    await ctx.db.patch(day._id, {
-      totalTtc: day.totalTtc - positif.ttc,
-      totalReceived: day.totalReceived - positif.received,
-    })
-
-    await audit(ctx, {
-      actorId: actor._id,
-      action: "vente.rembourser",
-      entityTable: "sales",
-      entityId: args.saleId,
-      before: { paidTtc: payeTtc },
-      after: {
-        refundId,
-        tickets: remboursables.length,
-        penaltyPct: args.penaltyPct,
-        refundedTtc: rembourseTtc,
-        reason: args.reason,
-      },
-    })
-
-    return {
-      refundId,
-      refundedTickets: remboursables.length,
-      paidTtc: payeTtc,
-      penaltyPct: args.penaltyPct,
-      refundedTtc: rembourseTtc,
-      partial: restants.length > 0,
-    }
+    return await performRefund(ctx, actor, args)
   },
 })
 

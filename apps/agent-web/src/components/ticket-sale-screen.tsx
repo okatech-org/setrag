@@ -1,927 +1,542 @@
 "use client"
 
-import {
-  Armchair,
-  ArrowLeft,
-  ArrowRight,
-  CalendarDays,
-  CreditCard,
-  TrainFront,
-  UserRound,
-} from "lucide-react"
+import { Banknote, Building2, CreditCard, Send, Smartphone, TriangleAlert, X } from "lucide-react"
 import type { Route } from "next"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { FormEvent, useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useCallback, useEffect, useRef, useState } from "react"
 
-import { authClient } from "@workspace/api/auth-client"
-import { useAuth, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
-import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
-import { Card } from "@workspace/ui/components/card"
-import { Field, Input, SelectNative } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
 
-import { useOnlineStatus } from "@/hooks/use-online-status"
+import { signalerNavigation } from "@/coquille/filet-navigation"
+import { MOYENS, libelleClasse, nomTrain, xaf, type ChoixMoyen } from "@/lib/agent-data"
 import {
-  DEMO_DASHBOARD,
-  DEMO_SEATS,
-  DEMO_STATIONS,
-  DEMO_TRIPS,
-  type SalePassenger,
-  type SeatMapItem,
-  type SellerDashboardData,
-  type ServiceClass,
-  type StationSummary,
-  type TripSearchResult,
-} from "@/lib/agent-data"
-import { formatTime } from "@/lib/format"
-import { saveTicketSaleDraft } from "@/lib/sale-draft"
-import { SeatMapDialog } from "./seat-map-dialog"
-import { SellerShell } from "./seller-shell"
+  effacerBrouillonVente,
+  signatureTenue,
+  useBrouillonVente,
+  type BrouillonVente,
+  type VoyageurBrouillon,
+} from "@/lib/sale-draft"
 
-const E2E_MODE =
-  process.env.NODE_ENV !== "production" &&
-  process.env.NEXT_PUBLIC_E2E_MODE === "1"
+import { CadreGuichet, ChargementEcran, useGuichet } from "./guichet/cadre"
+import { POSTE, messageErreur, useEcriture, useLecture, type Desserte, type Paiement } from "./guichet/donnees"
+import { BarreVente, CaisseFermee, EnTeteTunnel, HorsReseau } from "./guichet/elements"
+import {
+  AttentePaiement,
+  REGLEMENT_INITIAL,
+  estADistance,
+  moyenBackend,
+  reglementPret,
+  saisirChiffre,
+  type EtatReglement,
+} from "./guichet/reglement"
+import { EtapeEncaissement } from "./guichet/tunnel-encaissement"
+import { EtapePlaces } from "./guichet/tunnel-places"
+import { EtapeTrajet } from "./guichet/tunnel-trajet"
+import { EtapeVoyageurs } from "./guichet/tunnel-voyageurs"
+import {
+  brouillonInitial,
+  comptesDepuis,
+  ordreCategories,
+  resumeVente,
+  voyageursPourComptes,
+} from "./guichet/vente-billet"
 
-export interface TicketSearchCriteria {
-  originStationId: string
-  destinationStationId: string
-  serviceDate: string
-  passengers: number
+/**
+ * Vente d'un billet au guichet : Trajet → Places → Voyageurs → Encaissement.
+ *
+ * Les étapes vivent dans l'adresse (`?etape=`) : le bouton Retour du
+ * navigateur remonte le tunnel. La saisie est gardée dans l'onglet, la tenue
+ * des places dans Convex.
+ */
+
+type Etape = "trajet" | "places" | "voyageurs" | "encaissement"
+const ETAPES: readonly Etape[] = ["trajet", "places", "voyageurs", "encaissement"]
+
+const ICONE_MOYEN: Record<ChoixMoyen, typeof Banknote> = {
+  especes: Banknote,
+  airtel_money: Smartphone,
+  moov_money: Smartphone,
+  carte: CreditCard,
+  clickpay: Send,
+  en_compte: Building2,
 }
 
-interface TicketSearchFormProps {
-  stations: StationSummary[]
-  disabled?: boolean
-  onSearch: (criteria: TicketSearchCriteria) => void
+/** Heure courante, rafraîchie chaque seconde tant qu'une tenue court. */
+function useMaintenant(actif: boolean) {
+  const [maintenant, setMaintenant] = useState(() => Date.now())
+  useEffect(() => {
+    if (!actif) return
+    const minuterie = window.setInterval(() => setMaintenant(Date.now()), 1000)
+    return () => window.clearInterval(minuterie)
+  }, [actif])
+  return maintenant
 }
 
-function defaultServiceDate() {
-  const date = new Date()
-  date.setDate(date.getDate() + 1)
-  return date.toISOString().slice(0, 10)
+function tousPlaces(brouillon: BrouillonVente) {
+  return brouillon.voyageurs.every((v) => Boolean(v.seatId))
 }
 
-export function TicketSearchForm({
-  stations,
-  disabled,
-  onSearch,
-}: TicketSearchFormProps) {
-  const [origin, setOrigin] = useState(stations[0]?.id ?? "")
-  const [destination, setDestination] = useState(stations.at(-1)?.id ?? "")
-  const [serviceDate, setServiceDate] = useState(defaultServiceDate)
-  const [passengers, setPassengers] = useState("1")
-  const [error, setError] = useState("")
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!origin || !destination) {
-      setError("Sélectionnez une gare de départ et une gare d’arrivée.")
-      return
-    }
-    if (origin === destination) {
-      setError("Les gares de départ et d’arrivée doivent être différentes.")
-      return
-    }
-    const count = Number(passengers)
-    if (!Number.isInteger(count) || count < 1 || count > 9) {
-      setError("Le nombre de voyageurs doit être compris entre 1 et 9.")
-      return
-    }
-    setError("")
-    onSearch({
-      originStationId: origin,
-      destinationStationId: destination,
-      serviceDate,
-      passengers: count,
-    })
-  }
-
-  return (
-    <Card className="min-w-0 gap-5 p-4 shadow-none sm:p-5">
-      <form className="grid min-w-0 gap-4 lg:grid-cols-4" onSubmit={submit}>
-        <Field label="Gare de départ" htmlFor="origin-station">
-          <SelectNative
-            id="origin-station"
-            value={origin}
-            onChange={(event) => setOrigin(event.target.value)}
-            disabled={disabled}
-          >
-            {stations.map((station) => (
-              <option key={station.id} value={station.id}>
-                {station.name} ({station.code})
-              </option>
-            ))}
-          </SelectNative>
-        </Field>
-
-        <Field label="Gare d’arrivée" htmlFor="destination-station">
-          <SelectNative
-            id="destination-station"
-            value={destination}
-            onChange={(event) => setDestination(event.target.value)}
-            disabled={disabled}
-          >
-            {stations.map((station) => (
-              <option key={station.id} value={station.id}>
-                {station.name} ({station.code})
-              </option>
-            ))}
-          </SelectNative>
-        </Field>
-
-        <Field label="Date de voyage" htmlFor="service-date">
-          <Input
-            id="service-date"
-            type="date"
-            value={serviceDate}
-            onChange={(event) => setServiceDate(event.target.value)}
-            disabled={disabled}
-            required
-          />
-        </Field>
-
-        <Field label="Voyageurs" htmlFor="passengers">
-          <Input
-            id="passengers"
-            type="number"
-            min={1}
-            max={9}
-            inputMode="numeric"
-            value={passengers}
-            onChange={(event) => setPassengers(event.target.value)}
-            disabled={disabled}
-            required
-          />
-        </Field>
-
-        {error ? (
-          <InlineMessage
-            className="lg:col-span-4"
-            tone="danger"
-            title="Recherche impossible."
-          >
-            {error}
-          </InlineMessage>
-        ) : null}
-
-        <div className="flex min-w-0 justify-end lg:col-span-4">
-          <Button
-            type="submit"
-            size="lg"
-            disabled={disabled}
-            className="h-auto min-h-13 w-full min-w-0 py-3 text-center whitespace-normal sm:w-auto"
-          >
-            Rechercher les dessertes
-            <ArrowRight />
-          </Button>
-        </div>
-      </form>
-    </Card>
-  )
-}
-
-export function TripSearchResults({
-  results,
-  loading,
-  searched,
-  onSelect,
-}: {
-  results: TripSearchResult[]
-  loading: boolean
-  searched: boolean
-  onSelect: (trip: TripSearchResult) => void
-}) {
-  if (loading) {
-    return (
-      <p role="status" className="text-small py-8 text-center text-ink-muted">
-        Recherche des dessertes et des disponibilités…
-      </p>
-    )
-  }
-  if (!searched) {
-    return (
-      <Card className="items-center gap-3 border-dashed p-8 text-center shadow-none">
-        <CalendarDays className="size-8 text-accent-ink" />
-        <p className="font-semibold">Renseignez le trajet du voyageur.</p>
-        <p className="text-small max-w-lg text-ink-muted">
-          Les disponibilités affichées proviennent de l’inventaire Convex et
-          couvrent l’intégralité du segment demandé.
-        </p>
-      </Card>
-    )
-  }
-  if (results.length === 0) {
-    return (
-      <InlineMessage tone="warning" title="Aucune desserte disponible.">
-        Essayez une autre date ou un autre trajet.
-      </InlineMessage>
-    )
-  }
-
-  return (
-    <div className="grid min-w-0 gap-3">
-      <p className="text-small font-semibold">
-        {results.length} desserte(s) disponible(s)
-      </p>
-      {results.map((result) => (
-        <Card
-          key={result.id}
-          className="grid min-w-0 gap-5 p-4 shadow-none sm:p-5 lg:grid-cols-[1.2fr_1fr_auto] lg:items-center"
-        >
-          <div className="flex min-w-0 flex-wrap items-center gap-4">
-            <span className="flex size-11 items-center justify-center rounded-md bg-accent-soft text-accent-ink">
-              <TrainFront />
-            </span>
-            <div>
-              <p className="text-h4">{result.trainNumber}</p>
-              <p className="text-small text-ink-muted">{result.trainType}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div>
-              <p className="tabular text-time">
-                {formatTime(result.departureAt)}
-              </p>
-              <p className="text-caption text-ink-muted">départ</p>
-            </div>
-            <ArrowRight className="size-5 text-ink-muted" />
-            <div>
-              <p className="tabular text-time">
-                {formatTime(result.arrivalAt)}
-              </p>
-              <p className="text-caption text-ink-muted">arrivée</p>
-            </div>
-          </div>
-
-          <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 lg:justify-end">
-            {result.cancelled ? (
-              <Badge variant="destructive">Supprimée</Badge>
-            ) : (
-              Object.entries(result.availableByClass).map(
-                ([serviceClass, available]) => (
-                  <Badge
-                    key={serviceClass}
-                    variant={available > 0 ? "success" : "secondary"}
-                  >
-                    {serviceClass.toLowerCase()} · {available}
-                  </Badge>
-                )
-              )
-            )}
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!result.hasAvailability}
-              onClick={() => onSelect(result)}
-            >
-              Choisir {result.trainNumber}
-            </Button>
-          </div>
-        </Card>
-      ))}
-    </div>
-  )
-}
-
-interface CounterSaleQuote {
-  distanceKm: number
-  available: number
-  hasAvailability: boolean
-  totalTtc: number
-  lines: Array<{
-    unitPriceTtc: number
-    quotaLabel?: string
-    appliedRules: string[]
-  }>
-}
-
-export function PassengerDetails({
-  passengers,
-  onChange,
-}: {
-  passengers: SalePassenger[]
-  onChange: (index: number, passenger: SalePassenger) => void
-}) {
-  return (
-    <div className="grid gap-3">
-      {passengers.map((passenger, index) => (
-        <Card key={index} className="gap-4 p-5 shadow-none">
-          <div className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-full bg-accent-soft text-accent-ink">
-              <UserRound />
-            </span>
-            <h3 className="text-h4">Voyageur {index + 1}</h3>
-            {passenger.seatLabel ? (
-              <Badge variant="success" className="ml-auto">
-                place {passenger.seatLabel}
-              </Badge>
-            ) : null}
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Field label="Nom" htmlFor={`passenger-${index}-last-name`}>
-              <Input
-                id={`passenger-${index}-last-name`}
-                value={passenger.lastName}
-                autoComplete="family-name"
-                required
-                onChange={(event) =>
-                  onChange(index, {
-                    ...passenger,
-                    lastName: event.target.value.toUpperCase(),
-                  })
-                }
-              />
-            </Field>
-            <Field label="Prénom" htmlFor={`passenger-${index}-first-name`}>
-              <Input
-                id={`passenger-${index}-first-name`}
-                value={passenger.firstName}
-                autoComplete="given-name"
-                required
-                onChange={(event) =>
-                  onChange(index, {
-                    ...passenger,
-                    firstName: event.target.value,
-                  })
-                }
-              />
-            </Field>
-            <Field label="Genre" htmlFor={`passenger-${index}-gender`}>
-              <SelectNative
-                id={`passenger-${index}-gender`}
-                value={passenger.gender}
-                onChange={(event) =>
-                  onChange(index, {
-                    ...passenger,
-                    gender: event.target.value as "M" | "F",
-                  })
-                }
-              >
-                <option value="F">Femme</option>
-                <option value="M">Homme</option>
-              </SelectNative>
-            </Field>
-            <Field
-              label="Téléphone d’urgence"
-              htmlFor={`passenger-${index}-emergency`}
-              hint="Recommandé pour prévenir un proche."
-            >
-              <Input
-                id={`passenger-${index}-emergency`}
-                type="tel"
-                value={passenger.emergencyPhone ?? ""}
-                placeholder="+241 06…"
-                onChange={(event) =>
-                  onChange(index, {
-                    ...passenger,
-                    emergencyPhone: event.target.value,
-                  })
-                }
-              />
-            </Field>
-          </div>
-        </Card>
-      ))}
-    </div>
-  )
-}
-
-interface TicketSaleScreenProps {
-  dashboard: SellerDashboardData
-  stations: StationSummary[]
-  results: TripSearchResult[]
-  loading: boolean
-  searched: boolean
-  online: boolean
-  selectedTrip?: TripSearchResult
-  serviceClass: ServiceClass
-  passengers: SalePassenger[]
-  quote?: CounterSaleQuote
-  quoteLoading?: boolean
-  seats: SeatMapItem[]
-  seatsLoading?: boolean
-  seatDialogOpen: boolean
-  onSearch: (criteria: TicketSearchCriteria) => void
-  onSelectTrip: (trip: TripSearchResult) => void
-  onServiceClassChange: (serviceClass: ServiceClass) => void
-  onPassengerChange: (index: number, passenger: SalePassenger) => void
-  onSeatDialogOpenChange: (open: boolean) => void
-  onSeatsConfirm: (seatIds: string[]) => void
-  onContinue: () => void
-  onSignOut?: () => void
-}
-
-export function TicketSaleScreen({
-  dashboard,
-  stations,
-  results,
-  loading,
-  searched,
-  online,
-  selectedTrip,
-  serviceClass,
-  passengers,
-  quote,
-  quoteLoading,
-  seats,
-  seatsLoading,
-  seatDialogOpen,
-  onSearch,
-  onSelectTrip,
-  onServiceClassChange,
-  onPassengerChange,
-  onSeatDialogOpenChange,
-  onSeatsConfirm,
-  onContinue,
-  onSignOut,
-}: TicketSaleScreenProps) {
-  const disabled = !online || !dashboard.session
-  const passengersComplete = passengers.every(
-    (passenger) => passenger.firstName.trim() && passenger.lastName.trim()
-  )
-  const selectedSeatIds = passengers
-    .map((passenger) => passenger.seatId)
-    .filter((seatId): seatId is string => seatId !== undefined)
-
-  return (
-    <SellerShell
-      seller={dashboard.seller}
-      pointOfSale={dashboard.pointOfSale}
-      session={dashboard.session}
-      online={online}
-      onSignOut={onSignOut}
-    >
-      <div className="mx-auto grid w-full max-w-[1440px] min-w-0 gap-6">
-        <header className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:gap-4">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="max-w-full whitespace-normal"
-          >
-            <Link href={"/vente" as Route}>
-              <ArrowLeft />
-              Accueil vendeur
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            <span className="text-mono-label text-accent-ink">AW-V-02</span>
-            <h1 className="text-h2 mt-1">Billet voyageur</h1>
-            <p className="text-small mt-2 text-ink-muted">
-              Étape 1 sur 4 · trajet et desserte
-            </p>
-          </div>
-        </header>
-
-        {disabled ? (
-          <InlineMessage
-            tone="warning"
-            title={
-              !online
-                ? "Le système central est hors ligne."
-                : "La caisse est fermée."
-            }
-          >
-            Revenez à l’accueil et rétablissez les conditions de vente avant de
-            créer un billet.
-          </InlineMessage>
-        ) : null}
-
-        <section aria-labelledby="trip-search-heading" className="grid gap-3">
-          <h2 id="trip-search-heading" className="text-h4">
-            Trajet demandé
-          </h2>
-          <TicketSearchForm
-            stations={stations}
-            disabled={disabled}
-            onSearch={onSearch}
-          />
-        </section>
-
-        <section aria-labelledby="trip-results-heading" className="grid gap-3">
-          <h2 id="trip-results-heading" className="text-h4">
-            Dessertes et disponibilités
-          </h2>
-          <TripSearchResults
-            results={results}
-            loading={loading}
-            searched={searched}
-            onSelect={onSelectTrip}
-          />
-        </section>
-
-        {selectedTrip ? (
-          <>
-            <section
-              aria-labelledby="ticket-options-heading"
-              className="grid min-w-0 gap-3"
-            >
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-0 flex-1">
-                  <span className="text-mono-label text-accent-ink">
-                    {selectedTrip.trainNumber} sélectionné.
-                  </span>
-                  <h2 id="ticket-options-heading" className="text-h4 mt-1">
-                    Classe et voyageurs
-                  </h2>
-                </div>
-                <div
-                  className="flex min-w-0 flex-wrap gap-2"
-                  role="group"
-                  aria-label="Classe de voyage"
-                >
-                  {(
-                    [
-                      ["DEUXIEME", "2e classe"],
-                      ["PREMIERE", "1re classe"],
-                      ["VIP", "VIP"],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <Button
-                      key={value}
-                      type="button"
-                      size="sm"
-                      variant={serviceClass === value ? "primary" : "secondary"}
-                      disabled={
-                        (selectedTrip.availableByClass[value] ?? 0) <
-                        passengers.length
-                      }
-                      onClick={() => onServiceClassChange(value)}
-                    >
-                      {label} · {selectedTrip.availableByClass[value] ?? 0}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <PassengerDetails
-                passengers={passengers}
-                onChange={onPassengerChange}
-              />
-            </section>
-
-            <section className="grid gap-3 lg:grid-cols-[1fr_1fr]">
-              <Card className="gap-4 p-5 shadow-none">
-                <div className="flex items-start gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-md bg-accent-soft text-accent-ink">
-                    <Armchair />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-h4">Places</h2>
-                    <p className="text-small text-ink-muted">
-                      {selectedSeatIds.length === passengers.length
-                        ? passengers
-                            .map(
-                              (passenger) =>
-                                passenger.seatLabel ?? "automatique"
-                            )
-                            .join(" · ")
-                        : "Attribution automatique par défaut"}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => onSeatDialogOpenChange(true)}
-                  className="h-auto min-h-11 min-w-0 py-2 text-center whitespace-normal"
-                >
-                  Choisir sur le plan de voiture
-                </Button>
-              </Card>
-
-              <Card
-                data-theme="dark"
-                className="gap-4 border-0 bg-[oklch(0.24_0.058_257)] p-5 text-ink shadow-none"
-              >
-                <span className="text-mono-label text-ink-muted">
-                  Devis guichet
-                </span>
-                {quoteLoading ? (
-                  <p role="status" className="text-small text-ink-muted">
-                    Calcul du tarif et du yield…
-                  </p>
-                ) : quote ? (
-                  <>
-                    <div className="flex min-w-0 flex-wrap items-end gap-3">
-                      <strong className="tabular text-h1 break-words text-ink">
-                        {quote.totalTtc.toLocaleString("fr-FR")} FCFA
-                      </strong>
-                      <span className="text-small pb-1 text-ink-muted">
-                        TTC · {quote.distanceKm} km
-                      </span>
-                    </div>
-                    <p className="text-caption text-ink-muted">
-                      {quote.lines
-                        .map(
-                          (line, index) =>
-                            `V${index + 1} ${line.unitPriceTtc.toLocaleString("fr-FR")} FCFA`
-                        )
-                        .join(" · ")}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-small text-warning">
-                    Tarif momentanément indisponible.
-                  </p>
-                )}
-              </Card>
-            </section>
-
-            {!passengersComplete ? (
-              <InlineMessage
-                tone="warning"
-                title="Identité des voyageurs incomplète."
-              >
-                Le nom et le prénom sont obligatoires avant l’encaissement.
-              </InlineMessage>
-            ) : null}
-
-            <div className="flex min-w-0 justify-end border-t border-line pt-5">
-              <Button
-                type="button"
-                size="lg"
-                disabled={
-                  disabled || !passengersComplete || !quote?.hasAvailability
-                }
-                onClick={onContinue}
-                className="h-auto min-h-13 min-w-0 py-3 text-center whitespace-normal"
-              >
-                Passer à l’encaissement
-                <CreditCard />
-              </Button>
-            </div>
-
-            {seatDialogOpen ? (
-              <SeatMapDialog
-                open
-                seats={seats}
-                requiredCount={passengers.length}
-                initialSelection={selectedSeatIds}
-                loading={seatsLoading}
-                onOpenChange={onSeatDialogOpenChange}
-                onConfirm={onSeatsConfirm}
-              />
-            ) : null}
-          </>
-        ) : null}
-      </div>
-    </SellerShell>
-  )
+function identitesCompletes(brouillon: BrouillonVente) {
+  return brouillon.voyageurs.every((v) => v.nom.trim() && v.prenom.trim())
 }
 
 export function TicketSalePageClient() {
+  return (
+    <Suspense fallback={null}>
+      <TunnelBillet />
+    </Suspense>
+  )
+}
+
+function TunnelBillet() {
   const router = useRouter()
-  const online = useOnlineStatus()
-  const { isAuthenticated, isLoading } = useAuth()
-  const [criteria, setCriteria] = useState<TicketSearchCriteria | null>(null)
-  const [selectedTrip, setSelectedTrip] = useState<
-    TripSearchResult | undefined
-  >()
-  const [serviceClass, setServiceClass] = useState<ServiceClass>("DEUXIEME")
-  const [passengers, setPassengers] = useState<SalePassenger[]>([])
-  const [seatDialogOpen, setSeatDialogOpen] = useState(false)
-  const liveDashboard = useQuery(
-    api.functions.cash.sellerDashboard,
-    E2E_MODE || !isAuthenticated ? "skip" : {}
-  )
-  const liveStations = useQuery(
-    api.functions.referential.listStations,
-    E2E_MODE ? "skip" : { includeInactive: false }
-  )
-  const liveTrips = useQuery(
-    api.functions.trips.search,
-    E2E_MODE || !criteria
-      ? "skip"
-      : {
-          originStationId: criteria.originStationId as never,
-          destinationStationId: criteria.destinationStationId as never,
-          serviceDate: criteria.serviceDate,
-          passengers: criteria.passengers,
-        }
-  )
-  const liveQuote = useQuery(
-    api.functions.sales.quoteCounterSale,
-    E2E_MODE || !criteria || !selectedTrip
-      ? "skip"
-      : {
-          tripId: selectedTrip.id as never,
-          originStationId: criteria.originStationId as never,
-          destinationStationId: criteria.destinationStationId as never,
-          serviceClass,
-          passengerCount: passengers.length,
-          discountCodes: passengers.map(
-            (passenger) => passenger.discountCode ?? ""
-          ),
-        }
-  )
-  const liveSeats = useQuery(
-    api.functions.trips.availableSeats,
-    E2E_MODE || !selectedTrip
-      ? "skip"
-      : {
-          tripId: selectedTrip.id as never,
-          fromIndex: selectedTrip.fromIndex,
-          toIndex: selectedTrip.toIndex,
-          serviceClass,
-        }
-  )
+  const params = useSearchParams()
+  const demandee = (ETAPES as readonly string[]).includes(params.get("etape") ?? "") ? (params.get("etape") as Etape) : "trajet"
+  const { contexte, enLigne, caisseOuverte, peutVendre } = useGuichet()
+  const gares = useLecture(api.functions.referential.listStations, {})
+  const categories = useLecture(api.functions.fareSchedules.publicDiscounts, {})
+  const [brouillon, setBrouillon] = useBrouillonVente()
+  const tenir = useEcriture(api.functions.guichet.tenirPlaces)
+  const liberer = useEcriture(api.functions.guichet.libererTenue)
+  const encaisser = useEcriture(api.functions.guichet.encaisserBillets)
+  const annulerDemande = useEcriture(api.functions.guichet.annulerDemandePaiement)
 
+  const [reglement, setReglement] = useState<EtatReglement>(REGLEMENT_INITIAL)
+  const [enCours, setEnCours] = useState<null | "tenue" | "encaissement">(null)
+  const [erreur, setErreur] = useState("")
+  const [paiementId, setPaiementId] = useState<string | null>(null)
+  const [tentative, setTentative] = useState(false)
+  const maintenant = useMaintenant(Boolean(brouillon?.tenue))
+
+  // Premier passage : un brouillon neuf, au départ de la gare du guichet.
   useEffect(() => {
-    if (!E2E_MODE && !isLoading && !isAuthenticated) {
-      router.replace("/connexion")
-    }
-  }, [isAuthenticated, isLoading, router])
+    if (!brouillon && contexte && gares) setBrouillon(brouillonInitial(contexte, gares))
+  }, [brouillon, contexte, gares, setBrouillon])
 
-  const dashboard = E2E_MODE
-    ? DEMO_DASHBOARD
-    : (liveDashboard as SellerDashboardData | undefined)
-  const stations: StationSummary[] = E2E_MODE
-    ? DEMO_STATIONS
-    : (liveStations ?? []).map(
-        (station: { _id: string; code: string; name: string }) => ({
-          id: station._id,
-          code: station.code,
-          name: station.name,
-        })
-      )
-  const results: TripSearchResult[] = E2E_MODE
-    ? criteria
-      ? DEMO_TRIPS
-      : []
-    : (liveTrips ?? []).map(
-        (result: {
-          trip: {
-            _id: string
-            trainNumber: string
-            trainType: string
-            serviceDate: string
-            status: string
-          }
-          departureAt: number
-          arrivalAt: number
-          fromIndex: number
-          toIndex: number
-          distanceKm: number
-          availableByClass: Record<string, number>
-          hasAvailability: boolean
-        }) => ({
-          id: result.trip._id,
-          trainNumber: result.trip.trainNumber,
-          trainType: result.trip.trainType,
-          serviceDate: result.trip.serviceDate,
-          departureAt: result.departureAt,
-          arrivalAt: result.arrivalAt,
-          fromIndex: result.fromIndex,
-          toIndex: result.toIndex,
-          distanceKm: result.distanceKm,
-          availableByClass: result.availableByClass,
-          hasAvailability: result.hasAvailability,
-          cancelled: result.trip.status === "annule",
-        })
-      )
-  const quote: CounterSaleQuote | undefined =
-    E2E_MODE && selectedTrip
-      ? {
-          distanceKm: selectedTrip.distanceKm,
-          available: selectedTrip.availableByClass[serviceClass] ?? 0,
-          hasAvailability:
-            (selectedTrip.availableByClass[serviceClass] ?? 0) >=
-            passengers.length,
-          totalTtc: passengers.length * 23_417,
-          lines: passengers.map(() => ({
-            unitPriceTtc: 23_417,
-            appliedRules: ["tarif_guichet"],
+  const signature = brouillon ? signatureTenue(brouillon.desserte, brouillon.voyageurs) : ""
+  const tenueFraiche = Boolean(brouillon?.tenue && brouillon.tenue.signature === signature && brouillon.tenue.finTenue > maintenant)
+  const tenueExpiree = Boolean(brouillon?.tenue && brouillon.tenue.finTenue <= maintenant)
+  const tenueActive = brouillon?.tenue && brouillon.tenue.finTenue > maintenant ? brouillon.tenue.finTenue : null
+
+  // Une étape ne s'ouvre que si les précédentes sont faites.
+  const accessible = (etape: Etape) => {
+    if (!brouillon) return etape === "trajet"
+    if (etape === "trajet") return true
+    if (!brouillon.desserte) return false
+    if (etape === "places") return true
+    if (!tousPlaces(brouillon) || !brouillon.tenue) return false
+    if (etape === "voyageurs") return true
+    return identitesCompletes(brouillon)
+  }
+  const etape = [...ETAPES].slice(0, ETAPES.indexOf(demandee) + 1).reverse().find(accessible) ?? "trajet"
+
+  const naviguer = useCallback(
+    (suivante: Etape, remplacer: boolean) => {
+      signalerNavigation()
+      const href = (suivante === "trajet" ? "/vente/billet" : `/vente/billet?etape=${suivante}`) as Route
+      if (remplacer) router.replace(href)
+      else router.push(href)
+      window.scrollTo({ top: 0 })
+    },
+    [router]
+  )
+  const aller = (suivante: Etape, remplacer = false) => {
+    setErreur("")
+    naviguer(suivante, remplacer)
+  }
+
+  // Une étape demandée trop tôt renvoie à la dernière étape accessible.
+  const sortie = useRef(false)
+  useEffect(() => {
+    if (!sortie.current && brouillon && etape !== demandee) naviguer(etape, true)
+  }, [brouillon, etape, demandee, naviguer])
+
+  const maj = useCallback(
+    (modifier: (courant: BrouillonVente) => BrouillonVente) => setBrouillon((courant) => (courant ? modifier(courant) : courant)),
+    [setBrouillon]
+  )
+
+  /** Rend la tenue en cours, sans attendre : elle expirerait de toute façon. */
+  const rendreTenue = useCallback(
+    (venteId: string | undefined) => {
+      if (venteId) void liberer({ venteId: venteId as never }).catch(() => undefined)
+    },
+    [liberer]
+  )
+
+  /* ── Tenue des places ───────────────────────────────────────────────── */
+  const tenirMaintenant = useCallback(
+    async (instantane: BrouillonVente) => {
+      if (!instantane.desserte) return false
+      setEnCours("tenue")
+      setErreur("")
+      try {
+        const tenue = await tenir({
+          tripId: instantane.desserte.tripId as never,
+          originStationId: instantane.origineId as never,
+          destinationStationId: instantane.arriveeId as never,
+          serviceClass: instantane.desserte.classe,
+          passagers: instantane.voyageurs.map((v) => ({
+            seatId: v.seatId as never,
+            discountCode: v.categorie || undefined,
           })),
-        }
-      : (liveQuote as CounterSaleQuote | undefined)
-  const seats = E2E_MODE
-    ? DEMO_SEATS.map((seat) => ({ ...seat, serviceClass }))
-    : ((liveSeats ?? []) as SeatMapItem[])
+          remplace: (instantane.tenue?.venteId as never) ?? undefined,
+          deviceId: POSTE,
+        })
+        const signatureTenue_ = signatureTenue(instantane.desserte, instantane.voyageurs)
+        maj((courant) => ({
+          ...courant,
+          tenue: {
+            venteId: tenue.venteId,
+            numero: tenue.numero,
+            finTenue: tenue.finTenue,
+            montants: tenue.montants,
+            billets: tenue.billets.map((b) => ({ ...b, id: b.id, seatId: b.seatId })),
+            signature: signatureTenue_,
+          },
+          voyageurs: courant.voyageurs.map((v, i) => ({
+            ...v,
+            voiture: tenue.billets[i]?.voiture ?? v.voiture,
+            place: tenue.billets[i]?.place ?? v.place,
+          })),
+        }))
+        return true
+      } catch (cause) {
+        setErreur(messageErreur(cause, "Les places n'ont pas pu être tenues."))
+        return false
+      } finally {
+        setEnCours(null)
+      }
+    },
+    [tenir, maj, setEnCours, setErreur]
+  )
 
-  if (!dashboard || (!E2E_MODE && liveStations === undefined)) {
+  // Catégorie changée à l'étape Voyageurs : le prix change, la tenue suit.
+  const signatureDemandee = useRef("")
+  useEffect(() => {
+    if (!brouillon || etape !== "voyageurs" || enCours || !brouillon.tenue) return
+    if (brouillon.tenue.signature === signature || tenueExpiree) return
+    if (signatureDemandee.current === signature) return
+    signatureDemandee.current = signature
+    void tenirMaintenant(brouillon)
+  }, [brouillon, etape, enCours, signature, tenueExpiree, tenirMaintenant])
+
+  /* ── Encaissement ───────────────────────────────────────────────────── */
+  const allerConfirmation = useCallback(
+    (venteId: string, imprimer: boolean) => {
+      // Le brouillon s'efface à l'arrivée sur la confirmation : l'effacer ici
+      // ramènerait le tunnel au trajet avant que la navigation n'aboutisse.
+      sortie.current = true
+      setPaiementId(null)
+      signalerNavigation()
+      router.push(`/vente/confirmation/${venteId}${imprimer ? "?imprimer=1" : ""}` as Route)
+    },
+    [router, setPaiementId]
+  )
+
+  const encaisserMaintenant = async () => {
+    if (!brouillon?.tenue) return
+    setEnCours("encaissement")
+    setErreur("")
+    try {
+      const resultat = await encaisser({
+        venteId: brouillon.tenue.venteId as never,
+        voyageurs: brouillon.voyageurs.map((v, i) => ({
+          billetId: brouillon.tenue!.billets[i]!.id as never,
+          lastName: v.nom,
+          firstName: v.prenom,
+          gender: v.civilite,
+          phone: v.telephone.trim() || undefined,
+        })),
+        method: moyenBackend(reglement),
+        tendered: reglement.moyen === "especes" ? Number(reglement.recu || 0) : undefined,
+        payerPhone: estADistance(reglement.moyen) ? reglement.telephone : undefined,
+        reference: reglement.reference.trim() || undefined,
+        corporateAccountId: reglement.moyen === "en_compte" ? (reglement.compteId as never) : undefined,
+      })
+      if (resultat.statut === "en_attente" && resultat.paiementId) setPaiementId(resultat.paiementId)
+      else allerConfirmation(resultat.venteId, brouillon.imprimer)
+    } catch (cause) {
+      setErreur(messageErreur(cause, "La vente n'a pas pu être encaissée."))
+    } finally {
+      setEnCours(null)
+    }
+  }
+
+  /* ── Clavier : Entrée avance, lettres des moyens, chiffres des espèces ── */
+  const etatClavier = useRef({ etape, reglement, paiementId })
+  useEffect(() => {
+    etatClavier.current = { etape, reglement, paiementId }
+  })
+  useEffect(() => {
+    const ecouter = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return
+      const cible = event.target as HTMLElement | null
+      if (document.querySelector("[role='dialog']") || etatClavier.current.paiementId) return
+      const saisie = cible?.closest("input, textarea, select, [contenteditable='true']")
+      if (event.key === "Enter") {
+        if (cible?.closest("button, a, select, textarea, form, [role='radio']")) return
+        const bouton = document.querySelector<HTMLButtonElement>("[data-action-principale]")
+        if (bouton && !bouton.disabled) {
+          event.preventDefault()
+          bouton.click()
+        }
+        return
+      }
+      if (saisie || etatClavier.current.etape !== "encaissement") return
+      const moyen = MOYENS.find((m) => m.touche === event.key.toUpperCase())
+      if (moyen) {
+        event.preventDefault()
+        setReglement((r) => ({ ...r, moyen: moyen.code }))
+        return
+      }
+      if (etatClavier.current.reglement.moyen === "especes" && (/^[0-9]$/.test(event.key) || event.key === "Backspace")) {
+        event.preventDefault()
+        setReglement((r) => ({ ...r, recu: saisirChiffre(r.recu, event.key === "Backspace" ? "⌫" : event.key) }))
+      }
+    }
+    window.addEventListener("keydown", ecouter)
+    return () => window.removeEventListener("keydown", ecouter)
+  }, [])
+
+  /* ── Rendu ──────────────────────────────────────────────────────────── */
+  if (!contexte || !gares || !categories || !brouillon) {
     return (
-      <main className="flex min-h-dvh items-center justify-center">
-        <p role="status" className="text-small text-ink-muted">
-          Préparation de la vente…
-        </p>
-      </main>
+      <CadreGuichet contexte={contexte}>
+        <EnTeteTunnel titre="Vendre un billet" etape={0} />
+        <ChargementEcran libelle="Préparation de la vente…" />
+      </CadreGuichet>
     )
   }
 
-  return (
-    <TicketSaleScreen
-      dashboard={dashboard}
-      stations={stations}
-      results={results}
-      searched={criteria !== null}
-      loading={!E2E_MODE && criteria !== null && liveTrips === undefined}
-      online={online}
-      selectedTrip={selectedTrip}
-      onSearch={(nextCriteria) => {
-        setSelectedTrip(undefined)
-        setPassengers(
-          Array.from({ length: nextCriteria.passengers }, () => ({
-            firstName: "",
-            lastName: "",
-            gender: "F" as const,
-          }))
-        )
-        setServiceClass("DEUXIEME")
-        setCriteria(nextCriteria)
-      }}
-      onSelectTrip={(trip) => {
-        const availableClass =
-          (trip.availableByClass.DEUXIEME ?? 0) >= passengers.length
-            ? "DEUXIEME"
-            : ((["PREMIERE", "VIP"] as const).find(
-                (candidate) =>
-                  (trip.availableByClass[candidate] ?? 0) >= passengers.length
-              ) ?? "DEUXIEME")
-        setServiceClass(availableClass)
-        setSelectedTrip(trip)
-      }}
-      serviceClass={serviceClass}
-      passengers={passengers}
-      quote={quote}
-      quoteLoading={
-        !E2E_MODE && selectedTrip !== undefined && liveQuote === undefined
-      }
-      seats={seats}
-      seatsLoading={
-        !E2E_MODE && selectedTrip !== undefined && liveSeats === undefined
-      }
-      seatDialogOpen={seatDialogOpen}
-      onServiceClassChange={(nextClass) => {
-        setServiceClass(nextClass)
-        setPassengers((current) =>
-          current.map((passenger) => ({
-            ...passenger,
-            seatId: undefined,
-            seatLabel: undefined,
-          }))
-        )
-      }}
-      onPassengerChange={(index, passenger) =>
-        setPassengers((current) =>
-          current.map((item, itemIndex) =>
-            itemIndex === index ? passenger : item
-          )
-        )
-      }
-      onSeatDialogOpenChange={setSeatDialogOpen}
-      onSeatsConfirm={(seatIds) =>
-        setPassengers((current) =>
-          current.map((passenger, index) => {
-            const seatId = seatIds[index]
-            const seat = seats.find((candidate) => candidate.seatId === seatId)
-            return {
-              ...passenger,
-              seatId,
-              seatLabel: seat?.label,
-            }
-          })
-        )
-      }
-      onContinue={() => {
-        if (!criteria || !selectedTrip || !quote) return
-        const origin = stations.find(
-          (station) => station.id === criteria.originStationId
-        )
-        const destination = stations.find(
-          (station) => station.id === criteria.destinationStationId
-        )
-        if (!origin || !destination) return
-        saveTicketSaleDraft({
-          tripId: selectedTrip.id,
-          trainNumber: selectedTrip.trainNumber,
-          trainType: selectedTrip.trainType,
-          serviceDate: selectedTrip.serviceDate,
-          departureAt: selectedTrip.departureAt,
-          arrivalAt: selectedTrip.arrivalAt,
-          originStationId: origin.id,
-          originName: origin.name,
-          originCode: origin.code,
-          destinationStationId: destination.id,
-          destinationName: destination.name,
-          destinationCode: destination.code,
-          fromIndex: selectedTrip.fromIndex,
-          toIndex: selectedTrip.toIndex,
-          serviceClass,
-          passengers,
-          distanceKm: quote.distanceKm,
-          totalTtc: quote.totalTtc,
-        })
-        router.push("/vente/encaissement" as Route)
-      }}
-      onSignOut={async () => {
-        if (!E2E_MODE) await authClient.signOut()
-        router.replace("/connexion")
-      }}
-    />
+  const desserte = brouillon.desserte
+  const titreBarre = desserte ? `${nomTrain(desserte.trainType, desserte.trainNumber)} · ${libelleClasse(desserte.classe)}` : undefined
+  const total = brouillon.tenue ? xaf(brouillon.tenue.montants.ttc) : undefined
+  const abandonner = () => {
+    rendreTenue(brouillon.tenue?.venteId)
+    effacerBrouillonVente()
+    setReglement(REGLEMENT_INITIAL)
+    aller("trajet", true)
+  }
+  const index = ETAPES.indexOf(etape)
+  const titres: Record<Etape, { titre: string; texte?: string }> = {
+    trajet: { titre: "Vendre un billet" },
+    places: { titre: "Choisir les places", texte: "Choisissez le voyageur, puis sa place. Les places sont tenues dès que vous passez à la saisie des voyageurs." },
+    voyageurs: { titre: "Voyageurs", texte: "Nom tel qu'il figure sur la pièce d'identité : le contrôleur le compare à bord." },
+    encaissement: { titre: "Encaissement" },
+  }
+
+  const messageTenue = tenueExpiree && etape !== "trajet" && (
+    <InlineMessage tone="warning" title="Délai de tenue écoulé.">
+      <span className="flex flex-wrap items-center gap-3">
+        Les places ont été rendues à la vente.
+        <Button type="button" variant="secondary" size="sm" loading={enCours === "tenue"} onClick={() => void tenirMaintenant(brouillon)}>
+          Tenir à nouveau les places
+        </Button>
+      </span>
+    </InlineMessage>
   )
+
+  const pret = brouillon.tenue ? reglementPret(reglement, brouillon.tenue.montants.ttc) : { pret: false as const, raison: "" }
+  const IconeMoyen = ICONE_MOYEN[reglement.moyen]
+
+  return (
+    <CadreGuichet contexte={contexte} className="flex min-h-[calc(100dvh-7rem)] flex-col">
+      <EnTeteTunnel titre={titres[etape].titre} texte={titres[etape].texte} etape={index} />
+      {!enLigne ? <HorsReseau /> : null}
+      {!caisseOuverte ? <CaisseFermee /> : null}
+      {messageTenue}
+      {erreur ? (
+        <InlineMessage tone="danger" title="Opération refusée.">
+          {erreur}
+        </InlineMessage>
+      ) : null}
+      {brouillon.tenue || brouillon.desserte ? (
+        <div className="-mt-2 flex justify-end">
+          <Button type="button" variant="ghost" size="sm" onClick={abandonner}>
+            <X aria-hidden />
+            Abandonner la vente
+          </Button>
+        </div>
+      ) : null}
+
+      {etape === "trajet" ? (
+        <EtapeTrajet
+          brouillon={brouillon}
+          gares={gares}
+          categories={categories}
+          bloque={!peutVendre}
+          onCriteres={(criteres) =>
+            maj((courant) => {
+              const change = criteres.origineId !== courant.origineId || criteres.arriveeId !== courant.arriveeId || criteres.date !== courant.date
+              if (!change) return courant
+              rendreTenue(courant.tenue?.venteId)
+              return { ...courant, ...criteres, desserte: null, tenue: null, voyageurs: courant.voyageurs.map(sansPlace) }
+            })
+          }
+          onComptes={(comptes) =>
+            maj((courant) => ({
+              ...courant,
+              comptes,
+              voyageurs: voyageursPourComptes(comptes, ordreCategories(categories), courant.voyageurs),
+            }))
+          }
+          onChoisir={(choisie: Desserte, classe) =>
+            maj((courant) => {
+              const memeDesserte = courant.desserte?.tripId === choisie.tripId && courant.desserte.classe === classe
+              if (memeDesserte) return courant
+              rendreTenue(courant.tenue?.venteId)
+              return {
+                ...courant,
+                tenue: null,
+                voyageurs: courant.voyageurs.map(sansPlace),
+                desserte: {
+                  tripId: choisie.tripId,
+                  trainNumber: choisie.trainNumber,
+                  trainType: choisie.trainType,
+                  serviceDate: choisie.serviceDate,
+                  departAt: choisie.departAt,
+                  arriveeAt: choisie.arriveeAt,
+                  fromIndex: choisie.fromIndex,
+                  toIndex: choisie.toIndex,
+                  distanceKm: choisie.distanceKm,
+                  arretsIntermediaires: choisie.arretsIntermediaires,
+                  delayMinutes: choisie.delayMinutes,
+                  classe,
+                },
+              }
+            })
+          }
+          onSuivant={() => aller("places")}
+        />
+      ) : null}
+
+      {etape === "places" ? (
+        <>
+          <EtapePlaces
+            brouillon={brouillon}
+            categories={categories}
+            tenueActive={tenueFraiche ? tenueActive : null}
+            onVoyageurs={(voyageurs) => maj((courant) => ({ ...courant, voyageurs }))}
+          />
+          <BarreVente
+            titre={titreBarre}
+            resume={`${resumeVente(brouillon)} · ${brouillon.voyageurs.filter((v) => v.seatId).length} placé${brouillon.voyageurs.filter((v) => v.seatId).length > 1 ? "s" : ""}`}
+            total={tenueFraiche ? total : undefined}
+            retour={{ libelle: "Retour", onClick: () => aller("trajet") }}
+            action={{
+              libelle: "Saisir les voyageurs",
+              touche: "Entrée",
+              disabled: !peutVendre || !tousPlaces(brouillon),
+              loading: enCours === "tenue",
+              loadingLabel: "Tenue des places…",
+              onClick: async () => {
+                if (tenueFraiche || (await tenirMaintenant(brouillon))) aller("voyageurs")
+              },
+            }}
+          />
+        </>
+      ) : null}
+
+      {etape === "voyageurs" ? (
+        <>
+          <EtapeVoyageurs
+            brouillon={brouillon}
+            categories={categories}
+            tenueActive={tenueActive}
+            recalcul={enCours === "tenue"}
+            erreurs={tentative}
+            onVoyageur={(i, voyageur: VoyageurBrouillon) =>
+              maj((courant) => {
+                const voyageurs = courant.voyageurs.map((v, j) => (j === i ? voyageur : v))
+                return { ...courant, voyageurs, comptes: comptesDepuis(voyageurs) }
+              })
+            }
+            onOptions={(options) => maj((courant) => ({ ...courant, ...options }))}
+          />
+          <BarreVente
+            titre={titreBarre}
+            resume={resumeVente(brouillon)}
+            total={total}
+            retour={{ libelle: "Retour", onClick: () => aller("places") }}
+            action={{
+              libelle: "Passer à l'encaissement",
+              touche: "Entrée",
+              disabled: !peutVendre || enCours === "tenue",
+              onClick: async () => {
+                setTentative(true)
+                if (!identitesCompletes(brouillon)) {
+                  setErreur("Saisissez le nom et le prénom de chaque voyageur.")
+                  return
+                }
+                if (!tenueFraiche && !(await tenirMaintenant(brouillon))) return
+                const premier = brouillon.voyageurs.find((v) => v.telephone.trim())?.telephone ?? ""
+                setReglement((r) => ({
+                  ...r,
+                  moyen: brouillon.conventionne ? "en_compte" : r.moyen,
+                  telephone: r.telephone || premier,
+                }))
+                setTentative(false)
+                aller("encaissement")
+              },
+            }}
+          />
+        </>
+      ) : null}
+
+      {etape === "encaissement" && brouillon.tenue ? (
+        <>
+          <EtapeEncaissement
+            brouillon={brouillon}
+            gares={gares}
+            categories={categories}
+            reglement={reglement}
+            onReglement={setReglement}
+            tentativesMax={contexte.parametres.tentativesMobile}
+            tenueActive={tenueActive}
+            disabled={enCours === "encaissement"}
+          />
+          <BarreVente
+            titre={titreBarre}
+            resume={resumeVente(brouillon)}
+            total={total}
+            retour={{ libelle: "Retour", onClick: () => aller("voyageurs") }}
+            action={{
+              icone: pret.pret ? IconeMoyen : TriangleAlert,
+              libelle: !pret.pret
+                ? pret.raison
+                : estADistance(reglement.moyen)
+                  ? `Envoyer la demande · ${xaf(brouillon.tenue.montants.ttc)}`
+                  : `Encaisser ${xaf(brouillon.tenue.montants.ttc)}`,
+              touche: "Entrée",
+              disabled: !peutVendre || !pret.pret || !tenueFraiche,
+              loading: enCours === "encaissement",
+              loadingLabel: "Encaissement…",
+              onClick: () => void encaisserMaintenant(),
+            }}
+          />
+        </>
+      ) : null}
+
+      <AttentePaiement
+        paiementId={paiementId}
+        onConfirme={(paiement: Paiement) => allerConfirmation(paiement.vente?.id ?? brouillon.tenue?.venteId ?? "", brouillon.imprimer)}
+        onEchec={(paiement: Paiement) => {
+          setPaiementId(null)
+          setErreur(`${paiement.raison ?? "Paiement refusé par l'opérateur."} Les places restent tenues : proposez un autre moyen de paiement.`)
+        }}
+        onAnnuler={() => {
+          const id = paiementId
+          setPaiementId(null)
+          if (id) void annulerDemande({ paiementId: id as never }).catch(() => undefined)
+        }}
+      />
+    </CadreGuichet>
+  )
+}
+
+function sansPlace(voyageur: VoyageurBrouillon): VoyageurBrouillon {
+  return { ...voyageur, seatId: undefined, place: undefined, voiture: undefined }
 }

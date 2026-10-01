@@ -26,6 +26,7 @@ import {
   portalForRole,
   type StaffPortal,
 } from "@/lib/portal-access"
+import { EcranAttente } from "@/coquille/ecran-attente"
 
 const E2E_MODE =
   process.env.NODE_ENV !== "production" &&
@@ -51,20 +52,15 @@ export function usePortalSession() {
 }
 
 function PortalStatus({ children }: { children: React.ReactNode }) {
-  return (
-    <main className="flex min-h-dvh items-center justify-center bg-canvas p-6">
-      <p role="status" className="text-small text-center text-ink-muted">
-        {children}
-      </p>
-    </main>
-  )
+  return <EcranAttente>{children}</EcranAttente>
 }
 
 export function PortalGuard({
   portal,
   children,
 }: {
-  portal: StaffPortal
+  /** « tous » : page commune au personnel des deux portails (réglages). */
+  portal: StaffPortal | "tous"
   children: React.ReactNode
 }) {
   const router = useRouter()
@@ -77,11 +73,15 @@ export function PortalGuard({
   )
   const role = asAppRole(profile?.user?.role)
   const expectedPortal = role ? portalForRole(role) : null
+  const portalAllowed =
+    expectedPortal !== null && (portal === "tous" || expectedPortal === portal)
   const pathAllowed =
-    role && expectedPortal === portal
-      ? portal === "vente"
-        ? canAccessSalePath(role, pathname)
-        : canAccessManagementPath(role, pathname)
+    role && portalAllowed
+      ? portal === "tous"
+        ? true
+        : portal === "vente"
+          ? canAccessSalePath(role, pathname)
+          : canAccessManagementPath(role, pathname)
       : false
 
   useEffect(() => {
@@ -92,7 +92,7 @@ export function PortalGuard({
     }
     if (!role) return
     if (expectedPortal === null) return
-    if (expectedPortal !== portal) {
+    if (!portalAllowed) {
       router.replace(
         expectedPortal === "vente" ? "/vente" : defaultManagementPath(role)
       )
@@ -105,6 +105,7 @@ export function PortalGuard({
     }
   }, [
     expectedPortal,
+    portalAllowed,
     isAuthenticated,
     isLoading,
     pathAllowed,
@@ -162,7 +163,7 @@ export function PortalGuard({
       </main>
     )
   }
-  if (expectedPortal !== portal || !pathAllowed || !session) {
+  if (!portalAllowed || !pathAllowed || !session) {
     return <PortalStatus>Redirection vers votre espace autorisé…</PortalStatus>
   }
 

@@ -108,11 +108,20 @@ export const dashboard = query({
   handler: async (ctx, args) => {
     await requirePermission(ctx, "rapports", "consulter")
 
-    const courant = total(await readMetrics(ctx, args.from, args.to))
+    const lignesCourantes = await readMetrics(ctx, args.from, args.to)
+    const courant = total(lignesCourantes)
     const précédent = previousPeriod(args.from, args.to)
-    const antérieur = total(
-      await readMetrics(ctx, précédent.from, précédent.to),
-    )
+    const lignesAntérieures = await readMetrics(ctx, précédent.from, précédent.to)
+    const antérieur = total(lignesAntérieures)
+    // Une référence qui couvre beaucoup moins de journées que la période
+    // courante (historique incomplet) donnerait une « croissance » fictive :
+    // la comparaison n'est faite que si elle porte sur des durées voisines.
+    const comparable =
+      lignesAntérieures.length >= Math.max(1, Math.ceil(lignesCourantes.length * 0.8))
+    const comparer = (actuel: number, avant: number) => {
+      const variation = compare(actuel, avant)
+      return comparable ? variation : { ...variation, pct: null }
+    }
 
     const trips = await ctx.db
       .query("tripMetrics")
@@ -123,17 +132,17 @@ export const dashboard = query({
 
     return {
       period: { from: args.from, to: args.to, days: daysBetween(args.from, args.to) + 1 },
-      comparedTo: précédent,
+      comparedTo: { ...précédent, comparable },
       revenue: {
         grossTtc: courant.gross.ttc,
         refundedTtc: courant.refunded.ttc,
         netTtc: netTtc(courant),
-        variation: compare(netTtc(courant), netTtc(antérieur)),
+        variation: comparer(netTtc(courant), netTtc(antérieur)),
       },
       volume: {
         sales: courant.salesCount,
         tickets: courant.ticketCount,
-        variation: compare(courant.ticketCount, antérieur.ticketCount),
+        variation: comparer(courant.ticketCount, antérieur.ticketCount),
       },
       quality: {
         refundRatePct: refundRatePct(courant),
