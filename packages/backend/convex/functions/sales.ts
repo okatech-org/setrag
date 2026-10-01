@@ -17,7 +17,12 @@ import {
   segmentMask,
   SeatUnavailableError,
 } from "../model/inventory"
-import { occupancyRate, quotePrice, type PricingRule } from "../model/pricing"
+import {
+  pricingBounds,
+  quotePrice,
+  saleYield,
+  storedPricingRule,
+} from "../model/pricing"
 import {
   buildAmounts,
   formatNumber,
@@ -27,7 +32,7 @@ import {
   sumAmounts,
   type Amounts,
 } from "../model/sales"
-import { daysUntilDeparture, toServiceDate, weekdayOf } from "../model/calendar"
+import { toServiceDate } from "../model/calendar"
 import { PAYLOAD_VERSION, expiryFromArrival } from "../model/barcode"
 import { CURRENT_KEY_VERSION, signTicket } from "../lib/signature"
 import { quoteTrip } from "../lib/tripQuote"
@@ -352,43 +357,29 @@ export async function performSale(
       .query("pricingRules")
       .withIndex("by_active_priority", (q) => q.eq("isActive", true))
       .collect()
-    const scopedRules: PricingRule[] = rules
-      .filter((r) => r.tripId === undefined || r.tripId === args.tripId)
-      .filter(
-        (r) =>
-          r.serviceClass === undefined || r.serviceClass === args.serviceClass
-      )
-      .map((r) => ({
-        id: r._id,
-        type: r.type,
-        threshold: r.threshold,
-        modifierPct: r.modifierPct,
-        priority: r.priority,
-        validFrom: r.validFrom,
-        validUntil: r.validUntil,
-        code: r.code,
-        isActive: r.isActive,
-      }))
 
-    const capacity = onRoute[0]?.capacity ?? 0
-    const soldOnRoute = Math.max(...onRoute.map((c) => c.sold))
     const now = Date.now()
-    const pricingContext = {
-      occupancyRate: occupancyRate(capacity, soldOnRoute),
-      daysUntilDeparture: daysUntilDeparture(trip.departureAt, now),
-      departureWeekday: weekdayOf(trip.serviceDate),
+    // Le même contexte que celui du terminal contrôleur, qui chiffre la vente
+    // à bord hors ligne avec ces données embarquées (`control.manifest`).
+    const yieldOfSale = saleYield({
+      tripId: args.tripId,
+      serviceClass: args.serviceClass,
+      fromIndex,
+      toIndex,
+      departureAt: trip.departureAt,
+      serviceDate: trip.serviceDate,
       // Le canal réel de la vente : une règle de yield « ligne » doit valoir
       // pour le prix figé d'une réservation en ligne comme pour le devis
       // annoncé par `bookings.quote`, et non celles du guichet.
       channel: sale.channel,
       now,
       promoCode: args.promoCode,
-    }
-
-    // Bornes de sécurité : la règle la plus prioritaire qui en déclare.
-    const bounds = rules
-      .filter((r) => r.floorXaf !== undefined || r.capXaf !== undefined)
-      .sort((a, b) => a.priority - b.priority)[0]
+      quotas,
+      rules: rules.map(storedPricingRule),
+      counters: onRoute,
+      // Bornes de sécurité : la règle la plus prioritaire qui en déclare.
+      bounds: pricingBounds(rules),
+    })
 
     /* ── Titres ──────────────────────────────────────────────────────── */
     const serviceDate = toServiceDate(now)
@@ -447,19 +438,8 @@ export async function performSale(
       const quote = quotePrice({
         basePriceTtc: base.ttc,
         distanceKm,
-        quotas: quotas.map((q) => ({
-          label: q.label,
-          priority: q.priority,
-          seatCount: q.seatCount,
-          soldCount: q.soldCount,
-          coefficient: q.coefficient,
-          isActive: q.isActive,
-        })),
         seatsNeeded,
-        rules: scopedRules,
-        context: pricingContext,
-        floorXaf: bounds?.floorXaf,
-        capXaf: bounds?.capXaf,
+        ...yieldOfSale,
       })
 
       const ticketSeq = await nextSequence(
