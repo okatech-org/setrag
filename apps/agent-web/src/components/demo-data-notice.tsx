@@ -14,7 +14,7 @@ export function DemoDataNotice({
     <aside
       role="note"
       aria-label="Origine des données affichées"
-      className="flex flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50/80 p-4 text-amber-950 sm:flex-row sm:items-start sm:justify-between"
+      className="flex flex-col gap-3 rounded-lg border border-warning/40 bg-warning-soft p-4 text-warning-ink sm:flex-row sm:items-start sm:justify-between"
     >
       <div className="flex items-start gap-3">
         <FlaskConical aria-hidden className="mt-0.5 size-5 shrink-0" />
@@ -32,7 +32,7 @@ export function DemoDataNotice({
       </div>
       <Badge
         variant="outline"
-        className="w-fit shrink-0 border-amber-400 bg-white/70 text-amber-900"
+        className="w-fit shrink-0 border-warning/60 bg-surface text-warning-ink"
       >
         SYNTHÉTIQUE · NON OFFICIEL
       </Badge>

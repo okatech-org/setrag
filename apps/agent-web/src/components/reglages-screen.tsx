@@ -1,11 +1,14 @@
 "use client"
 
-import { Keyboard, LayoutGrid, LogOut, UserRound } from "lucide-react"
+import { Keyboard, LayoutGrid, LogOut, SunMoon, UserRound } from "lucide-react"
+import { useTheme } from "next-themes"
+import { useSyncExternalStore } from "react"
 
 import { useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
 import { MODULE_ACCESS_LEVEL_LABELS } from "@workspace/backend/modules"
 import { Button } from "@workspace/ui/components/button"
+import { Radio, RadioGroup } from "@workspace/ui/components/choice"
 import { Tag } from "@workspace/ui/components/tag"
 
 import { EnTetePage, Fiche, Panneau } from "@/components/charte"
@@ -28,6 +31,40 @@ const SECOND_FACTEUR = {
   sms: "Code par SMS",
   aucun: "Aucun",
 } as const
+
+const THEMES = [
+  { value: "light", label: "Clair" },
+  { value: "dark", label: "Sombre" },
+  { value: "system", label: "Automatique, comme le poste" },
+] as const
+
+const pasDAbonnement = () => () => {}
+
+/**
+ * Thème de l'affichage. Il vit dans le navigateur (next-themes), pas dans le
+ * compte : un poste de guichet partagé garde le sien. Inconnu au rendu
+ * serveur, le choix ne s'affiche qu'une fois la page montée.
+ */
+function ChoixTheme() {
+  const { theme, setTheme } = useTheme()
+  const monte = useSyncExternalStore(
+    pasDAbonnement,
+    () => true,
+    () => false
+  )
+  return (
+    <RadioGroup
+      value={monte ? (theme ?? "light") : undefined}
+      onValueChange={setTheme}
+      aria-label="Thème de l'affichage"
+      className="gap-0"
+    >
+      {THEMES.map((option) => (
+        <Radio key={option.value} value={option.value} label={option.label} />
+      ))}
+    </RadioGroup>
+  )
+}
 
 /** Point de vente de rattachement, pour le personnel de vente. */
 function PointDeVente({ vendeur }: { vendeur: boolean }) {
@@ -61,7 +98,7 @@ export function ReglagesScreen() {
         <EnTetePage
           surtitre="Votre compte"
           titre="Réglages"
-          description="Votre profil, les modules qui vous sont ouverts et vos raccourcis clavier. Ces réglages ne valent que pour votre compte."
+          description="Votre profil, l'apparence, les modules qui vous sont ouverts et vos raccourcis clavier."
         />
 
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -112,6 +149,14 @@ export function ReglagesScreen() {
                   ],
                 ]}
               />
+            </Panneau>
+
+            <Panneau
+              titre="Apparence"
+              icone={SunMoon}
+              pied="Propre à ce poste : un autre navigateur garde son propre réglage."
+            >
+              <ChoixTheme />
             </Panneau>
 
             <Panneau titre="Modules ouverts" icone={LayoutGrid}>

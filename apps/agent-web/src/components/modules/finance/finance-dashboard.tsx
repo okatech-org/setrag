@@ -218,8 +218,8 @@ function ConfigurationPanel({
   return (
     <Card className="border-line bg-surface">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base text-[#0F2C59]">
-          <Scale aria-hidden className="size-5 text-[#D39E00]" />
+        <CardTitle className="flex items-center gap-2 text-base text-ink">
+          <Scale aria-hidden className="size-5 text-ink-muted" />
           Référentiel comptable et fiscal
         </CardTitle>
       </CardHeader>
@@ -251,7 +251,7 @@ function ConfigurationPanel({
                 href={ruleSet.legalSourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="font-semibold text-[#0F2C59] underline-offset-4 hover:underline"
+                className="font-semibold text-accent-ink underline-offset-4 hover:underline"
               >
                 {ruleSet.legalSourceLabel}
               </a>
@@ -304,8 +304,8 @@ function JournalPanel({ journal }: { journal: FinanceOverviewDto["journal"] }) {
   return (
     <Card className="min-w-0 overflow-hidden border-line bg-surface">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base text-[#0F2C59]">
-          <BookOpenCheck aria-hidden className="size-5 text-[#D39E00]" />
+        <CardTitle className="flex items-center gap-2 text-base text-ink">
+          <BookOpenCheck aria-hidden className="size-5 text-ink-muted" />
           Journal comptable validé
         </CardTitle>
       </CardHeader>

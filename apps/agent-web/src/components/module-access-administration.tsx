@@ -509,7 +509,7 @@ export function ModuleAccessAdministration() {
       title="Administration des accès modulaires"
       subtitle="Direction des Systèmes d’Information & Projets Métiers"
       actions={
-        <Badge variant="outline" className="border-[#D39E00]/60 text-[#0F2C59]">
+        <Badge variant="outline" className="border-warning/60 text-ink">
           <Settings2 aria-hidden />
           Administration système
         </Badge>
@@ -517,7 +517,7 @@ export function ModuleAccessAdministration() {
     >
       <div className="grid gap-5">
         <div className="flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3">
-          <span className="rounded-lg bg-[#0F2C59]/10 p-2 text-[#0F2C59]">
+          <span className="rounded-lg bg-accent-soft p-2 text-accent-ink">
             <ShieldCheck aria-hidden className="size-5" />
           </span>
           <div>

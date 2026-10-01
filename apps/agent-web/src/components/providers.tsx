@@ -6,7 +6,7 @@ import type { ReactNode } from "react"
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem>
+    <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem disableTransitionOnChange>
       <AppConvexProvider>{children}</AppConvexProvider>
     </ThemeProvider>
   )

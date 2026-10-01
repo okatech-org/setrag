@@ -193,13 +193,14 @@ const TIME_FORMATTER = new Intl.DateTimeFormat("fr-FR", {
 })
 
 const KPI_TONE_CLASS = {
-  neutral: "text-[#0F2C59]",
+  neutral: "text-ink",
   positive: "text-success-ink",
   warning: "text-warning-ink",
   critical: "text-danger-ink",
 } as const
 
-const MOVEMENT_COLORS = ["#0F2C59", "#B7791F", "#15803D", "#7E22CE", "#B91C1C"]
+// Variables de la charte : les marches restent lisibles en clair comme en sombre.
+const MOVEMENT_COLORS = ["var(--c-accent)", "var(--c-warning)", "var(--c-success)", "var(--c-second)", "var(--c-danger)"]
 
 function humanizeCode(value: string) {
   return value
@@ -453,7 +454,7 @@ function TimeDistanceChart({
                   x2={right}
                   y1={y}
                   y2={y}
-                  stroke="#CBD5E1"
+                  stroke="var(--c-line-strong)"
                   strokeDasharray="4 5"
                 />
                 <text
@@ -461,7 +462,7 @@ function TimeDistanceChart({
                   y={y + 4}
                   textAnchor="end"
                   fontSize="12"
-                  fill="#475569"
+                  fill="var(--c-ink-muted)"
                 >
                   {station.name} · PK{" "}
                   {NUMBER_FORMATTER.format(station.kilometerPoint)}
@@ -474,13 +475,13 @@ function TimeDistanceChart({
             const x = xFor(time)
             return (
               <g key={time}>
-                <line x1={x} x2={x} y1={top} y2={bottom} stroke="#E2E8F0" />
+                <line x1={x} x2={x} y1={top} y2={bottom} stroke="var(--c-line)" />
                 <text
                   x={x}
                   y={bottom + 24}
                   textAnchor="middle"
                   fontSize="12"
-                  fill="#475569"
+                  fill="var(--c-ink-muted)"
                 >
                   {formatTime(time)}
                 </text>
@@ -494,7 +495,7 @@ function TimeDistanceChart({
             textAnchor="middle"
             fontSize="12"
             fontWeight="600"
-            fill="#0F172A"
+            fill="var(--c-ink)"
           >
             Heure locale · Libreville
           </text>
@@ -504,7 +505,7 @@ function TimeDistanceChart({
             textAnchor="middle"
             fontSize="12"
             fontWeight="600"
-            fill="#0F172A"
+            fill="var(--c-ink)"
             transform={`rotate(-90 18 ${(top + bottom) / 2})`}
           >
             Point kilométrique
@@ -590,7 +591,7 @@ function TimeDistanceChart({
                     key={`${movement.id}-${point.stationCode}-${point.plottedAt}`}
                   >
                     <TableCell className="min-w-44 align-top whitespace-normal">
-                      <p className="font-mono text-xs font-semibold text-[#0F2C59]">
+                      <p className="font-mono text-xs font-semibold text-ink">
                         {movement.trainNumber} · {movement.movementCode}
                       </p>
                       <p className="text-caption text-ink-muted">
@@ -641,8 +642,8 @@ function CirculationPanel({
   return (
     <Card className="min-w-0 border-line bg-surface">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base text-[#0F2C59]">
-          <Activity aria-hidden className="size-5 text-[#D39E00]" />
+        <CardTitle className="flex items-center gap-2 text-base text-ink">
+          <Activity aria-hidden className="size-5 text-ink-muted" />
           Graphique espace-temps · voie unique
         </CardTitle>
         <p className="text-small text-ink-muted">
@@ -665,8 +666,8 @@ function SegmentsPanel({
   return (
     <Card className="min-w-0 overflow-hidden border-line bg-surface">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base text-[#0F2C59]">
-          <Route aria-hidden className="size-5 text-[#D39E00]" />
+        <CardTitle className="flex items-center gap-2 text-base text-ink">
+          <Route aria-hidden className="size-5 text-ink-muted" />
           Cantons et occupation de la voie
         </CardTitle>
       </CardHeader>
@@ -695,7 +696,7 @@ function SegmentsPanel({
                   return (
                     <TableRow key={segment.id}>
                       <TableCell className="min-w-52 align-top whitespace-normal">
-                        <p className="font-mono text-xs font-semibold text-[#0F2C59]">
+                        <p className="font-mono text-xs font-semibold text-ink">
                           {segment.segmentCode}
                         </p>
                         <p className="text-small font-semibold">
@@ -839,8 +840,8 @@ function EventsPanel({ events }: { events: CotrafDashboardDto["events"] }) {
   return (
     <Card className="border-line bg-surface">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base text-[#0F2C59]">
-          <Radio aria-hidden className="size-5 text-[#D39E00]" />
+        <CardTitle className="flex items-center gap-2 text-base text-ink">
+          <Radio aria-hidden className="size-5 text-ink-muted" />
           Main courante et événements COTRAF
         </CardTitle>
       </CardHeader>
@@ -954,7 +955,7 @@ function EmptyCotrafDashboard() {
               <Database aria-hidden className="size-5" />
             </span>
             <div className="grid gap-1">
-              <CardTitle className="text-base text-[#0F2C59]">
+              <CardTitle className="text-base text-ink">
                 Socle COTRAF sécurisé
               </CardTitle>
               <p className="text-small text-ink-muted">

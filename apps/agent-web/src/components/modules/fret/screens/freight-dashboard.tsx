@@ -265,7 +265,7 @@ function FreightKpis({ kpis }: { kpis: FreightDashboard["kpis"] }) {
             <CardContent className="flex items-start justify-between gap-3 pt-6">
               <div className="min-w-0">
                 <dt className="text-small text-ink-muted">{kpi.label}</dt>
-                <dd className="mt-2 flex flex-wrap items-baseline gap-x-2 text-[#0F2C59]">
+                <dd className="mt-2 flex flex-wrap items-baseline gap-x-2 text-ink">
                   <span className="text-h2 tabular-nums">
                     {NUMBER_FORMATTER.format(kpi.value)}
                   </span>
@@ -322,7 +322,7 @@ function OperationProgress({
           >
             <div
               aria-hidden
-              className="h-full rounded-full bg-[#0F2C59]"
+              className="h-full rounded-full bg-accent-base"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -344,8 +344,8 @@ function FreightOperations({
   return (
     <Card className="min-w-0 overflow-hidden border-line bg-surface">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base text-[#0F2C59]">
-          <TrainFront aria-hidden className="size-5 text-[#D39E00]" />
+        <CardTitle className="flex items-center gap-2 text-base text-ink">
+          <TrainFront aria-hidden className="size-5 text-ink-muted" />
           Convois et flux marchandises
         </CardTitle>
       </CardHeader>
@@ -381,7 +381,7 @@ function FreightOperations({
                   <TableRow key={operation.id}>
                     <TableCell className="min-w-48 align-top whitespace-normal">
                       <div className="grid gap-1">
-                        <span className="font-mono text-xs font-semibold text-[#0F2C59]">
+                        <span className="font-mono text-xs font-semibold text-ink">
                           {operation.trainNumber}
                           {` · ${operation.operationCode}`}
                         </span>
@@ -398,7 +398,7 @@ function FreightOperations({
                         <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
                           <Route
                             aria-hidden
-                            className="size-4 shrink-0 text-[#D39E00]"
+                            className="size-4 shrink-0 text-warning-ink"
                           />
                           {operation.origin} → {operation.destination}
                         </span>
@@ -582,7 +582,7 @@ function EmptyFreightDashboard() {
               <ShieldCheck aria-hidden className="size-5" />
             </span>
             <div className="grid gap-1">
-              <CardTitle className="text-base text-[#0F2C59]">
+              <CardTitle className="text-base text-ink">
                 Socle Fret sécurisé
               </CardTitle>
               <p className="text-small text-ink-muted">
@@ -595,8 +595,8 @@ function EmptyFreightDashboard() {
       </Card>
       <Card className="border-line bg-surface">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base text-[#0F2C59]">
-            <Database aria-hidden className="size-5 text-[#D39E00]" />
+          <CardTitle className="flex items-center gap-2 text-base text-ink">
+            <Database aria-hidden className="size-5 text-ink-muted" />
             Activité Fret
           </CardTitle>
         </CardHeader>
