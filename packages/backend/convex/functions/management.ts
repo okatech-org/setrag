@@ -1,10 +1,16 @@
 import { action, mutation, query } from "../_generated/server"
 import type { MutationCtx } from "../_generated/server"
-import { api } from "../_generated/api"
+import { api, internal } from "../_generated/api"
 import type { Id } from "../_generated/dataModel"
 import { audit, requirePermission } from "../lib/auth"
 import { pointOfSaleType, serviceClass, trainType } from "../schema"
 import { applyBlock, occupiedSegments, segmentMask } from "../model/inventory"
+import {
+  CLE_PARAMETRES_PROGRAMMES,
+  completerParametres,
+  verifierParametres,
+  type Parametres,
+} from "./pilotage"
 import { v } from "convex/values"
 
 const SETTINGS_KEY = "commercial"
@@ -931,20 +937,17 @@ export const getSettings = query({
       .query("systemSettings")
       .withIndex("by_key", (q) => q.eq("key", SETTINGS_KEY))
       .unique()
-    return (
-      stored ?? {
-        key: SETTINGS_KEY,
-        vatPct: 18,
-        cssPct: 0,
-        seatHoldMinutes: 15,
-        mobilePaymentAttempts: 3,
-        degradedSalesEnabled: true,
-        cashVarianceNotificationsEnabled: true,
-      }
-    )
+    // Les champs ajoutés depuis sont complétés par leurs valeurs par défaut.
+    return { key: SETTINGS_KEY, ...completerParametres(stored) }
   },
 })
 
+/**
+ * Enregistre le paramétrage métier. Sans date d'effet (ou à une date déjà
+ * passée), la modification s'applique aussitôt ; sinon elle est programmée
+ * et remplace la version en vigueur à cette date. Chaque enregistrement est
+ * validé champ par champ et tracé, avec les valeurs avant et après.
+ */
 export const saveSettings = mutation({
   args: {
     vatPct: v.number(),
@@ -953,26 +956,102 @@ export const saveSettings = mutation({
     mobilePaymentAttempts: v.number(),
     degradedSalesEnabled: v.boolean(),
     cashVarianceNotificationsEnabled: v.boolean(),
+    saleOpeningDays: v.optional(v.number()),
+    refundPenaltyEarlyPct: v.optional(v.number()),
+    refundPenaltyLatePct: v.optional(v.number()),
+    refundThresholdHours: v.optional(v.number()),
+    refundAfterDepartureAllowed: v.optional(v.boolean()),
+    refundReasons: v.optional(v.array(v.string())),
+    ssoEnabled: v.optional(v.boolean()),
+    mfaRequired: v.optional(v.boolean()),
+    otpFallbackEnabled: v.optional(v.boolean()),
+    sessionIdleMinutes: v.optional(v.number()),
+    ticketPrintFormat: v.optional(
+      v.union(v.literal("thermique_80"), v.literal("a5"))
+    ),
+    duplicateMention: v.optional(v.string()),
+    ticketFooter: v.optional(v.string()),
+    /** Date d'effet ; absente ou passée : application immédiate. */
+    effectiveFrom: v.optional(v.number()),
+    /** Motif de la modification, repris au journal d'audit. */
+    changeReason: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  // Type de retour explicite : le corps référence `internal`, qui dépend
+  // lui-même du type de ce module (inférence circulaire sinon).
+  handler: async (ctx, args): Promise<Id<"systemSettings">> => {
     const actor = await requirePermission(ctx, "parametrage", "modifier")
-    if (args.vatPct < 0 || args.cssPct < 0) {
-      throw new Error("Les taux fiscaux ne peuvent pas être négatifs.")
-    }
-    if (args.seatHoldMinutes < 1 || args.mobilePaymentAttempts < 1) {
-      throw new Error(
-        "Les délais et tentatives doivent être supérieurs à zéro."
-      )
-    }
+    const { effectiveFrom, changeReason, ...valeurs } = args
     const existing = await ctx.db
       .query("systemSettings")
       .withIndex("by_key", (q) => q.eq("key", SETTINGS_KEY))
       .unique()
+    const avant = completerParametres(existing)
+    const nettoyees = Object.fromEntries(
+      Object.entries(valeurs).filter(([, valeur]) => valeur !== undefined)
+    ) as Partial<Parametres>
+    const apres: Parametres = {
+      ...avant,
+      ...nettoyees,
+      refundReasons: (nettoyees.refundReasons ?? avant.refundReasons)
+        .map((motif) => motif.trim())
+        .filter(Boolean),
+      duplicateMention: (
+        nettoyees.duplicateMention ?? avant.duplicateMention
+      ).trim(),
+      ticketFooter: (nettoyees.ticketFooter ?? avant.ticketFooter).trim(),
+    }
+    const erreurs = verifierParametres(apres)
+    if (erreurs.length > 0) {
+      throw new Error(`Paramètres refusés : ${erreurs.join(" ")}`)
+    }
+    const motif = changeReason?.trim() || undefined
+    const now = Date.now()
+    const programme = effectiveFrom !== undefined && effectiveFrom > now + 60_000
+
+    if (programme) {
+      const precedent = await ctx.db
+        .query("systemSettings")
+        .withIndex("by_key", (q) => q.eq("key", CLE_PARAMETRES_PROGRAMMES))
+        .unique()
+      if (precedent?.scheduledJobId) {
+        await ctx.scheduler.cancel(precedent.scheduledJobId)
+      }
+      const scheduledJobId = await ctx.scheduler.runAt(
+        effectiveFrom,
+        internal.functions.pilotage.appliquerParametresProgrammes,
+        {}
+      )
+      const stored = {
+        ...apres,
+        key: CLE_PARAMETRES_PROGRAMMES,
+        effectiveFrom,
+        scheduledJobId,
+        changeReason: motif,
+        updatedBy: actor._id,
+        updatedAt: now,
+      }
+      const id = precedent
+        ? (await ctx.db.patch(precedent._id, stored), precedent._id)
+        : await ctx.db.insert("systemSettings", stored)
+      await audit(ctx, {
+        actorId: actor._id,
+        action: "parametrage.programmer",
+        entityTable: "systemSettings",
+        entityId: id,
+        permission: "modifier",
+        reason: motif,
+        before: avant,
+        after: { ...apres, effectiveFrom },
+      })
+      return id
+    }
+
     const stored = {
-      ...args,
+      ...apres,
       key: SETTINGS_KEY,
+      changeReason: motif,
       updatedBy: actor._id,
-      updatedAt: Date.now(),
+      updatedAt: now,
     }
     const id = existing
       ? (await ctx.db.patch(existing._id, stored), existing._id)
@@ -982,8 +1061,10 @@ export const saveSettings = mutation({
       action: "parametrage.enregistrer",
       entityTable: "systemSettings",
       entityId: id,
-      before: existing,
-      after: args,
+      permission: "modifier",
+      reason: motif,
+      before: avant,
+      after: apres,
     })
     return id
   },

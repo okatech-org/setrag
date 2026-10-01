@@ -31,6 +31,11 @@ export interface DemoPersona {
   readonly moduleCodes: readonly ModuleCode[]
   readonly firstName: string
   readonly lastName: string
+  /**
+   * Point de vente de rattachement, pour les profils qui encaissent : sans
+   * lui, le compte ne peut ouvrir aucune caisse.
+   */
+  readonly pointOfSaleCode?: string
 }
 
 function persona(value: Omit<DemoPersona, "groupLabel">): DemoPersona {
@@ -117,6 +122,20 @@ export const DEMO_PERSONAS = [
     lastName: "DSI",
   }),
   persona({
+    key: "admin-fonctionnel",
+    label: "Administrateur fonctionnel billettique",
+    description: "Paramétrage commercial : livrets, grilles tarifaires, yield, points de vente",
+    actorType: "interne",
+    group: "dsi",
+    role: "admin_fonctionnel",
+    landingPath: "/gestion",
+    // Sécurité : les incidents d'exploitation et les procès-verbaux en
+    // relèvent, et ce rôle les administre.
+    moduleCodes: ["voyageurs", "finance", "securite", "rh", "ged", "copilot"],
+    firstName: "Démo",
+    lastName: "Paramétrage",
+  }),
+  persona({
     key: "cotraf",
     label: "Régulateur COTRAF",
     description: "Régulation en temps réel de la circulation ferroviaire",
@@ -160,7 +179,7 @@ export const DEMO_PERSONAS = [
     group: "def",
     role: "controleur_train",
     landingPath: "/securite",
-    moduleCodes: ["voyageurs", "securite"],
+    moduleCodes: ["voyageurs", "securite", "ged"],
     firstName: "Démo",
     lastName: "Contrôle",
   }),
@@ -316,9 +335,23 @@ export const DEMO_PERSONAS = [
     group: "dcfv",
     role: "vendeur_guichet",
     landingPath: "/vente",
-    moduleCodes: ["voyageurs"],
+    moduleCodes: ["voyageurs", "ged"],
     firstName: "Démo",
     lastName: "Vente",
+    pointOfSaleCode: "OWE-PV",
+  }),
+  persona({
+    key: "agence",
+    label: "Vendeur en agence accréditée",
+    description: "Vente pour le compte de SETRAG dans une agence partenaire",
+    actorType: "interne",
+    group: "dcfv",
+    role: "vendeur_agence",
+    landingPath: "/vente",
+    moduleCodes: ["voyageurs"],
+    firstName: "Démo",
+    lastName: "Agence",
+    pointOfSaleCode: "AG-LBV-MBT",
   }),
   persona({
     key: "chef-vente",
@@ -367,6 +400,18 @@ export const DEMO_PERSONAS = [
     moduleCodes: ["voyageurs", "fret", "finance", "ged"],
     firstName: "Démo",
     lastName: "Comptabilité",
+  }),
+  persona({
+    key: "recettes",
+    label: "Contrôleur des recettes",
+    description: "Visa des caisses, rapprochements et clôture des journées comptables",
+    actorType: "interne",
+    group: "dfc",
+    role: "controleur_recettes",
+    landingPath: "/gestion",
+    moduleCodes: ["voyageurs", "finance", "copilot"],
+    firstName: "Démo",
+    lastName: "Recettes",
   }),
   persona({
     key: "comptable-auxiliaire",

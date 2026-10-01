@@ -17,6 +17,7 @@ const INTERNAL_PERSONA_INVENTORY = [
     "Administrateur système — Direction des Systèmes d’Information & Projets Métiers",
     "admin_it",
   ],
+  ["admin-fonctionnel", "Administrateur fonctionnel billettique", "admin_fonctionnel"],
   ["cotraf", "Régulateur COTRAF", "regulateur_cotraf"],
   ["chef-gare", "Chef de gare", "chef_gare"],
   ["conducteur", "Conducteur de ligne", "conducteur_ligne"],
@@ -38,6 +39,7 @@ const INTERNAL_PERSONA_INVENTORY = [
   ["signalisation", "Technicien signalisation", "technicien_signalisation"],
   ["telecoms", "Technicien télécoms", "technicien_telecoms"],
   ["agent", "Guichetier", "vendeur_guichet"],
+  ["agence", "Vendeur en agence accréditée", "vendeur_agence"],
   ["chef-vente", "Chef de vente", "chef_vente"],
   ["fret", "Gestionnaire grands comptes fret", "gestionnaire_fret"],
   [
@@ -46,6 +48,7 @@ const INTERNAL_PERSONA_INVENTORY = [
     "gestionnaire_litiges_fret",
   ],
   ["comptable", "Comptable général", "comptable"],
+  ["recettes", "Contrôleur des recettes", "controleur_recettes"],
   ["comptable-auxiliaire", "Comptable auxiliaire", "comptable_auxiliaire"],
   ["fiscalite", "Fiscaliste", "fiscaliste"],
   ["tresorerie", "Trésorier", "tresorier"],
@@ -95,7 +98,7 @@ describe("Comptes de démonstration", () => {
       groupLabel: "DCFV · Commercial fret & voyageurs",
       role: "vendeur_guichet",
       landingPath: "/vente",
-      moduleCodes: ["voyageurs"],
+      moduleCodes: ["voyageurs", "ged"],
       firstName: "Démo",
       lastName: "Vente",
       email: "agent@setrag.ga",
@@ -139,7 +142,7 @@ describe("Comptes de démonstration", () => {
     expect(rendus.map((c) => c.key)).toEqual(["controle"])
   })
 
-  it("dérive les 45 comptes du mot de passe partagé et du domaine par défaut", async () => {
+  it("dérive les 48 comptes du mot de passe partagé et du domaine par défaut", async () => {
     vi.stubEnv("DEMO_ACCOUNTS_ENABLED", "true")
     vi.stubEnv("DEMO_PERSONAS_PASSWORD", "shared-secret")
     vi.stubEnv("DEMO_PERSONAS_EMAIL_DOMAIN", "")
@@ -149,7 +152,7 @@ describe("Comptes de démonstration", () => {
     const t = convexTest(schema, modules)
 
     const accounts = await t.query(api.functions.demoAccounts.list, {})
-    expect(accounts).toHaveLength(45)
+    expect(accounts).toHaveLength(48)
     expect(accounts.every(({ password }) => password === "shared-secret")).toBe(
       true
     )
@@ -189,16 +192,16 @@ describe("Comptes de démonstration", () => {
 })
 
 describe("Catalogue des acteurs SETRAG", () => {
-  it("couvre explicitement 35 fonctions internes et 10 parties prenantes externes", () => {
-    expect(DEMO_PERSONAS).toHaveLength(45)
+  it("couvre explicitement 38 fonctions internes et 10 parties prenantes externes", () => {
+    expect(DEMO_PERSONAS).toHaveLength(48)
     const internes = DEMO_PERSONAS.filter(
       ({ actorType }) => actorType === "interne"
     )
-    expect(internes).toHaveLength(35)
+    expect(internes).toHaveLength(38)
     expect(internes.map(({ key, label, role }) => [key, label, role])).toEqual(
       INTERNAL_PERSONA_INVENTORY
     )
-    expect(new Set(internes.map(({ role }) => role)).size).toBe(35)
+    expect(new Set(internes.map(({ role }) => role)).size).toBe(38)
     const externes = DEMO_PERSONAS.filter(
       ({ actorType }) => actorType === "externe"
     )
@@ -209,7 +212,7 @@ describe("Catalogue des acteurs SETRAG", () => {
   })
 
   it("utilise des clés uniques, des routes connues et des modules valides", () => {
-    expect(new Set(DEMO_PERSONAS.map(({ key }) => key)).size).toBe(45)
+    expect(new Set(DEMO_PERSONAS.map(({ key }) => key)).size).toBe(48)
     const routes = new Set([
       ...MODULE_MANIFEST.map(({ route }) => route),
       "/vente",
@@ -282,7 +285,7 @@ describe("Catalogue des acteurs SETRAG", () => {
       state.activations
         .filter(({ isEnabled }) => isEnabled)
         .map(({ moduleCode }) => moduleCode)
-    ).toEqual(["voyageurs"])
+    ).toEqual(["voyageurs", "ged"])
   })
 
   it("provisionne le persona DSI avec les dix modules activés", async () => {

@@ -4,6 +4,13 @@ import { continuityTables } from "./modules/continuity/tables"
 import { cotrafTables } from "./modules/cotraf/tables"
 import { financeTables } from "./modules/finance/tables"
 import { fretTables } from "./modules/fret/tables"
+import { rhTables } from "./modules/rh/tables"
+import { securiteTables } from "./modules/securite/tables"
+import { gedTables } from "./modules/ged/tables"
+import { etudesTables } from "./modules/etudes/tables"
+import { copilotTables } from "./modules/copilot/tables"
+import { gmaoTables } from "./modules/gmao/tables"
+import { infrastructureTables } from "./modules/infrastructure/tables"
 import { platformTables } from "./modules/platform/tables"
 import { appRoleValidator } from "./modules/platform/validators"
 
@@ -253,11 +260,45 @@ const fareTrace = v.object({
   roundingStep: v.number(),
 })
 
+/**
+ * Les six états du cahier des charges (portail de gestion, rubrique
+ * Rapports) : générables à la demande ou programmés.
+ */
+export const cdcReportType = v.union(
+  v.literal("ventes"),
+  v.literal("tracabilite_places"),
+  v.literal("places_vendues"),
+  v.literal("remboursements"),
+  v.literal("etat_caisse"),
+  v.literal("extraction_voyageurs")
+)
+
+/** Types acceptés par une programmation : les six états, plus les quatre historiques. */
+export const scheduledReportType = v.union(
+  v.literal("ventes_canaux"),
+  v.literal("remplissage"),
+  v.literal("annulations"),
+  v.literal("recettes"),
+  v.literal("ventes"),
+  v.literal("tracabilite_places"),
+  v.literal("places_vendues"),
+  v.literal("remboursements"),
+  v.literal("etat_caisse"),
+  v.literal("extraction_voyageurs")
+)
+
 export default defineSchema({
   ...platformTables,
   ...financeTables,
   ...continuityTables,
   ...fretTables,
+  ...rhTables,
+  ...securiteTables,
+  ...gedTables,
+  ...etudesTables,
+  ...copilotTables,
+  ...gmaoTables,
+  ...infrastructureTables,
   ...cotrafTables,
 
   /* ══════════════════ Identités & habilitations ═════════════════════════ */
@@ -295,6 +336,23 @@ export default defineSchema({
     identitySource: v.union(v.literal("annuaire"), v.literal("local")),
     isActive: v.boolean(),
     lastSeenAt: v.optional(v.number()),
+    /**
+     * Second facteur déclaré par l'annuaire (Entra ID). Tant que l'annuaire
+     * n'est pas raccordé, la synchronisation est simulée et le dit.
+     */
+    secondFactor: v.optional(
+      v.union(
+        v.literal("application"),
+        v.literal("fido2"),
+        v.literal("sms"),
+        v.literal("aucun")
+      )
+    ),
+    /** Dernière synchronisation de ce compte avec l'annuaire. */
+    directorySyncedAt: v.optional(v.number()),
+    /** Compte provisionné par invitation, en attente de première connexion. */
+    invitedAt: v.optional(v.number()),
+    invitedBy: v.optional(v.id("users")),
   })
     .index("by_authId", ["authId"])
     .index("by_email", ["email"])
@@ -352,6 +410,14 @@ export default defineSchema({
     row: v.number(),
     column: v.number(),
     isActive: v.boolean(),
+    /** Type de place, importé avec le plan de voiture. Absent : standard. */
+    kind: v.optional(
+      v.union(
+        v.literal("standard"),
+        v.literal("pmr"),
+        v.literal("strapontin")
+      )
+    ),
   })
     .index("by_coach", ["coachId"])
     .index("by_train", ["trainId"]),
@@ -368,6 +434,8 @@ export default defineSchema({
     approvedBy: v.optional(v.id("users")),
     approvedAt: v.optional(v.number()),
     rejectionReason: v.optional(v.string()),
+    submittedBy: v.optional(v.id("users")),
+    submittedAt: v.optional(v.number()),
   })
     .index("by_status", ["status"])
     .index("by_validity", ["validFrom"]),
@@ -459,6 +527,9 @@ export default defineSchema({
     approvedBy: v.optional(v.id("users")),
     approvedAt: v.optional(v.number()),
     rejectionReason: v.optional(v.string()),
+    /** Auteur de la soumission : il ne peut pas approuver sa propre grille. */
+    submittedBy: v.optional(v.id("users")),
+    submittedAt: v.optional(v.number()),
   })
     .index("by_status", ["status"])
     .index("by_validity", ["validFrom"]),
@@ -564,6 +635,8 @@ export default defineSchema({
     floorXaf: v.optional(v.number()),
     capXaf: v.optional(v.number()),
     code: v.optional(v.string()),
+    /** Nom lisible de la règle (« Forte demande vendredi »). */
+    label: v.optional(v.string()),
     isActive: v.boolean(),
     createdBy: v.id("users"),
   })
@@ -645,6 +718,10 @@ export default defineSchema({
     createdBy: v.id("users"),
     cancelledBy: v.optional(v.id("users")),
     cancelledAt: v.optional(v.number()),
+    /** Échéance : au-delà, les places non vendues reviennent à la vente générale. */
+    releaseAt: v.optional(v.number()),
+    /** Motif de l'annulation ou de la libération. */
+    releaseNote: v.optional(v.string()),
   })
     .index("by_pos_trip", ["pointOfSaleId", "tripId"])
     .index("by_trip", ["tripId"]),
@@ -679,6 +756,35 @@ export default defineSchema({
     mobilePaymentAttempts: v.number(),
     degradedSalesEnabled: v.boolean(),
     cashVarianceNotificationsEnabled: v.boolean(),
+    /*
+     * Paramètres ajoutés par l'écran de paramétrage du portail de gestion.
+     * Optionnels : le document déjà en base reste valide, les valeurs par
+     * défaut sont appliquées à la lecture (`functions/pilotage.ts`).
+     */
+    /** Ouverture de la vente, en jours avant le départ. */
+    saleOpeningDays: v.optional(v.number()),
+    /** Pénalité de remboursement plus de `refundThresholdHours` avant le départ. */
+    refundPenaltyEarlyPct: v.optional(v.number()),
+    /** Pénalité de remboursement moins de `refundThresholdHours` avant le départ. */
+    refundPenaltyLatePct: v.optional(v.number()),
+    refundThresholdHours: v.optional(v.number()),
+    /** Remboursement après le départ (train supprimé ou gros retard seulement). */
+    refundAfterDepartureAllowed: v.optional(v.boolean()),
+    /** Motifs de remboursement proposés au vendeur. */
+    refundReasons: v.optional(v.array(v.string())),
+    ssoEnabled: v.optional(v.boolean()),
+    mfaRequired: v.optional(v.boolean()),
+    otpFallbackEnabled: v.optional(v.boolean()),
+    sessionIdleMinutes: v.optional(v.number()),
+    ticketPrintFormat: v.optional(
+      v.union(v.literal("thermique_80"), v.literal("a5"))
+    ),
+    duplicateMention: v.optional(v.string()),
+    ticketFooter: v.optional(v.string()),
+    /** Version programmée : date à laquelle elle remplacera la version en vigueur. */
+    effectiveFrom: v.optional(v.number()),
+    scheduledJobId: v.optional(v.id("_scheduled_functions")),
+    changeReason: v.optional(v.string()),
     updatedBy: v.id("users"),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
@@ -725,6 +831,11 @@ export default defineSchema({
     contactPhone: v.optional(v.string()),
     contactEmail: v.optional(v.string()),
     amounts,
+    /**
+     * Moyen de règlement de l'opération, pour le rapprochement de caisse par
+     * moyen. Absent des réservations non réglées et des ventes antérieures.
+     */
+    paymentMethod: v.optional(paymentMethod),
     accountingDayId: v.optional(v.id("accountingDays")),
     cashSessionId: v.optional(v.id("cashSessions")),
     /** Vente d'origine, pour une annulation ou un remboursement. */
@@ -810,6 +921,10 @@ export default defineSchema({
     senderName: v.string(),
     recipientName: v.optional(v.string()),
     fareCode: v.optional(v.string()),
+    /** Nombre de pièces pesées ensemble, imprimé sur l'étiquette. */
+    pieceCount: v.optional(v.number()),
+    /** Nature déclarée (valise, sac, carton…). */
+    description: v.optional(v.string()),
     amounts,
   })
     .index("by_sale", ["saleId"])
@@ -829,6 +944,12 @@ export default defineSchema({
     senderPhone: v.string(),
     recipientName: v.string(),
     recipientPhone: v.string(),
+    /** Pièce d'identité de l'expéditeur, relevée au guichet. */
+    senderIdDocument: v.optional(v.string()),
+    /** Valeur déclarée, base de l'indemnisation en cas de perte. */
+    declaredValueXaf: v.optional(v.number()),
+    /** Consignes de manutention imprimées sur la vignette (fragile…). */
+    handling: v.optional(v.array(v.string())),
     totalWeightKg: v.number(),
     status: v.union(
       v.literal("enregistre"),
@@ -935,6 +1056,15 @@ export default defineSchema({
     expiresAt: v.optional(v.number()),
     lastPolledAt: v.optional(v.number()),
     settledAt: v.optional(v.number()),
+    /** Guichet : montant remis par le client et monnaie rendue (espèces). */
+    tenderedXaf: v.optional(v.number()),
+    changeXaf: v.optional(v.number()),
+    /** Guichet : ticket TPE, bon de commande ou référence opérateur saisie. */
+    reference: v.optional(v.string()),
+    /** Agent qui a demandé le règlement — seul à pouvoir l'utiliser. */
+    requestedBy: v.optional(v.id("users")),
+    /** Rang de la tentative de paiement mobile pour la même opération. */
+    attempt: v.optional(v.number()),
   })
     .index("by_sale", ["saleId"])
     .index("by_penalty", ["penaltyId"])
@@ -979,6 +1109,11 @@ export default defineSchema({
       )
     ),
     exportError: v.optional(v.string()),
+    /** Résumé du journal V65 engendré, pour lister les journées sans relire les écritures. */
+    journalEntryCount: v.optional(v.number()),
+    journalTotalTtc: v.optional(v.number()),
+    journalRefundsTtc: v.optional(v.number()),
+    journalGeneratedAt: v.optional(v.number()),
   })
     .index("by_date", ["date"])
     .index("by_status", ["status"]),
@@ -999,12 +1134,35 @@ export default defineSchema({
     ),
     varianceXaf: v.optional(v.number()),
     varianceReason: v.optional(v.string()),
+    /** Billetage du fonds compté à l'ouverture : coupure × quantité. */
+    openingBreakdown: v.optional(
+      v.array(v.object({ denomination: v.number(), count: v.number() }))
+    ),
+    /** Billetage des espèces comptées à la clôture, fonds compris. */
+    closingBreakdown: v.optional(
+      v.array(v.object({ denomination: v.number(), count: v.number() }))
+    ),
+    /** Carnet de billets pré-imprimés remis avec la caisse (mode dégradé). */
+    emergencyBooklet: v.optional(
+      v.object({
+        number: v.string(),
+        firstNumber: v.string(),
+        lastNumber: v.string(),
+      })
+    ),
     status: v.union(
       v.literal("ouverte"),
       v.literal("cloturee"),
       v.literal("validee")
     ),
     validatedBy: v.optional(v.id("users")),
+    /** Visa du contrôle des recettes : horodatage et commentaire. */
+    validatedAt: v.optional(v.number()),
+    visaComment: v.optional(v.string()),
+    /** Recomptage demandé par le contrôle des recettes avant visa. */
+    recountRequestedAt: v.optional(v.number()),
+    recountRequestedBy: v.optional(v.id("users")),
+    recountReason: v.optional(v.string()),
   })
     .index("by_seller", ["sellerId"])
     .index("by_day", ["accountingDayId"])
@@ -1039,6 +1197,15 @@ export default defineSchema({
     recordedAt: v.number(),
     originalSellerId: v.id("users"),
     recordedBy: v.id("users"),
+    /** Détail de la souche, pour la liste et le contrôle de séquence. */
+    passengerName: v.optional(v.string()),
+    tripId: v.optional(v.id("trips")),
+    originStationId: v.optional(v.id("stations")),
+    destinationStationId: v.optional(v.id("stations")),
+    serviceClass: v.optional(serviceClass),
+    /** Titre système créé pour tenir la place, jamais imprimé. */
+    ticketId: v.optional(v.id("tickets")),
+    pointOfSaleId: v.optional(v.id("pointsOfSale")),
   })
     .index("by_preprinted", ["preprintedNumber"])
     .index("by_sale", ["saleId"]),
@@ -1138,6 +1305,22 @@ export default defineSchema({
     resolvedBy: v.optional(v.id("users")),
     resolvedAt: v.optional(v.number()),
     resolutionNote: v.optional(v.string()),
+    /** Référence continue du réseau, ex. « INC-2026-0081 ». */
+    number: v.optional(v.string()),
+    /** Lieu précis hors gare : « Entre Ntoum et Andem ». */
+    location: v.optional(v.string()),
+    /** Cause retenue à la clôture. */
+    closureCause: v.optional(
+      v.union(
+        v.literal("materiel"),
+        v.literal("infrastructure"),
+        v.literal("exploitation"),
+        v.literal("tiers"),
+        v.literal("voyageur"),
+        v.literal("meteo"),
+        v.literal("autre")
+      )
+    ),
   })
     .index("by_trip", ["tripId"])
     .index("by_status", ["status"])
@@ -1686,12 +1869,7 @@ export default defineSchema({
   /** Rapports récurrents demandés depuis le back-office de gestion. */
   reportSchedules: defineTable({
     label: v.string(),
-    reportType: v.union(
-      v.literal("ventes_canaux"),
-      v.literal("remplissage"),
-      v.literal("annulations"),
-      v.literal("recettes")
-    ),
+    reportType: scheduledReportType,
     frequency: v.union(
       v.literal("quotidien"),
       v.literal("hebdomadaire"),
@@ -1701,6 +1879,8 @@ export default defineSchema({
     recipients: v.array(v.string()),
     nextRunAt: v.number(),
     lastRunAt: v.optional(v.number()),
+    /** Dernière exécution produite (fichier téléchargeable). */
+    lastRunId: v.optional(v.id("reportRuns")),
     isActive: v.boolean(),
     createdBy: v.id("users"),
     createdAt: v.number(),
@@ -1708,6 +1888,103 @@ export default defineSchema({
   })
     .index("by_next_run", ["nextRunAt"])
     .index("by_active_next_run", ["isActive", "nextRunAt"]),
+
+  /**
+   * Exécutions d'un état, à la demande ou programmées : filtres appliqués,
+   * fichier produit (stockage Convex) et aperçu des premières lignes.
+   */
+  reportRuns: defineTable({
+    reportType: cdcReportType,
+    trigger: v.union(
+      v.literal("demande"),
+      v.literal("programme"),
+      v.literal("manuel")
+    ),
+    scheduleId: v.optional(v.id("reportSchedules")),
+    from: v.string(),
+    to: v.string(),
+    filters: v.object({
+      pointOfSaleId: v.optional(v.id("pointsOfSale")),
+      trainNumber: v.optional(v.string()),
+      product: v.optional(productType),
+    }),
+    status: v.union(
+      v.literal("en_cours"),
+      v.literal("produit"),
+      v.literal("echec")
+    ),
+    rowCount: v.optional(v.number()),
+    storageId: v.optional(v.id("_storage")),
+    filename: v.optional(v.string()),
+    byteSize: v.optional(v.number()),
+    /** En-tête et premières lignes, en JSON, pour l'aperçu à l'écran. */
+    preview: v.optional(v.string()),
+    error: v.optional(v.string()),
+    requestedBy: v.optional(v.id("users")),
+    requestedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    /** Envoi aux destinataires d'une programmation (passerelle e-mail simulée). */
+    delivery: v.optional(
+      v.object({
+        recipients: v.array(v.string()),
+        status: v.union(
+          v.literal("en_file"),
+          v.literal("envoye"),
+          v.literal("echec")
+        ),
+        outboxEventId: v.optional(v.id("outboxEvents")),
+        message: v.optional(v.string()),
+      })
+    ),
+  })
+    .index("by_requested_at", ["requestedAt"])
+    .index("by_schedule", ["scheduleId", "requestedAt"])
+    .index("by_type", ["reportType", "requestedAt"]),
+
+  /**
+   * Échanges avec SAGE X3 (simulé tant que l'interface réelle n'est pas
+   * raccordée) : une ligne par transmission, avec l'accusé ou les rejets.
+   */
+  sageTransmissions: defineTable({
+    accountingDayId: v.id("accountingDays"),
+    outboxEventId: v.id("outboxEvents"),
+    attempt: v.number(),
+    sentAt: v.number(),
+    result: v.union(v.literal("integre"), v.literal("rejete")),
+    receiptNumber: v.string(),
+    pieceCount: v.number(),
+    totalTtc: v.number(),
+    rejectedPieces: v.array(
+      v.object({
+        pieceNumber: v.string(),
+        pointOfSaleCode: v.string(),
+        analyticAccount: v.string(),
+        costCenter: v.optional(v.string()),
+        ttc: v.number(),
+        reason: v.string(),
+      })
+    ),
+    simulated: v.boolean(),
+    sentBy: v.optional(v.id("users")),
+  })
+    .index("by_day", ["accountingDayId", "sentAt"])
+    .index("by_sent_at", ["sentAt"]),
+
+  /** Tests de connexion des services raccordés, tracés. */
+  integrationProbes: defineTable({
+    service: v.string(),
+    result: v.union(
+      v.literal("ok"),
+      v.literal("degrade"),
+      v.literal("echec"),
+      v.literal("non_raccorde")
+    ),
+    latencyMs: v.optional(v.number()),
+    message: v.string(),
+    simulated: v.boolean(),
+    testedBy: v.id("users"),
+    testedAt: v.number(),
+  }).index("by_service", ["service", "testedAt"]),
 
   notifications: defineTable({
     userId: v.id("users"),
@@ -1755,6 +2032,20 @@ export default defineSchema({
         v.literal("remboursement")
       )
     ),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  /**
+   * Préférences d'un agent sur le portail : raccourcis clavier du menu. Une
+   * ligne par compte, absente tant qu'il garde les réglages par défaut ; le
+   * poste suit l'agent, pas l'inverse.
+   */
+  agentPreferences: defineTable({
+    userId: v.id("users"),
+    raccourcisActifs: v.boolean(),
+    afficherTouches: v.boolean(),
+    /** Touches choisies par rubrique (chemin → touche), `null` pour aucune. */
+    touches: v.record(v.string(), v.union(v.string(), v.null())),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 

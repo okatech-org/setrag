@@ -36,8 +36,11 @@ async function draftFixture(t: ReturnType<typeof convexTest>) {
       createdBy: userId,
     })
   )
+  // Séparation des tâches : un second administrateur approuve.
+  const { client: approver } = await asRole(t, "admin_fonctionnel")
   return {
     client,
+    approver,
     userId,
     scheduleId: scheduleId as Id<"fareSchedules">,
   }
@@ -53,7 +56,7 @@ const BASE = {
 describe("Grilles tarifaires — détail et cycle de vie", () => {
   it("modifie le barème et gère ses bases tant qu'il est en brouillon", async () => {
     const t = convexTest(schema, modules)
-    const { client, scheduleId } = await draftFixture(t)
+    const { client, approver, scheduleId } = await draftFixture(t)
 
     await client.mutation(api.functions.fareSchedules.update, {
       scheduleId,
@@ -88,7 +91,7 @@ describe("Grilles tarifaires — détail et cycle de vie", () => {
 
   it("exécute soumission, rejet, correction, nouvelle soumission et activation", async () => {
     const t = convexTest(schema, modules)
-    const { client, scheduleId } = await draftFixture(t)
+    const { client, approver, scheduleId } = await draftFixture(t)
     await client.mutation(api.functions.fareSchedules.upsertBase, {
       scheduleId,
       ...BASE,
@@ -119,7 +122,7 @@ describe("Grilles tarifaires — détail et cycle de vie", () => {
 
     await client.mutation(api.functions.fareSchedules.submit, { scheduleId })
     await expect(
-      client.mutation(api.functions.fareSchedules.approve, { scheduleId })
+      approver.mutation(api.functions.fareSchedules.approve, { scheduleId })
     ).resolves.toBe("actif")
     const active = await t.run((ctx) => ctx.db.get(scheduleId))
     expect(active).toMatchObject({
@@ -131,13 +134,13 @@ describe("Grilles tarifaires — détail et cycle de vie", () => {
 
   it("expire une grille active sans supprimer son barème historique", async () => {
     const t = convexTest(schema, modules)
-    const { client, scheduleId } = await draftFixture(t)
+    const { client, approver, scheduleId } = await draftFixture(t)
     const baseId = await client.mutation(
       api.functions.fareSchedules.upsertBase,
       { scheduleId, ...BASE }
     )
     await client.mutation(api.functions.fareSchedules.submit, { scheduleId })
-    await client.mutation(api.functions.fareSchedules.approve, { scheduleId })
+    await approver.mutation(api.functions.fareSchedules.approve, { scheduleId })
 
     await expect(
       client.mutation(api.functions.fareSchedules.expire, { scheduleId })
@@ -173,7 +176,7 @@ describe("Grilles tarifaires — détail et cycle de vie", () => {
     await first.client.mutation(api.functions.fareSchedules.submit, {
       scheduleId: first.scheduleId,
     })
-    await first.client.mutation(api.functions.fareSchedules.approve, {
+    await first.approver.mutation(api.functions.fareSchedules.approve, {
       scheduleId: first.scheduleId,
     })
 
@@ -196,10 +199,30 @@ describe("Grilles tarifaires — détail et cycle de vie", () => {
       })
     )
     await expect(
-      first.client.mutation(api.functions.fareSchedules.approve, {
+      first.approver.mutation(api.functions.fareSchedules.approve, {
         scheduleId: secondId,
       })
     ).rejects.toThrow(/Chevauchement/)
+  })
+
+  it("refuse que l'auteur ou le soumetteur approuve sa propre grille", async () => {
+    const t = convexTest(schema, modules)
+    const { client, approver, scheduleId } = await draftFixture(t)
+    await client.mutation(api.functions.fareSchedules.upsertBase, {
+      scheduleId,
+      ...BASE,
+    })
+    await client.mutation(api.functions.fareSchedules.submit, { scheduleId })
+    expect(await t.run((ctx) => ctx.db.get(scheduleId))).toMatchObject({
+      submittedBy: expect.any(String),
+      submittedAt: expect.any(Number),
+    })
+    await expect(
+      client.mutation(api.functions.fareSchedules.approve, { scheduleId })
+    ).rejects.toThrow(/Séparation des tâches/)
+    await expect(
+      approver.mutation(api.functions.fareSchedules.approve, { scheduleId })
+    ).resolves.toBe("actif")
   })
 
   it("applique les droits fins et journalise les actions", async () => {
@@ -228,7 +251,7 @@ describe("Grilles tarifaires — détail et cycle de vie", () => {
 
   it("refuse la soumission d'une grille vide et les doublons de base", async () => {
     const t = convexTest(schema, modules)
-    const { client, scheduleId } = await draftFixture(t)
+    const { client, approver, scheduleId } = await draftFixture(t)
     await expect(
       client.mutation(api.functions.fareSchedules.submit, { scheduleId })
     ).rejects.toThrow(/Grille vide/)
@@ -249,7 +272,7 @@ describe("Grilles tarifaires — détail et cycle de vie", () => {
 describe("Réductions publiques (publicDiscounts)", () => {
   it("ne renvoie que les réductions actives de la grille active, triées par taux décroissant", async () => {
     const t = convexTest(schema, modules)
-    const { client, scheduleId } = await draftFixture(t)
+    const { client, approver, scheduleId } = await draftFixture(t)
     await client.mutation(api.functions.fareSchedules.upsertBase, {
       scheduleId,
       ...BASE,
@@ -285,7 +308,7 @@ describe("Réductions publiques (publicDiscounts)", () => {
       ])
     )
     await client.mutation(api.functions.fareSchedules.submit, { scheduleId })
-    await client.mutation(api.functions.fareSchedules.approve, { scheduleId })
+    await approver.mutation(api.functions.fareSchedules.approve, { scheduleId })
 
     const discounts = await t.query(
       api.functions.fareSchedules.publicDiscounts,

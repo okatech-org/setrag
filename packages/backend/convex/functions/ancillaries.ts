@@ -18,6 +18,11 @@ import {
 } from "../model/ancillary"
 import { buildAmounts, formatNumber, sequenceKey } from "../model/sales"
 import { distanceBetween } from "../model/network"
+import {
+  enregistrerReglement,
+  reglementArgs,
+  verifierReglement,
+} from "../lib/reglement"
 
 /**
  * Produits voyageurs hors billet : bagages, colis express, transport auto
@@ -156,6 +161,10 @@ export const sellBaggage = mutation({
     franchiseKg: v.optional(v.number()),
     excessRatePerKgHt: v.optional(v.number()),
     deviceId: v.optional(v.string()),
+    /** Nombre de pièces pesées ensemble et nature déclarée. */
+    pieceCount: v.optional(v.number()),
+    description: v.optional(v.string()),
+    ...reglementArgs,
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "ventes", "creer")
@@ -193,6 +202,13 @@ export const sellBaggage = mutation({
       fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
     )
     const amounts = buildAmounts(ttc, schedule.vatPct, schedule.cssPct, ttc)
+    if (
+      args.pieceCount !== undefined &&
+      (!Number.isInteger(args.pieceCount) || args.pieceCount < 1)
+    ) {
+      throw new Error(`Nombre de pièces invalide : ${args.pieceCount}`)
+    }
+    const reglement = await verifierReglement(ctx, actor, args, amounts.ttc)
 
     const code = selling.pointOfSale.code
     const saleSeq = await nextSequence(
@@ -232,8 +248,11 @@ export const sellBaggage = mutation({
       senderName: args.senderName,
       recipientName: args.recipientName,
       fareCode: args.fareCode,
+      pieceCount: args.pieceCount,
+      description: args.description?.trim() || undefined,
       amounts,
     })
+    await enregistrerReglement(ctx, actor, saleId, reglement, amounts.ttc)
 
     await accrueToAccountingDay(
       ctx,
@@ -257,6 +276,8 @@ export const sellBaggage = mutation({
       distanceKm,
       breakdown: fare,
       amounts,
+      paymentMethod: reglement.method,
+      changeXaf: reglement.changeXaf ?? 0,
     }
   },
 })
@@ -311,6 +332,12 @@ export const sellParcel = mutation({
     recipientPhone: v.string(),
     items: v.array(v.object({ description: v.string(), weightKg: v.number() })),
     deviceId: v.optional(v.string()),
+    /** Desserte d'acheminement, pour annoncer l'arrivée au destinataire. */
+    tripId: v.optional(v.id("trips")),
+    senderIdDocument: v.optional(v.string()),
+    declaredValueXaf: v.optional(v.number()),
+    handling: v.optional(v.array(v.string())),
+    ...reglementArgs,
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "ventes", "creer")
@@ -340,6 +367,20 @@ export const sellParcel = mutation({
       fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
     )
     const amounts = buildAmounts(ttc, schedule.vatPct, schedule.cssPct, ttc)
+    if (
+      args.declaredValueXaf !== undefined &&
+      (!Number.isFinite(args.declaredValueXaf) || args.declaredValueXaf < 0)
+    ) {
+      throw new Error(`Valeur déclarée invalide : ${args.declaredValueXaf}`)
+    }
+    if (args.tripId) {
+      const trip = await ctx.db.get(args.tripId)
+      if (!trip) throw new Error("Desserte d'acheminement introuvable")
+      if (trip.status === "annule" || trip.status === "termine") {
+        throw new Error(`Desserte « ${trip.status} » : acheminement impossible`)
+      }
+    }
+    const reglement = await verifierReglement(ctx, actor, args, amounts.ttc)
 
     const code = selling.pointOfSale.code
     const saleSeq = await nextSequence(
@@ -376,6 +417,7 @@ export const sellParcel = mutation({
     const parcelId = await ctx.db.insert("parcels", {
       saleId,
       shipmentNumber,
+      tripId: args.tripId,
       originStationId: args.originStationId,
       destinationStationId: args.destinationStationId,
       distanceKm,
@@ -384,10 +426,15 @@ export const sellParcel = mutation({
       senderPhone: args.senderPhone,
       recipientName: args.recipientName,
       recipientPhone: args.recipientPhone,
+      senderIdDocument: args.senderIdDocument?.trim() || undefined,
+      declaredValueXaf: args.declaredValueXaf,
+      handling: args.handling?.filter((h) => h.trim().length > 0),
       totalWeightKg: fare.totalWeightKg,
       status: "enregistre",
       amounts,
     })
+
+    await enregistrerReglement(ctx, actor, saleId, reglement, amounts.ttc)
 
     const stickers: string[] = []
     for (const [index, item] of args.items.entries()) {
@@ -443,6 +490,8 @@ export const sellParcel = mutation({
       distanceKm,
       zone: fare.items[0]!.zone,
       amounts,
+      paymentMethod: reglement.method,
+      changeXaf: reglement.changeXaf ?? 0,
     }
   },
 })
@@ -549,6 +598,7 @@ export const sellVehicleTransport = mutation({
     fareCode: v.optional(v.string()),
     validUntil: v.number(),
     deviceId: v.optional(v.string()),
+    ...reglementArgs,
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "ventes", "creer")
@@ -577,6 +627,7 @@ export const sellVehicleTransport = mutation({
       fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
     )
     const amounts = buildAmounts(ttc, schedule.vatPct, schedule.cssPct, ttc)
+    const reglement = await verifierReglement(ctx, actor, args, amounts.ttc)
 
     const code = selling.pointOfSale.code
     const saleSeq = await nextSequence(
@@ -624,6 +675,7 @@ export const sellVehicleTransport = mutation({
       validUntil: args.validUntil,
       amounts,
     })
+    await enregistrerReglement(ctx, actor, saleId, reglement, amounts.ttc)
 
     await accrueToAccountingDay(
       ctx,
@@ -640,7 +692,14 @@ export const sellVehicleTransport = mutation({
       after: { shipmentNumber, tonnage: args.tonnage, ttc: amounts.ttc },
     })
 
-    return { saleId, vehicleTransportId: id, shipmentNumber, amounts }
+    return {
+      saleId,
+      vehicleTransportId: id,
+      shipmentNumber,
+      amounts,
+      paymentMethod: reglement.method,
+      changeXaf: reglement.changeXaf ?? 0,
+    }
   },
 })
 
@@ -657,6 +716,7 @@ export const sellFuneralTransport = mutation({
     senderName: v.string(),
     fareCode: v.optional(v.string()),
     deviceId: v.optional(v.string()),
+    ...reglementArgs,
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "ventes", "creer")
@@ -685,6 +745,7 @@ export const sellFuneralTransport = mutation({
       fare.totalHt * (1 + schedule.vatPct / 100 + schedule.cssPct / 100)
     )
     const amounts = buildAmounts(ttc, schedule.vatPct, schedule.cssPct, ttc)
+    const reglement = await verifierReglement(ctx, actor, args, amounts.ttc)
 
     const code = selling.pointOfSale.code
     const saleSeq = await nextSequence(
@@ -729,6 +790,7 @@ export const sellFuneralTransport = mutation({
       fareCode: args.fareCode,
       amounts,
     })
+    await enregistrerReglement(ctx, actor, saleId, reglement, amounts.ttc)
 
     await accrueToAccountingDay(
       ctx,
@@ -745,7 +807,14 @@ export const sellFuneralTransport = mutation({
       after: { shipmentNumber, tonnage: args.tonnage, ttc: amounts.ttc },
     })
 
-    return { saleId, funeralTransportId: id, shipmentNumber, amounts }
+    return {
+      saleId,
+      funeralTransportId: id,
+      shipmentNumber,
+      amounts,
+      paymentMethod: reglement.method,
+      changeXaf: reglement.changeXaf ?? 0,
+    }
   },
 })
 

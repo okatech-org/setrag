@@ -53,11 +53,15 @@ export const upsertPersonaProfile = internalMutation({
     }
 
     const existing = byEmail ?? byAuthId
+    // Les profils qui encaissent sont rattachés à leur point de vente, s'il
+    // existe déjà (l'agence est créée par `seeds/demoActivite`).
+    const pointOfSaleCode: string | undefined =
+      "pointOfSaleCode" in profile ? profile.pointOfSaleCode : undefined
     const demoPointOfSale =
-      profile.key === "agent" && !existing?.pointOfSaleId
+      pointOfSaleCode && !existing?.pointOfSaleId
         ? await ctx.db
             .query("pointsOfSale")
-            .withIndex("by_code", (query) => query.eq("code", "OWE-PV"))
+            .withIndex("by_code", (query) => query.eq("code", pointOfSaleCode))
             .unique()
         : null
     const userValues = {

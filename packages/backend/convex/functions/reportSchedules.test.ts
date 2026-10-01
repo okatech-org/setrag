@@ -81,7 +81,7 @@ describe("Programmation des rapports", () => {
     ).toHaveLength(0)
   })
 
-  it("dépose l’occurrence dans la file durable et calcule la suivante", async () => {
+  it("produit l’état de la période close, l’envoie et calcule l’occurrence suivante", async () => {
     const t = convexTest(schema, modules)
     const scheduleId = await t.run(async (ctx) => {
       const userId = await ctx.db.insert("users", {
@@ -108,20 +108,39 @@ describe("Programmation des rapports", () => {
       scheduleId: scheduleId as Id<"reportSchedules">,
     })
     expect(result.queued).toBe(true)
-    const event = await t.run(async (ctx) =>
-      ctx.db
+    expect(result.nextRunAt).toBe(Date.parse("2026-08-03T08:00:00Z"))
+
+    // La production du fichier est confiée à une action planifiée aussitôt.
+    vi.advanceTimersByTime(1000)
+    await t.finishInProgressScheduledFunctions()
+
+    const [run, schedule, event] = await t.run(async (ctx) => [
+      await ctx.db.query("reportRuns").unique(),
+      await ctx.db.get(scheduleId),
+      await ctx.db
         .query("outboxEvents")
-        .withIndex("by_type_status", (q) =>
-          q.eq("type", "notification").eq("status", "en_attente")
-        )
-        .unique()
-    )
+        .withIndex("by_type_status", (q) => q.eq("type", "notification"))
+        .unique(),
+    ])
+    // Les annulations historiques sont servies par l'état des remboursements,
+    // sur la semaine close précédente.
+    expect(run).toMatchObject({
+      reportType: "remboursements",
+      trigger: "programme",
+      from: "2026-07-20",
+      to: "2026-07-26",
+      status: "produit",
+      rowCount: 0,
+      delivery: { recipients: ["controle@setrag.ga"], status: "envoye" },
+    })
+    expect(run?.storageId).toBeDefined()
+    expect(schedule?.lastRunId).toBe(run?._id)
     expect(JSON.parse(event!.payload)).toMatchObject({
       kind: "scheduled_report",
-      reportType: "annulations",
+      reportType: "remboursements",
       recipients: ["controle@setrag.ga"],
+      simulated: true,
     })
-    expect(result.nextRunAt).toBe(Date.parse("2026-08-03T08:00:00Z"))
   })
 
   it("permet de modifier, suspendre et réactiver une programmation", async () => {
@@ -224,19 +243,30 @@ describe("Programmation des rapports", () => {
       }
     )
 
-    await manager.mutation(api.functions.reportSchedules.runNow, {
-      scheduleId: created.scheduleId,
-    })
-    const [schedule, events] = await t.run(async (ctx) => [
+    const { runId } = await manager.mutation(
+      api.functions.reportSchedules.runNow,
+      { scheduleId: created.scheduleId }
+    )
+    vi.advanceTimersByTime(1000)
+    await t.finishInProgressScheduledFunctions()
+    const [schedule, run, events] = await t.run(async (ctx) => [
       await ctx.db.get(created.scheduleId),
+      await ctx.db.get(runId),
       await ctx.db.query("outboxEvents").collect(),
     ])
     expect(schedule?.nextRunAt).toBe(nextRunAt)
-    expect(schedule?.lastRunAt).toBe(Date.now())
+    expect(schedule?.lastRunAt).toBe(Date.now() - 1000)
+    expect(run).toMatchObject({
+      reportType: "ventes",
+      trigger: "manuel",
+      status: "produit",
+      from: "2026-06-27",
+      to: "2026-07-26",
+    })
     expect(events).toHaveLength(1)
     expect(JSON.parse(events[0]!.payload)).toMatchObject({
       kind: "scheduled_report",
-      reportType: "ventes_canaux",
+      reportType: "ventes",
     })
   })
 })

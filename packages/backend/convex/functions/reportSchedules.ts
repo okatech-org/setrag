@@ -3,13 +3,20 @@ import { v } from "convex/values"
 import { internal } from "../_generated/api"
 import { internalMutation, mutation, query } from "../_generated/server"
 import { audit, requirePermission } from "../lib/auth"
+import { scheduledReportType } from "../schema"
+import {
+  exigerDroitsRapport,
+  inscrireExecution,
+  periodeProgrammee,
+  typeCdc,
+} from "./pilotage"
 
-const reportType = v.union(
-  v.literal("ventes_canaux"),
-  v.literal("remplissage"),
-  v.literal("annulations"),
-  v.literal("recettes")
-)
+/**
+ * Les six états du CDC, plus les quatre types historiques (ventes par canal,
+ * remplissage, annulations, recettes), rattachés chacun à l'état qui le
+ * couvre au moment de l'exécution (`typeCdc`).
+ */
+const reportType = scheduledReportType
 const frequency = v.union(
   v.literal("quotidien"),
   v.literal("hebdomadaire"),
@@ -85,7 +92,7 @@ export const create = mutation({
     nextRunAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const actor = await requirePermission(ctx, "rapports", "creer")
+    const actor = await exigerDroitsRapport(ctx, typeCdc(args.reportType))
     const label = args.label.trim()
     if (!label) throw new Error("Le nom du rapport est obligatoire")
     if (!Number.isFinite(args.nextRunAt) || args.nextRunAt <= Date.now()) {
@@ -142,6 +149,7 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "rapports", "modifier")
+    await exigerDroitsRapport(ctx, typeCdc(args.reportType), "modifier")
     const schedule = await ctx.db.get(args.scheduleId)
     if (!schedule) throw new Error("Cette programmation n’existe plus.")
     const label = args.label.trim()
@@ -218,22 +226,20 @@ export const setActive = mutation({
 export const runNow = mutation({
   args: { scheduleId: v.id("reportSchedules") },
   handler: async (ctx, args) => {
-    const actor = await requirePermission(ctx, "rapports", "creer")
     const schedule = await ctx.db.get(args.scheduleId)
     if (!schedule) throw new Error("Cette programmation n’existe plus.")
+    const type = typeCdc(schedule.reportType)
+    const actor = await exigerDroitsRapport(ctx, type)
     const now = Date.now()
-    await ctx.db.insert("outboxEvents", {
-      type: "notification",
-      entityId: args.scheduleId,
-      payload: JSON.stringify({
-        kind: "scheduled_report",
-        reportType: schedule.reportType,
-        format: schedule.format,
-        recipients: schedule.recipients,
-      }),
-      status: "en_attente",
-      attempts: 0,
-      createdAt: now,
+    const periode = periodeProgrammee(schedule.frequency, now)
+    const runId = await inscrireExecution(ctx, {
+      reportType: type,
+      ...periode,
+      filters: {},
+      trigger: "manuel",
+      scheduleId: schedule._id,
+      requestedBy: actor._id,
+      recipients: schedule.recipients,
     })
     await ctx.db.patch(args.scheduleId, {
       lastRunAt: now,
@@ -244,16 +250,16 @@ export const runNow = mutation({
       action: "rapport.executer_maintenant",
       entityTable: "reportSchedules",
       entityId: args.scheduleId,
-      after: { queuedAt: now },
+      after: { queuedAt: now, runId, ...periode },
     })
-    return { queued: true }
+    return { queued: true, runId }
   },
 })
 
 /**
- * Dépose l'envoi dans la file durable puis programme l'occurrence suivante.
- * Le processeur de notifications peut ainsi être indisponible sans perdre le
- * rapport demandé.
+ * Inscrit l'exécution (production du fichier, puis envoi aux destinataires
+ * par la file durable) et programme l'occurrence suivante. La période
+ * couverte est la période close précédente (veille, semaine, 30 jours).
  */
 export const run = internalMutation({
   args: { scheduleId: v.id("reportSchedules") },
@@ -263,18 +269,13 @@ export const run = internalMutation({
 
     const runAt = Date.now()
     const nextRunAt = nextOccurrence(runAt, schedule.frequency)
-    await ctx.db.insert("outboxEvents", {
-      type: "notification",
-      entityId: args.scheduleId,
-      payload: JSON.stringify({
-        kind: "scheduled_report",
-        reportType: schedule.reportType,
-        format: schedule.format,
-        recipients: schedule.recipients,
-      }),
-      status: "en_attente",
-      attempts: 0,
-      createdAt: runAt,
+    await inscrireExecution(ctx, {
+      reportType: typeCdc(schedule.reportType),
+      ...periodeProgrammee(schedule.frequency, runAt),
+      filters: {},
+      trigger: "programme",
+      scheduleId: schedule._id,
+      recipients: schedule.recipients,
     })
     await ctx.db.patch(args.scheduleId, {
       lastRunAt: runAt,

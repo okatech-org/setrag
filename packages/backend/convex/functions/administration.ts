@@ -80,12 +80,16 @@ export const updatePricingRule = mutation({
     floorXaf: v.optional(v.number()),
     capXaf: v.optional(v.number()),
     code: v.string(),
+    label: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const actor = await requirePermission(ctx, "yield", "modifier")
     const rule = await ctx.db.get(args.ruleId)
     if (!rule) throw new Error("Règle de yield introuvable.")
-    const patch = await validatePricingRule(ctx, args)
+    const patch = {
+      ...(await validatePricingRule(ctx, args)),
+      label: args.label === undefined ? rule.label : validRuleLabel(args.label),
+    }
     const duplicate = (await ctx.db.query("pricingRules").collect()).find(
       (candidate) => candidate._id !== rule._id && candidate.code === patch.code
     )
@@ -129,7 +133,17 @@ export const setPricingRuleStatus = mutation({
   },
 })
 
-interface PricingRuleInput {
+/** Nom lisible d'une règle : 80 caractères au plus, vide accepté. */
+export function validRuleLabel(label: string | undefined) {
+  const value = label?.trim()
+  if (!value) return undefined
+  if (value.length > 80) {
+    throw new Error("Le nom de la règle ne peut pas dépasser 80 caractères.")
+  }
+  return value
+}
+
+export interface PricingRuleInput {
   scope: Doc<"pricingRules">["scope"]
   tripId?: Id<"trips">
   serviceClass?: Doc<"pricingRules">["serviceClass"]
@@ -144,7 +158,10 @@ interface PricingRuleInput {
   code: string
 }
 
-async function validatePricingRule(ctx: MutationCtx, input: PricingRuleInput) {
+export async function validatePricingRule(
+  ctx: MutationCtx,
+  input: PricingRuleInput
+) {
   const code = input.code.trim().toUpperCase()
   if (!/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(code)) {
     throw new Error(
@@ -284,6 +301,7 @@ export const updateManagedUser = mutation({
     if (actor._id === user._id && args.role !== user.role) {
       throw new Error("Vous ne pouvez pas modifier votre propre rôle.")
     }
+    assertRoleGrantable(actor, args.role, user.role)
     if (user.role === "admin_it" && args.role !== "admin_it") {
       await requireAnotherActiveAdminIt(ctx, user._id)
     }
@@ -354,8 +372,29 @@ export const setManagedUserStatus = mutation({
   },
 })
 
-interface ManagedUserInput {
-  userId: Id<"users">
+/**
+ * Seul un administrateur technique attribue ou retire le rôle d'administrateur
+ * technique : sans ce verrou, un droit de modification des comptes suffirait
+ * à s'élever soi-même au sommet de la gouvernance.
+ */
+export function assertRoleGrantable(
+  actor: Doc<"users">,
+  nextRole: Doc<"users">["role"],
+  currentRole?: Doc<"users">["role"]
+) {
+  if (
+    actor.role !== "admin_it" &&
+    (nextRole === "admin_it" || currentRole === "admin_it") &&
+    nextRole !== currentRole
+  ) {
+    throw new Error(
+      "Seul un administrateur système attribue ou retire ce rôle."
+    )
+  }
+}
+
+export interface ManagedUserInput {
+  userId?: Id<"users">
   email?: string
   phone?: string
   firstName?: string
@@ -365,7 +404,10 @@ interface ManagedUserInput {
   pointOfSaleId?: Id<"pointsOfSale">
 }
 
-async function validateManagedUser(ctx: MutationCtx, input: ManagedUserInput) {
+export async function validateManagedUser(
+  ctx: MutationCtx,
+  input: ManagedUserInput
+) {
   const optional = (value: string | undefined) => value?.trim() || undefined
   const email = optional(input.email)?.toLowerCase()
   const phone = optional(input.phone)?.replace(/[\s.-]/g, "")
