@@ -1,257 +1,233 @@
 "use client"
 
-import type { GenericId } from "convex/values"
-import { useState, type FormEvent } from "react"
+import type { FunctionReturnType } from "convex/server"
+import { Ban, Coins, FileText, Flag, History, RotateCcw } from "lucide-react"
+import { useState, type ReactNode } from "react"
 
 import { useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
-import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
-import { Card } from "@workspace/ui/components/card"
-import { Field, SelectNative, Textarea } from "@workspace/ui/components/field"
+import { SkeletonLines } from "@workspace/ui/components/empty-state"
+import { Field, Input, SelectNative, Textarea } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
-import { formatPrice } from "@workspace/ui/lib/format"
 
-import { asAppRole, canRole } from "@/lib/portal-access"
+import { Chronologie, Fiche, Panneau, type EvenementChronologie } from "@/components/charte"
+import { useDroitsGestion } from "./gestion/referentiels/droits"
+import { RetourOperation, useOperation } from "./gestion/referentiels/elements"
+import { agent, dateHeure, dateService, heure, jourMois, libelleDesserte, montant, MOYENS_PAIEMENT } from "./gestion/referentiels/format"
+import { FenetreFormulaire, texte } from "./gestion/referentiels/formulaire"
+import { evenementsHistorique } from "./gestion/referentiels/libelles-audit"
+import { TagPv } from "./gestion/referentiels/statuts"
 import { ManagementDetailShell } from "./management-detail-shell"
-import { usePortalSession } from "./portal-guard"
 
-type PenaltyId = GenericId<"procesVerbaux">
+export type DossierPv = NonNullable<FunctionReturnType<typeof api.functions.referentiels.penalite>>
 
-const REASON_LABELS = {
-  sans_titre: "Absence de titre",
+export const MOTIFS_PV = {
+  sans_titre: "Voyageur sans titre",
   titre_invalide: "Titre invalide",
   classe_superieure: "Surclassement",
   autre: "Autre irrégularité",
 } as const
 
-const STATUS_LABELS = {
-  emis: "Émis · à encaisser",
-  paye: "Payé",
-  conteste: "Contesté",
-  annule: "Annulé",
-} as const
+export function chronologiePv(dossier: DossierPv): EvenementChronologie[] {
+  const { penalty } = dossier
+  return [
+    ...evenementsHistorique(dossier.historique.filter((h) => h.action !== "pv.synchroniser")),
+    {
+      cle: "emission",
+      heure: jourMois(penalty.issuedAt),
+      titre: penalty.status === "paye" && !dossier.historique.some((h) => h.action === "pv.encaisser") ? "Dressé et payé à bord" : "Procès-verbal dressé à bord",
+      detail: `${heure(penalty.issuedAt)} · ${agent(dossier.agent)}${penalty.offline ? " · saisi hors ligne" : ""}`,
+    },
+  ]
+}
 
-const STATUS_TRANSITIONS = {
-  emis: ["paye", "conteste", "annule"],
-  conteste: ["emis", "paye", "annule"],
-  paye: [],
-  annule: [],
-} as const
-
-function fullName(
-  user?: { firstName?: string; lastName?: string; matricule?: string } | null
-) {
-  if (!user) return "Non renseigné"
+export function FichePv({ dossier }: { dossier: DossierPv }) {
+  const { penalty } = dossier
+  const o = penalty.offender
   return (
-    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-    user.matricule ||
-    "Non renseigné"
+    <Fiche
+      elements={[
+        ["Motif", MOTIFS_PV[penalty.reason]],
+        ["Montant", <span key="m" className="tabular">{montant(penalty.amountXaf)} XAF</span>],
+        ["Contrevenant", o.declined ? "Identité refusée" : [o.firstName, o.lastName?.toUpperCase()].filter(Boolean).join(" ") || "Non renseigné"],
+        ["Téléphone", <span key="t" className="tabular">{o.phone ?? "—"}</span>],
+        ["Train", dossier.desserte ? `${libelleDesserte(dossier.desserte)} · ${dateService(dossier.desserte.serviceDate)}` : "—"],
+        ["Dressé par", agent(dossier.agent)],
+        ["Le", <span key="l" className="tabular">{dateHeure(penalty.issuedAt)}</span>],
+        dossier.billet ? ["Billet lié", <span key="b" className="tabular">{dossier.billet.number}</span>] : null,
+        dossier.paiement
+          ? ["Paiement", `${MOYENS_PAIEMENT[dossier.paiement.method]} · ${dateHeure(dossier.paiement.settledAt)}${dossier.paiement.reference ? ` · réf. ${dossier.paiement.reference}` : ""}`]
+          : null,
+      ]}
+    />
   )
 }
 
+const MOYENS_PV = ["especes", "airtel_money", "moov_money", "clickpay", "visa", "mastercard"] as const
+
+/**
+ * Traitement d'un PV : l'encaissement au guichet est la décision attendue
+ * (bouton principal) ; la contestation et l'annulation exigent un motif.
+ */
+export function useActionsPv(dossier: DossierPv | null | undefined) {
+  const droits = useDroitsGestion()
+  const operation = useOperation()
+  const encaisser = useMutation(api.functions.referentiels.encaisserPv)
+  const changer = useMutation(api.functions.control.setPenaltyStatus)
+  const [dialogue, setDialogue] = useState<"encaisser" | "conteste" | "annule" | "emis" | null>(null)
+  const [moyen, setMoyen] = useState<(typeof MOYENS_PV)[number]>("especes")
+  const peut = droits.may("proces_verbaux", "modifier") && Boolean(dossier)
+  const status = dossier?.penalty.status
+  const ouvert = status === "emis" || status === "conteste"
+
+  const boutons = (options: { principal?: boolean } = {}): ReactNode =>
+    dossier && peut && ouvert ? (
+      <>
+        {status === "emis" ? (
+          <Button type="button" variant="ghost" onClick={() => setDialogue("conteste")}>
+            <Flag />
+            Contester
+          </Button>
+        ) : (
+          <Button type="button" variant="ghost" onClick={() => setDialogue("emis")}>
+            <RotateCcw />
+            Maintenir le PV
+          </Button>
+        )}
+        <Button type="button" variant="danger" onClick={() => setDialogue("annule")}>
+          <Ban />
+          Annuler
+        </Button>
+        <Button type="button" variant={options.principal === false ? "secondary" : "primary"} onClick={() => setDialogue("encaisser")}>
+          <Coins />
+          Encaisser {montant(dossier.penalty.amountXaf)} XAF
+        </Button>
+      </>
+    ) : null
+
+  const fenetre = dossier ? (
+    dialogue === "encaisser" ? (
+      <FenetreFormulaire
+        open
+        onOpenChange={(o) => !o && setDialogue(null)}
+        titre={`Encaisser ${dossier.penalty.number}`}
+        description={`${montant(dossier.penalty.amountXaf)} XAF. Le paiement est enregistré et le procès-verbal soldé dans la même opération.`}
+        libelleValider={
+          <>
+            <Coins />
+            Encaisser
+          </>
+        }
+        enCours={operation.enCours === "encaisser"}
+        erreur={operation.retour?.ton === "danger" ? operation.retour.detail : null}
+        onSubmit={async (donnees) => {
+          const ok = await operation.executer(
+            "encaisser",
+            () => encaisser({ penaltyId: dossier.penalty._id, method: moyen, reference: texte(donnees, "reference"), note: texte(donnees, "note") }),
+            `${dossier.penalty.number} encaissé et soldé.`
+          )
+          if (ok) setDialogue(null)
+        }}
+      >
+        <Field label="Moyen de paiement" htmlFor="pv-moyen">
+          <SelectNative id="pv-moyen" value={moyen} onChange={(event) => setMoyen(event.target.value as typeof moyen)}>
+            {MOYENS_PV.map((m) => (
+              <option key={m} value={m}>
+                {MOYENS_PAIEMENT[m]}
+              </option>
+            ))}
+          </SelectNative>
+        </Field>
+        {moyen !== "especes" ? (
+          <Field label="Référence de la transaction" htmlFor="pv-reference">
+            <Input id="pv-reference" name="reference" required className="tabular" />
+          </Field>
+        ) : null}
+        <Field label="Note (facultatif)" htmlFor="pv-note">
+          <Textarea id="pv-note" name="note" placeholder="Réglé au guichet 2 d'Owendo, reçu remis." />
+        </Field>
+      </FenetreFormulaire>
+    ) : dialogue ? (
+      <FenetreFormulaire
+        open
+        onOpenChange={(o) => !o && setDialogue(null)}
+        titre={dialogue === "conteste" ? "Contester le procès-verbal" : dialogue === "annule" ? "Annuler le procès-verbal" : "Maintenir le procès-verbal"}
+        description="Le motif reste au journal et à la chronologie du dossier."
+        variante={dialogue === "annule" ? "danger" : "primary"}
+        libelleValider={dialogue === "conteste" ? "Enregistrer la contestation" : dialogue === "annule" ? "Annuler le PV" : "Maintenir le PV"}
+        enCours={operation.enCours === "statut"}
+        erreur={operation.retour?.ton === "danger" ? operation.retour.detail : null}
+        onSubmit={async (donnees) => {
+          const ok = await operation.executer(
+            "statut",
+            () => changer({ penaltyId: dossier.penalty._id, status: dialogue, resolutionNote: String(donnees.get("motif") ?? "") }).then(() => true),
+            dialogue === "annule" ? "Procès-verbal annulé." : dialogue === "conteste" ? "Contestation enregistrée." : "Procès-verbal maintenu : il reste à encaisser."
+          )
+          if (ok) setDialogue(null)
+        }}
+      >
+        <Field label="Motif" htmlFor="pv-motif">
+          <Textarea id="pv-motif" name="motif" required minLength={3} placeholder={dialogue === "annule" ? "Titre retrouvé : le voyageur avait un billet valide." : "Le voyageur conteste les faits."} />
+        </Field>
+      </FenetreFormulaire>
+    ) : null
+  ) : null
+
+  return { operation, boutons, fenetre }
+}
+
 export function PenaltyDetail({ penaltyId }: { penaltyId: string }) {
-  const id = penaltyId as PenaltyId
-  const session = usePortalSession()
-  const role = asAppRole(session?.profile.user.role)
-  const mayModify = canRole(role, "proces_verbaux", "modifier")
-  const detail = useQuery(api.functions.control.getPenalty, { penaltyId: id })
-  const setStatus = useMutation(api.functions.control.setPenaltyStatus)
-  const [pending, setPending] = useState(false)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
+  const droits = useDroitsGestion()
+  const dossier = useQuery(api.functions.referentiels.penalite, { penaltyId: penaltyId as never })
+  const actions = useActionsPv(dossier)
 
-  async function updateStatus(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = event.currentTarget
-    const data = new FormData(form)
-    const status = String(data.get("status")) as
-      "emis" | "paye" | "conteste" | "annule"
-    const resolutionNote = String(data.get("resolutionNote") ?? "").trim()
-    if (!resolutionNote) {
-      setError("Un motif est obligatoire pour tracer cette action.")
-      return
-    }
-
-    setPending(true)
-    setMessage("")
-    setError("")
-    try {
-      await setStatus({ penaltyId: id, status, resolutionNote })
-      setMessage(
-        `Le procès-verbal est maintenant « ${STATUS_LABELS[status]} ».`
-      )
-      form.reset()
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "L’action a échoué.")
-    } finally {
-      setPending(false)
-    }
-  }
-
-  if (detail === undefined) {
+  if (dossier === undefined || dossier === null) {
     return (
-      <ManagementDetailShell
-        title="Procès-verbal"
-        eyebrow="Détail de l’irrégularité"
-        backHref="/gestion/incidents"
-      >
-        <p role="status">Chargement du procès-verbal…</p>
+      <ManagementDetailShell title={dossier === null ? "Procès-verbal introuvable" : "Procès-verbal"} eyebrow="Supervision · procès-verbal" backHref="/gestion/incidents?onglet=pv" verrouillage="aucun">
+        {dossier === null ? <InlineMessage tone="danger" title="Ce procès-verbal n'existe plus." /> : <SkeletonLines />}
       </ManagementDetailShell>
     )
   }
-
-  if (detail === null) {
-    return (
-      <ManagementDetailShell
-        title="Procès-verbal introuvable"
-        eyebrow="Irrégularités"
-        backHref="/gestion/incidents"
-      >
-        <InlineMessage tone="danger" title="Ce procès-verbal n’existe plus." />
-      </ManagementDetailShell>
-    )
-  }
-
-  const { penalty, agent, trip, ticket, payment, resolver } = detail
-  const allowedStatuses = STATUS_TRANSITIONS[penalty.status]
-  const offenderName = penalty.offender.declined
-    ? "Identité refusée"
-    : [penalty.offender.firstName, penalty.offender.lastName]
-        .filter(Boolean)
-        .join(" ") || "Non renseignée"
-
+  const { penalty } = dossier
   return (
     <ManagementDetailShell
       title={penalty.number}
-      eyebrow="Détail du procès-verbal"
-      backHref="/gestion/incidents"
+      eyebrow="Supervision · procès-verbal"
+      backHref="/gestion/incidents?onglet=pv"
+      verrouillage="aucun"
+      lectureSeule={!droits.chargement && !droits.may("proces_verbaux", "modifier")}
+      description={MOTIFS_PV[penalty.reason]}
+      actions={actions.boutons()}
     >
-      {error ? (
-        <InlineMessage tone="danger" title="Action impossible">
-          {error}
+      <div className="flex flex-wrap gap-2">
+        <TagPv status={penalty.status} />
+      </div>
+      <RetourOperation retour={actions.operation.retour} />
+      {penalty.status === "emis" ? (
+        <InlineMessage tone="info" title="Non payé à bord.">
+          Le procès-verbal s’encaisse au guichet : le paiement est enregistré et le PV soldé d’un seul geste.
         </InlineMessage>
       ) : null}
-      {message ? <InlineMessage tone="success" title={message} /> : null}
-
-      <Card className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <span className="text-caption text-ink-muted">État</span>
-          <div className="mt-1">
-            <Badge>{STATUS_LABELS[penalty.status]}</Badge>
-          </div>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Montant</span>
-          <p className="tabular font-semibold">
-            {formatPrice(penalty.amountXaf)}
-          </p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Motif</span>
-          <p>{REASON_LABELS[penalty.reason]}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Émis le</span>
-          <p>{new Date(penalty.issuedAt).toLocaleString("fr-FR")}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Contrevenant</span>
-          <p>{offenderName}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Téléphone</span>
-          <p>{penalty.offender.phone ?? "Non renseigné"}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Document</span>
-          <p>{penalty.offender.documentNumber ?? "Non renseigné"}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">
-            Agent verbalisateur
-          </span>
-          <p>{fullName(agent)}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Train</span>
-          <p>{trip?.trainNumber ?? "Non renseigné"}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Billet lié</span>
-          <p>{ticket?.number ?? "Aucun"}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Paiement</span>
-          <p>
-            {payment
-              ? `${payment.method} · ${formatPrice(payment.amountXaf)}`
-              : "Non encaissé"}
-          </p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Saisie</span>
-          <p>{penalty.offline ? "Synchronisée hors ligne" : "En ligne"}</p>
-        </div>
-      </Card>
-
-      {penalty.notes ? (
-        <Card className="grid gap-3 p-5">
-          <h2 className="text-h3">Notes du contrôle</h2>
-          <p className="whitespace-pre-wrap">{penalty.notes}</p>
-        </Card>
-      ) : null}
-
-      {penalty.resolutionNote ? (
-        <Card className="grid gap-3 p-5">
-          <h2 className="text-h3">Dernier motif de traitement</h2>
-          <p className="whitespace-pre-wrap">{penalty.resolutionNote}</p>
-          <p className="text-small text-ink-muted">
-            {resolver ? `Par ${fullName(resolver)}` : "Auteur non renseigné"}
-          </p>
-        </Card>
-      ) : null}
-
-      {mayModify && allowedStatuses.length ? (
-        <Card className="p-5">
-          <h2 className="text-h3">Traiter le procès-verbal</h2>
-          <form
-            className="mt-4 grid gap-4 sm:grid-cols-2"
-            onSubmit={updateStatus}
-          >
-            <Field label="Nouvel état" htmlFor="penalty-status">
-              <SelectNative
-                id="penalty-status"
-                name="status"
-                defaultValue=""
-                required
-              >
-                <option value="">Choisir le nouvel état</option>
-                {allowedStatuses.map((value) => (
-                  <option key={value} value={value}>
-                    {STATUS_LABELS[value]}
-                  </option>
-                ))}
-              </SelectNative>
-            </Field>
-            <Field
-              className="sm:col-span-2"
-              label="Motif ou note obligatoire"
-              htmlFor="penalty-resolution-note"
-            >
-              <Textarea
-                id="penalty-resolution-note"
-                name="resolutionNote"
-                placeholder="Expliquez le paiement, la contestation ou l’annulation."
-                required
-              />
-            </Field>
-            <Button type="submit" loading={pending}>
-              Enregistrer le changement
-            </Button>
-          </form>
-        </Card>
-      ) : null}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Panneau titre="Procès-verbal" icone={FileText}>
+          <FichePv dossier={dossier} />
+          {penalty.notes ? (
+            <InlineMessage tone="info" title="Notes du contrôleur">
+              {penalty.notes}
+            </InlineMessage>
+          ) : null}
+          {penalty.resolutionNote ? (
+            <InlineMessage tone="info" title={`Dernier motif · ${agent(dossier.resolveur)}`}>
+              {penalty.resolutionNote}
+            </InlineMessage>
+          ) : null}
+        </Panneau>
+        <Panneau titre="Chronologie" icone={History}>
+          <Chronologie evenements={chronologiePv(dossier)} />
+        </Panneau>
+      </div>
+      {actions.fenetre}
     </ManagementDetailShell>
   )
 }

@@ -1,441 +1,336 @@
 "use client"
 
-import { Building2, CircleDollarSign, Power, Save, Users } from "lucide-react"
-import type { FormEvent } from "react"
+import type { FunctionReturnType } from "convex/server"
+import { Coins, History, LockOpen, Pencil, Plus, Power, Store, Ticket, Users } from "lucide-react"
 import { useState } from "react"
-import type { GenericId } from "convex/values"
 
 import { useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
-import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
+import { SkeletonLines } from "@workspace/ui/components/empty-state"
 import { Field, Input, SelectNative } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
 
-import { asAppRole, canRole } from "@/lib/portal-access"
+import { CelluleDouble, Fiche, Indicateur, Indicateurs, Panneau, TableauDonnees, type ColonneTableau } from "@/components/charte"
+import { ROLE_LABELS } from "@/lib/roles"
+import { useDroitsGestion } from "./gestion/referentiels/droits"
+import { Historique, RetourOperation, useOperation } from "./gestion/referentiels/elements"
+import { agent, CLASSES, dateHeure, dateService, dateServiceCourte, libelleDesserte, millions, montant, nombre, TYPES_POINT_DE_VENTE } from "./gestion/referentiels/format"
+import { FenetreFormulaire, nombreSaisi, texte } from "./gestion/referentiels/formulaire"
+import { Pastille, TagActif } from "./gestion/referentiels/statuts"
 import { ManagementDetailShell } from "./management-detail-shell"
-import { usePortalSession } from "./portal-guard"
 
-type PointOfSaleId = GenericId<"pointsOfSale">
-type StationId = GenericId<"stations">
+type Dossier = NonNullable<FunctionReturnType<typeof api.functions.referentiels.pointDeVente>>
+type TypePoint = keyof typeof TYPES_POINT_DE_VENTE
 
-const TYPE_LABELS = {
-  gare: "Gare",
-  agence_accreditee: "Agence accréditée",
-  agence_premium: "Agence premium",
-} as const
+export interface ValeursPoint {
+  code: string
+  name: string
+  type: TypePoint
+  stationId?: string
+  counters: { passengers: number; baggage: number; parcels: number }
+  royaltyPct?: number | null
+}
 
-function StatCard({
-  label,
-  value,
-  icon,
+/** Création ou modification d'un point de vente. */
+export function DialoguePointDeVente({
+  open,
+  onOpenChange,
+  point,
+  typeInitial = "gare",
+  onCree,
 }: {
-  label: string
-  value: string
-  icon: React.ReactNode
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  point?: ValeursPoint & { _id: string }
+  typeInitial?: TypePoint
+  onCree?: (id: string) => void
 }) {
+  const stations = useQuery(api.functions.referential.listStations, open ? { includeInactive: true } : "skip")
+  const creer = useMutation(api.functions.management.createPointOfSale)
+  const modifier = useMutation(api.functions.management.updatePointOfSale)
+  const operation = useOperation()
+  const [type, setType] = useState<TypePoint>(point?.type ?? typeInitial)
   return (
-    <Card className="gap-2 p-5">
-      <div className="flex items-center justify-between gap-3 text-ink-muted">
-        <span className="text-small">{label}</span>
-        {icon}
+    <FenetreFormulaire
+      open={open}
+      onOpenChange={onOpenChange}
+      titre={point ? `Modifier ${point.name}` : type === "gare" ? "Nouveau point de vente" : "Accréditer une agence"}
+      description={point ? "Réduire les guichets est refusé tant que des caisses restent ouvertes." : "Le point de vente est actif dès sa création ; rattachez-y ensuite ses vendeurs."}
+      libelleValider={point ? "Enregistrer" : (<><Plus />{type === "gare" ? "Créer le point de vente" : "Accréditer l'agence"}</>)}
+      enCours={operation.enCours === "point"}
+      erreur={operation.retour?.ton === "danger" ? operation.retour.detail : null}
+      onSubmit={async (donnees) => {
+        const valeurs = {
+          code: String(donnees.get("code") ?? ""),
+          name: String(donnees.get("name") ?? ""),
+          type,
+          stationId: texte(donnees, "stationId") as never,
+          passengerCounters: nombreSaisi(donnees, "passengers") ?? 0,
+          baggageCounters: nombreSaisi(donnees, "baggage") ?? 0,
+          parcelCounters: nombreSaisi(donnees, "parcels") ?? 0,
+          royaltyPct: type === "gare" ? undefined : nombreSaisi(donnees, "royaltyPct"),
+        }
+        const id = await operation.executer("point", () => (point ? modifier({ pointOfSaleId: point._id as never, ...valeurs }) : creer(valeurs)))
+        if (id) {
+          onOpenChange(false)
+          if (!point) onCree?.(id)
+        }
+      }}
+    >
+      <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+        <Field label="Code" htmlFor="pdv-code">
+          <Input id="pdv-code" name="code" defaultValue={point?.code} placeholder={type === "gare" ? "OWE" : "AG-LBV1"} required className="tabular uppercase" />
+        </Field>
+        <Field label="Nom" htmlFor="pdv-nom">
+          <Input id="pdv-nom" name="name" defaultValue={point?.name} placeholder={type === "gare" ? "Gare d'Owendo" : "Agence Libreville Centre"} required />
+        </Field>
       </div>
-      <strong className="tabular text-h3">{value}</strong>
-    </Card>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Type" htmlFor="pdv-type">
+          <SelectNative id="pdv-type" value={type} onChange={(event) => setType(event.target.value as TypePoint)}>
+            {Object.entries(TYPES_POINT_DE_VENTE).map(([valeur, libelle]) => (
+              <option key={valeur} value={valeur}>
+                {libelle}
+              </option>
+            ))}
+          </SelectNative>
+        </Field>
+        <Field label="Gare de rattachement" htmlFor="pdv-gare">
+          <SelectNative id="pdv-gare" name="stationId" defaultValue={point?.stationId ?? ""}>
+            <option value="">Aucune</option>
+            {stations?.map((s) => (
+              <option key={s._id} value={s._id}>
+                {s.name} · PK {s.kilometerPoint}
+                {s.isActive ? "" : " · fermée"}
+              </option>
+            ))}
+          </SelectNative>
+        </Field>
+      </div>
+      <fieldset className="grid gap-2">
+        <legend className="text-[13px] font-medium">Postes de vente</legend>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="Voyageurs" htmlFor="pdv-voyageurs">
+            <Input id="pdv-voyageurs" name="passengers" inputMode="numeric" defaultValue={point?.counters.passengers ?? 1} required className="tabular" />
+          </Field>
+          <Field label="Bagages" htmlFor="pdv-bagages">
+            <Input id="pdv-bagages" name="baggage" inputMode="numeric" defaultValue={point?.counters.baggage ?? 0} required className="tabular" />
+          </Field>
+          <Field label="Colis" htmlFor="pdv-colis">
+            <Input id="pdv-colis" name="parcels" inputMode="numeric" defaultValue={point?.counters.parcels ?? 0} required className="tabular" />
+          </Field>
+        </div>
+      </fieldset>
+      {type !== "gare" ? (
+        <Field label="Commission de l'agence (%)" hint="Taux de royalties reversé à l'agence." htmlFor="pdv-royalties">
+          <Input id="pdv-royalties" name="royaltyPct" inputMode="decimal" defaultValue={point?.royaltyPct ?? undefined} className="tabular" />
+        </Field>
+      ) : null}
+    </FenetreFormulaire>
   )
 }
 
-export function PointOfSaleDetail({
-  pointOfSaleId,
-}: {
-  pointOfSaleId: string
-}) {
-  const id = pointOfSaleId as PointOfSaleId
-  const session = usePortalSession()
-  const role = asAppRole(session?.profile.user.role)
-  const mayModify = canRole(role, "referentiel", "modifier")
-  const maySuspend = canRole(role, "referentiel", "supprimer")
-  const detail = useQuery(api.functions.management.getPointOfSale, {
-    pointOfSaleId: id,
-  })
-  const stations = useQuery(api.functions.referential.listStations, {
-    includeInactive: true,
-  })
-  const updatePointOfSale = useMutation(
-    api.functions.management.updatePointOfSale
-  )
-  const setPointOfSaleStatus = useMutation(
-    api.functions.management.setPointOfSaleStatus
-  )
-  const [pending, setPending] = useState(false)
-  const [statusPending, setStatusPending] = useState(false)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
+type Vendeur = Dossier["vendeurs"][number]
+type Caisse = Dossier["caisses"][number]
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    const stationId = String(data.get("stationId") ?? "")
-    const royalty = String(data.get("royaltyPct") ?? "")
-    setPending(true)
-    setMessage("")
-    setError("")
-    try {
-      await updatePointOfSale({
-        pointOfSaleId: id,
-        code: String(data.get("code") ?? ""),
-        name: String(data.get("name") ?? ""),
-        type: String(data.get("type")) as
-          "gare" | "agence_accreditee" | "agence_premium",
-        stationId: stationId ? (stationId as StationId) : undefined,
-        passengerCounters: Number(data.get("passengerCounters")),
-        baggageCounters: Number(data.get("baggageCounters")),
-        parcelCounters: Number(data.get("parcelCounters")),
-        royaltyPct: royalty === "" ? undefined : Number(royalty),
-      })
-      setMessage("Les modifications du point de vente sont enregistrées.")
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "La modification a échoué."
-      )
-    } finally {
-      setPending(false)
-    }
-  }
+const colonnesVendeurs: ColonneTableau<Vendeur>[] = [
+  { cle: "nom", libelle: "Vendeur", rendu: (v) => <CelluleDouble haut={v.nom} bas={<span className="tabular">{v.matricule ?? "sans matricule"}</span>} />, tri: (v) => v.nom },
+  { cle: "role", libelle: "Rôle", rendu: (v) => ROLE_LABELS[v.role], tri: (v) => ROLE_LABELS[v.role], secondaire: true },
+  { cle: "acces", libelle: "Dernier accès", rendu: (v) => <span className="tabular">{dateHeure(v.lastSeenAt)}</span>, tri: (v) => v.lastSeenAt ?? 0 },
+  {
+    cle: "etat",
+    libelle: "État",
+    rendu: (v) => (
+      <span className="flex flex-wrap gap-1.5">
+        <TagActif actif={v.isActive} />
+        {v.caisseOuverte ? (
+          <Pastille ton="success" icone={LockOpen}>
+            Caisse ouverte
+          </Pastille>
+        ) : null}
+      </span>
+    ),
+    tri: (v) => (v.caisseOuverte ? 0 : v.isActive ? 1 : 2),
+    export: (v) => `${v.isActive ? "Actif" : "Suspendu"}${v.caisseOuverte ? " · caisse ouverte" : ""}`,
+  },
+]
 
-  async function changeStatus(isActive: boolean) {
-    if (
-      !isActive &&
-      !window.confirm(
-        "Suspendre ce point de vente ? Les nouvelles ventes y seront immédiatement bloquées."
-      )
-    ) {
-      return
-    }
-    setStatusPending(true)
-    setMessage("")
-    setError("")
-    try {
-      await setPointOfSaleStatus({ pointOfSaleId: id, isActive })
-      setMessage(
-        isActive
-          ? "Le point de vente est de nouveau actif."
-          : "Le point de vente est suspendu. Son historique est conservé."
-      )
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Le changement d’état a échoué."
-      )
-    } finally {
-      setStatusPending(false)
-    }
-  }
+const colonnesCaisses: ColonneTableau<Caisse>[] = [
+  { cle: "vendeur", libelle: "Vendeur", rendu: (c) => agent(c.vendeur), tri: (c) => c.vendeur?.nom },
+  { cle: "ouverte", libelle: "Ouverte", rendu: (c) => <span className="tabular">{dateHeure(c.openedAt)}</span>, tri: (c) => c.openedAt },
+  { cle: "fermee", libelle: "Clôturée", rendu: (c) => <span className="tabular">{dateHeure(c.closedAt)}</span>, tri: (c) => c.closedAt ?? 0, secondaire: true },
+  { cle: "ecart", libelle: "Écart", rendu: (c) => (c.varianceXaf === null ? "—" : `${c.varianceXaf > 0 ? "+" : c.varianceXaf < 0 ? "−" : ""}${montant(Math.abs(c.varianceXaf))}`), tri: (c) => c.varianceXaf ?? 0, numerique: true },
+  {
+    cle: "etat",
+    libelle: "État",
+    rendu: (c) =>
+      c.status === "ouverte" ? (
+        <Pastille ton="success" icone={LockOpen}>Ouverte</Pastille>
+      ) : c.status === "validee" ? (
+        <Pastille ton="neutral">Validée</Pastille>
+      ) : c.varianceXaf && !c.varianceReason ? (
+        <Pastille ton="warning">Écart à justifier</Pastille>
+      ) : (
+        <Pastille ton="neutral">Clôturée</Pastille>
+      ),
+    tri: (c) => c.status,
+  },
+]
 
-  if (detail === undefined || stations === undefined) {
+export function PointOfSaleDetail({ pointOfSaleId }: { pointOfSaleId: string }) {
+  const droits = useDroitsGestion()
+  const dossier = useQuery(api.functions.referentiels.pointDeVente, { pointOfSaleId: pointOfSaleId as never })
+  const changerEtat = useMutation(api.functions.management.setPointOfSaleStatus)
+  const operation = useOperation()
+  const [edition, setEdition] = useState(false)
+
+  if (dossier === undefined || dossier === null) {
     return (
-      <ManagementDetailShell
-        title="Chargement…"
-        eyebrow="RÉFÉRENTIEL · POINT DE VENTE"
-        backHref="/gestion/points-de-vente"
-      >
-        <p role="status" className="text-small text-ink-muted">
-          Chargement du point de vente…
-        </p>
+      <ManagementDetailShell title={dossier === null ? "Point de vente introuvable" : "Point de vente"} eyebrow="Commercial · réseau de vente" backHref="/gestion/points-de-vente" verrouillage="aucun">
+        {dossier === null ? <InlineMessage tone="danger" title="Ce point de vente n'existe plus." /> : <SkeletonLines />}
       </ManagementDetailShell>
     )
   }
-
-  const { pointOfSale, station, dependencies, attachedUsers } = detail
-  const totalCounters =
-    pointOfSale.counters.passengers +
-    pointOfSale.counters.baggage +
-    pointOfSale.counters.parcels
-  const suspensionBlocked =
-    dependencies.openCashSessions > 0 || dependencies.activeAgencyQuotas > 0
+  const { pointOfSale: pos, dependances } = dossier
+  const bloque = dependances.caissesOuvertes > 0 || dependances.quotasActifs > 0
+  const peutModifier = droits.may("referentiel", "modifier")
+  const peutSuspendre = pos.isActive ? droits.may("referentiel", "supprimer") : peutModifier
+  const maxJour = Math.max(1, ...dossier.serie.map((j) => j.net))
 
   return (
     <ManagementDetailShell
-      title={pointOfSale.name}
-      eyebrow={`POINT DE VENTE · ${pointOfSale.code}`}
+      title={pos.name}
+      eyebrow={`Commercial · ${TYPES_POINT_DE_VENTE[pos.type]} · ${pos.code}`}
       backHref="/gestion/points-de-vente"
+      verrouillage="aucun"
+      lectureSeule={!droits.chargement && !peutModifier}
+      description={dossier.station ? `Rattaché à ${dossier.station.name}, PK ${dossier.station.kilometerPoint}.` : "Sans gare de rattachement."}
+      actions={
+        <>
+          {peutSuspendre ? (
+            <Button
+              type="button"
+              variant={pos.isActive ? "danger" : "secondary"}
+              disabled={pos.isActive && bloque}
+              loading={operation.enCours === "etat"}
+              onClick={() => {
+                if (pos.isActive && !window.confirm(`Suspendre ${pos.name} ? Les ventes y seront bloquées ; son historique reste.`)) return
+                void operation.executer("etat", () => changerEtat({ pointOfSaleId: pos._id, isActive: !pos.isActive }), pos.isActive ? "Point de vente suspendu : son historique est conservé." : "Point de vente réactivé.")
+              }}
+            >
+              <Power />
+              {pos.isActive ? "Suspendre" : "Réactiver"}
+            </Button>
+          ) : null}
+          {peutModifier ? (
+            <Button type="button" variant="secondary" onClick={() => setEdition(true)}>
+              <Pencil />
+              Modifier
+            </Button>
+          ) : null}
+        </>
+      }
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <Badge variant={pointOfSale.isActive ? "success" : "warning"}>
-          {pointOfSale.isActive ? "Actif" : "Suspendu"}
-        </Badge>
-        <Badge variant="outline">{TYPE_LABELS[pointOfSale.type]}</Badge>
-        <span className="text-small text-ink-muted">
-          {station
-            ? `${station.code} · ${station.name}`
-            : "Sans gare de rattachement"}
-        </span>
+      <div className="flex flex-wrap gap-2">
+        <TagActif actif={pos.isActive} oui={pos.type === "gare" ? "Ouvert" : "Accréditée"} non="Suspendu" />
+        <Pastille ton="neutral">{TYPES_POINT_DE_VENTE[pos.type]}</Pastille>
       </div>
-
-      {message ? (
-        <InlineMessage tone="success" title="Modification enregistrée">
-          {message}
+      <RetourOperation retour={operation.retour} />
+      {pos.isActive && bloque && peutSuspendre ? (
+        <InlineMessage tone="info" title="Suspension protégée.">
+          {dependances.caissesOuvertes} caisse(s) ouverte(s) et {dependances.quotasActifs} quota(s) actif(s) : clôturez-les ou levez-les avant de suspendre ce point de vente.
         </InlineMessage>
       ) : null}
-      {error ? (
-        <InlineMessage tone="danger" title="Action impossible">
-          {error}
-        </InlineMessage>
-      ) : null}
-      {suspensionBlocked ? (
-        <InlineMessage tone="warning" title="Suspension protégée">
-          Clôturez les {dependencies.openCashSessions} caisse(s) ouverte(s) et
-          désactivez les {dependencies.activeAgencyQuotas} quota(s) actif(s)
-          avant de suspendre ce point de vente.
-        </InlineMessage>
-      ) : null}
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Guichets configurés"
-          value={String(totalCounters)}
-          icon={<Building2 className="size-5" />}
-        />
-        <StatCard
-          label="Agents rattachés"
-          value={String(dependencies.attachedUsers)}
-          icon={<Users className="size-5" />}
-        />
-        <StatCard
-          label="Caisses ouvertes"
-          value={String(dependencies.openCashSessions)}
-          icon={<CircleDollarSign className="size-5" />}
-        />
-        <StatCard
-          label="Ventes historiques"
-          value={dependencies.sales.toLocaleString("fr-FR")}
-          icon={<Save className="size-5" />}
-        />
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Informations du point de vente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="grid gap-5" onSubmit={submit}>
-              <fieldset
-                disabled={!mayModify || pending}
-                className="grid gap-4 sm:grid-cols-2"
-              >
-                <Field label="Code" htmlFor="pos-detail-code">
-                  <Input
-                    id="pos-detail-code"
-                    name="code"
-                    defaultValue={pointOfSale.code}
-                    required
-                  />
-                </Field>
-                <Field label="Nom" htmlFor="pos-detail-name">
-                  <Input
-                    id="pos-detail-name"
-                    name="name"
-                    defaultValue={pointOfSale.name}
-                    required
-                  />
-                </Field>
-                <Field label="Type" htmlFor="pos-detail-type">
-                  <SelectNative
-                    id="pos-detail-type"
-                    name="type"
-                    defaultValue={pointOfSale.type}
-                  >
-                    <option value="gare">Gare</option>
-                    <option value="agence_accreditee">Agence accréditée</option>
-                    <option value="agence_premium">Agence premium</option>
-                  </SelectNative>
-                </Field>
-                <Field
-                  label="Gare de rattachement"
-                  htmlFor="pos-detail-station"
-                >
-                  <SelectNative
-                    id="pos-detail-station"
-                    name="stationId"
-                    defaultValue={pointOfSale.stationId ?? ""}
-                  >
-                    <option value="">Aucune</option>
-                    {stations.map((stationOption) => (
-                      <option key={stationOption._id} value={stationOption._id}>
-                        {stationOption.code} · {stationOption.name}
-                        {!stationOption.isActive ? " · inactive" : ""}
-                      </option>
-                    ))}
-                  </SelectNative>
-                </Field>
-                <Field
-                  label="Guichets voyageurs"
-                  htmlFor="pos-detail-passengers"
-                >
-                  <Input
-                    id="pos-detail-passengers"
-                    name="passengerCounters"
-                    type="number"
-                    min="0"
-                    max="1000"
-                    defaultValue={pointOfSale.counters.passengers}
-                    required
-                  />
-                </Field>
-                <Field label="Guichets bagages" htmlFor="pos-detail-baggage">
-                  <Input
-                    id="pos-detail-baggage"
-                    name="baggageCounters"
-                    type="number"
-                    min="0"
-                    max="1000"
-                    defaultValue={pointOfSale.counters.baggage}
-                    required
-                  />
-                </Field>
-                <Field label="Guichets colis" htmlFor="pos-detail-parcels">
-                  <Input
-                    id="pos-detail-parcels"
-                    name="parcelCounters"
-                    type="number"
-                    min="0"
-                    max="1000"
-                    defaultValue={pointOfSale.counters.parcels}
-                    required
-                  />
-                </Field>
-                <Field
-                  label="Royalties agence (%)"
-                  htmlFor="pos-detail-royalty"
-                  hint="Laissez vide pour un point de vente sans commission."
-                >
-                  <Input
-                    id="pos-detail-royalty"
-                    name="royaltyPct"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    defaultValue={pointOfSale.royaltyPct}
-                  />
-                </Field>
-              </fieldset>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="submit"
-                  loading={pending}
-                  loadingLabel="Enregistrement…"
-                  disabled={!mayModify}
-                >
-                  <Save />
-                  Enregistrer
-                </Button>
-                {pointOfSale.isActive ? (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    loading={statusPending}
-                    loadingLabel="Suspension…"
-                    disabled={!maySuspend || suspensionBlocked}
-                    onClick={() => changeStatus(false)}
-                  >
-                    <Power />
-                    Suspendre
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    loading={statusPending}
-                    loadingLabel="Réactivation…"
-                    disabled={!mayModify}
-                    onClick={() => changeStatus(true)}
-                  >
-                    <Power />
-                    Réactiver
-                  </Button>
-                )}
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Rattachements et dépendances</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-5">
-            <dl className="text-small grid gap-3">
-              <div className="flex justify-between gap-4">
-                <dt className="text-ink-muted">Agents actifs</dt>
-                <dd className="tabular font-semibold">
-                  {dependencies.activeUsers}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-ink-muted">Sessions de caisse</dt>
-                <dd className="tabular font-semibold">
-                  {dependencies.cashSessions}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-ink-muted">Quotas agence actifs</dt>
-                <dd className="tabular font-semibold">
-                  {dependencies.activeAgencyQuotas}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-ink-muted">Taux de royalties</dt>
-                <dd className="tabular font-semibold">
-                  {pointOfSale.royaltyPct === undefined
-                    ? "Non applicable"
-                    : `${pointOfSale.royaltyPct.toLocaleString("fr-FR")} %`}
-                </dd>
-              </div>
-            </dl>
-
-            <div className="grid gap-2 border-t border-line pt-4">
-              <h2 className="font-semibold">Agents rattachés</h2>
-              {attachedUsers.length === 0 ? (
-                <p className="text-small text-ink-muted">
-                  Aucun agent rattaché.
-                </p>
+      <Indicateurs>
+        <Indicateur libelle="Postes de vente" icone={Store} valeur={nombre(pos.counters.passengers + pos.counters.baggage + pos.counters.parcels)} evolution={{ sens: "neutre", texte: `${pos.counters.passengers} voyageurs · ${pos.counters.baggage} bagages · ${pos.counters.parcels} colis` }} />
+        <Indicateur libelle="Vendeurs" icone={Users} valeur={nombre(dependances.agentsActifs)} unite={`/ ${dependances.agents}`} evolution={{ sens: "neutre", texte: "comptes actifs rattachés" }} />
+        <Indicateur libelle="Caisses ouvertes" icone={LockOpen} valeur={nombre(dossier.caissesOuvertes)} />
+        <Indicateur libelle="Recette · 30 j" icone={Coins} valeur={millions(dossier.recette30j)} unite="XAF" fort evolution={{ sens: "neutre", texte: `${nombre(dossier.billets30j)} billets · journées clôturées` }} />
+      </Indicateurs>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.6fr)]">
+        <div className="grid content-start gap-5">
+          <Panneau titre="Vendeurs" icone={Users} plein>
+            <div className="p-3">
+              <TableauDonnees
+                libelle="Vendeurs rattachés"
+                colonnes={colonnesVendeurs}
+                lignes={dossier.vendeurs}
+                cle={(v) => v.id}
+                lien={droits.may("utilisateurs") ? (v) => `/gestion/utilisateurs/${v.id}` : undefined}
+                exportNom={`vendeurs-${pos.code}`}
+                parPage={10}
+                vide={{ titre: "Aucun vendeur rattaché", description: "Rattachez un compte à ce point de vente depuis « Utilisateurs et droits »." }}
+              />
+            </div>
+          </Panneau>
+          <Panneau titre="Caisses" icone={Coins} sousTitre="12 dernières sessions" plein>
+            <div className="p-3">
+              <TableauDonnees
+                libelle="Sessions de caisse"
+                colonnes={colonnesCaisses}
+                lignes={dossier.caisses}
+                cle={(c) => c.id}
+                exportNom={`caisses-${pos.code}`}
+                parPage={12}
+                vide={{ titre: "Aucune caisse ouverte à ce jour", description: "Les sessions apparaissent à la première ouverture de caisse." }}
+              />
+            </div>
+          </Panneau>
+        </div>
+        <div className="grid content-start gap-4">
+          <Panneau titre="Recette nette par jour" icone={Ticket} sousTitre="30 derniers jours · XAF">
+            {dossier.serie.length === 0 ? (
+              <p className="text-small text-ink-muted">Aucune journée clôturée sur la période.</p>
+            ) : (
+              <ol className="grid gap-1.5">
+                {dossier.serie.slice(-10).map((jour) => (
+                  <li key={jour.date} className="grid grid-cols-[48px_minmax(0,1fr)_72px] items-center gap-2 text-[13px]">
+                    <span className="tabular text-ink-muted">{dateServiceCourte(jour.date)}</span>
+                    <span aria-hidden className="h-2.5 rounded-[3px] bg-accent-base" style={{ width: `${Math.max(2, (jour.net / maxJour) * 100)}%` }} />
+                    <span className="tabular text-right">{millions(jour.net)}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Panneau>
+          {pos.type !== "gare" ? (
+            <Panneau titre="Quotas en cours" icone={Store} plein>
+              {dossier.quotas.length === 0 ? (
+                <p className="text-small p-4 text-ink-muted">Aucun quota actif.</p>
               ) : (
-                <ul className="grid gap-2">
-                  {attachedUsers.map((user) => (
-                    <li
-                      key={user.id}
-                      className="rounded-md bg-surface-sunk px-3 py-2"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-semibold">
-                          {user.displayName}
-                        </span>
-                        <Badge
-                          variant={user.isActive ? "success" : "secondary"}
-                        >
-                          {user.isActive ? "Actif" : "Suspendu"}
-                        </Badge>
-                      </div>
-                      <p className="text-caption text-ink-muted">
-                        {user.matricule ?? "Sans matricule"} · {user.role}
-                      </p>
+                <ul className="divide-y divide-line">
+                  {dossier.quotas.map((q) => (
+                    <li key={q.id} className="grid gap-0.5 px-4 py-2.5 text-[13.5px]">
+                      <b className="font-semibold">{q.desserte ? `${libelleDesserte(q.desserte)} · ${dateService(q.desserte.serviceDate)}` : "Desserte"}</b>
+                      <small className="text-ink-muted">
+                        {CLASSES[q.serviceClass].long} · <span className="tabular">{q.sold} / {q.allocated}</span> vendues · libération {q.releaseAt ? <span className="tabular">{dateHeure(q.releaseAt)}</span> : "au départ"}
+                      </small>
                     </li>
                   ))}
                 </ul>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </Panneau>
+          ) : null}
+          <Panneau titre="Fiche" icone={Store}>
+            <Fiche
+              elements={[
+                ["Code", <span key="c" className="tabular">{pos.code}</span>],
+                ["Gare", dossier.station ? `${dossier.station.name} · PK ${dossier.station.kilometerPoint}` : "—"],
+                pos.royaltyPct !== undefined ? ["Commission", `${pos.royaltyPct.toLocaleString("fr-FR")} %`] : null,
+              ]}
+            />
+          </Panneau>
+          <Panneau titre="Historique" icone={History}>
+            <Historique historique={dossier.historique} />
+          </Panneau>
+        </div>
       </div>
+      <DialoguePointDeVente
+        open={edition}
+        onOpenChange={setEdition}
+        point={{ _id: pos._id, code: pos.code, name: pos.name, type: pos.type, stationId: pos.stationId, counters: pos.counters, royaltyPct: pos.royaltyPct }}
+      />
     </ManagementDetailShell>
   )
 }

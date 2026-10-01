@@ -107,6 +107,8 @@ const financeApi = (
 const FCFA_FORMATTER = new Intl.NumberFormat("fr-FR", {
   style: "currency",
   currency: "XAF",
+  // Le code « XAF », comme partout dans la charte, plutôt que le symbole.
+  currencyDisplay: "code",
   maximumFractionDigits: 0,
 })
 
@@ -330,7 +332,7 @@ function JournalPanel({ journal }: { journal: FinanceOverviewDto["journal"] }) {
         </div>
 
         {journal.latest.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <Table>
               <TableCaption>Derniers lots comptables validés.</TableCaption>
               <TableHeader>

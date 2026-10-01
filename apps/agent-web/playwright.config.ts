@@ -2,6 +2,8 @@ import { defineConfig, devices } from "@playwright/test"
 
 export default defineConfig({
   testDir: "./e2e",
+  // Les parcours contre le vrai backend ont leur propre configuration.
+  testIgnore: /\.reel\.spec\.ts$/,
   fullyParallel: true,
   reporter: "list",
   use: {

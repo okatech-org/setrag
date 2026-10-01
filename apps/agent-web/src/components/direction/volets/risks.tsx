@@ -117,7 +117,7 @@ function CountTable({
             </TableCell>
             {withAmount ? (
               <TableCell className="text-right font-mono tabular-nums">
-                {NUMBER_FORMATTER.format(row.amountXaf ?? 0)} FCFA
+                {NUMBER_FORMATTER.format(row.amountXaf ?? 0)} XAF
               </TableCell>
             ) : null}
           </TableRow>
@@ -316,8 +316,8 @@ export function RisksVolet({ data }: ExecutiveVoletProps) {
                 value={NUMBER_FORMATTER.format(
                   safetySummary.penalties.amountXaf
                 )}
-                unit="FCFA"
-                supporting={`hors annulations · ${NUMBER_FORMATTER.format(safetySummary.penalties.byStatus.paye.amountXaf)} FCFA payés`}
+                unit="XAF"
+                supporting={`hors annulations · ${NUMBER_FORMATTER.format(safetySummary.penalties.byStatus.paye.amountXaf)} XAF payés`}
               />
             </MetricGrid>
             <div className="grid gap-4 lg:grid-cols-2">

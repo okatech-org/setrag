@@ -199,7 +199,7 @@ export function OverviewVolet({
                 ? NUMBER_FORMATTER.format(passenger.revenueNet)
                 : undefined
             }
-            unit="FCFA"
+            unit="XAF"
             supporting={
               passenger.state === "operational"
                 ? variationLabel(passenger.revenueVariationPct, comparison)

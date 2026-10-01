@@ -24,3 +24,13 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: vi.fn(),
   })),
 })
+
+// jsdom ne fournit pas ResizeObserver : le ruban qui glisse (NavRuban,
+// NavRubanVertical) s'en sert pour se recaler. Une version inerte suffit.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+}

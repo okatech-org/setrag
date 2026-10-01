@@ -565,7 +565,7 @@ function TimeDistanceChart({
         </svg>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <Table aria-label="Alternative textuelle du graphique espace-temps">
           <TableCaption>
             Alternative textuelle du graphique : horaires prévus et
@@ -677,7 +677,7 @@ function SegmentsPanel({
             description="Le serveur n’a fourni aucun état d’occupation pour le périmètre autorisé."
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <Table aria-label="État des cantons COTRAF">
               <TableHeader>
                 <TableRow>

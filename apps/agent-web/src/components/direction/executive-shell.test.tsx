@@ -8,6 +8,8 @@ const shellState = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   usePathname: () => shellState.pathname,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }))
 vi.mock("@/components/portal-guard", () => ({
   usePortalSession: () => ({
@@ -25,6 +27,7 @@ vi.mock("@/components/portal-guard", () => ({
 }))
 vi.mock("@workspace/api/hooks", () => ({
   useQuery: () => undefined,
+  useMutation: () => vi.fn(),
 }))
 
 import { ExecutiveShell } from "./executive-shell"
@@ -35,16 +38,14 @@ describe("chrome de l’espace Direction générale", () => {
     shellState.pathname = "/direction/finances"
   })
 
-  it("place les rubriques avant « Mes modules », avec la pastille d’espace", () => {
+  it("place les rubriques avant le menu du portail", () => {
     render(
       <ExecutiveShell volet="finances" preset="annee">
         Contenu
       </ExecutiveShell>
     )
 
-    expect(screen.getByLabelText("Espace actif")).toHaveTextContent(
-      "Direction générale"
-    )
+    expect(screen.getAllByText("Direction générale").length).toBeGreaterThan(0)
     expect(
       screen.getByRole("heading", { level: 1, name: "Finances" })
     ).toBeInTheDocument()
@@ -52,7 +53,7 @@ describe("chrome de l’espace Direction générale", () => {
     const rubrics = screen.getByRole("navigation", {
       name: "Direction générale",
     })
-    const modules = screen.getByRole("navigation", { name: "Mes modules" })
+    const modules = screen.getByRole("navigation", { name: "Menu du portail" })
     expect(
       rubrics.compareDocumentPosition(modules) &
         Node.DOCUMENT_POSITION_FOLLOWING

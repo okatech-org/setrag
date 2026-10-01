@@ -282,13 +282,10 @@ export function ModuleAccessMatrix({ data }: { data: AdministrationData }) {
             />
           </Field>
 
-          <Field
-            label="Motif du changement"
-            htmlFor="module-access-reason"
-            hint="Obligatoire et inscrit au journal d’audit."
-          >
+          <Field label="Motif du changement" htmlFor="module-access-reason">
             <Textarea
               id="module-access-reason"
+              aria-describedby="module-access-reason-aide"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               placeholder="Précisez la demande, la décision ou le ticket associé…"
@@ -313,6 +310,10 @@ export function ModuleAccessMatrix({ data }: { data: AdministrationData }) {
             Enregistrer ({changes.size})
           </Button>
         </div>
+        {/* Sous la ligne : dans le champ, l'aide décalerait la recherche et le bouton. */}
+        <p id="module-access-reason-aide" className="text-xs text-ink-muted">
+          Le motif est obligatoire et inscrit au journal d’audit.
+        </p>
         <p className="text-xs text-ink-muted" aria-live="polite">
           {changes.size === 0
             ? "Aucune modification en attente."

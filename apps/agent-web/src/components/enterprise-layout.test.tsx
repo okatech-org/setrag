@@ -9,6 +9,12 @@ const shellState = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   usePathname: () => shellState.pathname,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}))
+vi.mock("@workspace/api/hooks", () => ({
+  useQuery: () => undefined,
+  useMutation: () => vi.fn(),
 }))
 vi.mock("./portal-guard", () => ({
   usePortalSession: () => ({
@@ -27,27 +33,18 @@ vi.mock("./portal-guard", () => ({
 vi.mock("./module-access-navigation", () => ({
   canPerformModuleActions: (level: string | null, role?: string) =>
     role !== "admin_it" && (level === "utilisation" || level === "admin"),
-  canShowDecisionResources: (role?: string) => Boolean(role),
-  canShowExecutiveSpace: (role?: string) => role === "direction_generale",
-  ModuleSidebarNavigation: ({
-    activeModuleCode,
-    leading,
-  }: {
-    activeModuleCode?: string
-    leading?: React.ReactNode
-  }) => (
-    <>
-      {leading}
-      <nav
-        aria-label="Mes modules"
-        data-active-module={activeModuleCode ?? "aucun"}
-      >
-        Mes modules
-      </nav>
-    </>
-  ),
   useModuleNavigationAccesses: () => ({
-    accesses: [{ code: "cotraf", accessLevel: shellState.accessLevel }],
+    accesses: [
+      {
+        code: "cotraf",
+        label: "COTRAF",
+        route: "/cotraf",
+        enabled: true,
+        canAccess: true,
+        accessLevel: shellState.accessLevel,
+        accessSource: "role",
+      },
+    ],
     loading: false,
   }),
 }))
@@ -61,93 +58,59 @@ describe("shell des modules d’entreprise", () => {
     shellState.pathname = "/cotraf"
   })
 
-  it("rend un seul en-tête, sans sélecteur horizontal ni niveau d’accès", () => {
+  it("rend le cadre du portail, le menu et l’en-tête de page", () => {
     render(
       <EnterpriseShell title="COTRAF" subtitle="Régulation du trafic">
         Contenu
       </EnterpriseShell>
     )
 
-    expect(
-      document.querySelectorAll('[data-slot="enterprise-header"]')
-    ).toHaveLength(1)
-    expect(screen.getAllByRole("img", { name: "SETRAG" })).toHaveLength(1)
-    expect(
-      screen.queryByRole("navigation", { name: "Sélecteur des modules métier" })
-    ).not.toBeInTheDocument()
-    expect(screen.queryByText(/Heure de Libreville/)).not.toBeInTheDocument()
-    expect(screen.queryByText("Lecture")).not.toBeInTheDocument()
-
-    // L'espace actif, le compte et le titre de page restent lisibles.
-    expect(screen.getByLabelText("Espace actif")).toHaveTextContent("COTRAF")
-    expect(screen.getByText("Direction générale")).toBeInTheDocument()
-    expect(screen.getByText("D. Direction · DEMO-G-001")).toBeInTheDocument()
-    expect(
-      screen.getByRole("heading", { level: 1, name: "COTRAF" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "COTRAF" })).toBeInTheDocument()
     expect(screen.getByText("Régulation du trafic")).toBeInTheDocument()
+    // Le module courant porte le ruban du menu et apparaît au fil d'Ariane.
+    const menu = screen.getByRole("navigation", { name: "Menu du portail" })
+    // Le libellé, suivi de la touche de son raccourci (2 par défaut).
+    const lien = Array.from(menu.querySelectorAll("a")).find((a) => a.textContent?.startsWith("COTRAF"))
+    expect(lien).toHaveAttribute("aria-current", "page")
+    expect(lien?.querySelector("kbd")).toHaveTextContent("2")
+    expect(lien?.querySelector("svg")).not.toBeNull()
+    expect(screen.getByRole("navigation", { name: "Fil d'Ariane" })).toHaveTextContent("COTRAF")
+    // Le compte reste lisible.
+    expect(screen.getByText("Démo Direction")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Aller au contenu" })).toHaveAttribute("href", "#contenu")
   })
 
-  it("masque les actions et désactive les contrôles au niveau Lecture", () => {
+  it("masque les actions et désactive les contrôles au niveau lecture", () => {
     render(
-      <EnterpriseShell
-        title="COTRAF"
-        actions={<button type="button">Créer un bulletin</button>}
-      >
+      <EnterpriseShell title="COTRAF" actions={<button type="button">Créer un bulletin</button>}>
         <button type="button">Modifier la circulation</button>
       </EnterpriseShell>
     )
 
     expect(screen.queryByText("Créer un bulletin")).not.toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: "Modifier la circulation" })
-    ).toBeDisabled()
-    expect(screen.getByRole("status")).toHaveTextContent("Mode Lecture")
+    expect(screen.getByRole("button", { name: "Modifier la circulation" })).toBeDisabled()
+    expect(screen.getByText(/Mode lecture/)).toBeInTheDocument()
   })
 
-  it("conserve l’Admin système en gouvernance sans actions métier ni badge", () => {
+  it("conserve l’Admin système en gouvernance sans actions métier", () => {
     shellState.role = "admin_it"
     shellState.accessLevel = "admin"
 
     render(
-      <EnterpriseShell
-        title="COTRAF"
-        actions={<button type="button">Créer un bulletin</button>}
-      >
+      <EnterpriseShell title="COTRAF" actions={<button type="button">Créer un bulletin</button>}>
         <button type="button">Modifier la circulation</button>
       </EnterpriseShell>
     )
 
-    expect(screen.queryByText("Admin système")).not.toBeInTheDocument()
     expect(screen.queryByText("Créer un bulletin")).not.toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: "Modifier la circulation" })
-    ).toBeDisabled()
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Administration système"
-    )
+    expect(screen.getByRole("button", { name: "Modifier la circulation" })).toBeDisabled()
+    expect(screen.getByText(/Administration système/)).toBeInTheDocument()
   })
 
-  it("conserve la navigation latérale sur la ressource de décision", () => {
-    shellState.pathname = "/etudes"
-
-    render(<EnterpriseShell title="Études">Documents</EnterpriseShell>)
-
-    expect(
-      screen.getByRole("navigation", { name: "Mes modules" })
-    ).toHaveAttribute("data-active-module", "aucun")
-    expect(screen.getByLabelText("Espace actif")).toHaveTextContent(
-      "Audit & documents"
-    )
-    expect(
-      screen.getByRole("button", { name: "Ouvrir le menu" })
-    ).toHaveAttribute("aria-controls", "enterprise-module-sidebar")
-  })
-
-  it("ouvre la navigation latérale et l’espace sur /direction pour la DG seulement", () => {
+  it("rend les rubriques d’un espace transverse avant le menu, avec son périmètre", () => {
     shellState.pathname = "/direction/risques"
 
-    const { unmount } = render(
+    render(
       <EnterpriseShell
         title="Risques et continuité"
         space="Direction générale"
@@ -159,48 +122,18 @@ describe("shell des modules d’entreprise", () => {
       </EnterpriseShell>
     )
 
-    expect(screen.getByLabelText("Espace actif")).toHaveTextContent(
-      "Direction générale"
-    )
-    expect(
-      screen.getByText("Réseau entier · Owendo–Franceville")
-    ).toBeInTheDocument()
-    const rubrics = screen.getByRole("navigation", {
-      name: "Direction générale",
-    })
-    const modules = screen.getByRole("navigation", { name: "Mes modules" })
-    expect(
-      rubrics.compareDocumentPosition(modules) &
-        Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy()
-    expect(
-      screen.getByRole("link", { name: "Vue d’ensemble" })
-    ).toBeInTheDocument()
-    expect(screen.queryByRole("status")).not.toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: "Ouvrir le menu" })
-    ).toHaveAttribute("aria-controls", "enterprise-module-sidebar")
-    unmount()
-
-    shellState.role = "chef_vente"
-    render(
-      <EnterpriseShell title="Risques et continuité">Contenu</EnterpriseShell>
-    )
-    expect(
-      screen.queryByRole("button", { name: "Ouvrir le menu" })
-    ).not.toBeInTheDocument()
+    expect(screen.getByText("Réseau entier · Owendo–Franceville")).toBeInTheDocument()
+    const rubriques = screen.getByRole("navigation", { name: "Direction générale" })
+    const menu = screen.getByRole("navigation", { name: "Menu du portail" })
+    expect(rubriques.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole("link", { name: "Vue d’ensemble" })).toBeInTheDocument()
+    // Hors module, pas de mode lecture.
+    expect(screen.queryByText(/Mode lecture/)).not.toBeInTheDocument()
   })
 
-  it("n’offre aucun tiroir hors des modules", () => {
-    shellState.pathname = "/administration"
+  it("ouvre le menu en tiroir sous lg", () => {
+    render(<EnterpriseShell title="COTRAF">Contenu</EnterpriseShell>)
 
-    render(<EnterpriseShell title="Administration">Matrice</EnterpriseShell>)
-
-    expect(
-      screen.queryByRole("button", { name: "Ouvrir le menu" })
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("navigation", { name: "Mes modules" })
-    ).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Ouvrir le menu" })).toHaveAttribute("aria-controls", "menu-portail")
   })
 })

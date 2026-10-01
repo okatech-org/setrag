@@ -1,266 +1,164 @@
 "use client"
 
-import type { GenericId } from "convex/values"
-import { useState } from "react"
+import { Briefcase, CreditCard, Download, History, ScanLine, Ticket, UserRound } from "lucide-react"
 
 import { useAction, useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
-import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
-import { Card } from "@workspace/ui/components/card"
+import { SkeletonLines } from "@workspace/ui/components/empty-state"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
-import { formatPrice } from "@workspace/ui/lib/format"
 
-import { asAppRole, canRole } from "@/lib/portal-access"
+import { Chronologie, Fiche, Panneau } from "@/components/charte"
+import { useDroitsGestion } from "./gestion/referentiels/droits"
+import { Historique, RetourOperation, useOperation } from "./gestion/referentiels/elements"
+import { agent, CATEGORIES_REDUCTION, CLASSES, dateHeure, dateService, heure, jourMois, libelleDesserte, montant, MOYENS_PAIEMENT, taux } from "./gestion/referentiels/format"
+import { Pastille } from "./gestion/referentiels/statuts"
+import { RESULTATS_CONTROLE, TelephoneMasque } from "./gestion/referentiels/voyageurs-commun"
 import { ManagementDetailShell } from "./management-detail-shell"
-import { usePortalSession } from "./portal-guard"
 
-type TicketId = GenericId<"tickets">
-
-const STATUS_LABELS = {
-  en_attente: "En attente de paiement",
-  valide: "Valide",
-  utilise: "Utilisé",
-  annule: "Annulé",
-  rembourse: "Remboursé",
-  expire: "Expiré",
+const ETATS_BILLET = {
+  en_attente: { libelle: "En attente de paiement", ton: "warning" },
+  valide: { libelle: "Valide", ton: "success" },
+  utilise: { libelle: "Utilisé", ton: "neutral" },
+  annule: { libelle: "Annulé", ton: "danger" },
+  rembourse: { libelle: "Remboursé", ton: "danger" },
+  expire: { libelle: "Expiré", ton: "neutral" },
 } as const
 
+const CANAUX = { guichet: "Guichet", ligne: "En ligne", agence: "Agence", bord: "À bord", manuel: "Ressaisie papier" } as const
+
 export function TravelerTicketDetail({ ticketId }: { ticketId: string }) {
-  const id = ticketId as TicketId
-  const session = usePortalSession()
-  const role = asAppRole(session?.profile.user.role)
-  const mayReadDocument = canRole(role, "duplicatas", "consulter")
-  const mayDuplicate = canRole(role, "duplicatas", "creer")
-  const detail = useQuery(api.functions.management.getTravelerTicket, {
-    ticketId: id,
-  })
+  const droits = useDroitsGestion()
+  const dossier = useQuery(api.functions.referentiels.billetVoyageur, { ticketId: ticketId as never })
   const ticketPdf = useAction(api.functions.documents.ticketPdf)
   const reprint = useMutation(api.functions.sales.reprintTicket)
-  const [pending, setPending] = useState(false)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
+  const operation = useOperation()
 
-  async function download() {
-    setPending(true)
-    setMessage("")
-    setError("")
-    try {
-      const result = await ticketPdf({ ticketId: id })
-      window.open(result.url, "_blank", "noopener,noreferrer")
-      setMessage("Le document du billet a été généré.")
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Document indisponible."
-      )
-    } finally {
-      setPending(false)
-    }
-  }
-
-  async function createDuplicate() {
-    if (
-      !window.confirm(
-        "Émettre un duplicata tracé de ce billet ? Cette action sera auditée."
-      )
-    ) {
-      return
-    }
-    setPending(true)
-    setMessage("")
-    setError("")
-    try {
-      const result = await reprint({ ticketId: id })
-      setMessage(`${result.mention} enregistré pour ${result.ticketNumber}.`)
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Duplicata impossible.")
-    } finally {
-      setPending(false)
-    }
-  }
-
-  if (detail === undefined) {
+  if (dossier === undefined || dossier === null) {
     return (
-      <ManagementDetailShell
-        title="Voyageur"
-        eyebrow="Billet et manifeste"
-        backHref="/gestion/voyageurs"
-      >
-        <p role="status">Chargement du billet…</p>
+      <ManagementDetailShell title={dossier === null ? "Billet introuvable" : "Voyageur"} eyebrow="Commercial · voyageurs" backHref="/gestion/voyageurs" verrouillage="aucun">
+        {dossier === null ? <InlineMessage tone="danger" title="Ce billet n'existe plus." /> : <SkeletonLines />}
       </ManagementDetailShell>
     )
   }
-
-  if (detail === null) {
-    return (
-      <ManagementDetailShell
-        title="Billet introuvable"
-        eyebrow="Voyageurs"
-        backHref="/gestion/voyageurs"
-      >
-        <InlineMessage tone="danger" title="Ce billet n’existe plus." />
-      </ManagementDetailShell>
-    )
-  }
-
-  const {
-    ticket,
-    sale,
-    trip,
-    origin,
-    destination,
-    customer,
-    scans,
-    baggages,
-    payments,
-  } = detail
+  const { ticket, vente, desserte } = dossier
+  const etat = ETATS_BILLET[ticket.status]
+  const p = ticket.passager
 
   return (
     <ManagementDetailShell
-      title={`${ticket.passenger.firstName} ${ticket.passenger.lastName}`}
-      eyebrow={`Billet ${ticket.number}`}
+      title={`${p.lastName.toUpperCase()} ${p.firstName}`}
+      eyebrow={`Commercial · billet ${ticket.number}`}
       backHref="/gestion/voyageurs"
-    >
-      {error ? (
-        <InlineMessage tone="danger" title="Action impossible">
-          {error}
-        </InlineMessage>
-      ) : null}
-      {message ? <InlineMessage tone="success" title={message} /> : null}
-
-      <Card className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <span className="text-caption text-ink-muted">État du billet</span>
-          <div className="mt-1">
-            <Badge>{STATUS_LABELS[ticket.status]}</Badge>
-          </div>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Desserte</span>
-          <p>
-            {trip
-              ? `${trip.trainNumber} · ${trip.serviceDate}`
-              : "Non renseignée"}
-          </p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Trajet</span>
-          <p>
-            {origin?.name ?? "?"} → {destination?.name ?? "?"}
-          </p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Place</span>
-          <p>
-            {ticket.coachLabel ?? "—"} ·{" "}
-            {ticket.seatLabel ?? (ticket.isStanding ? "Debout" : "—")}
-          </p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Classe</span>
-          <p>{ticket.serviceClass}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Prix TTC</span>
-          <p className="tabular">{formatPrice(ticket.unitPriceTtc)}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Vente</span>
-          <p>{sale?.number ?? "Non renseignée"}</p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Duplicatas</span>
-          <p>{ticket.duplicateCount}</p>
-        </div>
-      </Card>
-
-      <Card className="grid gap-4 p-5 sm:grid-cols-2">
-        <div>
-          <h2 className="text-h3">Identité du voyageur</h2>
-          <dl className="text-small mt-3 grid gap-2">
-            <div>
-              <dt className="text-ink-muted">Nom complet</dt>
-              <dd>
-                {ticket.passenger.firstName} {ticket.passenger.lastName}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">Genre</dt>
-              <dd>{ticket.passenger.gender}</dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">Téléphone voyageur</dt>
-              <dd>{ticket.passenger.phone ?? "Non renseigné"}</dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">Contact d’urgence</dt>
-              <dd>{ticket.passenger.emergencyPhone ?? "Non renseigné"}</dd>
-            </div>
-          </dl>
-        </div>
-        <div>
-          <h2 className="text-h3">Contact du dossier</h2>
-          <dl className="text-small mt-3 grid gap-2">
-            <div>
-              <dt className="text-ink-muted">Téléphone</dt>
-              <dd>
-                {sale?.contactPhone ?? customer?.phone ?? "Non renseigné"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">E-mail</dt>
-              <dd>
-                {sale?.contactEmail ?? customer?.email ?? "Non renseigné"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">Paiement</dt>
-              <dd>
-                {payments[0]
-                  ? `${payments[0].status} · ${payments[0].method}`
-                  : "Non renseigné"}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </Card>
-
-      <Card className="grid gap-3 p-5">
-        <h2 className="text-h3">Suivi opérationnel</h2>
-        <p>
-          {scans.length
-            ? `${scans.length} contrôle(s), dernier résultat : ${scans[0]!.result}`
-            : "Aucun contrôle enregistré."}
-        </p>
-        <p>
-          {baggages.length
-            ? `${baggages.length} bagage(s) enregistré(s).`
-            : "Aucun bagage enregistré."}
-        </p>
-      </Card>
-
-      {mayReadDocument || (mayDuplicate && ticket.status === "valide") ? (
-        <Card className="flex flex-wrap gap-3 p-5">
-          {mayReadDocument ? (
+      verrouillage="aucun"
+      description="Les données transactionnelles ne se modifient ni ne se suppriment : annulation et remboursement passent par le guichet, avec leurs écritures liées."
+      actions={
+        <>
+          {droits.may("duplicatas") ? (
             <Button
+              type="button"
               variant="secondary"
-              loading={pending}
-              onClick={() => void download()}
+              loading={operation.enCours === "pdf"}
+              onClick={() =>
+                void operation.executer("pdf", async () => {
+                  const resultat = await ticketPdf({ ticketId: ticket._id })
+                  window.open(resultat.url, "_blank", "noopener,noreferrer")
+                  return true
+                })
+              }
             >
-              Télécharger le billet
+              <Download />
+              Billet (PDF)
             </Button>
           ) : null}
-          {mayDuplicate && ticket.status === "valide" ? (
-            <Button loading={pending} onClick={() => void createDuplicate()}>
-              Émettre un duplicata tracé
+          {droits.may("duplicatas", "creer") && ticket.status === "valide" ? (
+            <Button
+              type="button"
+              loading={operation.enCours === "duplicata"}
+              onClick={() => {
+                if (!window.confirm("Émettre un duplicata ? Il porte la mention DUPLICATA et reste au journal.")) return
+                void operation.executer("duplicata", () => reprint({ ticketId: ticket._id }), (r) => `${r.mention} enregistré pour ${r.ticketNumber}.`)
+              }}
+            >
+              <Ticket />
+              Émettre un duplicata
             </Button>
           ) : null}
-          <p className="text-small basis-full text-ink-muted">
-            Les données transactionnelles ne peuvent être ni modifiées ni
-            supprimées depuis cette fiche.
-          </p>
-        </Card>
-      ) : null}
+        </>
+      }
+    >
+      <div className="flex flex-wrap gap-2">
+        <Pastille ton={etat.ton}>{etat.libelle}</Pastille>
+        {ticket.duplicateCount > 0 ? <Pastille ton="neutral">{ticket.duplicateCount} duplicata(s)</Pastille> : null}
+      </div>
+      <RetourOperation retour={operation.retour} />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Panneau titre="Billet" icone={Ticket}>
+          <Fiche
+            elements={[
+              ["Desserte", desserte ? `${libelleDesserte(desserte)}` : "—"],
+              ["Date", desserte ? dateService(desserte.serviceDate) : "—"],
+              ["Trajet", `${dossier.origine?.name ?? "?"} → ${dossier.destination?.name ?? "?"}`],
+              ["Classe", CLASSES[ticket.serviceClass].long],
+              ["Place", <span key="p" className="tabular">{ticket.isStanding ? `${ticket.coachLabel ?? "?"} · debout` : `${ticket.coachLabel ?? "?"} · ${ticket.seatLabel ?? "?"}`}</span>],
+              ["Catégorie", ticket.fare.discountCode ? `${CATEGORIES_REDUCTION[ticket.fare.discountCode] ?? ticket.fare.discountCode} · −${ticket.fare.discountPct} %` : "Adulte"],
+              ["Calcul", <span key="c" className="tabular">{ticket.fare.chargeableKm} km × {taux(ticket.fare.ratePerKm)}</span>],
+              ["Prix TTC", <span key="t" className="tabular">{montant(ticket.unitPriceTtc)} XAF</span>],
+            ]}
+          />
+        </Panneau>
+        <Panneau titre="Voyageur" icone={UserRound}>
+          <Fiche
+            elements={[
+              ["Nom", `${p.lastName.toUpperCase()} ${p.firstName}`],
+              ["Civilité", p.gender === "F" ? "Madame" : "Monsieur"],
+              ["Nationalité", p.nationality ?? "—"],
+              ["Naissance", p.birthDate ?? "—"],
+              ["Pièce", p.documentNumber ? "Renseignée" : "—"],
+              ["Téléphone", <TelephoneMasque key="t" ticketId={ticket._id} masque={ticket.telephone} />],
+              ["Urgence", <TelephoneMasque key="u" ticketId={ticket._id} masque={ticket.urgence} libelle="le contact d'urgence" />],
+            ]}
+          />
+        </Panneau>
+        <Panneau titre="Vente" icone={CreditCard}>
+          {vente ? (
+            <Fiche
+              elements={[
+                ["Vente", <span key="v" className="tabular">{vente.number}</span>],
+                ["Canal", CANAUX[vente.channel]],
+                ["Le", <span key="d" className="tabular">{dateHeure(vente.soldAt)}</span>],
+                ["Vendeur", agent(vente.vendeur, "Vente en ligne")],
+                ["Point de vente", vente.pointOfSale ? `${vente.pointOfSale.code} · ${vente.pointOfSale.name}` : "—"],
+                ["Contact", <TelephoneMasque key="c" ticketId={ticket._id} masque={vente.contactTelephone} libelle="le contact" />],
+                ["E-mail", vente.contactEmail ?? "—"],
+                ...dossier.paiements.map((paiement) => [`Paiement · ${MOYENS_PAIEMENT[paiement.method]}`, <span key={paiement.id} className="tabular">{montant(paiement.amountXaf)} · {paiement.status}</span>] as const),
+              ]}
+            />
+          ) : (
+            <p className="text-small text-ink-muted">Vente introuvable.</p>
+          )}
+        </Panneau>
+        <Panneau titre="Contrôles à bord" icone={ScanLine}>
+          <Chronologie
+            evenements={dossier.controles.map((scan) => ({
+              cle: scan.id,
+              heure: jourMois(scan.scannedAt),
+              titre: `${RESULTATS_CONTROLE[scan.result]?.libelle ?? scan.result}${scan.conflict ? " · à arbitrer" : ""}`,
+              detail: `${heure(scan.scannedAt)} · ${agent(scan.agent)}${scan.offline ? " · hors ligne" : ""}`,
+            }))}
+            vide="Aucun contrôle enregistré : le voyageur n'est pas encore passé au contrôle."
+          />
+          {dossier.bagages.length > 0 ? (
+            <p className="flex items-center gap-2 text-[13.5px]">
+              <Briefcase aria-hidden className="size-4 text-ink-muted" />
+              {dossier.bagages.map((b) => `${b.tagNumber} · ${b.weightKg} kg`).join(" ; ")}
+            </p>
+          ) : null}
+        </Panneau>
+      </div>
+      <Panneau titre="Historique" icone={History}>
+        <Historique historique={dossier.historique} vide="Aucune action tracée sur ce billet." />
+      </Panneau>
     </ManagementDetailShell>
   )
 }

@@ -125,7 +125,7 @@ export function FinancesVolet({
                 ? NUMBER_FORMATTER.format(passenger.revenueNet)
                 : undefined
             }
-            unit="FCFA"
+            unit="XAF"
             supporting={
               passenger.state === "operational"
                 ? revenueVariationSupporting(
@@ -143,7 +143,7 @@ export function FinancesVolet({
                 ? NUMBER_FORMATTER.format(passenger.refundedTtc)
                 : undefined
             }
-            unit="FCFA"
+            unit="XAF"
             supporting={
               passenger.state === "operational" &&
               passenger.refundRatePct !== undefined
@@ -159,7 +159,7 @@ export function FinancesVolet({
                 ? NUMBER_FORMATTER.format(passenger.averageBasketTtc)
                 : undefined
             }
-            unit="FCFA"
+            unit="XAF"
           />
           <MetricCard
             label="Ventes"
@@ -228,13 +228,13 @@ export function FinancesVolet({
                 label="Total débit"
                 state={finance.state}
                 value={NUMBER_FORMATTER.format(overview.journal.totalDebit)}
-                unit="FCFA"
+                unit="XAF"
               />
               <MetricCard
                 label="Total crédit"
                 state={finance.state}
                 value={NUMBER_FORMATTER.format(overview.journal.totalCredit)}
-                unit="FCFA"
+                unit="XAF"
               />
               <MetricCard
                 label="Comptes actifs"

@@ -1,24 +1,17 @@
 "use client"
 
-import { RefreshCw } from "lucide-react"
+import { Network, RefreshCw } from "lucide-react"
 import { useState } from "react"
 import type { FunctionReference } from "convex/server"
 
 import { useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
-import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
-import { Card } from "@workspace/ui/components/card"
+import { EmptyState, SkeletonLines } from "@workspace/ui/components/empty-state"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@workspace/ui/components/table"
+import { Tag } from "@workspace/ui/components/tag"
+
+import { Indicateur, Indicateurs, Panneau } from "@/components/charte"
 
 export type IntegrationEventStatus =
   "en_attente" | "en_cours" | "envoye" | "rejete"
@@ -131,12 +124,12 @@ const integrationApi = (
 
 const STATUS_PRESENTATION: Record<
   IntegrationEventStatus,
-  { label: string; variant: "info" | "warning" | "success" | "destructive" }
+  { label: string; tone: "info" | "warning" | "success" | "danger" }
 > = {
-  en_attente: { label: "En attente", variant: "warning" },
-  en_cours: { label: "En cours", variant: "info" },
-  envoye: { label: "Envoyés", variant: "success" },
-  rejete: { label: "Rejetés", variant: "destructive" },
+  en_attente: { label: "En attente", tone: "warning" },
+  en_cours: { label: "En cours", tone: "info" },
+  envoye: { label: "Envoyés", tone: "success" },
+  rejete: { label: "Rejetés", tone: "danger" },
 }
 
 export function shouldLoadIntegrationOutbox({
@@ -188,24 +181,6 @@ function createCorrelationId() {
   )
 }
 
-function IntegrationCounter({
-  status,
-  count,
-}: {
-  status: IntegrationEventStatus
-  count: number
-}) {
-  const presentation = STATUS_PRESENTATION[status]
-  return (
-    <Card className="gap-2 p-4">
-      <span className="text-h3 tabular-nums">
-        {count.toLocaleString("fr-FR")}
-      </span>
-      <span className="text-small text-ink-muted">{presentation.label}</span>
-    </Card>
-  )
-}
-
 export function IntegrationOutboxPanel({
   health,
   events,
@@ -230,52 +205,38 @@ export function IntegrationOutboxPanel({
   const rows = events ?? []
 
   return (
-    <section aria-labelledby="integration-outbox-title" className="grid gap-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 id="integration-outbox-title" className="text-h3">
-            Outbox plateforme
-          </h2>
-          <p className="text-small mt-1 text-ink-muted">
-            Événements inter-modules suivis jusqu’à leur acquittement.
-          </p>
-        </div>
-        {health ? (
-          <p className="text-caption text-ink-muted" role="status">
-            Plus ancien en attente :{" "}
-            {formatIntegrationAge(health.oldestPendingAgeMs)}
+    <Panneau
+      titre="Outbox plateforme"
+      icone={Network}
+      sousTitre="Événements inter-modules suivis jusqu’à leur acquittement"
+      actions={
+        health ? (
+          <span className="tabular text-[12.5px] text-ink-muted" role="status">
+            Plus ancien en attente : {formatIntegrationAge(health.oldestPendingAgeMs)}
             {health.due > 0 ? ` · ${health.due} à traiter` : ""}
-          </p>
-        ) : null}
-      </div>
-
+          </span>
+        ) : null
+      }
+    >
       {loading ? (
-        <Card className="p-5">
-          <p role="status" className="text-small text-ink-muted">
-            Chargement de l’outbox…
-          </p>
-        </Card>
+        <SkeletonLines />
       ) : health ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {(Object.keys(STATUS_PRESENTATION) as IntegrationEventStatus[]).map(
-            (status) => (
-              <IntegrationCounter
-                key={status}
-                status={status}
-                count={health.totals[status]}
-              />
-            )
-          )}
-        </div>
+        <Indicateurs colonnes={4}>
+          {(Object.keys(STATUS_PRESENTATION) as IntegrationEventStatus[]).map((status) => (
+            <Indicateur
+              key={status}
+              libelle={STATUS_PRESENTATION[status].label}
+              valeur={health.totals[status].toLocaleString("fr-FR")}
+            />
+          ))}
+        </Indicateurs>
       ) : (
         <InlineMessage tone="warning" title="Supervision indisponible.">
           L’état de l’outbox n’a pas pu être chargé.
         </InlineMessage>
       )}
 
-      {replayMessage ? (
-        <InlineMessage tone="success" title={replayMessage} />
-      ) : null}
+      {replayMessage ? <InlineMessage tone="success" title={replayMessage} /> : null}
       {replayError ? (
         <InlineMessage tone="danger" title="Le rejeu a échoué.">
           {normalizeIntegrationError(replayError)}
@@ -283,106 +244,97 @@ export function IntegrationOutboxPanel({
       ) : null}
 
       {!loading && health ? (
-        <Card className="min-w-0 overflow-hidden p-0">
-          <Table>
-            <TableCaption>
-              {health.truncated
-                ? `Derniers événements affichés (limite ${rows.length}).`
-                : "Derniers événements d’intégration."}
-            </TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Événement</TableHead>
-                <TableHead>Destination</TableHead>
-                <TableHead>Âge</TableHead>
-                <TableHead>Tentatives</TableHead>
-                <TableHead>Dernière erreur</TableHead>
-                <TableHead>État</TableHead>
-                {canReplay ? (
-                  <TableHead className="text-right">Action</TableHead>
-                ) : null}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((event) => {
-                const presentation = STATUS_PRESENTATION[event.status]
-                const isReplaying = replayingEventId === event._id
-                return (
-                  <TableRow key={event._id}>
-                    <TableCell className="font-semibold">
-                      <span
-                        className="block max-w-64 truncate"
-                        title={event.type}
-                      >
-                        {event.type}
-                      </span>
-                      <span className="text-caption text-ink-muted">
-                        {event.entityType} · {event.entityId}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {event.endpoint?.name ?? "Destination supprimée"}
-                      {event.endpoint ? (
-                        <span className="text-caption block text-ink-muted">
-                          {event.endpoint.code} · {event.endpoint.transport}
-                        </span>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      <time dateTime={new Date(event.createdAt).toISOString()}>
-                        {formatIntegrationAge(
-                          Math.max(health.generatedAt - event.createdAt, 0)
-                        )}
-                      </time>
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {event.attempts} / {event.maxAttempts}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className="block max-w-72 truncate"
-                        title={normalizeIntegrationError(event.error?.message)}
-                      >
-                        {normalizeIntegrationError(event.error?.message)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={presentation.variant}>
-                        {presentation.label}
-                      </Badge>
-                    </TableCell>
-                    {canReplay ? (
-                      <TableCell className="text-right">
-                        {event.status === "rejete" ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            loading={isReplaying}
-                            loadingLabel="Rejeu…"
-                            disabled={!online || Boolean(replayingEventId)}
-                            aria-label={`Rejouer l’événement ${event.type}`}
-                            onClick={() => onReplay?.(event._id)}
-                          >
-                            <RefreshCw />
-                            Rejouer
-                          </Button>
+        rows.length === 0 ? (
+          <EmptyState
+            title="Aucun événement d’intégration à afficher."
+            description="Les modules publient ici leurs échanges avec les systèmes tiers."
+          />
+        ) : (
+          <div className="relative overflow-x-auto rounded-md border border-line">
+            <table className="w-full border-collapse text-[14px]">
+              <caption className="sr-only">
+                {health.truncated
+                  ? `Derniers événements affichés (limite ${rows.length}).`
+                  : "Derniers événements d’intégration."}
+              </caption>
+              <thead>
+                <tr className="bg-surface-sunk text-left text-[11.5px] tracking-[0.05em] text-ink-muted uppercase">
+                  <th scope="col" className="px-3.5 py-2.5">Événement</th>
+                  <th scope="col" className="px-3.5 py-2.5">Destination</th>
+                  <th scope="col" className="px-3.5 py-2.5">Âge</th>
+                  <th scope="col" className="px-3.5 py-2.5 text-right">Tentatives</th>
+                  <th scope="col" className="hidden px-3.5 py-2.5 md:table-cell">Dernière erreur</th>
+                  <th scope="col" className="px-3.5 py-2.5">État</th>
+                  {canReplay ? (
+                    <th scope="col" className="px-3.5 py-2.5 text-right">Action</th>
+                  ) : null}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((event) => {
+                  const presentation = STATUS_PRESENTATION[event.status]
+                  const isReplaying = replayingEventId === event._id
+                  return (
+                    <tr key={event._id} className="border-t border-line">
+                      <td className="px-3.5 py-2.5">
+                        <b className="block max-w-64 truncate font-semibold" title={event.type}>
+                          {event.type}
+                        </b>
+                        <small className="text-[12.5px] text-ink-muted">
+                          {event.entityType} · {event.entityId}
+                        </small>
+                      </td>
+                      <td className="px-3.5 py-2.5">
+                        {event.endpoint?.name ?? "Destination supprimée"}
+                        {event.endpoint ? (
+                          <small className="block text-[12.5px] text-ink-muted">
+                            {event.endpoint.code} · {event.endpoint.transport}
+                          </small>
                         ) : null}
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-          {rows.length === 0 ? (
-            <p className="text-small p-6 text-center text-ink-muted">
-              Aucun événement d’intégration à afficher.
-            </p>
-          ) : null}
-        </Card>
+                      </td>
+                      <td className="px-3.5 py-2.5">
+                        <time className="tabular text-[13px]" dateTime={new Date(event.createdAt).toISOString()}>
+                          {formatIntegrationAge(Math.max(health.generatedAt - event.createdAt, 0))}
+                        </time>
+                      </td>
+                      <td className="px-3.5 py-2.5 text-right font-mono tabular-nums">
+                        {event.attempts} / {event.maxAttempts}
+                      </td>
+                      <td className="hidden px-3.5 py-2.5 md:table-cell">
+                        <span className="block max-w-72 truncate" title={normalizeIntegrationError(event.error?.message)}>
+                          {normalizeIntegrationError(event.error?.message)}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-2.5">
+                        <Tag tone={presentation.tone}>{presentation.label}</Tag>
+                      </td>
+                      {canReplay ? (
+                        <td className="px-3.5 py-2.5 text-right">
+                          {event.status === "rejete" ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              loading={isReplaying}
+                              loadingLabel="Rejeu…"
+                              disabled={!online || Boolean(replayingEventId)}
+                              aria-label={`Rejouer l’événement ${event.type}`}
+                              onClick={() => onReplay?.(event._id)}
+                            >
+                              <RefreshCw />
+                              Rejouer
+                            </Button>
+                          ) : null}
+                        </td>
+                      ) : null}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       ) : null}
-    </section>
+    </Panneau>
   )
 }
 

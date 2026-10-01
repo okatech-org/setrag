@@ -8,6 +8,12 @@ body {
   margin: 0;
 }
 
+/* Champ dans un cadre qui porte déjà l'anneau de focus (recherche, filtre) :
+   l'anneau est celui du cadre, le champ n'en dessine pas un second. */
+[class*="focus-within:shadow-"] :is(input, select, textarea):focus-visible {
+  box-shadow: none;
+}
+
 @media print {
   @page {
     margin: 12mm;

@@ -1,283 +1,218 @@
 "use client"
 
-import { Power, Save } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { History, KeyRound, Power, Save, ShieldCheck, UserRound } from "lucide-react"
 
+import { permissionsFor, type AppRole } from "@workspace/backend/permissions"
 import { useMutation, useQuery } from "@workspace/api/hooks"
 import { api } from "@workspace/backend/generated"
-import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
-import { Card } from "@workspace/ui/components/card"
+import { SkeletonLines } from "@workspace/ui/components/empty-state"
 import { Field, Input, SelectNative } from "@workspace/ui/components/field"
 import { InlineMessage } from "@workspace/ui/components/inline-message"
 
-import { asAppRole, canRole } from "@/lib/portal-access"
-import { ROLE_LABELS, ROLES } from "@/lib/roles"
+import { Fiche, LienBouton, Panneau } from "@/components/charte"
+import { ROLE_LABELS } from "@/lib/roles"
+import { useDroitsGestion } from "./gestion/referentiels/droits"
+import { CelluleDroits, LIBELLES_RESSOURCES, RESSOURCES_METIER, ROLES_INTERNES } from "./gestion/referentiels/droits-matrice"
+import { Historique, RetourOperation, useOperation } from "./gestion/referentiels/elements"
+import { agent, dateHeure } from "./gestion/referentiels/format"
+import { texte } from "./gestion/referentiels/formulaire"
+import { libelleAction } from "./gestion/referentiels/libelles-audit"
+import { TagCompte } from "./gestion/referentiels/statuts"
+import { TagSecondFacteur } from "./gestion/referentiels/utilisateurs"
 import { ManagementDetailShell } from "./management-detail-shell"
-import { usePortalSession } from "./portal-guard"
 
 export function ManagedUserDetail({ userId }: { userId: string }) {
-  const session = usePortalSession()
-  const role = asAppRole(session?.profile.user.role)
-  const mayModify = canRole(role, "utilisateurs", "modifier")
-  const maySuspend = canRole(role, "utilisateurs", "supprimer")
-  const detail = useQuery(api.functions.administration.getManagedUser, {
-    userId: userId as never,
-  })
-  const pointsOfSale = useQuery(api.functions.management.listPointsOfSale, {})
-  const updateUser = useMutation(api.functions.administration.updateManagedUser)
-  const setStatus = useMutation(
-    api.functions.administration.setManagedUserStatus
-  )
-  const [pending, setPending] = useState(false)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
+  const droits = useDroitsGestion()
+  const dossier = useQuery(api.functions.referentiels.compte, { userId: userId as never })
+  const points = useQuery(api.functions.management.listPointsOfSale, droits.may("referentiel") ? {} : "skip")
+  const modifier = useMutation(api.functions.administration.updateManagedUser)
+  const changerEtat = useMutation(api.functions.administration.setManagedUserStatus)
+  const operation = useOperation()
 
-  async function run(action: () => Promise<unknown>, success: string) {
-    setPending(true)
-    setMessage("")
-    setError("")
-    try {
-      await action()
-      setMessage(success)
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "L’action a échoué.")
-    } finally {
-      setPending(false)
-    }
-  }
-
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    const optional = (key: string) => {
-      const value = String(data.get(key) ?? "").trim()
-      return value || undefined
-    }
-    await run(
-      () =>
-        updateUser({
-          userId: userId as never,
-          email: optional("email"),
-          phone: optional("phone"),
-          firstName: optional("firstName"),
-          lastName: optional("lastName"),
-          role: String(data.get("role") ?? detail?.user.role ?? "") as never,
-          matricule: optional("matricule"),
-          pointOfSaleId: optional("pointOfSaleId") as never,
-        }),
-      "Le profil utilisateur a été mis à jour."
-    )
-  }
-
-  if (detail === undefined || pointsOfSale === undefined) {
+  if (dossier === undefined || dossier === null) {
     return (
-      <ManagementDetailShell
-        title="Utilisateur"
-        eyebrow="UTILISATEURS · CHARGEMENT"
-        backHref="/gestion/utilisateurs"
-      >
-        <p role="status">Chargement du profil…</p>
+      <ManagementDetailShell title={dossier === null ? "Compte introuvable" : "Utilisateur"} eyebrow="Supervision · habilitations" backHref="/gestion/utilisateurs" verrouillage="aucun" gouvernance>
+        {dossier === null ? <InlineMessage tone="danger" title="Ce compte n'existe plus." /> : <SkeletonLines />}
       </ManagementDetailShell>
     )
   }
-
-  if (detail === null) {
-    return (
-      <ManagementDetailShell
-        title="Utilisateur introuvable"
-        eyebrow="UTILISATEURS"
-        backHref="/gestion/utilisateurs"
-      >
-        <InlineMessage tone="danger" title="Ce compte n’existe plus." />
-      </ManagementDetailShell>
-    )
-  }
-
-  const { user, pointOfSale, dependencies, isSelf } = detail
-  const displayName =
-    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
-    user.email ||
-    user.authId
+  const { user, dependances } = dossier
+  const nom = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email || user.matricule || "Agent"
+  const peutModifier = droits.may("utilisateurs", "modifier")
+  const peutChangerEtat = user.isActive ? droits.may("utilisateurs", "supprimer") && !dossier.estSoiMeme : peutModifier
+  const roles = ROLES_INTERNES.filter((r) => r !== "admin_it" || droits.role === "admin_it" || user.role === "admin_it")
+  const ressources = RESSOURCES_METIER.filter((r) => permissionsFor(user.role as AppRole, r).length > 0)
 
   return (
     <ManagementDetailShell
-      title={displayName}
-      eyebrow={`UTILISATEUR · ${ROLE_LABELS[user.role]}`}
+      title={nom}
+      eyebrow={`Supervision · ${ROLE_LABELS[user.role].split(" — ")[0]}`}
       backHref="/gestion/utilisateurs"
+      verrouillage="aucun"
+      gouvernance
+      lectureSeule={!droits.chargement && !peutModifier}
+      description={[user.matricule, user.email].filter(Boolean).join(" · ")}
+      actions={
+        peutChangerEtat ? (
+          <Button
+            type="button"
+            variant={user.isActive ? "danger" : "secondary"}
+            disabled={user.isActive && dependances.caissesOuvertes > 0}
+            loading={operation.enCours === "etat"}
+            onClick={() => {
+              if (user.isActive && !window.confirm(`Suspendre le compte de ${nom} ? Son historique est conservé.`)) return
+              void operation.executer("etat", () => changerEtat({ userId: user._id, isActive: !user.isActive }), user.isActive ? "Compte suspendu : l'historique reste attaché." : "Compte réactivé.")
+            }}
+          >
+            <Power />
+            {user.isActive ? "Suspendre" : "Réactiver"}
+          </Button>
+        ) : null
+      }
     >
-      {error ? (
-        <InlineMessage tone="danger" title="Action impossible">
-          {error}
+      <div className="flex flex-wrap gap-2">
+        <TagCompte etat={dossier.etat} />
+      </div>
+      <RetourOperation retour={operation.retour} />
+      {user.isActive && dependances.caissesOuvertes > 0 ? (
+        <InlineMessage tone="info" title="Suspension protégée.">
+          {dependances.caissesOuvertes} caisse(s) ouverte(s) : elles doivent être clôturées avant la suspension du compte.
         </InlineMessage>
       ) : null}
-      {message ? <InlineMessage tone="success" title={message} /> : null}
-      {dependencies.openCashSessions > 0 ? (
-        <InlineMessage tone="warning" title="Suspension protégée">
-          Cet utilisateur possède {dependencies.openCashSessions} caisse(s)
-          ouverte(s). Elles doivent être clôturées avant sa suspension.
-        </InlineMessage>
-      ) : null}
-
-      <Card className="grid gap-4 p-5 sm:grid-cols-4">
-        <div>
-          <span className="text-caption text-ink-muted">État</span>
-          <div className="mt-1">
-            <Badge variant={user.isActive ? "success" : "warning"}>
-              {user.isActive ? "Actif" : "Suspendu"}
-            </Badge>
-          </div>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Source d’identité</span>
-          <p className="font-semibold">
-            {user.identitySource === "annuaire" ? "Annuaire" : "Compte local"}
-          </p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Point de vente</span>
-          <p className="font-semibold">
-            {pointOfSale
-              ? `${pointOfSale.code} · ${pointOfSale.name}`
-              : "Non rattaché"}
-          </p>
-        </div>
-        <div>
-          <span className="text-caption text-ink-muted">Ventes réalisées</span>
-          <p className="tabular font-semibold">
-            {dependencies.sales.toLocaleString("fr-FR")}
-          </p>
-        </div>
-      </Card>
-
-      <Card className="p-5">
-        <h2 className="text-h3">Informations et habilitations</h2>
-        <form className="mt-5 grid gap-4 sm:grid-cols-2" onSubmit={save}>
-          <fieldset className="contents" disabled={!mayModify || pending}>
-            <Field label="Prénom" htmlFor="managed-user-first-name">
-              <Input
-                id="managed-user-first-name"
-                name="firstName"
-                defaultValue={user.firstName}
-              />
-            </Field>
-            <Field label="Nom" htmlFor="managed-user-last-name">
-              <Input
-                id="managed-user-last-name"
-                name="lastName"
-                defaultValue={user.lastName}
-              />
-            </Field>
-            <Field label="Adresse e-mail" htmlFor="managed-user-email">
-              <Input
-                id="managed-user-email"
-                name="email"
-                type="email"
-                defaultValue={user.email}
-              />
-            </Field>
-            <Field label="Téléphone" htmlFor="managed-user-phone">
-              <Input
-                id="managed-user-phone"
-                name="phone"
-                type="tel"
-                defaultValue={user.phone}
-              />
-            </Field>
-            <Field label="Matricule" htmlFor="managed-user-matricule">
-              <Input
-                id="managed-user-matricule"
-                name="matricule"
-                defaultValue={user.matricule}
-              />
-            </Field>
-            <Field
-              label="Identifiant d’authentification"
-              htmlFor="managed-user-auth-id"
-              hint="Cet identifiant est géré par le fournisseur d’identité."
-            >
-              <Input
-                id="managed-user-auth-id"
-                value={user.authId}
-                disabled
-                readOnly
-              />
-            </Field>
-            <Field
-              label="Rôle"
-              htmlFor="managed-user-role"
-              hint={
-                isSelf
-                  ? "Votre propre rôle ne peut pas être modifié ici."
-                  : undefined
-              }
-            >
-              <SelectNative
-                id="managed-user-role"
-                name="role"
-                defaultValue={user.role}
-                disabled={isSelf || !mayModify}
-              >
-                {ROLES.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </SelectNative>
-            </Field>
-            <Field label="Point de vente" htmlFor="managed-user-point-of-sale">
-              <SelectNative
-                id="managed-user-point-of-sale"
-                name="pointOfSaleId"
-                defaultValue={user.pointOfSaleId ?? ""}
-              >
-                <option value="">Aucun rattachement</option>
-                {pointsOfSale.map(({ pointOfSale: option }) => (
-                  <option
-                    key={option._id}
-                    value={option._id}
-                    disabled={!option.isActive}
-                  >
-                    {option.code} · {option.name}
-                    {!option.isActive ? " · suspendu" : ""}
-                  </option>
-                ))}
-              </SelectNative>
-            </Field>
-          </fieldset>
-          <div className="flex flex-wrap gap-3 sm:col-span-2">
-            <Button type="submit" loading={pending} disabled={!mayModify}>
-              <Save />
-              Enregistrer
-            </Button>
-            <Button
-              type="button"
-              variant={user.isActive ? "danger" : "secondary"}
-              loading={pending}
-              disabled={
-                user.isActive
-                  ? !maySuspend || isSelf || dependencies.openCashSessions > 0
-                  : !mayModify
-              }
-              onClick={() =>
-                run(
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]">
+        <div className="grid content-start gap-5">
+          <Panneau titre="Rôle et rattachement" icone={UserRound}>
+            <form
+              className="grid gap-4"
+              onSubmit={async (event) => {
+                event.preventDefault()
+                const donnees = new FormData(event.currentTarget)
+                await operation.executer(
+                  "enregistrer",
                   () =>
-                    setStatus({
-                      userId: userId as never,
-                      isActive: !user.isActive,
+                    modifier({
+                      userId: user._id,
+                      firstName: texte(donnees, "firstName"),
+                      lastName: texte(donnees, "lastName"),
+                      email: texte(donnees, "email"),
+                      phone: texte(donnees, "phone"),
+                      matricule: texte(donnees, "matricule"),
+                      role: String(donnees.get("role") ?? user.role) as AppRole,
+                      pointOfSaleId: texte(donnees, "pointOfSaleId") as never,
                     }),
-                  user.isActive
-                    ? "Le compte a été suspendu sans effacer son historique."
-                    : "Le compte a été réactivé."
+                  "Compte enregistré. Les droits du nouveau rôle s'appliquent à la prochaine action de l'agent."
                 )
-              }
+              }}
             >
-              <Power />
-              {user.isActive ? "Suspendre" : "Réactiver"}
-            </Button>
-          </div>
-        </form>
-      </Card>
+              <fieldset disabled={!peutModifier} className="grid gap-4 sm:grid-cols-2">
+                <Field label="Prénom" htmlFor="compte-prenom">
+                  <Input id="compte-prenom" name="firstName" defaultValue={user.firstName} />
+                </Field>
+                <Field label="Nom" htmlFor="compte-nom">
+                  <Input id="compte-nom" name="lastName" defaultValue={user.lastName} />
+                </Field>
+                <Field label="Adresse e-mail" htmlFor="compte-email">
+                  <Input id="compte-email" name="email" type="email" defaultValue={user.email} />
+                </Field>
+                <Field label="Téléphone" htmlFor="compte-tel">
+                  <Input id="compte-tel" name="phone" type="tel" defaultValue={user.phone} className="tabular" />
+                </Field>
+                <Field label="Matricule" htmlFor="compte-matricule">
+                  <Input id="compte-matricule" name="matricule" defaultValue={user.matricule} className="tabular uppercase" />
+                </Field>
+                <Field label="Rôle" hint={dossier.estSoiMeme ? "Votre propre rôle ne se modifie pas ici." : undefined} htmlFor="compte-role" disabled={dossier.estSoiMeme || !peutModifier}>
+                  <SelectNative id="compte-role" name="role" defaultValue={user.role}>
+                    {roles.map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </option>
+                    ))}
+                  </SelectNative>
+                </Field>
+                <Field label="Point de vente" hint="Obligatoire pour un vendeur." htmlFor="compte-pdv" className="sm:col-span-2">
+                  <SelectNative id="compte-pdv" name="pointOfSaleId" defaultValue={user.pointOfSaleId ?? ""}>
+                    <option value="">Aucun (réseau)</option>
+                    {(points ?? []).map(({ pointOfSale }) => (
+                      <option key={pointOfSale._id} value={pointOfSale._id} disabled={!pointOfSale.isActive && pointOfSale._id !== user.pointOfSaleId}>
+                        {pointOfSale.code} · {pointOfSale.name}
+                        {pointOfSale.isActive ? "" : " · suspendu"}
+                      </option>
+                    ))}
+                    {!points && dossier.pointOfSale ? <option value={dossier.pointOfSale.id}>{dossier.pointOfSale.code} · {dossier.pointOfSale.name}</option> : null}
+                  </SelectNative>
+                </Field>
+              </fieldset>
+              {peutModifier ? (
+                <div>
+                  <Button type="submit" loading={operation.enCours === "enregistrer"} loadingLabel="Enregistrement…">
+                    <Save />
+                    Enregistrer le compte
+                  </Button>
+                </div>
+              ) : null}
+            </form>
+          </Panneau>
+          <Panneau titre={`Droits du rôle « ${ROLE_LABELS[user.role].split(" — ")[0]} »`} icone={ShieldCheck} plein>
+            {ressources.length === 0 ? (
+              <p className="text-small p-4 text-ink-muted">Ce rôle n’a aucun droit sur la billetterie ; ses accès passent par les modules.</p>
+            ) : (
+              <ul className="divide-y divide-line">
+                {ressources.map((r) => (
+                  <li key={r} className="flex items-center justify-between gap-3 px-4 py-2 text-[14px]">
+                    <span>{LIBELLES_RESSOURCES[r]}</span>
+                    <CelluleDroits droits={permissionsFor(user.role as AppRole, r)} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panneau>
+        </div>
+        <div className="grid content-start gap-4">
+          <Panneau titre="Identité et sécurité" icone={KeyRound}>
+            <Fiche
+              elements={[
+                ["Source", user.identitySource === "annuaire" ? "Annuaire Eramet (Entra ID)" : "Compte local de repli"],
+                ["Second facteur", <TagSecondFacteur key="m" valeur={user.secondFactor ?? null} />],
+                ["Dernier accès", <span key="a" className="tabular">{dateHeure(user.lastSeenAt)}</span>],
+                ["Synchronisé le", <span key="s" className="tabular">{dateHeure(user.directorySyncedAt)}</span>],
+                user.invitedAt ? ["Invité le", `${dateHeure(user.invitedAt)} · ${agent(dossier.invitePar)}`] : null,
+                ["Rattachement", dossier.pointOfSale ? `${dossier.pointOfSale.code} · ${dossier.pointOfSale.name}` : "Réseau"],
+                ["Ventes réalisées", <span key="v" className="tabular">{dependances.ventes}</span>],
+              ]}
+            />
+          </Panneau>
+          <Panneau titre="Historique du compte" icone={History}>
+            <Historique historique={dossier.historique} />
+          </Panneau>
+          <Panneau
+            titre="Dernières actions de l'agent"
+            icone={History}
+            plein
+            actions={
+              <LienBouton href={`/gestion/audit?agent=${user._id}`} variante="ghost" taille="sm">
+                Journal complet
+              </LienBouton>
+            }
+          >
+            {dossier.dernieresActions.length === 0 ? (
+              <p className="text-small p-4 text-ink-muted">Aucune action tracée.</p>
+            ) : (
+              <ul className="divide-y divide-line">
+                {dossier.dernieresActions.map((action) => (
+                  <li key={action.id} className="grid gap-0.5 px-4 py-2 text-[13.5px]">
+                    <span className="font-semibold">{libelleAction(action.action)}</span>
+                    <small className="text-ink-muted">
+                      <span className="tabular">{dateHeure(action.createdAt)}</span> · {action.entityTable}
+                      {action.result && action.result !== "succes" ? ` · ${action.result}` : ""}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panneau>
+        </div>
+      </div>
     </ManagementDetailShell>
   )
 }
