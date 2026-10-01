@@ -23,7 +23,12 @@ import { verifyBarcode } from "../lib/signature"
  * après une coupure ne doit rien dupliquer.
  */
 
-async function seedTrip(t: ReturnType<typeof convexTest>) {
+async function seedTrip(
+  t: ReturnType<typeof convexTest>,
+  options: { places?: number } = {}
+) {
+  // Quatre places par défaut : de quoi éprouver la capacité en peu de ventes.
+  const places = options.places ?? 4
   const net = await t.run(async (ctx) => {
     const pos = await ctx.db.insert("pointsOfSale", {
       code: "OWE-PV",
@@ -66,18 +71,16 @@ async function seedTrip(t: ReturnType<typeof convexTest>) {
       trainId,
       label: "V1",
       serviceClass: "DEUXIEME",
-      rowCount: 2,
+      rowCount: Math.ceil(places / 2),
       columnCount: 2,
-      seatCount: 4,
+      seatCount: places,
       standingCapacity: 0,
       position: 1,
     })
-    for (const [label, row, column] of [
-      ["1A", 1, 1],
-      ["1B", 1, 2],
-      ["2A", 2, 1],
-      ["2B", 2, 2],
-    ] as const) {
+    for (let index = 0; index < places; index += 1) {
+      const row = Math.floor(index / 2) + 1
+      const column = (index % 2) + 1
+      const label = `${row}${column === 1 ? "A" : "B"}`
       await ctx.db.insert("seats", {
         coachId,
         trainId,
@@ -1487,5 +1490,100 @@ describe("Synthèse agrégée des incidents et procès-verbaux", () => {
     expect(summary.dataState).toBe("restricted")
     expect(summary.incidents.total).toBe(0)
     expect(summary.penalties.total).toBe(0)
+  })
+})
+
+/* ═══════════════ Peuplement de démonstration du contrôle ═════════════════ */
+
+describe("Peuplement de démonstration du contrôle", () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  const EMAIL = "controle@demo.setrag.test"
+
+  async function preparer(t: ReturnType<typeof convexTest>) {
+    // Six voyageurs partent tous d'Owendo : il faut six places au départ.
+    const fx = await seedTrip(t, { places: 8 })
+    const agent = await asAgent(t, "controleur_train", fx.pos)
+    await t.run(async (ctx) => ctx.db.patch(agent.userId, { email: EMAIL }))
+    // Un second contrôleur, sans lequel le conflit n'est pas fabriqué.
+    await asAgent(t, "controleur_train", fx.pos, "-second")
+    return fx
+  }
+
+  function compter(t: ReturnType<typeof convexTest>) {
+    return t.run(async (ctx) => ({
+      ventes: (await ctx.db.query("sales").collect()).length,
+      titres: (await ctx.db.query("tickets").collect()).length,
+      controles: (await ctx.db.query("ticketScans").collect()).length,
+      procesVerbaux: (await ctx.db.query("procesVerbaux").collect()).length,
+      incidents: (await ctx.db.query("incidents").collect()).length,
+      caisses: (await ctx.db.query("cashSessions").collect()).length,
+    }))
+  }
+
+  it("est idempotent : une relance ne vend ni ne contrôle rien de plus", async () => {
+    vi.stubEnv("DEMO_ACCOUNTS_ENABLED", "true")
+    vi.stubEnv("DEMO_CONTROL_EMAIL", EMAIL)
+    const t = convexTest(schema, modules)
+    await preparer(t)
+
+    const premier = await t.mutation(internal.seeds.controlDemo.provision, {})
+    const apresPremier = await compter(t)
+    const second = await t.mutation(internal.seeds.controlDemo.provision, {})
+    const apresSecond = await compter(t)
+
+    expect(apresPremier).toEqual({
+      ventes: 6,
+      titres: 6,
+      // Trois contrôles de la première moitié, plus le passage concurrent.
+      controles: 4,
+      procesVerbaux: 1,
+      incidents: 1,
+      caisses: 1,
+    })
+    expect(apresSecond).toEqual(apresPremier)
+    expect(second.tickets).toBe(premier.tickets)
+    expect(second.scans).toBe(0)
+  })
+
+  it("rend les mêmes titres d'une relance à l'autre", async () => {
+    vi.stubEnv("DEMO_ACCOUNTS_ENABLED", "true")
+    vi.stubEnv("DEMO_CONTROL_EMAIL", EMAIL)
+    const t = convexTest(schema, modules)
+    await preparer(t)
+
+    const numeros = () =>
+      t.run(async (ctx) =>
+        (await ctx.db.query("tickets").collect()).map((ticket) => ticket.number)
+      )
+    await t.mutation(internal.seeds.controlDemo.provision, {})
+    const avant = await numeros()
+    await t.mutation(internal.seeds.controlDemo.provision, {})
+    expect(await numeros()).toEqual(avant)
+  })
+
+  it("complète une tournée interrompue sans revendre ce qui l'est déjà", async () => {
+    vi.stubEnv("DEMO_ACCOUNTS_ENABLED", "true")
+    vi.stubEnv("DEMO_CONTROL_EMAIL", EMAIL)
+    const t = convexTest(schema, modules)
+    await preparer(t)
+
+    await t.mutation(internal.seeds.controlDemo.provision, {})
+    // La dernière vente de démonstration a disparu, titre compris.
+    await t.run(async (ctx) => {
+      const ventes = await ctx.db.query("sales").collect()
+      const vente = ventes[ventes.length - 1]!
+      const titres = await ctx.db
+        .query("tickets")
+        .withIndex("by_sale", (q) => q.eq("saleId", vente._id))
+        .collect()
+      for (const titre of titres) await ctx.db.delete(titre._id)
+      await ctx.db.delete(vente._id)
+    })
+
+    await t.mutation(internal.seeds.controlDemo.provision, {})
+    const etat = await compter(t)
+    expect(etat.ventes).toBe(6)
+    expect(etat.titres).toBe(6)
   })
 })
