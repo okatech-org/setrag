@@ -5,7 +5,10 @@ import type { Id } from "../_generated/dataModel"
 import schema from "../schema"
 import { modules } from "../test.setup"
 import type { AppRole } from "../model/permissions"
-import { addDays, toServiceDate } from "../model/calendar"
+import type { FunctionReturnType } from "convex/server"
+import { addDays, toServiceDate, weekdayOf } from "../model/calendar"
+import { computeTicketFare } from "../model/fares"
+import { quotePrice, saleYield } from "../model/pricing"
 import {
   BARCODE_PREFIX,
   decodeBase45,
@@ -1244,6 +1247,257 @@ describe("Vente à bord hors ligne", () => {
     })
     expect(r.quotedXaf).toBe(1)
     expect(r.serverXaf).toBeGreaterThan(1)
+  })
+})
+
+/* ═════════════ Tarification à bord, alignée sur la vente ═════════════════ */
+
+/**
+ * Le constat de départ : une régularisation Booué → Franceville en 2e sur
+ * l'Express 201 annonçait 15 800 FCFA à bord (barème seul), quand la vente
+ * facturait 13 900 FCFA (contingent « Bas prix » ×0,8, dernière minute
+ * +10 %). Le terminal chiffre désormais avec les données de yield
+ * embarquées et les fonctions mêmes de la vente.
+ *
+ * Miroir de `apps/controleur-web/src/lib/offline/fares.test.ts`, qui rejoue
+ * les mêmes ventes côté terminal et attend la même suite de prix.
+ */
+describe("Tarification à bord, alignée sur la vente", () => {
+  type Manifeste = FunctionReturnType<typeof api.functions.control.manifest>
+
+  /** Suite des prix facturés par le serveur, attendue aussi par le terminal. */
+  const SUITE_DES_PRIX = [
+    13_900, 13_900, 17_400, 17_400, 17_400, 17_400, 26_700, 26_700,
+  ]
+
+  /**
+   * Express en route depuis cinq heures, huit places en 2e, contingents et
+   * règles de la démonstration (`seeds/demo.ts`). La règle du jour de départ
+   * vise le lendemain : elle doit rester sans effet ici.
+   */
+  async function desserteEnRoute(t: ReturnType<typeof convexTest>) {
+    const fx = await seedTrip(t, { places: 8 })
+    const depart = Date.now() - 5 * 3_600_000
+    const serviceDate = toServiceDate(depart)
+    await t.run(async (ctx) => {
+      await ctx.db.patch(fx.tripId, { departureAt: depart, serviceDate })
+      const bareme = await ctx.db.query("fareSchedules").first()
+      await ctx.db.patch(bareme!._id, { vatPct: 18 })
+
+      for (const [label, seatCount, coefficient, priority] of [
+        ["Bas prix", 2, 0.8, 1],
+        ["Standard", 4, 1, 2],
+        ["Flexible", 2, 1.35, 3],
+      ] as const) {
+        await ctx.db.insert("fareClassQuotas", {
+          tripId: fx.tripId,
+          serviceClass: "DEUXIEME",
+          label,
+          priority,
+          seatCount,
+          soldCount: 0,
+          coefficient,
+          isActive: true,
+        })
+      }
+
+      const admin = await ctx.db
+        .query("users")
+        .filter((q) => q.eq(q.field("role"), "admin_fonctionnel"))
+        .first()
+      for (const regle of [
+        { type: "anticipation", threshold: 21, modifierPct: -10, priority: 10 },
+        { type: "anticipation", threshold: 2, modifierPct: 10, priority: 20 },
+        { type: "remplissage", threshold: 0.7, modifierPct: 15, priority: 30 },
+        { type: "remplissage", threshold: 0.9, modifierPct: 15, priority: 40 },
+        {
+          type: "periode",
+          threshold: (weekdayOf(serviceDate) + 1) % 7,
+          modifierPct: 20,
+          priority: 50,
+        },
+      ] as const) {
+        await ctx.db.insert("pricingRules", {
+          scope: "reseau",
+          ...regle,
+          floorXaf: 2000,
+          capXaf: 150_000,
+          isActive: true,
+          createdBy: admin!._id,
+        })
+      }
+    })
+    const agent = await asAgent(t, "controleur_train", fx.pos)
+    await agent.ctx.mutation(api.functions.cash.openSession, {
+      openingFloatXaf: 0,
+    })
+    return { ...fx, agent }
+  }
+
+  /**
+   * Le devis du terminal, à partir du seul manifeste : barème, puis
+   * `saleYield` et `quotePrice` — les fonctions de `performSale`.
+   */
+  function devisEmbarque(
+    m: Manifeste,
+    trajet: { de: Id<"stations">; a: Id<"stations"> },
+    now = Date.now()
+  ) {
+    const fromIndex = m.stops.findIndex((s) => s.stationId === trajet.de)
+    const toIndex = m.stops.findIndex((s) => s.stationId === trajet.a)
+    const distanceKm = Math.abs(
+      m.stops[toIndex]!.kilometerPoint - m.stops[fromIndex]!.kilometerPoint
+    )
+    const base = computeTicketFare({
+      schedule: {
+        bases: m.fare!.bases,
+        roundingBasis: m.fare!.roundingBasis,
+        taxes: { vatPct: m.fare!.vatPct, cssPct: m.fare!.cssPct },
+      },
+      trainType: m.trip.trainType,
+      serviceClass: "DEUXIEME",
+      distanceKm,
+      discount: null,
+    })
+    const quote = quotePrice({
+      basePriceTtc: base.ttc,
+      distanceKm,
+      seatsNeeded: 1,
+      ...saleYield({
+        tripId: m.trip._id,
+        serviceClass: "DEUXIEME",
+        fromIndex,
+        toIndex,
+        departureAt: m.trip.departureAt,
+        serviceDate: m.trip.serviceDate,
+        channel: "bord",
+        now,
+        quotas: m.pricing.quotas,
+        rules: m.pricing.rules,
+        counters: m.pricing.counters,
+        bounds: m.pricing.bounds,
+      }),
+    })
+    return { bareme: base.ttc, prix: quote.unitPriceTtc, quote }
+  }
+
+  async function vendreABord(
+    fx: Awaited<ReturnType<typeof desserteEnRoute>>,
+    rang: number,
+    quotedXaf: number
+  ) {
+    return await fx.agent.ctx.mutation(api.functions.control.syncSale, {
+      clientSaleId: `term-yield-${rang}`,
+      tripId: fx.tripId,
+      originStationId: fx.boo,
+      destinationStationId: fx.fcv,
+      serviceClass: "DEUXIEME",
+      passengers: [{ lastName: "VOYAGEUR", firstName: `N${rang}`, gender: "M" }],
+      quotedXaf,
+      method: "especes",
+    })
+  }
+
+  it("Booué → Franceville en 2e : le terminal annonce 13 900, le serveur facture 13 900", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await desserteEnRoute(t)
+
+    const m = await fx.agent.ctx.query(api.functions.control.manifest, {
+      tripId: fx.tripId,
+      includeTickets: false,
+    })
+    const devis = devisEmbarque(m, { de: fx.boo, a: fx.fcv })
+    expect(devis.bareme).toBe(15_800)
+    expect(devis.quote.quotaLabel).toBe("Bas prix")
+    expect(devis.quote.totalModifierPct).toBe(10)
+    expect(devis.prix).toBe(13_900)
+
+    const vente = await vendreABord(fx, 0, devis.prix)
+    expect(vente.serverXaf).toBe(13_900)
+    expect(vente.serverXaf).toBe(vente.quotedXaf)
+  })
+
+  it("reste aligné vente après vente, contingents épuisés et remplissage compris", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await desserteEnRoute(t)
+
+    const annonces: number[] = []
+    const factures: number[] = []
+    for (let rang = 0; rang < SUITE_DES_PRIX.length; rang += 1) {
+      // Le terminal remet son manifeste à jour entre deux ventes.
+      const m = await fx.agent.ctx.query(api.functions.control.manifest, {
+        tripId: fx.tripId,
+        includeTickets: false,
+      })
+      const devis = devisEmbarque(m, { de: fx.boo, a: fx.fcv })
+      const vente = await vendreABord(fx, rang, devis.prix)
+      annonces.push(devis.prix)
+      factures.push(vente.serverXaf)
+    }
+
+    expect(factures).toEqual(SUITE_DES_PRIX)
+    expect(annonces).toEqual(factures)
+  })
+
+  it("embarque contingents, compteurs, règles et bornes de la desserte", async () => {
+    const t = convexTest(schema, modules)
+    const fx = await desserteEnRoute(t)
+    await t.run(async (ctx) => {
+      const admin = (await ctx.db
+        .query("users")
+        .withIndex("by_role", (q) => q.eq("role", "admin_fonctionnel"))
+        .first())!
+      // Une promotion à code : jamais présentée à bord, jamais embarquée.
+      await ctx.db.insert("pricingRules", {
+        scope: "reseau",
+        type: "promotion",
+        modifierPct: -50,
+        priority: 60,
+        code: "SECRET-50",
+        isActive: true,
+        createdBy: admin._id,
+      })
+      // Une règle d'une autre desserte, mais qui fixe les bornes du réseau :
+      // la vente les applique partout, le terminal doit donc les connaître.
+      const { _id, _creationTime, ...copie } = (await ctx.db.get(fx.tripId))!
+      const autre = await ctx.db.insert("trips", copie)
+      await ctx.db.insert("pricingRules", {
+        scope: "desserte",
+        tripId: autre,
+        type: "remplissage",
+        threshold: 0.5,
+        modifierPct: 5,
+        priority: 1,
+        floorXaf: 3000,
+        capXaf: 90_000,
+        isActive: true,
+        createdBy: admin._id,
+      })
+    })
+
+    const m = await fx.agent.ctx.query(api.functions.control.manifest, {
+      tripId: fx.tripId,
+      includeTickets: false,
+    })
+    expect(m.pricing.quotas.map((q) => q.label)).toEqual([
+      "Bas prix",
+      "Standard",
+      "Flexible",
+    ])
+    expect(m.pricing.counters).toContainEqual({
+      serviceClass: "DEUXIEME",
+      segmentIndex: 1,
+      capacity: 8,
+      sold: 0,
+    })
+    expect(m.pricing.rules).toHaveLength(5)
+    expect(m.pricing.rules.some((r) => r.code === "SECRET-50")).toBe(false)
+    expect(m.pricing.bounds).toEqual({ floorXaf: 3000, capXaf: 90_000 })
+
+    // Et le prix reste celui de la vente, bornes du réseau comprises.
+    const devis = devisEmbarque(m, { de: fx.boo, a: fx.fcv })
+    const vente = await vendreABord(fx, 0, devis.prix)
+    expect(vente.serverXaf).toBe(devis.prix)
   })
 })
 
