@@ -44,7 +44,7 @@ function Field({
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined
 
   return (
-    <div className={cn("grid gap-1.5", className)} {...props}>
+    <div className={cn("grid content-start gap-1.5", className)} {...props}>
       <label
         htmlFor={id}
         className={cn(
@@ -61,7 +61,11 @@ function Field({
             children as React.ReactElement<FieldControlProps>,
             {
               id,
-              "aria-describedby": describedBy,
+              "aria-describedby":
+                describedBy ??
+                (children as React.ReactElement<FieldControlProps>).props[
+                  "aria-describedby"
+                ],
               "aria-invalid": error ? true : undefined,
               disabled,
             }
