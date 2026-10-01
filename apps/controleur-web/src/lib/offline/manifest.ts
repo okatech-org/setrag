@@ -18,12 +18,21 @@ type TicketPage = FunctionReturnType<
   typeof api.functions.control.manifestTickets
 >
 
-/** Construit l'en-tête embarqué à partir de la réponse du serveur. */
+/**
+ * Construit l'en-tête embarqué à partir de la réponse du serveur.
+ *
+ * `requestedAt` est l'heure, au terminal, à laquelle l'en-tête a été demandé :
+ * elle date l'instantané de yield (voir `EmbarkedPricing`).
+ */
 export function toEmbarkedManifest(
   header: ManifestHeader,
-  previous?: EmbarkedManifest
+  previous?: EmbarkedManifest,
+  requestedAt: number = Date.now()
 ): EmbarkedManifest {
   const stops = header.stops
+  // Un serveur plus ancien ne l'envoie pas : la vente à bord se rabat alors
+  // sur le barème seul, et le dit.
+  const pricing = (header as { pricing?: ManifestHeader["pricing"] }).pricing
   const origin = stops[0]
   const destination = stops[stops.length - 1]
   return {
@@ -51,6 +60,13 @@ export function toEmbarkedManifest(
       header as { composition?: ManifestHeader["composition"] }
     ).composition?.map((coach) => ({ ...coach, seats: [...coach.seats] })),
     fare: header.fare,
+    pricing: pricing && {
+      quotas: pricing.quotas.map((quota) => ({ ...quota })),
+      rules: pricing.rules.map((rule) => ({ ...rule })),
+      bounds: { ...pricing.bounds },
+      counters: pricing.counters.map((counter) => ({ ...counter })),
+      requestedAt,
+    },
     penalties: [...header.penalties],
     signing: header.signing,
     ticketCount: header.ticketCount,
@@ -99,8 +115,10 @@ export async function downloadManifest(
   } = {}
 ): Promise<EmbarkedManifest> {
   const pageSize = options.pageSize ?? 100
+  // Relevée AVANT l'appel : toute vente confirmée plus tôt est dans l'en-tête.
+  const requestedAt = Date.now()
   const header = await handles.fetchHeader({ tripId, includeTickets: false })
-  let manifest = toEmbarkedManifest(header, options.resume)
+  let manifest = toEmbarkedManifest(header, options.resume, requestedAt)
   await putManifest(manifest)
   await putSubscriptions(tripId, [...header.subscriptions])
 

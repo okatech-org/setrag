@@ -17,6 +17,7 @@ import { CartesChoix } from "@/composants/carte-choix"
 import { Cases } from "@/composants/cases"
 import { Message } from "@/composants/message"
 import { Bas, BarreApp, Corps, Note } from "@/coquille/ecran"
+import { useMaintenant } from "@/hooks/use-maintenant"
 import { humanError } from "@/lib/errors"
 import { jourHeure, montant, montantCourt } from "@/lib/format"
 import {
@@ -31,6 +32,7 @@ import { arretDeRang, arretsOrdonnes } from "@/lib/position"
 import { nomDuTrain, numeroVoiture } from "@/lib/train"
 
 import { useTerminal } from "../terminal/contexte-terminal"
+import { useVentesLocales } from "../vente/ventes-locales"
 import { ZoneSignature } from "./signature"
 
 /**
@@ -39,7 +41,8 @@ import { ZoneSignature } from "./signature"
  * L'amende vient du barème embarqué et ne se modifie pas à bord : c'est ce
  * qui rend le procès-verbal opposable et protège le contrôleur d'un
  * marchandage. Le trajet dû s'y ajoute, de la dernière gare atteinte au
- * terminus, en 2e classe, par le même barème que la vente.
+ * terminus, en 2e classe, par le même calcul que la vente à bord : barème,
+ * puis yield.
  *
  * L'identité est DÉCLARÉE, jamais vérifiée : le terminal consigne ce que le
  * contrevenant annonce, et l'écrit tel quel.
@@ -125,21 +128,29 @@ export function ProcesVerbal() {
   const bareme = manifest?.penalties ?? []
   const ligne = bareme.find((r) => r.reason === motif)
 
+  const maintenant = useMaintenant(60_000)
+  const ventesLocales = useVentesLocales(manifest?.tripId)
+
   /**
-   * Trajet dû : de la gare atteinte au terminus. Sans barème embarqué, seule
+   * Trajet dû : de la gare atteinte au terminus, au prix d'une vente à bord
+   * faite à cet instant (barème et yield). Sans barème embarqué, seule
    * l'amende est perçue — l'écran le dit.
    */
   const du = useMemo(() => {
-    if (!manifest) return null
+    if (!manifest || maintenant === null) return null
     const arrets = arretsOrdonnes(manifest)
     const terminus = arrets[arrets.length - 1]
     if (!terminus || terminus.sequence <= settings.currentStopIndex) return null
     try {
-      const devis = quoteOnboard(manifest, {
-        fromSequence: settings.currentStopIndex,
-        toSequence: terminus.sequence,
-        serviceClass: "DEUXIEME",
-      })
+      const devis = quoteOnboard(
+        manifest,
+        {
+          fromSequence: settings.currentStopIndex,
+          toSequence: terminus.sequence,
+          serviceClass: "DEUXIEME",
+        },
+        { now: maintenant, ventesLocales }
+      )
       const de = arretDeRang(manifest, settings.currentStopIndex)
       return {
         devis,
@@ -148,7 +159,7 @@ export function ProcesVerbal() {
     } catch {
       return null
     }
-  }, [manifest, settings.currentStopIndex])
+  }, [manifest, settings.currentStopIndex, maintenant, ventesLocales])
 
   const amende = ligne?.amountXaf ?? 0
   const trajet = du?.devis.ttc ?? 0

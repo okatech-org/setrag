@@ -3,10 +3,12 @@ import {
   applicableRules,
   consumeQuota,
   occupancyRate,
+  pricingBounds,
   quotePrice,
   releaseQuota,
   remainingInQuota,
   ruleApplies,
+  saleYield,
   selectQuota,
   type FareClassQuota,
   type PricingContext,
@@ -494,5 +496,100 @@ describe("quotePrice — chaîne complète", () => {
       expect(prix).toBeGreaterThanOrEqual(precedent)
       precedent = prix
     }
+  })
+})
+
+describe("Contexte de yield d'une vente", () => {
+  const BASE = {
+    tripId: "t1",
+    serviceClass: "DEUXIEME",
+    fromIndex: 1,
+    toIndex: 3,
+    departureAt: Date.parse("2026-10-01T07:00:00Z"),
+    // Un jeudi.
+    serviceDate: "2026-10-01",
+    channel: "bord",
+    now: Date.parse("2026-10-01T12:00:00Z"),
+    bounds: { floorXaf: 2000, capXaf: 150_000 },
+  }
+
+  it("ne retient que les contingents de la classe vendue", () => {
+    const y = saleYield({
+      ...BASE,
+      quotas: [
+        { ...QUOTAS[0]!, serviceClass: "DEUXIEME" },
+        { ...QUOTAS[0]!, label: "VIP bas prix", serviceClass: "VIP" },
+      ],
+      rules: [],
+      counters: [],
+    })
+    expect(y.quotas?.map((q) => q.label)).toEqual(["Bas prix"])
+  })
+
+  it("garde les règles du réseau et de la desserte, pour la classe vendue", () => {
+    const regle = {
+      type: "remplissage" as const,
+      threshold: 0.5,
+      modifierPct: 10,
+      priority: 1,
+      isActive: true,
+    }
+    const y = saleYield({
+      ...BASE,
+      quotas: [],
+      rules: [
+        { ...regle, id: "reseau" },
+        { ...regle, id: "desserte", tripId: "t1" },
+        { ...regle, id: "autre-desserte", tripId: "t2" },
+        { ...regle, id: "classe", serviceClass: "DEUXIEME" },
+        { ...regle, id: "autre-classe", serviceClass: "VIP" },
+      ],
+      counters: [],
+    })
+    expect(y.rules.map((r) => r.id)).toEqual(["reseau", "desserte", "classe"])
+  })
+
+  it("mesure le remplissage sur le segment le plus chargé du tronçon", () => {
+    const y = saleYield({
+      ...BASE,
+      quotas: [],
+      rules: [],
+      counters: [
+        { serviceClass: "DEUXIEME", segmentIndex: 0, capacity: 10, sold: 10 },
+        { serviceClass: "DEUXIEME", segmentIndex: 1, capacity: 10, sold: 4 },
+        { serviceClass: "DEUXIEME", segmentIndex: 2, capacity: 10, sold: 7 },
+        { serviceClass: "DEUXIEME", segmentIndex: 3, capacity: 10, sold: 9 },
+        { serviceClass: "VIP", segmentIndex: 1, capacity: 10, sold: 10 },
+      ],
+    })
+    expect(y.context.occupancyRate).toBe(0.7)
+  })
+
+  it("porte le canal, le délai avant départ, le jour de circulation et les bornes", () => {
+    const y = saleYield({ ...BASE, quotas: [], rules: [], counters: [] })
+    expect(y.context.channel).toBe("bord")
+    // Train parti depuis cinq heures : le délai est négatif.
+    expect(y.context.daysUntilDeparture).toBe(-1)
+    expect(y.context.departureWeekday).toBe(4)
+    expect([y.floorXaf, y.capXaf]).toEqual([2000, 150_000])
+  })
+})
+
+describe("Bornes de sécurité", () => {
+  it("prend celles de la règle la plus prioritaire qui en déclare", () => {
+    expect(
+      pricingBounds([
+        { priority: 30, floorXaf: 1000 },
+        { priority: 5 },
+        { priority: 10, floorXaf: 2000, capXaf: 90_000 },
+      ])
+    ).toEqual({ floorXaf: 2000, capXaf: 90_000 })
+  })
+
+  it("n'en impose aucune quand aucune règle n'en déclare", () => {
+    expect(pricingBounds([{ priority: 1 }])).toEqual({
+      floorXaf: undefined,
+      capXaf: undefined,
+    })
   })
 })

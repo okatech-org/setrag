@@ -21,6 +21,7 @@ export function resumeAffichage(prefs: Preferences): string {
     theme,
     prefs.son ? "son activé" : "son coupé",
     prefs.contraste && "contraste renforcé",
+    !prefs.ecranAllume && "veille de l'écran autorisée",
   ]
     .filter(Boolean)
     .join(" · ")
@@ -32,7 +33,8 @@ export function resumeAffichage(prefs: Preferences): string {
  * Le thème sombre vient seul la nuit (18:30 → 06:00 par défaut, heures
  * réglables) ; l'agent peut le forcer. Le son des verdicts se coupe — des
  * voyageurs dorment. Le contraste renforcé sert en plein soleil, sur le quai.
- * Le viseur, lui, reste toujours sombre.
+ * L'écran reste allumé pendant la tournée, sauf si l'agent préfère ménager
+ * la batterie. Le viseur, lui, reste toujours sombre.
  */
 export function FeuilleAffichage({
   open,
@@ -122,6 +124,22 @@ export function FeuilleAffichage({
           <Note>
             Pour le plein soleil : bordures pleines, textes secondaires passés
             en encre.
+          </Note>
+        </section>
+
+        <section className="grid gap-1">
+          <Switch
+            label="Garder l'écran allumé pendant le contrôle"
+            checked={prefs.ecranAllume}
+            onCheckedChange={(ecranAllume) =>
+              modifierPreferences({ ecranAllume })
+            }
+          />
+          <Note>
+            Pendant la tournée, l&apos;écran ne se met pas en veille entre deux
+            voyageurs ; la veille reprend dès que le terminal se verrouille.
+            Cela use davantage la batterie : coupez-le si le terminal doit tenir
+            la journée sans recharge.
           </Note>
         </section>
       </div>

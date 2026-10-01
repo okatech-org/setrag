@@ -18,6 +18,7 @@
  * prix aberrant.
  */
 
+import { daysUntilDeparture, weekdayOf } from "./calendar"
 import { roundFare } from "./fares"
 
 /* ─────────────────────── Contingents de classes tarifaires ─────────────── */
@@ -268,6 +269,178 @@ export function quotePrice(input: QuoteInput): Quote {
     appliedRules: applied.map((r) => r.id),
     bounded,
     unitPriceTtc: roundFare(price, distanceKm),
+  }
+}
+
+/* ───────────────────── Contexte de yield d'une vente ────────────────────── */
+
+/**
+ * Règle de modulation telle qu'elle est enregistrée : sa portée en plus.
+ *
+ * Sans `tripId`, la règle vaut pour tout le réseau — y compris une règle « de
+ * ligne », qui ne porte pas encore d'identifiant de ligne. Sans
+ * `serviceClass`, elle vaut pour toutes les classes.
+ */
+export interface StoredPricingRule extends PricingRule {
+  readonly tripId?: string
+  readonly serviceClass?: string
+}
+
+/** Projection d'une règle enregistrée vers le moteur de yield. */
+export function storedPricingRule(doc: {
+  readonly _id: string
+  readonly tripId?: string
+  readonly serviceClass?: string
+  readonly type: PricingRuleType
+  readonly threshold?: number
+  readonly modifierPct: number
+  readonly priority: number
+  readonly validFrom?: number
+  readonly validUntil?: number
+  readonly code?: string
+  readonly isActive: boolean
+}): StoredPricingRule {
+  return {
+    id: doc._id,
+    tripId: doc.tripId,
+    serviceClass: doc.serviceClass,
+    type: doc.type,
+    threshold: doc.threshold,
+    modifierPct: doc.modifierPct,
+    priority: doc.priority,
+    validFrom: doc.validFrom,
+    validUntil: doc.validUntil,
+    code: doc.code,
+    isActive: doc.isActive,
+  }
+}
+
+/** Bornes de sécurité, appliquées après cumul des règles. */
+export interface PricingBounds {
+  readonly floorXaf?: number
+  readonly capXaf?: number
+}
+
+/**
+ * Bornes en vigueur : celles de la règle active la plus prioritaire qui en
+ * déclare, quelle que soit sa portée.
+ */
+export function pricingBounds(
+  rules: readonly (PricingBounds & { readonly priority: number })[],
+): PricingBounds {
+  const bounds = rules
+    .filter((r) => r.floorXaf !== undefined || r.capXaf !== undefined)
+    .sort((a, b) => a.priority - b.priority)[0]
+  return { floorXaf: bounds?.floorXaf, capXaf: bounds?.capXaf }
+}
+
+/** Contingent tarifaire d'une classe sur une desserte. */
+export interface ClassQuota extends FareClassQuota {
+  readonly serviceClass: string
+}
+
+/** Compteur d'un segment de la desserte, dans une classe. */
+export interface SegmentLoad {
+  readonly serviceClass: string
+  readonly segmentIndex: number
+  readonly capacity: number
+  readonly sold: number
+}
+
+/** Ce que le yield doit savoir d'une vente, lu en base ou embarqué. */
+export interface SaleYieldInput {
+  readonly tripId: string
+  readonly serviceClass: string
+  /** Rangs des gares de départ et d'arrivée dans la desserte. */
+  readonly fromIndex: number
+  readonly toIndex: number
+  readonly departureAt: number
+  /** Date de circulation, `AAAA-MM-JJ` à Libreville. */
+  readonly serviceDate: string
+  readonly channel: string
+  /** Instant de la vente. */
+  readonly now: number
+  readonly promoCode?: string
+  /** Contingents de la desserte, toutes classes confondues. */
+  readonly quotas: readonly ClassQuota[]
+  /** Règles actives, toutes portées confondues. */
+  readonly rules: readonly StoredPricingRule[]
+  /** Compteurs de la desserte, toutes classes confondues. */
+  readonly counters: readonly SegmentLoad[]
+  readonly bounds: PricingBounds
+}
+
+/** Tout ce que `quotePrice` attend, hors prix de référence, distance et effectif. */
+export type SaleYield = Pick<
+  QuoteInput,
+  "quotas" | "rules" | "context" | "floorXaf" | "capXaf"
+>
+
+/**
+ * Contexte de yield d'une vente : contingents de la classe, règles de la
+ * desserte et de la classe, remplissage du tronçon, bornes.
+ *
+ * Partagé par la vente (`performSale`) et par le terminal contrôleur, qui
+ * chiffre hors ligne la vente à bord avec les mêmes données, embarquées dans
+ * le manifeste. Le prix annoncé au voyageur et celui que le serveur
+ * recalcule sortent donc du même code : un écart ne peut venir que des
+ * données (une vente intervenue entre-temps), jamais du calcul.
+ *
+ * Le remplissage est celui du segment le plus chargé du tronçon, rapporté à
+ * la capacité du premier : c'est lui qui borne la disponibilité.
+ */
+export function saleYield(input: SaleYieldInput): SaleYield {
+  const quotas = input.quotas
+    .filter((q) => q.serviceClass === input.serviceClass)
+    .map((q) => ({
+      label: q.label,
+      priority: q.priority,
+      seatCount: q.seatCount,
+      soldCount: q.soldCount,
+      coefficient: q.coefficient,
+      isActive: q.isActive,
+    }))
+
+  const rules: PricingRule[] = input.rules
+    .filter((r) => r.tripId === undefined || r.tripId === input.tripId)
+    .filter(
+      (r) =>
+        r.serviceClass === undefined || r.serviceClass === input.serviceClass,
+    )
+    .map((r) => ({
+      id: r.id,
+      type: r.type,
+      threshold: r.threshold,
+      modifierPct: r.modifierPct,
+      priority: r.priority,
+      validFrom: r.validFrom,
+      validUntil: r.validUntil,
+      code: r.code,
+      isActive: r.isActive,
+    }))
+
+  const onRoute = input.counters.filter(
+    (c) =>
+      c.serviceClass === input.serviceClass &&
+      c.segmentIndex >= input.fromIndex &&
+      c.segmentIndex < input.toIndex,
+  )
+  const capacity = onRoute[0]?.capacity ?? 0
+  const sold = onRoute.length > 0 ? Math.max(...onRoute.map((c) => c.sold)) : 0
+
+  return {
+    quotas,
+    rules,
+    context: {
+      occupancyRate: occupancyRate(capacity, sold),
+      daysUntilDeparture: daysUntilDeparture(input.departureAt, input.now),
+      departureWeekday: weekdayOf(input.serviceDate),
+      channel: input.channel,
+      now: input.now,
+      promoCode: input.promoCode,
+    },
+    floorXaf: input.bounds.floorXaf,
+    capXaf: input.bounds.capXaf,
   }
 }
 

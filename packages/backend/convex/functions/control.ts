@@ -13,6 +13,7 @@ import { assertCan } from "../modules/platform/model"
 import { scanResult, serviceClass } from "../schema"
 import { performSale } from "./sales"
 import { segmentMask } from "../model/inventory"
+import { pricingBounds, storedPricingRule } from "../model/pricing"
 import { verifyScope, type ScopeVerdict } from "../model/barcode"
 import {
   CURRENT_KEY_VERSION,
@@ -118,6 +119,13 @@ export const manifest = query({
        * à bord calcule le même prix que le guichet, sans réseau.
        */
       fare: await embarkFareSchedule(ctx),
+      /**
+       * Données de yield de la desserte, au moment du téléchargement : ce que
+       * la vente lit, au-delà du barème, pour chiffrer un titre. Le terminal
+       * applique le même calcul (`saleYield` puis `quotePrice`), si bien que
+       * le prix encaissé à bord est celui que le serveur facturera.
+       */
+      pricing: await embarkPricing(ctx, trip._id),
       alreadyScanned: scans.map((s) => ({
         ticketId: s.ticketId,
         scannedAt: s.scannedAt,
@@ -292,6 +300,56 @@ async function embarkFareSchedule(ctx: QueryCtx) {
       serviceClass: b.serviceClass,
       shortDistanceRate: b.shortDistanceRate,
       longDistanceRate: b.longDistanceRate,
+    })),
+  }
+}
+
+/**
+ * Données de yield d'une desserte, réduites à ce que la vente à bord lit.
+ *
+ * Contingents et compteurs de toutes les classes, avec leurs ventes au moment
+ * du téléchargement ; règles actives du réseau et de cette desserte ; bornes
+ * de sécurité, déjà choisies parmi TOUTES les règles actives, comme le fait
+ * la vente. Les promotions à code sont écartées : la vente à bord n'en
+ * présente aucune, elles ne s'y appliqueraient donc jamais, et leurs codes
+ * n'ont rien à faire sur un terminal.
+ */
+async function embarkPricing(ctx: QueryCtx, tripId: Id<"trips">) {
+  const [quotas, counters, rules] = await Promise.all([
+    ctx.db
+      .query("fareClassQuotas")
+      .withIndex("by_trip_class", (q) => q.eq("tripId", tripId))
+      .collect(),
+    ctx.db
+      .query("segmentCounters")
+      .withIndex("by_trip_class", (q) => q.eq("tripId", tripId))
+      .collect(),
+    ctx.db
+      .query("pricingRules")
+      .withIndex("by_active_priority", (q) => q.eq("isActive", true))
+      .collect(),
+  ])
+
+  return {
+    quotas: quotas.map((q) => ({
+      serviceClass: q.serviceClass,
+      label: q.label,
+      priority: q.priority,
+      seatCount: q.seatCount,
+      soldCount: q.soldCount,
+      coefficient: q.coefficient,
+      isActive: q.isActive,
+    })),
+    rules: rules
+      .filter((r) => r.tripId === undefined || r.tripId === tripId)
+      .filter((r) => !(r.type === "promotion" && r.code !== undefined))
+      .map(storedPricingRule),
+    bounds: pricingBounds(rules),
+    counters: counters.map((c) => ({
+      serviceClass: c.serviceClass,
+      segmentIndex: c.segmentIndex,
+      capacity: c.capacity,
+      sold: c.sold,
     })),
   }
 }

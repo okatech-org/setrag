@@ -141,6 +141,35 @@ dès l'écran de connexion et survivent à la purge.
 - **Contraste renforcé**, pour le plein soleil : textes secondaires passés
   en encre, bordures plus sombres (`[data-contraste="renforce"]` dans
   `app/globals.css`). Les tirets qui portent un sens restent des tirets.
+- **Garder l'écran allumé pendant le contrôle**, actif par défaut (voir
+  ci-dessous). La note du réglage prévient que la batterie s'use davantage.
+
+### Écran allumé pendant le contrôle
+
+Entre deux voyageurs, le téléphone se mettait en veille, et chaque titre
+coûtait un réveil et un déverrouillage du système. Pendant une tournée
+active, le terminal demande donc l'API Screen Wake Lock
+(`navigator.wakeLock.request("screen")`) :
+
+- **où** : sur les écrans tournée, viseur, recherche et voiture (qui rendent
+  des verdicts), vente à bord et procès-verbal (`ECRANS_DE_TOURNEE`, dans
+  `lib/ecran-allume.ts`). Ailleurs (historique, incident, données
+  embarquées), la veille reprend ;
+- **quand** : tant qu'un manifeste est embarqué et que le réglage est actif ;
+- **retour de visibilité** : le navigateur rend le verrou dès que la page se
+  cache (écran éteint au bouton, autre application). Il est redemandé à
+  l'événement `visibilitychange`, jamais page cachée (ce serait refusé) ;
+- **relâche** : au verrouillage du terminal (la coquille, qui porte
+  `EcranAllume`, est démontée derrière l'écran de verrouillage), en fin de
+  tournée et quand l'agent coupe le réglage. Le verrouillage pour inactivité
+  (5 min) reste en place : l'écran allumé ne dispense pas du code de reprise ;
+- **repli** : sans l'API, ou si la demande est refusée (mode économie
+  d'énergie), rien ne s'affiche et rien ne casse. L'écran se met en veille
+  comme avant.
+
+La logique vit dans `creerGardeEcran()` et se teste avec une API simulée
+(`lib/ecran-allume.test.ts`) ; le crochet `useEcranAllume` est testé sur le
+`navigator` de jsdom (`coquille/ecran-allume.test.tsx`).
 
 ### La marque
 
@@ -242,9 +271,67 @@ réessaie toutes les 30 secondes ; l'action manuelle de l'écran historique
 n'est qu'un raccourci pour forcer une reprise immédiate.
 
 Le prix d'une vente est **recalculé par le serveur**. Le montant encaissé à
-bord revient dans la réponse, et l'écran affiche les deux côte à côte lorsque
-le yield management les sépare : l'écart doit être justifié en caisse, pas
-absorbé.
+bord revient dans la réponse, et l'écran de la vente met les deux côte à
+côte (« Encaissé à bord », « Recalculé par le serveur ») ; s'ils diffèrent,
+un message d'écart s'y ajoute, et l'historique les montre aussi. L'écart doit
+être justifié en caisse, pas absorbé. Dans le cas normal, il n'existe plus :
+voir ci-dessous.
+
+La confirmation d'une vente est datée sur le terminal (`sentAt`) : elle sert
+à savoir si un manifeste téléchargé ensuite compte déjà cette vente.
+
+## Tarification à bord
+
+Le terminal encaisse le prix que le serveur facturera. Avant cette
+correction, il n'appliquait que le barème kilométrique : une régularisation
+Booué → Franceville en 2e sur l'Express 201 annonçait 15 800 FCFA, quand la
+vente serveur facturait 13 900 FCFA (contingent « Bas prix » ×0,8, dernière
+minute +10 %). Le CDC (§7.11) prévoit le yield pour tous les billets ; c'est
+donc le terminal qui s'aligne.
+
+**Même calcul que le serveur.** `quoteOnboard()` (`lib/offline/fares.ts`)
+enchaîne les fonctions pures de la vente (`performSale`), importées du
+backend par `@workspace/backend/fares` :
+
+1. `computeTicketFare` : le barème, prix de référence ;
+2. `saleYield` : contingents de la classe, règles du réseau et de la desserte
+   pour cette classe, remplissage du segment le plus chargé du tronçon,
+   délai avant départ et jour de circulation, canal `bord`, bornes ;
+3. `quotePrice` : contingent ouvert le moins cher, cumul des règles,
+   bornes, arrondi réglementaire.
+
+`performSale` appelle le même `saleYield` : le prix annoncé et le prix
+facturé sortent du même code, seules les données peuvent différer.
+
+**Données embarquées.** Le manifeste porte un champ `pricing`, figé au
+téléchargement : contingents et compteurs de places de chaque classe avec
+leurs ventes, règles actives du réseau et de la desserte, bornes de sécurité
+(choisies parmi toutes les règles actives, comme le fait la vente). Les
+promotions à code n'y figurent pas : la vente à bord n'en présente aucune,
+elles ne s'y appliqueraient jamais.
+
+**Ventes du terminal.** Une vente faite depuis le téléchargement, encore en
+file, en échec (elle sera rejouée) ou confirmée après la demande du
+manifeste n'est pas dans ces données, alors que le serveur la traitera avant
+la suivante. Le terminal la retranche lui-même, dans l'ordre d'envoi : elle
+consomme le contingent que le serveur lui attribuera (`selectQuota`, le
+critère de `performSale`) et charge les segments de son trajet. Huit ventes
+hors ligne d'affilée donnent ainsi, au franc près, la suite de prix du
+serveur.
+
+**Écarts qui restent possibles**, et qui se voient : une vente d'un autre
+canal ou d'un autre terminal entre le téléchargement et la synchronisation,
+une règle qui commence ou expire entre l'encaissement et l'envoi (le serveur
+chiffre à l'instant de la synchronisation), un barème changé entre-temps.
+
+**Repli.** Un manifeste sans `pricing` (téléchargé avant cet ajout, ou servi
+par un serveur plus ancien) reste utilisable : prix du barème seul, et un
+message « Prix du barème seul » invite à mettre le manifeste à jour.
+
+L'écran de vente détaille la formation du prix sous le montant
+(« Barème 15 800 · Bas prix ×0,8 · dernière minute +10 % »). Les classes
+proposées sont celles que le barème tarife **et** que la desserte
+commercialise. Le trajet dû du procès-verbal suit le même calcul.
 
 ## Lecture des codes
 
@@ -312,7 +399,7 @@ Ajouts à `convex/functions/control.ts` pour ce portage :
 
 | Fonction                 | Rôle                                                         |
 | ------------------------ | ------------------------------------------------------------ |
-| `manifest`               | Enrichi : barème kilométrique, abonnements, `includeTickets` |
+| `manifest`               | Enrichi : barème, yield, abonnements, `includeTickets`       |
 | `manifestTickets`        | Titres par pages reprenables                                 |
 | `assignedTrips`          | Dessertes de la fenêtre de service                           |
 | `syncSale`               | Une vente, idempotente par `clientSaleId`                    |
@@ -326,6 +413,12 @@ Pour la charte, deux ajouts rétrocompatibles, en lecture seule :
 - `manifest`, `manifestTickets` et `verifyTicket` résolvent la voiture de
   chaque titre depuis sa place quand le titre ne la porte pas (les titres
   vendus au guichet n'avaient pas de `coachLabel`).
+
+Pour la tarification à bord, un ajout rétrocompatible, en lecture seule :
+`manifest` embarque `pricing` (contingents, compteurs, règles, bornes ; voir
+« Tarification à bord »). Le contexte de yield de `performSale` est extrait
+dans `saleYield` (`model/pricing.ts`), sans changement de comportement, et le
+moteur est réexporté par `@workspace/backend/fares`.
 
 **Un contrôle enregistré n'est jamais modifiable** — invariante du projet,
 vérifiée par un test de la matrice de droits. Le contrôleur signale donc un
@@ -380,10 +473,18 @@ Ce seed installe ce qu'un contrôleur trouve en montant à bord : la prochaine
 desserte ouverte à la vente avec six voyageurs, une caisse ouverte, trois
 contrôles déjà effectués, un procès-verbal réglé, un incident en cours — et un
 **conflit à arbitrer**, le seul état qu'on ne peut pas produire en manipulant
-l'application, puisqu'il faut un second terminal. Il se veut idempotent,
-mais ne l'est pas tout à fait : sa recherche des titres déjà vendus filtre
-sur une voiture que ces titres ne portent pas, si bien que chaque relance
-vend six titres de plus sur la desserte.
+l'application, puisqu'il faut un second terminal.
+
+Il est **idempotent** : une relance met à jour sans rien dupliquer. Chaque
+vente de démonstration porte un marqueur dans `clientSaleId`
+(`demo-controle-vente-<desserte>-<rang>`), retrouvé par l'index
+`by_client_id`. Une relance ne vend que les voyageurs manquants. Contrôles, conflit,
+procès-verbal et incident sont retrouvés de la même façon par leur
+identifiant client `demo-controle-…`. Un test vérifie que deux appels
+successifs laissent le même nombre de ventes, de titres, de contrôles et de
+procès-verbaux. Les relances antérieures à cette correction ont pu laisser
+des titres en trop sur la desserte de démonstration ; le seed ne les retire
+pas.
 
 Ajouter `--prod` à ces deux commandes les applique à la production.
 
@@ -431,8 +532,16 @@ Les tests couvrent ce qui doit tenir sans réseau : vérification de titres
 réellement signés (verdicts valide, contrefait, hors segment, expiré, annulé,
 déjà contrôlé, abonnement, clé hors service), atomicité des écritures, ordre
 de la file, conservation des échecs, refus de purge prématurée, et égalité du
-tarif embarqué avec le barème de référence du backend. S'y ajoutent les
-règles de la charte : familles et suites des verdicts (un seul primaire,
-retour automatique limité aux titres acceptés), gare proposée d'après
-l'horaire, titres contrôlés distincts, états du bandeau, thème de nuit, et
-formats (taux « 43,42 », heures de Libreville).
+tarif embarqué avec le prix de la vente serveur, yield compris (cas Booué →
+Franceville, suite de huit ventes hors ligne, repli sans données de yield).
+S'y ajoutent les règles de la charte : familles et suites des verdicts (un
+seul primaire, retour automatique limité aux titres acceptés), gare proposée
+d'après l'horaire, titres contrôlés distincts, états du bandeau, thème de
+nuit, écran allumé (API Wake Lock simulée), et formats (taux « 43,42 »,
+heures de Libreville).
+
+Côté backend, `convex/functions/control.test.ts` porte le miroir de la
+tarification à bord : sur la même desserte, les mêmes contingents et les
+mêmes règles, le devis calculé sur le manifeste égale le prix de `syncSale`,
+vente après vente. Il porte aussi le test d'idempotence du seed de
+démonstration.

@@ -593,3 +593,34 @@ function assertPercentage(value: number, label: string): void {
 function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
+
+/* ─────────────── Yield, pour les terminaux qui chiffrent hors ligne ────── */
+
+/*
+ * Le moteur de yield (`./pricing`) se pose au-dessus de ce barème. Il est
+ * réexporté ici, point d'entrée déjà publié du paquet (`@workspace/backend/
+ * fares`), pour que le terminal contrôleur chiffre la vente à bord avec les
+ * fonctions mêmes de la vente serveur. Logique pure, comme le barème : rien
+ * de Convex ne part dans le paquet client.
+ *
+ * `pricing` importe `roundFare` d'ici : la dépendance est circulaire, mais
+ * sans effet, car aucun des deux modules n'appelle l'autre à son chargement.
+ */
+export {
+  consumeQuota,
+  quotePrice,
+  remainingInQuota,
+  saleYield,
+  selectQuota,
+} from "./pricing"
+export type {
+  ClassQuota,
+  FareClassQuota,
+  PricingBounds,
+  PricingRule,
+  PricingRuleType,
+  Quote,
+  SaleYieldInput,
+  SegmentLoad,
+  StoredPricingRule,
+} from "./pricing"

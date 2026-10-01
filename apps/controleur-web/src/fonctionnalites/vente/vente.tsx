@@ -28,8 +28,14 @@ import {
   montantCourt,
   taux,
 } from "@/lib/format"
+import { useMaintenant } from "@/hooks/use-maintenant"
 import { commitOperation, getTicketByNumber } from "@/lib/offline/db"
-import { availableClasses, quoteOnboard } from "@/lib/offline/fares"
+import {
+  availableClasses,
+  libelleRegle,
+  quoteOnboard,
+  type OnboardQuote,
+} from "@/lib/offline/fares"
 import { clientId, localNumber, nowMs } from "@/lib/offline/ids"
 import type {
   EmbarkedStop,
@@ -40,17 +46,45 @@ import { arretDeRang, arretsOrdonnes } from "@/lib/position"
 import { nomDuTrain, numeroVoiture } from "@/lib/train"
 
 import { useTerminal } from "../terminal/contexte-terminal"
+import { useVentesLocales } from "./ventes-locales"
 
 /**
  * Régulariser : la vente à bord. Trois étapes, trois gares sur le ruban des
  * étapes, comme le tunnel d'achat.
  *
- * Le prix n'est jamais saisi : il sort du barème embarqué, par le même calcul
- * que le guichet (`computeTicketFare`). La vente part en file d'envoi et
- * prend son numéro définitif au retour du signal ; le voyageur repart avec
- * une référence provisoire, et l'écran le dit. Aucune place n'est bloquée :
- * à bord, on constate, on ne réserve pas.
+ * Le prix n'est jamais saisi : il sort des données embarquées, par le calcul
+ * même de la vente serveur — barème kilométrique, puis yield (contingent,
+ * règles, bornes). La vente part en file d'envoi et prend son numéro
+ * définitif au retour du signal ; le voyageur repart avec une référence
+ * provisoire, et l'écran le dit. Aucune place n'est bloquée : à bord, on
+ * constate, on ne réserve pas.
  */
+
+const coefficient = new Intl.NumberFormat("fr-FR", {
+  maximumFractionDigits: 2,
+})
+
+/**
+ * Comment le prix est formé, en une ligne :
+ * « Barème 15 800 · Bas prix ×0,8 · dernière minute +10 % ».
+ */
+function compositionDuPrix(devis: OnboardQuote): string {
+  const morceaux = [`Barème ${montantCourt(devis.baremeTtc)}`]
+  if (devis.contingent) {
+    morceaux.push(
+      `${devis.contingent.label} ×${coefficient.format(devis.contingent.coefficient)}`
+    )
+  }
+  for (const regle of devis.regles) {
+    const signe = regle.modifierPct > 0 ? "+" : "−"
+    morceaux.push(
+      `${libelleRegle(regle)} ${signe}${Math.abs(regle.modifierPct)} %`
+    )
+  }
+  if (devis.borne) morceaux.push("borné")
+  if (morceaux.length === 1) morceaux.push("sans modulation")
+  return morceaux.join(" · ")
+}
 
 type Etape = 0 | 1 | 2
 type Classe = "DEUXIEME" | "PREMIERE" | "VIP"
@@ -115,22 +149,32 @@ export function VenteABord() {
     [manifest]
   )
 
+  // L'instant de la vente compte (délai avant départ, validité des règles) ;
+  // il n'est connu qu'une fois l'écran monté sur le terminal.
+  const maintenant = useMaintenant(60_000)
+  const ventesLocales = useVentesLocales(manifest?.tripId)
+
   const calcul = useMemo(() => {
     if (!manifest || arrivee === undefined)
       return { devis: null, erreur: "Aucun manifeste embarqué." }
+    if (maintenant === null) return { devis: null, erreur: null }
     try {
       return {
-        devis: quoteOnboard(manifest, {
-          fromSequence: depart,
-          toSequence: arrivee,
-          serviceClass: classe,
-        }),
+        devis: quoteOnboard(
+          manifest,
+          {
+            fromSequence: depart,
+            toSequence: arrivee,
+            serviceClass: classe,
+          },
+          { now: maintenant, ventesLocales }
+        ),
         erreur: null,
       }
     } catch (error) {
       return { devis: null, erreur: (error as Error).message }
     }
-  }, [manifest, depart, arrivee, classe])
+  }, [manifest, depart, arrivee, classe, maintenant, ventesLocales])
   const { devis, erreur } = calcul
 
   const valeurRemise = Number.parseInt(remis.replace(/\s/g, ""), 10) || 0
@@ -287,15 +331,32 @@ export function VenteABord() {
               </Message>
             ) : (
               devis && (
-                <div className="grid gap-1 rounded-md border border-line bg-surface px-3.5 py-3">
-                  <small className="font-mono text-[12.5px] font-medium text-ink-muted">
-                    {devis.distanceKm} km · {taux(devis.ratePerKm)} FCFA/km ·{" "}
-                    {manifest.fare?.label}
-                  </small>
-                  <b className="font-mono text-[30px] leading-[1.1] font-bold tabular-nums">
-                    {montant(devis.ttc)}
-                  </b>
-                </div>
+                <>
+                  <div className="grid gap-1 rounded-md border border-line bg-surface px-3.5 py-3">
+                    <small className="font-mono text-[12.5px] font-medium text-ink-muted">
+                      {devis.distanceKm} km · {taux(devis.ratePerKm)} FCFA/km ·{" "}
+                      {manifest.fare?.label}
+                    </small>
+                    <b className="font-mono text-[30px] leading-[1.1] font-bold tabular-nums">
+                      {montant(devis.ttc)}
+                    </b>
+                    {devis.methode === "yield" && (
+                      <small
+                        data-testid="composition-prix"
+                        className="text-[12.5px] leading-snug font-medium text-ink-muted"
+                      >
+                        {compositionDuPrix(devis)}
+                      </small>
+                    )}
+                  </div>
+                  {devis.methode === "bareme" && (
+                    <Message ton="alerte" titre="Prix du barème seul.">
+                      Ce manifeste ne porte pas le yield de la desserte : le
+                      serveur pourra facturer un autre montant. Mettez le
+                      manifeste à jour dès que le réseau le permet.
+                    </Message>
+                  )}
+                </>
               )
             )}
           </Corps>
@@ -610,6 +671,29 @@ function TitreRemis({
             </span>
           )}
         </div>
+        {lu?.serverXaf !== undefined && (
+          <dl
+            data-testid="prix-compares"
+            className="grid grid-cols-2 gap-3 rounded-md border border-line bg-surface px-3.5 py-2.5"
+          >
+            <div className="grid gap-0.5">
+              <dt className="text-[12.5px] font-medium text-ink-muted">
+                Encaissé à bord
+              </dt>
+              <dd className="font-mono text-[16px] font-bold tabular-nums">
+                {montant(vente.quotedXaf)}
+              </dd>
+            </div>
+            <div className="grid gap-0.5">
+              <dt className="text-[12.5px] font-medium text-ink-muted">
+                Recalculé par le serveur
+              </dt>
+              <dd className="font-mono text-[16px] font-bold tabular-nums">
+                {montant(lu.serverXaf)}
+              </dd>
+            </div>
+          </dl>
+        )}
         {lu?.serverXaf !== undefined && lu.serverXaf !== vente.quotedXaf && (
           <Message ton="alerte" titre="Écart de tarification.">
             Le système a facturé {montant(lu.serverXaf)} pour{" "}

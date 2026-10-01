@@ -258,6 +258,9 @@ async function sendSales(
         serverSaleNumber: done.saleNumber,
         serverTicketNumbers: done.ticketNumbers,
         serverXaf: done.serverXaf,
+        // Date la confirmation : un manifeste demandé plus tard compte
+        // déjà cette vente dans ses contingents (voir `quoteOnboard`).
+        sentAt: Date.now(),
       })
       await markSent("sale", sale.clientSaleId)
       report.sent += 1

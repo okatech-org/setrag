@@ -152,11 +152,27 @@ const PASSAGERS = [
 ] as const
 
 /**
+ * Marqueur d'une vente de démonstration : la desserte et le rang du voyageur.
+ *
+ * Porté par `clientSaleId`, la clé d'idempotence des ventes du terrain, et
+ * retrouvé par son index : une relance sait exactement ce qu'elle a déjà
+ * vendu, sans rien supposer des titres (la vente ne leur attribue pas de
+ * voiture, par exemple). La desserte en fait partie, car la démonstration
+ * change de circulation d'un jour à l'autre.
+ */
+function demoSaleId(tripId: Id<"trips">, rang: number): string {
+  return `demo-controle-vente-${tripId}-${rang}`
+}
+
+/**
  * Titres à contrôler.
  *
  * Vendus par le chemin ordinaire du guichet : le manifeste embarqué doit
  * contenir des billets réellement signés, sinon la vérification hors ligne du
  * terminal n'aurait rien d'authentique à vérifier.
+ *
+ * Chaque voyageur n'est vendu qu'une fois : une relance retrouve sa vente par
+ * son marqueur et ne vend que les manquants.
  */
 async function ensureTickets(
   ctx: MutationCtx,
@@ -164,45 +180,56 @@ async function ensureTickets(
   trip: Doc<"trips">,
   stops: Doc<"tripStops">[]
 ): Promise<Doc<"tickets">[]> {
-  const existants = await ctx.db
-    .query("tickets")
-    .withIndex("by_trip", (q) => q.eq("tripId", trip._id))
-    .collect()
-  const demo = existants.filter((t) => t.coachLabel !== undefined)
-  if (demo.length >= PASSAGERS.length) return demo.slice(0, PASSAGERS.length)
-
   const terminus = stops[stops.length - 1]!
   const intermediaire = stops[Math.floor(stops.length / 2)]!
+  const titres: Doc<"tickets">[] = []
 
-  for (let index = demo.length; index < PASSAGERS.length; index += 1) {
-    const [firstName, lastName, gender] = PASSAGERS[index]!
-    // Un voyageur sur trois descend en route : c'est ce qui rend le verdict
-    // « hors segment » démontrable une fois la desserte engagée.
-    const destination = index % 3 === 2 ? intermediaire : terminus
-    await performCounterSale(ctx, agent, {
-      tripId: trip._id,
-      originStationId: stops[0]!.stationId,
-      destinationStationId: destination.stationId,
-      serviceClass: "DEUXIEME",
-      passengers: [
-        {
-          firstName,
-          lastName,
-          gender,
-          phone: `+241 06 ${10 + index} ${20 + index} ${30 + index}`,
-        },
-      ],
-      method: index % 2 === 0 ? "especes" : "airtel_money",
-      deviceId: "demo-controle",
-    })
+  for (const [index, passager] of PASSAGERS.entries()) {
+    const clientSaleId = demoSaleId(trip._id, index)
+    const dejaVendue = await ctx.db
+      .query("sales")
+      .withIndex("by_client_id", (q) => q.eq("clientSaleId", clientSaleId))
+      .unique()
+
+    if (!dejaVendue) {
+      const [firstName, lastName, gender] = passager
+      // Un voyageur sur trois descend en route : c'est ce qui rend le verdict
+      // « hors segment » démontrable une fois la desserte engagée.
+      const destination = index % 3 === 2 ? intermediaire : terminus
+      await performCounterSale(ctx, agent, {
+        tripId: trip._id,
+        originStationId: stops[0]!.stationId,
+        destinationStationId: destination.stationId,
+        serviceClass: "DEUXIEME",
+        passengers: [
+          {
+            firstName,
+            lastName,
+            gender,
+            phone: `+241 06 ${10 + index} ${20 + index} ${30 + index}`,
+          },
+        ],
+        method: index % 2 === 0 ? "especes" : "airtel_money",
+        deviceId: "demo-controle",
+        clientSaleId,
+      })
+    }
+
+    const vente =
+      dejaVendue ??
+      (await ctx.db
+        .query("sales")
+        .withIndex("by_client_id", (q) => q.eq("clientSaleId", clientSaleId))
+        .unique())
+    if (!vente) continue
+    const titre = await ctx.db
+      .query("tickets")
+      .withIndex("by_sale", (q) => q.eq("saleId", vente._id))
+      .first()
+    if (titre) titres.push(titre)
   }
 
-  return (
-    await ctx.db
-      .query("tickets")
-      .withIndex("by_trip", (q) => q.eq("tripId", trip._id))
-      .collect()
-  ).slice(0, PASSAGERS.length)
+  return titres
 }
 
 /**
