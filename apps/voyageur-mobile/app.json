@@ -7,8 +7,8 @@
     "orientation": "portrait",
     "scheme": "setrag",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "primaryColor": "#15704A",
+    "primaryColor": "#0F50A0",
+    "icon": "./assets/icon.png",
     "description": "Application voyageur SETRAG — horaires, réservation et billets électroniques du Transgabonais (Owendo–Franceville).",
     "ios": {
       "supportsTablet": false,
@@ -23,9 +23,9 @@
     "android": {
       "package": "ga.setrag.voyageur",
       "versionCode": 1,
-      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
-        "backgroundColor": "#15704A"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
       }
     },
     "web": {
@@ -37,16 +37,28 @@
       "expo-secure-store",
       "expo-localization",
       [
+        "expo-calendar",
+        {
+          "writeOnlyAccess": true,
+          "writeOnlyCalendarPermission": "SETRAG peut ajouter votre voyage à votre calendrier."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
-          "backgroundColor": "#15704A",
+          "image": "./assets/splash.png",
+          "imageWidth": 240,
+          "backgroundColor": "#FFFFFF",
           "resizeMode": "contain"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": true,
+      "autolinkingModuleResolution": true
     },
     "extra": {
       "router": {}

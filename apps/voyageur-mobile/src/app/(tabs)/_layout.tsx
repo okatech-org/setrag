@@ -1,48 +1,31 @@
-import { Tabs } from "expo-router"
-import { Search, Ticket, User } from "lucide-react-native"
+import { useEffect } from "react"
+import { Redirect, Tabs } from "expo-router"
+import { useConvexAuth } from "convex/react"
 
-import { useTheme } from "@workspace/mobile-ui/components"
+import { Demarrage } from "@/components/demarrage"
+import { BarreOnglets } from "@/components/onglets"
+import { useReglages } from "@/lib/reglages"
 
+/** Trois onglets : Accueil, Billets, Compte. */
 export default function TabsLayout() {
-  const theme = useTheme()
+  const { isLoading, isAuthenticated } = useConvexAuth()
+  const { pret, bienvenueVue, marquerBienvenueVue } = useReglages()
+
+  // Un voyageur déjà connecté a passé la bienvenue, même s'il n'est jamais passé par elle.
+  useEffect(() => {
+    if (pret && isAuthenticated && !bienvenueVue) void marquerBienvenueVue()
+  }, [pret, isAuthenticated, bienvenueVue, marquerBienvenueVue])
+
+  // Le démarrage n'attend la session que pour décider d'afficher la bienvenue :
+  // hors réseau, les billets ne doivent pas rester derrière le logo.
+  if (!pret || (!bienvenueVue && isLoading)) return <Demarrage />
+  if (!bienvenueVue && !isAuthenticated) return <Redirect href="/bienvenue" />
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: theme.colors.accentInk,
-        tabBarInactiveTintColor: theme.colors.inkFaint,
-        tabBarLabelStyle: {
-          fontFamily: theme.typography.caption.fontFamily,
-          fontSize: 12,
-        },
-        tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.line,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Rechercher",
-          tabBarIcon: ({ color, size }) => <Search color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="billets"
-        options={{
-          title: "Mes billets",
-          tabBarIcon: ({ color, size }) => <Ticket color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="compte"
-        options={{
-          title: "Compte",
-          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
-        }}
-      />
+    <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <BarreOnglets {...props} />}>
+      <Tabs.Screen name="index" options={{ title: "Accueil" }} />
+      <Tabs.Screen name="billets" options={{ title: "Billets" }} />
+      <Tabs.Screen name="compte" options={{ title: "Compte" }} />
     </Tabs>
   )
 }

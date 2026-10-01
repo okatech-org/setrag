@@ -197,6 +197,43 @@ export const brand = {
   encre: "#131B26",
 } as const
 
+/**
+ * Sur fond encre — billet, billet plein écran, bouton de Ruban. Le billet est
+ * un objet : ces teintes ne changent pas avec le thème. Valeurs de la charte
+ * (`ui.css`, `mobile.css` : `.billet`, `.voie.sur-encre`, `.embarquement`…).
+ */
+export const surEncre = {
+  /** oklch(0.97 0.006 257) — heures, valeurs. */
+  texte: "#F3F5F9",
+  /** oklch(0.76 0.016 257) — libellés, gares (`--ink-2`). */
+  texte2: "#ABB2BB",
+  /** Voie posée sur l'encre : rails et traverses. */
+  rail: "#596475",
+  traverse: "#303945",
+  okFond: "#224726",
+  okTexte: "#CBF5CC",
+  retardFond: "#554614",
+  retardTexte: "#FFEDA0",
+  neutreFond: "#2C333D",
+  /** Pastille d'action d'un billet réduit. */
+  bouton: "#262E3A",
+  /** Encart du billet plein écran (« Départ dans »). */
+  encart: "#1F2938",
+  encartTexte: "#B6BECB",
+  pageEteinte: "#4E5661",
+  note: "#9DA5B1",
+  /** Légende sous le code, sur fond blanc. */
+  legendeCode: "#58606C",
+  /** Bouton de Ruban en thème sombre. */
+  fabSombre: "#2E3948",
+} as const
+
+/** Bouton « Ajouter à Apple Wallet / Google Wallet » : noir, imposé par les deux chartes. */
+export const wallet = { fond: "#000000", texte: "#FFFFFF" } as const
+
+/** Voile sous une feuille : oklch(0.15 0.02 257 / 0.42). */
+export const voile = "rgba(6, 11, 20, 0.42)"
+
 export { RUBAN } from "./ruban"
 
 /**

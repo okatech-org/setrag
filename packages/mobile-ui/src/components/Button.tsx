@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useState } from "react"
 import {
   Animated,
   Easing,
@@ -9,6 +9,9 @@ import {
   type ViewStyle,
 } from "react-native"
 
+import { motion } from "../tokens"
+import { Ruban } from "../marque/Ruban"
+import { useMouvementReduit } from "../marque/useMouvementReduit"
 import { useTheme } from "./useTheme"
 import { Text } from "./Text"
 
@@ -27,8 +30,9 @@ export interface ButtonProps extends Omit<PressableProps, "children" | "style"> 
 }
 
 /**
- * Bouton SETRAG — pill, hauteurs 36 / 44 / 52.
+ * Bouton SETRAG — pill, hauteurs 36 / 44 / 52 (`.btn` de la charte).
  * Un seul bouton `primary` par écran : celui qui fait avancer le voyage.
+ * En cours, le libellé reste et un ruban fin passe sous lui.
  */
 export function Button({
   title,
@@ -46,7 +50,7 @@ export function Button({
   const isDisabled = disabled || loading
 
   const height = theme.controlHeight[size]
-  const paddingHorizontal = { sm: 16, md: 20, lg: 28 }[size]
+  const paddingHorizontal = { sm: 16, md: 20, lg: 24 }[size]
   const fontSize = { sm: 14, md: 15, lg: 16 }[size]
 
   const palette: Record<
@@ -60,8 +64,8 @@ export function Button({
     },
     secondary: {
       background: theme.colors.surface,
-      border: theme.colors.ink,
-      label: theme.colors.ink,
+      border: theme.colors.accentLine,
+      label: theme.colors.accentInk,
     },
     ghost: {
       background: "transparent",
@@ -69,13 +73,16 @@ export function Button({
       label: theme.colors.accentInk,
     },
     danger: {
-      background: theme.colors.danger,
-      border: "transparent",
-      label: theme.colors.inkInverse,
+      background: theme.colors.surface,
+      border: theme.colors.danger,
+      label: theme.colors.dangerInk,
     },
   }
 
   const tone = palette[variant]
+  const bordered = variant === "secondary" || variant === "danger"
+  // En cours, le bouton garde sa couleur : seul le ruban dit qu'on attend.
+  const inactive = disabled && !loading
 
   return (
     <Pressable
@@ -85,18 +92,17 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         {
-          height,
+          minHeight: height,
           paddingHorizontal,
           borderRadius: theme.radius.pill,
-          backgroundColor: isDisabled
-            ? variant === "ghost" || variant === "secondary"
+          backgroundColor: inactive
+            ? variant === "ghost"
               ? "transparent"
-              : theme.colors.line
+              : theme.colors.surfaceSunk
             : tone.background,
-          borderWidth: variant === "secondary" ? 1.5 : 0,
-          borderColor: isDisabled ? theme.colors.line : tone.border,
-          opacity: pressed && !isDisabled ? 0.9 : 1,
-          transform: [{ translateY: pressed && !isDisabled ? 1 : 0 }],
+          borderWidth: bordered ? 1 : 0,
+          borderColor: inactive ? theme.colors.line : tone.border,
+          transform: [{ scale: pressed && !isDisabled ? 0.98 : 1 }],
           alignSelf: block ? "stretch" : "flex-start",
         },
         style,
@@ -109,54 +115,70 @@ export function Button({
           variant="body"
           style={{
             fontSize,
-            lineHeight: fontSize,
+            lineHeight: fontSize + 4,
             fontFamily: theme.typography.h4.fontFamily,
-            color: isDisabled ? theme.colors.inkFaint : tone.label,
+            color: inactive ? theme.colors.inkFaint : tone.label,
           }}
         >
           {loading ? (loadingLabel ?? title) : title}
         </Text>
-        {loading && <ProgressBar color={tone.label} />}
       </View>
+      {loading && <RubanEnCours teinte={variant === "primary" ? "blanc" : theme.isDark ? "sombre" : "clair"} />}
     </Pressable>
   )
 }
 
-/** Barre indéterminée — conservée sous « animations réduites », comme la charte. */
-function ProgressBar({ color }: { color: string }) {
-  const progress = useRef(new Animated.Value(0)).current
+/** Un ruban de 3 pt passe sous le libellé, sans fin, tant que dure l'attente. */
+function RubanEnCours({ teinte }: { teinte: "clair" | "sombre" | "blanc" }) {
+  const reduit = useMouvementReduit()
+  const [largeur, setLargeur] = useState(0)
+  const [passage] = useState(() => new Animated.Value(0))
 
   useEffect(() => {
-    const animation = Animated.loop(
-      Animated.timing(progress, {
+    if (reduit) return
+    const boucle = Animated.loop(
+      Animated.timing(passage, {
         toValue: 1,
-        duration: 1100,
-        easing: Easing.bezier(0.2, 0.8, 0.2, 1),
+        duration: motion.durationBoucle,
+        easing: Easing.bezier(...motion.easing.glisse),
         useNativeDriver: true,
       })
     )
-    animation.start()
-    return () => animation.stop()
-  }, [progress])
+    boucle.start()
+    return () => boucle.stop()
+  }, [passage, reduit])
+
+  const longueur = largeur * 0.34
 
   return (
-    <View style={[styles.track, { backgroundColor: `${color}59` }]}>
-      <Animated.View
-        style={[
-          styles.thumb,
-          {
-            backgroundColor: color,
-            transform: [
-              {
-                translateX: progress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-17, 42],
-                }),
-              },
-            ],
-          },
-        ]}
-      />
+    <View
+      style={styles.piste}
+      pointerEvents="none"
+      onLayout={(event) => setLargeur(event.nativeEvent.layout.width)}
+    >
+      {largeur > 0 && (
+        <Animated.View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            height: 3,
+            width: longueur,
+            left: reduit ? largeur * 0.33 : 0,
+            transform: reduit
+              ? []
+              : [
+                  {
+                    translateX: passage.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-longueur, longueur * 3],
+                    }),
+                  },
+                ],
+          }}
+        >
+          <Ruban teinte={teinte} rayon={3} style={{ flex: 1 }} />
+        </Animated.View>
+      )}
     </View>
   )
 }
@@ -166,21 +188,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
+    overflow: "hidden",
   },
   content: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  track: {
-    width: 42,
+  piste: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
     height: 3,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  thumb: {
-    width: 17,
-    height: 3,
-    borderRadius: 999,
   },
 })

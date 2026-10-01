@@ -7,6 +7,7 @@
 // Les composants React ne calculent rien : ils posent ces chaînes dans du SVG.
 
 import { mkdirSync, writeFileSync } from "node:fs"
+import { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { S_SEGMENTS, arcTable, etapesOklch, offsetPoints, pointsD, segmentsD } from "./geo.mjs"
 import { LOGO } from "./logo-geom.mjs"
@@ -71,3 +72,32 @@ writeFileSync(
     `export const RUBAN = ${JSON.stringify(traces.degrades)} as const\n`,
 )
 console.log("packages/mobile-ui/src/tokens/ruban.ts")
+
+// Les logos de l'app mobile : SVG autonomes, posés tels quels par SvgXml. Les
+// classes et variables CSS des animations web n'ont pas cours en React Native.
+const pourMobile = (svg) => svg.replace(/ class="[^"]*"/g, "").replace(/ style="[^"]*"/g, "")
+const logosMobile = {
+  compact: logo({ variante: "compact" }),
+  compactNegatif: logo({ variante: "compact", theme: "negatif" }),
+  symboleRuban: logo({ variante: "symbole-ruban", titre: "SETRAG" }),
+  symboleMonoEncre: logo({ variante: "symbole", theme: "mono-encre", titre: "" }),
+  symboleMonoBlanc: logo({ variante: "symbole", theme: "mono-blanc", titre: "" }),
+}
+// Le signe de Ruban : le S seul, sans rails, tracé par le composant SigneRuban.
+// React Native ne connaît pas pathLength : la longueur du S est précalculée.
+const signeMobile =
+  `export const S = ${JSON.stringify(traces.s)}\n\n` +
+  `/** Longueur du S, pour les pointillés animés (pathLength n'existe pas en natif). */\n` +
+  `export const S_LONGUEUR = ${T.length.toFixed(2)}`
+const sortieLogos = fileURLToPath(new URL("../../../mobile-ui/src/marque/logos.ts", import.meta.url))
+mkdirSync(dirname(sortieLogos), { recursive: true })
+writeFileSync(
+  sortieLogos,
+  `// Généré par packages/ui/scripts/marque/generer.mjs — ne pas modifier à la main.\n` +
+    `// Logos SETRAG en SVG autonome, pour SvgXml (react-native-svg).\n\n` +
+    Object.entries(logosMobile)
+      .map(([nom, svg]) => `export const ${nom.replace(/[A-Z]/g, (m) => `_${m}`).toUpperCase()} = ${JSON.stringify(pourMobile(svg))}`)
+      .join("\n\n") +
+    `\n\n${signeMobile}\n`,
+)
+console.log("packages/mobile-ui/src/marque/logos.ts")

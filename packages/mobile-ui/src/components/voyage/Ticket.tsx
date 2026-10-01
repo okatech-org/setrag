@@ -2,6 +2,7 @@ import { View, type ViewStyle } from "react-native"
 
 import { formatTime, spellTime } from "@workspace/shared/utils/format"
 
+import { surEncre } from "../../tokens"
 import { useTheme } from "../useTheme"
 import { Text } from "../Text"
 
@@ -131,7 +132,7 @@ export function Ticket({
           alignItems: "center",
           gap: theme.spacing[5],
           borderTopWidth: 1,
-          borderTopColor: theme.colors.inkMuted,
+          borderTopColor: surEncre.texte2,
           borderStyle: "dashed",
           paddingTop: theme.spacing[6],
         }}
@@ -151,14 +152,14 @@ export function Ticket({
           </View>
         )}
         <View style={{ gap: 6, flex: 1 }}>
-          <Text variant="caption" style={{ color: theme.colors.inkMuted }}>
+          <Text variant="caption" style={{ color: surEncre.texte2 }}>
             {passengerLabel}
           </Text>
           <Text variant="mono" tone="inverse">
             DOSSIER · {reference}
           </Text>
           {conditionsNote && (
-            <Text variant="caption" style={{ color: theme.colors.inkMuted }}>
+            <Text variant="caption" style={{ color: surEncre.texte2 }}>
               {conditionsNote}
             </Text>
           )}
@@ -177,13 +178,11 @@ function Fact({
   value: string
   note?: string
 }) {
-  const theme = useTheme()
-
   return (
     <View style={{ gap: 4, flex: 1 }}>
       <Text
         variant="caption"
-        style={{ fontSize: 11, lineHeight: 11, color: theme.colors.inkMuted }}
+        style={{ fontSize: 11, lineHeight: 11, color: surEncre.texte2 }}
       >
         {label}
       </Text>
@@ -193,7 +192,7 @@ function Fact({
       {note && (
         <Text
           variant="caption"
-          style={{ fontSize: 12, lineHeight: 16, color: theme.colors.inkMuted }}
+          style={{ fontSize: 12, lineHeight: 16, color: surEncre.texte2 }}
         >
           {note}
         </Text>

@@ -52,9 +52,11 @@ Convex packagé (`packages/backend`).
   Design. Le logo, le ruban et leurs tracés SVG vivent dans
   `@workspace/ui/marque` (`Logo`, `LogoAnime`, `SigneRuban`) ; tout se régénère
   avec `packages/ui/scripts/marque/generer.mjs`, qui écrit
-  `src/marque/traces.ts`, `src/marque/svg/*.svg` et
-  `packages/mobile-ui/src/tokens/ruban.ts` — ne jamais modifier ces sorties à
-  la main. Pas de valeur hexadécimale en dur dans les composants applicatifs :
+  `src/marque/traces.ts`, `src/marque/svg/*.svg`,
+  `packages/mobile-ui/src/tokens/ruban.ts` et
+  `packages/mobile-ui/src/marque/logos.ts` — ne jamais modifier ces sorties à
+  la main. Côté mobile, `@workspace/mobile-ui/marque` expose `Logo`, `Voie`,
+  `Ruban` et `SigneRuban`. Pas de valeur hexadécimale en dur dans les composants applicatifs :
   on passe par les utilitaires (`bg-surface`, `text-ink-muted`, `rounded-lg`)
   ou les variables (`var(--c-accent)`).
   Le mobile (`packages/mobile-ui`) porte la même charte : les couleurs y sont
