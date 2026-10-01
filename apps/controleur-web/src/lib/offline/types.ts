@@ -7,6 +7,13 @@
  * duplique rien.
  */
 
+import type {
+  ClassQuota,
+  PricingBounds,
+  SegmentLoad,
+  StoredPricingRule,
+} from "@workspace/backend/fares"
+
 /** Verdicts rendus par la vérification locale d'un titre. */
 export type Verdict =
   | "valide"
@@ -151,6 +158,27 @@ export interface EmbarkedFare {
   bases: EmbarkedFareBase[]
 }
 
+/**
+ * Données de yield de la desserte, figées au téléchargement du manifeste.
+ *
+ * C'est ce que la vente serveur lit, au-delà du barème, pour chiffrer un
+ * titre : contingents tarifaires et compteurs de places (avec leurs ventes),
+ * règles de modulation, bornes de sécurité. Le terminal les passe aux mêmes
+ * fonctions que la vente (`saleYield`, `quotePrice`).
+ */
+export interface EmbarkedPricing {
+  quotas: ClassQuota[]
+  rules: StoredPricingRule[]
+  bounds: PricingBounds
+  counters: SegmentLoad[]
+  /**
+   * Heure du terminal à laquelle l'en-tête a été demandé. Une vente de ce
+   * terminal confirmée avant y figure déjà ; une vente confirmée après, ou
+   * encore en file, n'y figure pas et doit être retranchée localement.
+   */
+  requestedAt: number
+}
+
 export interface PenaltyScaleRow {
   reason: "sans_titre" | "titre_invalide" | "classe_superieure" | "autre"
   label: string
@@ -189,6 +217,13 @@ export interface EmbarkedManifest {
    */
   composition?: EmbarkedCoach[]
   fare: EmbarkedFare | null
+  /**
+   * Données de yield. Absentes d'un manifeste téléchargé avant leur ajout,
+   * ou servi par un serveur plus ancien : la vente à bord se rabat alors sur
+   * le barème seul, et l'écran prévient que le serveur pourra facturer un
+   * autre montant.
+   */
+  pricing?: EmbarkedPricing
   penalties: PenaltyScaleRow[]
   signing: { publicKey: string; keyVersion: number; isDemoKey: boolean }
   /** Nombre total de titres à embarquer, annoncé par le serveur. */
@@ -248,6 +283,12 @@ export interface LocalSale {
   serverSaleNumber?: string
   serverTicketNumbers?: string[]
   serverXaf?: number
+  /**
+   * Heure du terminal à laquelle le serveur a confirmé la vente. Absente sur
+   * les ventes confirmées avant son ajout : elles sont réputées connues de
+   * tout manifeste téléchargé depuis.
+   */
+  sentAt?: number
 }
 
 export interface LocalPenalty {
