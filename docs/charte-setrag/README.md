@@ -21,6 +21,7 @@ cd docs && python3 -m http.server 4747
 | `web.html`        | Billetterie web, routes réelles de `apps/billetterie-web`      |
 | `mobile.html`     | App voyageur, 18 écrans dont 3 en thème sombre                 |
 | `agent.html`      | Portail agent, prototype navigable : guichet (13 écrans) et gestion (16) |
+| `controleur.html` | Contrôle à bord, 38 écrans dont 5 de nuit — validés, mis en œuvre dans `apps/controleur-web` |
 | `widgets.html`    | Widgets iOS et Android, activité en direct, Wallet, alertes    |
 | `assistant.html`  | Ruban, l'assistant : identité, fenêtre web, feuille mobile, voix |
 

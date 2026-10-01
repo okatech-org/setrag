@@ -1,0 +1,1303 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SETRAG — contrôle à bord</title>
+  <link rel="icon" href="logo/setrag-symbole.svg">
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shared/ui.css">
+  <link rel="stylesheet" href="shared/mobile.css">
+  <link rel="stylesheet" href="shared/controleur.css">
+  <script src="vendor/lottie_light.min.js"></script>
+  <script type="module" src="shared/app.js"></script>
+  <script type="module" src="shared/controleur.js"></script>
+</head>
+<body>
+<header class="doc-barre">
+  <a class="doc-logo" href="index.html" data-logo="compact" data-titre="SETRAG — charte graphique"></a>
+  <nav aria-label="Pages de la charte">
+    <a href="index.html">Charte</a>
+    <a href="mouvement.html">Mouvement</a>
+    <a href="composants.html">Composants</a>
+    <a href="web.html">Web</a>
+    <a href="mobile.html">Mobile</a>
+    <a href="agent.html">Agent</a>
+    <a href="controleur.html">Contrôleur</a>
+    <a href="widgets.html">Widgets &amp; Live</a>
+    <a href="assistant.html">Assistant</a>
+  </nav>
+  <button class="doc-bouton" id="theme" aria-pressed="false"><i data-i="moon"></i><span>Thème sombre</span></button>
+</header>
+
+<main class="doc">
+  <section class="doc-tete">
+    <div>
+      <p class="doc-sur">Contrôle à bord · PWA · terminal Android · maquettes à valider</p>
+      <h1>Le terminal du contrôleur, écran par écran</h1>
+      <p class="doc-chapo">Les écrans de <code>apps/controleur-web</code> redessinés dans la charte « la voie et le ruban », avant implémentation. Même cadre que l'app voyageur, mêmes composants, même ruban. Ce qui change, c'est le terrain : une main, parfois des gants, le soleil sur le quai, la nuit dans l'Omnibus, et pas de réseau entre Booué et Lopé.</p>
+    </div>
+    <div class="doc-carte">
+      <h3>Ce que le terminal sait faire</h3>
+      <p>Vérifier un titre sans réseau : le code Aztec porte sa portée et une signature Ed25519, que la clé publique embarquée suffit à contrôler. Vendre un titre à bord, encaisser, dresser un procès-verbal, signaler un incident. Chaque écriture part en file d'envoi, dans la même transaction que l'opération. Une seule chose exige le réseau : l'ouverture de session, en gare.</p>
+      <p style="margin-top:var(--s-3)">Données : la tournée de démonstration (<code>seeds/controlDemo.ts</code>), six voyageurs en 2e classe, trois déjà contrôlés, un procès-verbal, un incident, un conflit. Gares, points kilométriques et compositions du référentiel. Horaires du livret de démonstration (<code>seeds/demo.ts</code>), pas de l'horaire SETRAG.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================ 01 -->
+  <section class="doc-section">
+    <h2><span class="n">01</span>Prendre son service</h2>
+    <p class="doc-intro">En gare, avec du réseau : c'est le seul moment où il en faut. L'agent ouvre sa session en deux facteurs, choisit sa desserte, embarque le manifeste. Ensuite le terminal travaille seul. Le bandeau de service, sous la barre d'état, est déjà là : il ne quittera plus l'écran.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" style="background:#fff">
+          <div class="statut" style="color:#131B26"><span class="tabular">07:12</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="m-demarrage">
+            <div class="lottie" id="lt-demarrage-c" data-lottie="logo-anime" aria-label="Logo SETRAG animé"></div>
+          </div>
+          <span class="version">SETRAG · Contrôle à bord</span>
+          <div class="barre-accueil" style="background:#131B26"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Démarrage</b> — le logo animé, au démarrage à froid seulement. <button class="doc-bouton" style="min-height:32px;margin-top:6px" data-rejouer="#lt-demarrage-c"><i data-i="rotate-ccw"></i><span>Rejouer</span></button>
+          <span class="decision">Le même que l'app voyageur, une fois. Si la session locale et le manifeste sont prêts avant la fin, l'écran part dès que le ruban est posé (2,4 s). Rouvrir le terminal en tournée ne rejoue jamais l'animation.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">07:12</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="c-service en-ligne"><i data-i="cloud-check"></i><span><b>En ligne</b> · session à ouvrir</span></div>
+          <div class="m-corps" style="gap:var(--s-4);padding-top:var(--s-5)">
+            <div><span data-logo="compact" class="c-logo"></span><p class="c-appli" style="margin-top:10px">Application de contrôle à bord</p></div>
+            <div data-demo="etapes" data-depart="0"><ol class="etapes m-etapes" style="--n:3"><span class="ruban"></span><li class="etape"><span class="gare"></span>Identifiant</li><li class="etape"><span class="gare"></span>Code</li><li class="etape"><span class="gare"></span>Session</li></ol></div>
+            <div class="champ"><span class="champ-libelle">Compte de service</span><div class="saisie"><span class="indice">controleur@setrag.ga</span></div></div>
+            <div class="champ"><span class="champ-libelle">Mot de passe</span><div class="saisie"><span class="indice">••••••••</span></div></div>
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Continuer</span>
+            <div class="c-demo">
+              <h3>Comptes de démonstration</h3>
+              <span class="btn btn-secondaire btn-bloc"><span>Contrôleur<small>Contrôle des titres, litiges et procès-verbaux à bord</small></span><i data-i="chevron-right"></i></span>
+            </div>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Connexion</b> — compte de service et mot de passe, puis un code.
+          <span class="decision">Le compte de démonstration n'apparaît que sur un déploiement marqué comme tel ; il emprunte le même chemin que l'agent réel (deux facteurs vérifiés par le serveur). Aucune adresse personnelle à l'écran : le terminal peut se perdre.</span>
+          <span class="regle">un seul bouton primaire ; le compte démo est secondaire.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">07:13</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="c-service en-ligne"><i data-i="cloud-check"></i><span><b>En ligne</b> · session à ouvrir</span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Code de vérification<small>Étape 2 sur 3</small></span></div>
+          <div class="m-corps" style="gap:var(--s-4)">
+            <p class="m-sous">Saisissez le code à six chiffres envoyé à votre compte de service.</p>
+            <div class="c-msg"><b><i data-i="info"></i>Vérification en deux temps.</b>Code envoyé à controle@demo.setrag.ga. Saisissez-le pour ouvrir la session.</div>
+            <div class="otp"><span>4</span><span>8</span><span>1</span><span class="focus"></span><span></span><span></span></div>
+          </div>
+          <div class="m-bas sans-bord" style="padding-bottom:var(--s-3)"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain" data-demo="en-cours">Ouvrir la session</span><span class="btn btn-fantome btn-bloc">Revenir à l'identifiant</span></div>
+          <div class="clavier">
+            <span>1</span><span>2<small>ABC</small></span><span>3<small>DEF</small></span>
+            <span>4<small>GHI</small></span><span>5<small>JKL</small></span><span>6<small>MNO</small></span>
+            <span>7<small>PQRS</small></span><span>8<small>TUV</small></span><span>9<small>WXYZ</small></span>
+            <span class="touche-vide"></span><span>0</span><span class="touche-vide"><i data-i="arrow-left"></i></span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Code de vérification</b> — le second facteur, valable 10 minutes.
+          <span class="decision">Cases dessinées de la billetterie, un seul champ réel. Le code arrive par courriel sur le compte de service : c'est le facteur dont le système dispose aujourd'hui (pas de TOTP).</span>
+          <span class="regle">l'erreur s'écrit sous le champ, jamais une bordure rouge seule.</span>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="tels" style="margin-top:var(--s-8)">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">07:14</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="c-service en-ligne"><i data-i="cloud-check"></i><span><b>En ligne</b> · rien à envoyer</span></div>
+          <div class="m-barre logo"><span data-logo="compact"></span><div class="actions"><span class="matricule"><i data-i="user"></i>C-401</span></div></div>
+          <div class="m-corps">
+            <div class="c-vide"><b>Aucune desserte embarquée</b><p>Choisissez votre desserte ci-dessous, puis téléchargez son manifeste avant le départ : au-delà de Ntoum, le réseau devient très irrégulier.</p></div>
+            <p class="c-titre-liste">Dessertes disponibles</p>
+            <div role="radiogroup" aria-label="Desserte" style="display:grid;gap:var(--s-2)">
+              <div class="c-desserte-choix" role="radio" aria-checked="true"><span class="radio"></span><b>Express 201 · <span class="tabular">08:00</span></b><small>Mer. 30 sept. · Owendo Virié → Franceville · <span class="tabular">6</span> titres</small><span class="tag tag-accent">choisie</span></div>
+              <div class="c-desserte-choix" role="radio" aria-checked="false"><span class="radio"></span><b>Omnibus 202 · <span class="tabular">17:30</span></b><small>Mer. 30 sept. · Franceville → Owendo Virié</small><span class="tag tag-neutre">choisir</span></div>
+              <div class="c-desserte-choix" role="radio" aria-checked="false"><span class="radio"></span><b>Express 201 · <span class="tabular">08:00</span></b><small>Jeu. 1 oct. · Owendo Virié → Franceville</small><span class="tag tag-neutre">choisir</span></div>
+            </div>
+          </div>
+          <div class="m-bas avec-onglets"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Télécharger le manifeste</span></div>
+          <nav class="onglets-m c4" data-glisse="a"><a aria-current="page"><i data-i="house"></i>Tournée</a><a><i data-i="scan-line"></i>Scanner</a><a><i data-i="list-ordered"></i>Historique</a><a><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Prise de service</b> — la desserte du jour, choisie dans la fenêtre de service.
+          <span class="decision">Le nom du train s'écrit comme sur le billet (« Express 201 »), pas « TR-201 ». Choisir, puis télécharger : deux gestes distincts, le second en bas, au pouce.</span>
+          <span class="code-actuel">le code affiche <code>TR-201</code> et envoie directement vers <code>/manifeste</code>. Le nombre de titres des deux autres dessertes dépend de la base : non figuré.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">07:15</span><span class="reseau"><i data-i="signal"></i><i data-i="wifi"></i><i data-i="battery-full"></i></span></div><div class="ilot"></div>
+          <div class="c-service en-ligne"><i data-i="cloud-check"></i><span><b>En ligne</b> · rien à envoyer</span><span class="fin">synchro <span class="tabular">07:15</span></span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Données embarquées<small>Express 201 · Owendo Virié → Franceville</small></span></div>
+          <div class="m-corps">
+            <div class="c-msg ok"><b><i data-i="circle-check"></i>Données embarquées à jour.</b>Mises à jour à l'instant.</div>
+            <div class="c-progres" style="--p:1"><div class="haut"><span>Titres de la desserte</span><span class="tabular">6 / 6</span></div><span class="voie"><span class="ruban"></span></span><small>Lot 1 · téléchargement par lots, reprenable</small></div>
+            <div class="liste">
+              <div class="ligne"><i data-i="key-round"></i><span>Clé publique de signature</span><span class="fin tabular">Ed25519 · v1</span></div>
+              <div class="ligne"><i data-i="route"></i><span>Barème kilométrique<small>Barème CDC — annexe 2</small></span><span class="fin"><span class="tabular">23</span> gares</span></div>
+              <div class="ligne"><i data-i="receipt"></i><span>Barème des amendes</span><span class="fin"><span class="tabular">4</span> motifs</span></div>
+            </div>
+            <div class="c-tags"><span class="tag tag-retard"><i data-i="key-round"></i>clé de démonstration</span></div>
+            <p class="c-note">Les données restent sur ce terminal. Elles s'effacent à la purge de fin de tournée, une fois tout confirmé.</p>
+          </div>
+          <div class="m-bas"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Commencer le contrôle</span><span class="btn btn-secondaire btn-bloc">Mettre à jour le manifeste</span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Données embarquées</b> — ce que le terminal emporte, et d'où il le tient.
+          <span class="decision">La progression du téléchargement est une voie que le ruban remplit : « ça avance ». Un échec garde les lots écrits et dit combien de titres manquent ; la reprise repart du dernier lot confirmé.</span>
+          <span class="regle">le ruban ne bouge que pendant une attente réelle.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">16:12</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">9</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verrouille">
+            <span class="rond"><i data-i="lock"></i></span>
+            <h2>Terminal verrouillé</h2>
+            <p>Session ouverte, inactive depuis 5 min. Vos écritures locales sont intactes.</p>
+            <div class="otp c4"><span>•</span><span>•</span><span class="focus"></span><span></span></div>
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Déverrouiller</span>
+            <p class="c-note"><span class="tabular">9</span> écritures en attente d'envoi. Le déverrouillage se fait sans réseau : le code est vérifié localement.</p>
+          </div>
+          <div class="clavier">
+            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span>
+            <span class="touche-vide"></span><span>0</span><span class="touche-vide"><i data-i="arrow-left"></i></span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Reprise après une pause</b> — quatre chiffres, vérifiés sur le terminal.
+          <span class="decision">Après 5 minutes d'inactivité le terminal se referme. Redemander le second facteur condamnerait l'agent à attendre la prochaine gare : un code court, choisi à la première ouverture, suffit. Le bandeau reste visible, même verrouillé.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 02 -->
+  <section class="doc-section">
+    <h2><span class="n">02</span>La tournée</h2>
+    <p class="doc-intro">L'écran d'accueil répond à trois questions, dans cet ordre : où en est le train, où en est le contrôle, que reste-t-il à envoyer. Le ruban y garde son sens : sur la voie de la desserte il dit où est le train, sous chaque voiture il dit la part contrôlée.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:54</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">7</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre logo"><span data-logo="compact"></span><div class="actions"><span class="matricule"><i data-i="user"></i>C-401</span><span class="action" aria-label="Verrouiller le terminal"><i data-i="lock"></i></span></div></div>
+          <div class="m-corps">
+            <div class="c-desserte">
+              <div class="prochain-tete"><span><b>Express 201</b> · Mer. 30 sept. · <span class="tabular">23</span> gares</span></div>
+              <div class="trajet-heures"><div class="trajet-pt"><b>08:00</b><span>Owendo Virié</span></div><div class="trajet-milieu"><span class="voie" style="--p:.505"><span class="ruban"></span></span><small>PK 338 sur 669</small></div><div class="trajet-pt fin"><b>22:00</b><span>Franceville</span></div></div>
+              <div class="c-position"><i data-i="map-pin"></i><span>Après <b>Booué</b> · <span class="tabular">15:40</span></span><span class="changer">Changer</span></div>
+            </div>
+            <div class="c-compteurs">
+              <div class="c-compteur"><b>5</b><span>contrôlés</span></div>
+              <div class="c-compteur"><b>6</b><span>attendus</span></div>
+              <div class="c-compteur attente"><b>7</b><span><i data-i="cloud-upload"></i>à envoyer</span></div>
+            </div>
+            <p class="c-rame-tete">Voitures <span>ruban : part contrôlée</span></p>
+            <div class="c-rame">
+              <div class="c-voiture"><b>V1</b><small>VIP</small><span class="n vide">—</span></div>
+              <div class="c-voiture"><b>V2</b><small>1re</small><span class="n vide">—</span></div>
+              <div class="c-voiture"><b>V3</b><small>1re</small><span class="n vide">—</span></div>
+              <div class="c-voiture ici" style="--p:.833"><b>V4</b><small>2e · ici</small><span class="n">5/6</span></div>
+              <div class="c-voiture"><b>V5</b><small>2e</small><span class="n vide">—</span></div>
+              <div class="c-voiture"><b>V6</b><small>2e</small><span class="n vide">—</span></div>
+            </div>
+            <div class="liste"><div class="ligne" style="min-height:48px"><i data-i="clipboard-list"></i><span>Données embarquées<small>mises à jour il y a 9 h</small></span><span class="fin"><span class="tag tag-ok"><i data-i="circle-check"></i>à jour</span><i data-i="chevron-right"></i></span></div></div>
+          </div>
+          <div class="m-bas avec-onglets"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Reprendre le contrôle</span></div>
+          <nav class="onglets-m c4" data-glisse="a"><a aria-current="page"><i data-i="house"></i>Tournée</a><a><i data-i="scan-line"></i>Scanner</a><a><i data-i="list-ordered"></i>Historique<span class="badge">7</span></a><a><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Tournée</b> — la desserte, la position, le contrôle par voiture.
+          <span class="decision">« Contrôlés » compte les titres distincts, pas les passages : cinq des six titres de la démo. La composition vient du référentiel (Express 201 : V1 VIP, V2–V3 1re, V4–V6 2e). Le bouton principal est posé juste au-dessus des onglets.</span>
+          <span class="code-actuel">le code compte les passages, et le manifeste ne porte pas la voiture des titres vendus au guichet : la progression par voiture suppose de l'y ajouter. Voiture des six voyageurs supposée (V4).</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut" style="color:#fff"><span class="tabular">15:41</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · rien à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre logo"><span data-logo="compact"></span></div>
+          <div class="voile"></div>
+          <div class="feuille" style="top:150px">
+            <span class="poignee"></span>
+            <div class="feuille-tete">Dernière gare atteinte <span class="fermer"><i data-i="x"></i></span></div>
+            <p class="c-note" style="padding:0 var(--s-4) var(--s-3)">D'après l'horaire embarqué, l'Express 201 est passé à Booué à <span class="tabular">15:40</span>. Confirmez : la portée des titres se vérifie à partir de cette gare.</p>
+            <div class="gares-ligne" style="padding:0 var(--s-4)">
+              <span class="voie-v" style="left:calc(var(--s-4) + 23px)"></span>
+              <div class="gare-l" style="opacity:.55"><span class="pt"></span><span>Lopé</span><small>14:40 · PK 290</small></div>
+              <div class="gare-l"><span class="pt"></span><span>Offoué</span><small>15:10 · PK 312</small></div>
+              <div class="gare-l maj choisie"><span class="pt"></span><b>Booué</b><small>15:40 · PK 338</small></div>
+              <div class="gare-l maj"><span class="pt"></span><b>Ivindo</b><small>16:30 · PK 375</small></div>
+              <div class="gare-l"><span class="pt"></span><span>Mouyabi</span><small>17:15 · PK 411</small></div>
+              <div class="gare-l"><span class="pt"></span><span>Milolé</span><small>18:00 · PK 448</small></div>
+            </div>
+            <div class="m-bas" style="margin-top:auto"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Confirmer : après Booué</span></div>
+          </div>
+          <div class="barre-accueil" style="z-index:7"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Dernière gare atteinte</b> — la gare se choisit sur la voie, comme dans la billetterie.
+          <span class="decision">Le terminal propose la gare d'après l'horaire, l'agent confirme d'un geste. Sans elle, « hors segment » ne peut pas être rendu : le verdict dépend de la position du train.</span>
+          <span class="code-actuel">aucun écran ne fait avancer l'arrêt courant ; il reste à la première gare.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:54</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">7</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Voiture 4 · 2e classe<small>80 places assises · 20 debout · 6 titres</small></span></div>
+          <div class="m-corps">
+            <div class="segment" data-glisse="span:not(.indicateur)" style="width:100%"><span aria-pressed="true">Plan</span><span aria-pressed="false">Liste</span><span class="indicateur"></span></div>
+            <div class="c-legende-plan"><span><i class="c-place controle"></i>contrôlé</span><span><i class="c-place titre"></i>à contrôler</span><span><i class="c-place refus"></i>refusé</span><span><i class="c-place libre"></i>sans titre</span></div>
+            <div class="c-plan">
+              <span></span><span class="col">A</span><span class="col">B</span><span></span><span class="col">C</span><span class="col">D</span>
+              <span class="rang">1</span><span class="c-place controle">1A</span><span class="c-place controle">1B</span><span class="c-allee"></span><span class="c-place controle">1C</span><span class="c-place controle">1D</span>
+              <span class="rang">2</span><span class="c-place refus"><span data-picto="refus"></span>2A</span><span class="c-place titre">2B</span><span class="c-allee"></span><span class="c-place libre">2C</span><span class="c-place libre">2D</span>
+              <span class="rang">3</span><span class="c-place libre">3A</span><span class="c-place libre">3B</span><span class="c-allee"></span><span class="c-place libre">3C</span><span class="c-place libre">3D</span>
+              <span class="rang">4</span><span class="c-place libre">4A</span><span class="c-place libre">4B</span><span class="c-allee"></span><span class="c-place libre">4C</span><span class="c-place libre">4D</span>
+              <span class="rang">5</span><span class="c-place libre">5A</span><span class="c-place libre">5B</span><span class="c-allee"></span><span class="c-place libre">5C</span><span class="c-place libre">5D</span>
+            </div>
+          </div>
+          <div class="m-bas">
+            <div class="c-carte-titre" style="padding:10px 14px"><b>MOUSSAVOU Édith · 2B</b><p>Owendo Virié → Lopé · titre non contrôlé</p></div>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Vérifier ce titre sans le code</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Manifeste de la voiture</b> — par place : qui reste à contrôler.
+          <span class="decision">Quatre états de place, chacun par une forme (pleine et cochée, cerclée, octogone, en tirets) et un mot dans la légende. Toucher une place ouvre le titre ; la vérification sans code passe par la recherche manuelle et le dit.</span>
+          <span class="code-actuel">écran nouveau : <code>/manifeste</code> ne montre aujourd'hui que les données embarquées. Places des voyageurs de démo supposées.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 03 -->
+  <section class="doc-section">
+    <h2><span class="n">03</span>Contrôler un titre</h2>
+    <p class="doc-intro">Le viseur est toujours sombre : la caméra montre une image sombre, et un fond clair éblouirait dans une voiture éteinte. Le verdict recouvre tout l'écran. Il s'écrit en toutes lettres, en tête, avec sa forme ; le billet du voyageur apparaît dessous, tel qu'il le tient dans sa main.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" data-theme="dark">
+          <div class="statut"><span class="tabular">15:46</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">2</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-viseur-tete"><div><b>Voiture 4 · 2e classe</b><small>Express 201 · après Booué</small></div></div>
+          <div class="c-viseur">
+            <div class="presente"><span data-aztec="41"></span></div>
+            <div class="cadre"><i></i><i></i><i></i><i></i></div>
+            <div class="consigne">Présentez le code Aztec dans le cadre<span class="voie attente sur-encre"><span class="ruban"></span></span></div>
+          </div>
+          <div class="c-viseur-pied"><span><b>4</b> contrôlés</span><span class="attente"><b>2</b> à envoyer</span></div>
+          <div class="c-commandes"><span><i data-i="flashlight"></i>Lampe</span><span><i data-i="train-front"></i>Voiture 4</span><span><i data-i="search"></i>Chercher</span><span><i data-i="keyboard"></i>Saisir</span></div>
+          <nav class="onglets-m c4" data-glisse="a"><a><i data-i="house"></i>Tournée</a><a aria-current="page"><i data-i="scan-line"></i>Scanner</a><a><i data-i="list-ordered"></i>Historique<span class="badge">2</span></a><a><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Viseur</b> — sombre de jour comme de nuit.
+          <span class="decision">Une rame passe sous la consigne tant que la caméra attend un code : c'est l'attente réelle, le seul mouvement. Quatre commandes de 58 px au pouce : lampe, voiture, recherche, saisie du code. Lecture par <code>BarcodeDetector</code>, sinon <code>zxing-wasm</code> embarqué, sinon saisie.</span>
+          <span class="code-actuel">le code n'a que trois commandes ; la saisie n'est proposée qu'en cas d'échec caméra. La voiture y défile de 1 à 6 quelle que soit la composition (l'Omnibus en a 4).</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:44</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · rien à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verdict v-ok"><span data-picto="ok"></span><p class="source">Signature vérifiée localement</p><h1>Valide</h1></div>
+          <div class="m-corps" style="padding-top:var(--s-4)">
+            <div class="billet c-billet">
+              <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span>Express 201 · Mer. 30 sept.</span></div>
+              <span class="qui">NZE Antoinette</span>
+              <div class="billet-trajet"><div><b>08:00</b><span>Owendo Virié</span></div><div class="milieu"><span class="voie sur-encre pleine"><span class="ruban"></span></span></div><div><b>22:00</b><span>Franceville</span></div></div>
+              <div class="billet-grille" style="grid-template-columns:repeat(3,1fr)"><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>1D</b></div><div><span>Classe</span><b>2e</b></div></div>
+              <span class="ref">N° B-OWE-PV-20260930-000004</span>
+            </div>
+            <div class="c-tags"><span class="tag v-ok"><i data-i="circle-check"></i>segment couvert</span><span class="tag v-ok"><i data-i="circle-check"></i>1er contrôle</span></div>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Valider et scanner le suivant</span>
+            <p class="c-auto">Retour au viseur dans <span class="tabular">1,5</span> s · touchez l'écran pour rester</p>
+            <span class="btn btn-fantome btn-bloc">Fermer sans enregistrer</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Valide</b> — cercle, coche, le mot en 36 px.
+          <span class="decision">Le billet est l'objet encre de la billetterie : l'agent reconnaît ce que le voyageur lui montre. Proposé : retour automatique au viseur après 1,5 s, pour contrôler en rafale.</span>
+          <span class="regle">vibration courte (40 ms) ; son proposé, un bip aigu bref.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:45</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">1</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verdict v-vigilance"><span data-picto="vigilance"></span><p class="source">Signature vérifiée localement</p><h1>Déjà contrôlé</h1><p class="motif">Titre déjà contrôlé sur ce terminal</p></div>
+          <div class="m-corps" style="padding-top:var(--s-4)">
+            <div class="billet c-billet">
+              <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span>Express 201 · Mer. 30 sept.</span></div>
+              <span class="qui">MBADINGA Paul</span>
+              <div class="billet-trajet"><div><b>08:00</b><span>Owendo Virié</span></div><div class="milieu"><span class="voie sur-encre pleine"><span class="ruban"></span></span></div><div><b>22:00</b><span>Franceville</span></div></div>
+              <div class="billet-grille" style="grid-template-columns:repeat(3,1fr)"><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>1A</b></div><div><span>Classe</span><b>2e</b></div></div>
+              <span class="ref">N° B-OWE-PV-20260930-000001</span>
+            </div>
+            <div class="c-tags"><span class="tag v-vigilance"><i data-i="history"></i>anti-repassage · 1er contrôle <span class="tabular">08:49</span></span></div>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Continuer sans second contrôle</span>
+            <span class="btn btn-fantome btn-bloc">Fermer sans enregistrer</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Déjà contrôlé</b> — triangle, liseré en tirets : « à vérifier », pas « refusé ».
+          <span class="decision">Le titre est bon ; c'est son second passage. L'heure du premier contrôle est écrite, pour que l'agent juge (même personne revenue, ou titre prêté).</span>
+          <span class="regle">vibration double (40-60-40 ms) ; son proposé, deux bips moyens.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 04 -->
+  <section class="doc-section">
+    <h2><span class="n">04</span>Quand le titre ne passe pas</h2>
+    <p class="doc-intro">Un refus porte l'octogone, des hachures et son motif. Le motif décide de la suite : régulariser ou verbaliser. Un agent qui refuse un voyageur doit pouvoir lui dire pourquoi ; la source du verdict (signature ou manifeste) est écrite au-dessus du mot.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:47</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">2</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Signature vérifiée localement</p><h1>Hors segment</h1><p class="motif">Le voyageur circule au-delà du parcours payé</p></div>
+          <div class="m-corps" style="padding-top:var(--s-4)">
+            <div class="billet c-billet">
+              <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span>Express 201 · Mer. 30 sept.</span></div>
+              <span class="qui">OBAME Jean</span>
+              <div class="billet-trajet"><div><b>08:00</b><span>Owendo Virié</span></div><div class="milieu"><span class="voie sur-encre pleine"><span class="ruban"></span></span></div><div><b>14:40</b><span>Lopé</span></div></div>
+              <div class="billet-grille" style="grid-template-columns:repeat(3,1fr)"><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>1C</b></div><div><span>Classe</span><b>2e</b></div></div>
+            </div>
+            <p class="c-portee"><i data-i="map-pin"></i>Train après Booué (PK 338) · titre valable jusqu'à Lopé (PK 290)</p>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Régulariser — vendre le complément</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Établir un procès-verbal</span>
+            <span class="btn btn-fantome btn-bloc">Fermer sans enregistrer</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Hors segment</b> — le bon titre, le mauvais tronçon.
+          <span class="decision">La ligne sous le billet dit l'écart en gares et en PK. Le seul refus régularisable : la vente du complément vient en premier, le procès-verbal en second.</span>
+          <span class="regle">vibration de refus (40-60-40 ms dans le code) ; son proposé, un son grave long.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:50</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">4</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Signature vérifiée localement</p><h1>Mauvaise desserte</h1><p class="motif">Ce titre vaut pour une autre circulation que l'Express 201 du 30/09 embarqué ici. Vérifiez que le manifeste téléchargé est celui de votre train.</p></div>
+          <div class="m-corps" style="padding-top:var(--s-4)">
+            <div class="c-carte-titre"><b>Ce que dit le code</b><p>Titre authentique, circulation du <span class="tabular">29/09</span> · 2e classe</p><p class="tabular">N° B-OWE-PV-20260928-000014</p></div>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Établir un procès-verbal</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Vendre un titre à bord</span>
+            <span class="btn btn-fantome btn-bloc">Fermer sans enregistrer</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Mauvaise desserte</b> — authentique, mais pas pour ce train.
+          <span class="decision">Le motif nomme la desserte embarquée : deux circulations d'un même train peuvent coexister. La carte montre ce que le code porte (date, classe, référence) ; il ne porte aucun nom.</span>
+          <span class="code-actuel">la carte « Ce que dit le code » est nouvelle. La suite (procès-verbal d'abord) reprend le code ; à discuter pour un voyageur de bonne foi.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:51</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">5</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Signature vérifiée localement</p><h1>Signature invalide</h1><p class="motif">Signature non valide — ce code n'a pas été émis par SETRAG</p></div>
+          <div class="m-corps" style="padding-top:var(--s-4)">
+            <div class="c-carte-titre vide"><b>Aucune identité</b><p>Un code que la clé SETRAG ne reconnaît pas ne dit rien de son porteur. Le verdict est certain, même sans réseau.</p></div>
+            <div class="c-tags"><span class="tag v-refus"><i data-i="octagon-x"></i>signature non valide</span></div>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Établir un procès-verbal</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Vendre un titre à bord</span>
+            <span class="btn btn-fantome btn-bloc">Fermer sans enregistrer</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Signature invalide</b> — le faux, établi sur le terminal.
+          <span class="decision">Rien d'autre à montrer qu'un fait : la signature ne correspond pas. Le terminal ne doit pas inventer un voyageur.</span>
+          <span class="regle">un seul bouton primaire, même quand trois suites sont possibles.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:53</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">6</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Manifeste embarqué</p><h1>Titre remboursé</h1><p class="motif">Titre remboursé — information du manifeste embarqué</p></div>
+          <div class="m-corps" style="padding-top:var(--s-4)">
+            <div class="billet c-billet">
+              <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span>Express 201 · Mer. 30 sept.</span></div>
+              <span class="qui">NDONG Sylvain</span>
+              <div class="billet-trajet"><div><b>08:00</b><span>Owendo Virié</span></div><div class="milieu"><span class="voie sur-encre"><span class="ruban"></span></span></div><div><b>22:00</b><span>Franceville</span></div></div>
+              <div class="billet-grille" style="grid-template-columns:repeat(3,1fr)"><div><span>Voiture</span><b>4</b></div><div><span>Place</span><b>2A</b></div><div><span>Classe</span><b>2e</b></div></div>
+            </div>
+            <div class="c-msg"><b><i data-i="info"></i>Information issue du manifeste embarqué.</b>Mis à jour il y a 9 h. La signature du titre, elle, est vérifiée localement sans réseau.</div>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Établir un procès-verbal</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Vendre un titre à bord</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Titre remboursé</b> — ou annulé : le manifeste le sait, la signature non.
+          <span class="decision">La voie du billet est vide : le trajet n'est plus acquis. L'âge du manifeste est écrit, car un remboursement postérieur au téléchargement échappe au terminal.</span>
+          <span class="code-actuel">scénario illustratif : aucun titre de la démo n'est remboursé.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 05 -->
+  <section class="doc-section">
+    <h2><span class="n">05</span>Quand le code ne se lit pas</h2>
+    <p class="doc-intro">Un code froissé, tronqué ou d'un autre émetteur n'est pas une contrefaçon. Il se représente, se saisit à la main ou se retrouve dans le manifeste. Il n'y a jamais d'impasse : une caméra refusée ne bloque pas le contrôle.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:55</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">7</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verdict v-lecture"><span data-picto="lecture"></span><p class="source">Lecture du code</p><h1>Code illisible</h1><p class="motif">Code-barres tronqué : signature absente</p></div>
+          <div class="m-corps" style="padding-top:var(--s-4)">
+            <div class="c-carte-titre"><b>Ce n'est pas un verdict sur le voyageur</b><p>Faites présenter le code à nouveau, écran à pleine luminosité, ou allumez la lampe. Sur papier, dépliez le billet.</p></div>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Scanner à nouveau</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Saisir le code à la main</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Chercher dans le manifeste</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Code illisible</b> — cadre en tirets, gris : ni oui ni non.
+          <span class="decision">Quatrième famille, « lecture impossible ». Aucune teinte d'alerte, aucune vibration de refus : rien n'est reproché au voyageur.</span>
+          <span class="code-actuel">le code range « illisible » parmi les refus et propose d'abord un procès-verbal, alors que son propre commentaire demande de représenter ou de saisir le code.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" data-theme="dark">
+          <div class="statut"><span class="tabular">15:55</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">7</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-viseur-tete"><div><b>Voiture 4 · 2e classe</b><small>Express 201 · après Booué</small></div></div>
+          <div class="c-viseur">
+            <div class="indispo"><i data-i="camera-off"></i><b>Caméra indisponible</b><p>L'accès à la caméra a été refusé. Autorisez la caméra pour ce site dans les réglages du navigateur, puis réessayez.</p></div>
+          </div>
+          <div class="m-bas" style="background:transparent;border-top:0;padding-bottom:var(--s-3)">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Autoriser la caméra</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Saisir un code à la main</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Chercher dans le manifeste</span>
+          </div>
+          <nav class="onglets-m c4" data-glisse="a"><a><i data-i="house"></i>Tournée</a><a aria-current="page"><i data-i="scan-line"></i>Scanner</a><a><i data-i="list-ordered"></i>Historique<span class="badge">7</span></a><a><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Caméra indisponible</b> — trois portes de sortie, au pouce.
+          <span class="decision">Le message dit ce qui s'est passé et ce qu'il reste à tenter, avec les mots du code. La saisie attend la chaîne complète (<code>SETRAG1:</code>…) : elle passe par la même vérification de signature.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:56</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">7</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Recherche manuelle<small>Express 201 · <span class="tabular">6</span> titres embarqués</small></span></div>
+          <div class="m-corps">
+            <div class="segment" data-glisse="span:not(.indicateur)" style="width:100%"><span aria-pressed="false">Référence</span><span aria-pressed="true">Nom</span><span aria-pressed="false">Place</span><span class="indicateur"></span></div>
+            <div class="champ"><span class="champ-libelle">Nom du voyageur</span><div class="saisie focus"><i data-i="search"></i><span class="tabular">KOUM</span></div><span class="champ-aide">Recherche locale : aucune donnée n'est envoyée.</span></div>
+            <div class="c-resultats">
+              <div class="c-resultat"><b>KOUMBA Alice</b><span class="ref">B-OWE-PV-20260930-000002</span><p>Owendo Virié → Franceville · 1B</p><span class="tag v-vigilance"><span data-picto="vigilance"></span>déjà contrôlé</span></div>
+            </div>
+            <p class="c-compte"><span class="tabular">1</span> résultat · recherche locale, aucune donnée envoyée.</p>
+          </div>
+          <div class="m-bas"><span class="btn btn-fantome btn-bloc">Retour au scanner</span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Recherche manuelle</b> — par référence, nom ou place.
+          <span class="decision">Le résultat reprend la forme du verdict en miniature. Ouvrir un résultat rend un verdict marqué « recherche manuelle » : la signature, elle, n'a pas été lue.</span>
+          <span class="code-actuel">le code suggère <code>B-48…</code> en exemple ; les références réelles sont au format <code>B-OWE-PV-20260930-000002</code>.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:57</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">7</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Recherche manuelle<small>Express 201 · <span class="tabular">6</span> titres embarqués</small></span></div>
+          <div class="m-corps">
+            <div class="segment" data-glisse="span:not(.indicateur)" style="width:100%"><span aria-pressed="false">Référence</span><span aria-pressed="true">Nom</span><span aria-pressed="false">Place</span><span class="indicateur"></span></div>
+            <div class="champ"><span class="champ-libelle">Nom du voyageur</span><div class="saisie focus"><i data-i="search"></i><span class="tabular">NGUEMA</span></div><span class="champ-aide">Recherche locale : aucune donnée n'est envoyée.</span></div>
+            <div class="etat-vide" style="padding-top:var(--s-3)">
+              <span data-s-attente></span>
+              <b>Aucun titre trouvé</b>
+              <p>Aucun voyageur de ce nom dans le manifeste de l'Express 201.</p>
+            </div>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Vendre un titre à bord</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Établir un procès-verbal</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Aucun titre</b> — le S gris, rame à quai : rien ne roule.
+          <span class="decision">L'état vide de la charte, avec ses deux sorties. Si le manifeste est incomplet, un avertissement rappelle que l'absence d'un titre ne vaut pas preuve.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 06 -->
+  <section class="doc-section">
+    <h2><span class="n">06</span>Les verdicts, côte à côte</h2>
+    <p class="doc-intro">Treize verdicts dans le code, quatre familles à l'écran. Chaque famille a une forme, un mot, une texture et un retour physique. La teinte vient en dernier : l'épreuve ci-dessous retire la couleur, puis simule le plein soleil.</p>
+    <div class="familles">
+      <div class="famille">
+        <div class="c-verdict v-ok"><span data-picto="ok"></span><p class="source">Famille</p><h1>Accepté</h1></div>
+        <div class="famille-corps"><p><b>Forme</b> cercle plein, coche. <b>Texture</b> aucune.</p><ul><li>Valide</li><li>Abonnement valide</li></ul><p><b>Vibration</b> <span class="vibre"><i style="width:10px"></i></span> 40 ms (code)</p><p><b>Son</b> un bip aigu bref (proposé)</p></div>
+      </div>
+      <div class="famille">
+        <div class="c-verdict v-vigilance"><span data-picto="vigilance"></span><p class="source">Famille</p><h1>À vérifier</h1></div>
+        <div class="famille-corps"><p><b>Forme</b> triangle, point d'exclamation. <b>Texture</b> liseré en tirets.</p><ul><li>Déjà contrôlé</li><li>Statut inconnu</li><li>Clé hors service (proposé)</li></ul><p><b>Vibration</b> <span class="vibre"><i style="width:10px"></i><i style="width:10px;margin-left:4px"></i></span> 40-60-40 ms (code)</p><p><b>Son</b> deux bips moyens (proposé)</p></div>
+      </div>
+      <div class="famille">
+        <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Famille</p><h1>Refusé</h1></div>
+        <div class="famille-corps"><p><b>Forme</b> octogone, croix. <b>Texture</b> hachures.</p><ul><li>Hors segment (régularisable)</li><li>Mauvaise desserte · Expiré</li><li>Titre annulé · Titre remboursé</li><li>Non payé · Signature invalide</li></ul><p><b>Vibration</b> <span class="vibre"><i style="width:26px"></i></span> longue (proposé)</p><p><b>Son</b> un son grave long (proposé)</p></div>
+      </div>
+      <div class="famille">
+        <div class="c-verdict v-lecture"><span data-picto="lecture"></span><p class="source">Famille</p><h1>Lecture impossible</h1></div>
+        <div class="famille-corps"><p><b>Forme</b> cadre en tirets. <b>Texture</b> aucune, fond gris.</p><ul><li>Code illisible (proposé)</li><li>Caméra indisponible</li></ul><p><b>Vibration</b> aucune (proposé)</p><p><b>Son</b> aucun (proposé)</p></div>
+      </div>
+    </div>
+
+    <h3 class="doc-h3">L'épreuve : sans couleur, au soleil, de nuit</h3>
+    <div class="epreuve">
+      <figure><div data-theme="light" class="pile">
+        <div class="c-verdict v-ok"><span data-picto="ok"></span><p class="source">Signature</p><h1>Valide</h1></div>
+        <div class="c-verdict v-vigilance"><span data-picto="vigilance"></span><p class="source">Signature</p><h1>Déjà contrôlé</h1></div>
+        <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Signature</p><h1>Hors segment</h1></div>
+        <div class="c-verdict v-lecture"><span data-picto="lecture"></span><p class="source">Lecture</p><h1>Code illisible</h1></div>
+      </div><figcaption><b>Clair</b> — la référence.</figcaption></figure>
+      <figure><div data-theme="light" class="pile gris">
+        <div class="c-verdict v-ok"><span data-picto="ok"></span><p class="source">Signature</p><h1>Valide</h1></div>
+        <div class="c-verdict v-vigilance"><span data-picto="vigilance"></span><p class="source">Signature</p><h1>Déjà contrôlé</h1></div>
+        <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Signature</p><h1>Hors segment</h1></div>
+        <div class="c-verdict v-lecture"><span data-picto="lecture"></span><p class="source">Lecture</p><h1>Code illisible</h1></div>
+      </div><figcaption><b>Niveaux de gris</b> — la forme, le mot et la texture suffisent.</figcaption></figure>
+      <figure><div data-theme="light" class="pile soleil">
+        <div class="c-verdict v-ok"><span data-picto="ok"></span><p class="source">Signature</p><h1>Valide</h1></div>
+        <div class="c-verdict v-vigilance"><span data-picto="vigilance"></span><p class="source">Signature</p><h1>Déjà contrôlé</h1></div>
+        <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Signature</p><h1>Hors segment</h1></div>
+        <div class="c-verdict v-lecture"><span data-picto="lecture"></span><p class="source">Lecture</p><h1>Code illisible</h1></div>
+      </div><figcaption><b>Plein soleil</b> — simulation (contraste réduit, écran délavé) : le texte encre tient.</figcaption></figure>
+      <figure><div class="pile" data-theme="dark">
+        <div class="c-verdict v-ok"><span data-picto="ok"></span><p class="source">Signature</p><h1>Valide</h1></div>
+        <div class="c-verdict v-vigilance"><span data-picto="vigilance"></span><p class="source">Signature</p><h1>Déjà contrôlé</h1></div>
+        <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Signature</p><h1>Hors segment</h1></div>
+        <div class="c-verdict v-lecture"><span data-picto="lecture"></span><p class="source">Lecture</p><h1>Code illisible</h1></div>
+      </div><figcaption><b>Nuit</b> — fonds sombres de la charte, aucun aplat lumineux.</figcaption></figure>
+    </div>
+
+    <h3 class="doc-h3">Les treize verdicts du code</h3>
+    <table class="specs table-verdicts">
+      <thead><tr><th>Libellé affiché</th><th>Famille</th><th>Source écrite au-dessus</th><th>Suite (bouton primaire, puis secondaire)</th></tr></thead>
+      <tbody>
+        <tr><td>Valide</td><td><span class="tag v-ok"><span data-picto="ok"></span>Accepté</span></td><td>Signature vérifiée localement</td><td>Valider et scanner le suivant</td></tr>
+        <tr><td>Abonnement valide</td><td><span class="tag v-ok"><span data-picto="ok"></span>Accepté</span></td><td>Manifeste embarqué</td><td>Valider et scanner le suivant. <em>Le code le fait vibrer comme un refus (40-60-40 ms) : à aligner sur « Valide ».</em></td></tr>
+        <tr><td>Déjà contrôlé</td><td><span class="tag v-vigilance"><span data-picto="vigilance"></span>À vérifier</span></td><td>Signature vérifiée localement, ou manifeste</td><td>Continuer sans second contrôle</td></tr>
+        <tr><td>Statut inconnu</td><td><span class="tag v-vigilance"><span data-picto="vigilance"></span>À vérifier</span></td><td>Manifeste embarqué</td><td>Régulariser — vendre le complément · Établir un procès-verbal. <em>Le code affiche ici deux boutons primaires (« Valider… » et « Régulariser… ») : un seul doit le rester.</em></td></tr>
+        <tr><td>Clé hors service</td><td><span class="tag v-vigilance"><span data-picto="vigilance"></span>À vérifier</span></td><td>Signature vérifiée localement</td><td>Proposé : Chercher dans le manifeste · Signaler à l'exploitation. <em>Le code en fait un refus avec procès-verbal (motif « autre ») ; son commentaire parle d'un « problème d'exploitation, pas de voyageur ».</em></td></tr>
+        <tr><td>Hors segment</td><td><span class="tag v-refus"><span data-picto="refus"></span>Refusé</span></td><td>Signature vérifiée localement</td><td>Régulariser — vendre le complément · Établir un procès-verbal</td></tr>
+        <tr><td>Mauvaise desserte</td><td><span class="tag v-refus"><span data-picto="refus"></span>Refusé</span></td><td>Signature vérifiée localement</td><td>Établir un procès-verbal · Vendre un titre à bord</td></tr>
+        <tr><td>Expiré</td><td><span class="tag v-refus"><span data-picto="refus"></span>Refusé</span></td><td>Signature, ou manifeste (abonnement)</td><td>Établir un procès-verbal · Vendre un titre à bord</td></tr>
+        <tr><td>Titre annulé</td><td><span class="tag v-refus"><span data-picto="refus"></span>Refusé</span></td><td>Manifeste embarqué</td><td>Établir un procès-verbal · Vendre un titre à bord</td></tr>
+        <tr><td>Titre remboursé</td><td><span class="tag v-refus"><span data-picto="refus"></span>Refusé</span></td><td>Manifeste embarqué</td><td>Établir un procès-verbal · Vendre un titre à bord</td></tr>
+        <tr><td>Non payé</td><td><span class="tag v-refus"><span data-picto="refus"></span>Refusé</span></td><td>Manifeste embarqué</td><td>Établir un procès-verbal · Vendre un titre à bord</td></tr>
+        <tr><td>Signature invalide</td><td><span class="tag v-refus"><span data-picto="refus"></span>Refusé</span></td><td>Signature vérifiée localement</td><td>Établir un procès-verbal · Vendre un titre à bord</td></tr>
+        <tr><td>Code illisible</td><td><span class="tag v-lecture"><span data-picto="lecture"></span>Lecture</span></td><td>Lecture du code</td><td>Proposé : Scanner à nouveau · Saisir le code · Chercher. <em>Le code propose d'abord un procès-verbal.</em></td></tr>
+      </tbody>
+    </table>
+    <p class="doc-note" style="margin-top:var(--s-3)">Retour physique : le code fait vibrer 40 ms pour « Valide » et 40-60-40 ms pour tout le reste ; il n'émet aucun son. Les sons et la vibration longue des refus sont des propositions, à régler avec les contrôleurs (volume, coupure la nuit).</p>
+  </section>
+
+  <!-- ================================================================ 07 -->
+  <section class="doc-section">
+    <h2><span class="n">07</span>Régulariser : la vente à bord</h2>
+    <p class="doc-intro">Trois étapes, trois gares sur le ruban des étapes, comme le tunnel d'achat. Le prix n'est jamais saisi : il sort du barème embarqué, par le même calcul que le guichet. Ici, Jean OBAME, hors segment après Lopé, achète la suite de son trajet.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:48</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">3</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Vente à bord<small>Express 201 · voiture 4 · titre de OBAME Jean</small></span></div>
+          <div class="m-corps">
+            <div data-demo="etapes" data-depart="0"><ol class="etapes m-etapes" style="--n:3"><span class="ruban"></span><li class="etape"><span class="gare"></span>Trajet</li><li class="etape"><span class="gare"></span>Encaissement</li><li class="etape"><span class="gare"></span>Titre</li></ol></div>
+            <div class="champ"><span class="champ-libelle">Départ du trajet restant</span><div class="c-champ-sel">Booué <small>PK 338</small><i data-i="chevron-down"></i></div><span class="champ-aide">Dernière gare atteinte.</span></div>
+            <div class="champ"><span class="champ-libelle">Destination</span><div class="c-champ-sel">Franceville <small>PK 669</small><i data-i="chevron-down"></i></div></div>
+            <div class="champ"><span class="champ-libelle">Classe</span><div class="c-choix3" role="radiogroup" aria-label="Classe"><span role="radio" aria-checked="true">2e</span><span role="radio" aria-checked="false">1re</span><span role="radio" aria-checked="false">VIP</span></div></div>
+            <div class="c-tarif"><small>331 km · 43,42 FCFA/km · Barème CDC — annexe 2</small><b>17 000 FCFA</b></div>
+          </div>
+          <div class="m-bas"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Encaisser 17 000 FCFA</span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Trajet</b> — de la dernière gare atteinte à la destination.
+          <span class="decision">Montant calculé par <code>computeTicketFare</code> : 331 km × 43,42 FCFA/km, TVA 18 %, arrondi TTC au pas de 100 F. Le montant est dans le bouton : l'agent l'annonce avant d'encaisser.</span>
+          <span class="code-actuel">le taux s'y affiche « 43.42 » (point décimal) ; ici en français. Tarif du barème CDC, inférieur de 30 à 39 % aux tarifs publics 2025 d'après le référentiel : à confirmer par SETRAG.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:49</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">3</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Vente à bord<small>Express 201 · voiture 4</small></span></div>
+          <div class="m-corps c-serre">
+            <div data-demo="etapes" data-depart="1"><ol class="etapes m-etapes" style="--n:3"><span class="ruban"></span><li class="etape"><span class="gare"></span>Trajet</li><li class="etape"><span class="gare"></span>Encaissement</li><li class="etape"><span class="gare"></span>Titre</li></ol></div>
+            <div class="c-total"><span>Montant dû<small>Booué → Franceville</small></span><b>17 000 FCFA</b></div>
+            <div class="champ"><span class="champ-libelle">Mode de paiement</span><div class="c-choix3" style="--n:2" role="radiogroup" aria-label="Mode de paiement"><span role="radio" aria-checked="true">Espèces</span><span role="radio" aria-checked="false">Mobile money</span></div></div>
+            <div class="champ"><span class="champ-libelle">Montant remis</span><div class="saisie focus"><span class="tabular">20 000</span><span class="suffixe">FCFA</span></div></div>
+            <div class="c-raccourcis"><span>5 000</span><span>10 000</span><span>15 000</span><span class="on">20 000</span></div>
+            <div class="c-rendu"><span>À rendre</span><b>3 000 FCFA</b></div>
+            <div class="c-replie"><i data-i="user"></i><span>Identité du voyageur <small>· facultative</small></span><i data-i="chevron-down"></i></div>
+          </div>
+          <div class="m-bas"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Confirmer le paiement</span><span class="btn btn-fantome btn-bloc">Revenir au trajet</span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Encaissement</b> — espèces par défaut, rendu calculé.
+          <span class="decision">Raccourcis de 48 px pour les billets courants, rendu en mono, gros. Si le montant remis ne suffit pas, la case dit « Montant insuffisant » en toutes lettres. Choisir « Mobile money » affiche l'avertissement du code : la demande partira au retour du réseau, le titre reste dû.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:49</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">4</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre"><span class="titre" style="padding-left:var(--s-3)">Titre remis</span></div>
+          <div class="m-corps">
+            <div data-demo="etapes" data-depart="2"><ol class="etapes m-etapes" style="--n:3"><span class="ruban"></span><li class="etape"><span class="gare"></span>Trajet</li><li class="etape"><span class="gare"></span>Encaissement</li><li class="etape"><span class="gare"></span>Titre</li></ol></div>
+            <div class="c-msg ok"><b><i data-i="circle-check"></i>Titre délivré.</b>Réglé en espèces · 3 000 FCFA rendus</div>
+            <div class="billet c-billet" data-emission-auto>
+              <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span>Express 201 · Mer. 30 sept.</span></div>
+              <div class="billet-trajet"><div><b>15:40</b><span>Booué</span></div><div class="milieu">331 km<span class="voie sur-encre pleine"><span class="ruban"></span></span></div><div><b>22:00</b><span>Franceville</span></div></div>
+              <div class="billet-coupe" style="--fond-coupe:var(--c-canvas)"><span class="voie sur-encre"><span class="ruban"></span></span></div>
+              <div class="billet-grille" style="grid-template-columns:repeat(2,1fr)"><div><span>Classe</span><b>2e</b></div><div><span>Réglé</span><b>17 000</b></div></div>
+              <div class="c-sans-code"><b>B-0001</b><small>Référence provisoire : numéro définitif et code Aztec à la synchronisation.</small></div>
+            </div>
+            <div class="c-tags"><span class="tag tag-retard"><i data-i="cloud-upload"></i>en attente d'envoi</span></div>
+          </div>
+          <div class="m-bas"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Terminer et scanner le suivant</span><span class="btn btn-fantome btn-bloc">Voir la file d'envoi</span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Titre remis</b> — un billet, mais pas encore de code.
+          <span class="decision">Le terminal ne détient pas la clé privée : il ne peut pas signer. Plutôt qu'un faux code, le billet porte la référence provisoire, en grand, et le dit. Le ruban traverse la découpe une fois, comme à l'émission dans la billetterie.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 08 -->
+  <section class="doc-section">
+    <h2><span class="n">08</span>Verbaliser : le procès-verbal</h2>
+    <p class="doc-intro">Motif, montant, signature. L'amende vient du barème embarqué et ne se modifie pas à bord. L'exemple est celui de la démonstration : Serge NGUEMA, monté à Ndjolé sans titre de transport.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:58</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">7</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Procès-verbal<small>Express 201 · voiture 4</small></span></div>
+          <div class="m-corps">
+            <div data-demo="etapes" data-depart="0"><ol class="etapes m-etapes" style="--n:3"><span class="ruban"></span><li class="etape"><span class="gare"></span>Motif</li><li class="etape"><span class="gare"></span>Montant</li><li class="etape"><span class="gare"></span>Signature</li></ol></div>
+            <div class="classes" role="radiogroup" aria-label="Motif" style="gap:6px">
+              <div class="classe c-motif" role="radio" aria-checked="true"><span class="radio"></span><b>Voyage sans titre de transport</b><span class="prix">25 000</span></div>
+              <div class="classe c-motif" role="radio" aria-checked="false"><span class="radio"></span><b>Titre invalide ou expiré</b><span class="prix">15 000</span></div>
+              <div class="classe c-motif" role="radio" aria-checked="false"><span class="radio"></span><b>Classe supérieure à celle payée</b><span class="prix">8 000</span></div>
+              <div class="classe c-motif" role="radio" aria-checked="false"><span class="radio"></span><b>Autre motif</b><span class="prix">10 000</span></div>
+            </div>
+            <p class="c-provisoire"><i data-i="triangle-alert"></i>Barème provisoire du système, en FCFA : montants à arrêter par la direction commerciale.</p>
+            <div class="champ"><span class="champ-libelle">Nom déclaré</span><div class="saisie"><span>NGUEMA Serge</span></div></div>
+            <div class="champ"><span class="champ-libelle">Pièce présentée</span><div class="saisie"><span class="tabular">CNI 04-889-231</span></div></div>
+          </div>
+          <div class="m-bas"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Continuer</span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Motif</b> — quatre motifs, leur montant en regard.
+          <span class="decision">Des cartes plutôt qu'une liste déroulante : l'agent voit le montant avant de choisir, et le voyageur aussi. Sous les champs d'identité : « Le contrevenant refuse de décliner son identité », et le rappel que l'identité est déclarée, non vérifiée.</span>
+          <span class="code-actuel">montants de <code>PENALTY_SCALE</code>, marqués provisoires dans le code : à confirmer par SETRAG.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:58</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">7</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Procès-verbal<small>Express 201 · voiture 4</small></span></div>
+          <div class="m-corps">
+            <div data-demo="etapes" data-depart="1"><ol class="etapes m-etapes" style="--n:3"><span class="ruban"></span><li class="etape"><span class="gare"></span>Motif</li><li class="etape"><span class="gare"></span>Montant</li><li class="etape"><span class="gare"></span>Signature</li></ol></div>
+            <div class="c-tarif">
+              <div class="ligne-t"><span>Amende · Voyage sans titre de transport</span><span class="tabular">25 000</span></div>
+              <p class="c-note">Barème embarqué, non modifiable par l'agent.</p>
+              <div class="ligne-t"><span>Trajet dû · Booué → Franceville · 331 km</span><span class="tabular">17 000</span></div>
+            </div>
+            <div class="champ"><span class="champ-libelle">Encaissement</span><div class="c-choix3" style="--n:2" role="radiogroup" aria-label="Encaissement"><span role="radio" aria-checked="true">Immédiat</span><span role="radio" aria-checked="false">Différé</span></div><span class="c-aide-champ">Immédiat : en espèces, à bord.</span></div>
+            <div class="c-total"><span>Total à percevoir</span><b>42 000 FCFA</b></div>
+            <div class="champ"><span class="champ-libelle">Observations (facultatif)</span><div class="c-texte" style="min-height:0">Monté à Ndjolé sans titre de transport.</div></div>
+          </div>
+          <div class="m-bas"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Enregistrer le procès-verbal</span><span class="btn btn-fantome btn-bloc">Revenir au motif</span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Montant</b> — l'amende, plus le trajet restant.
+          <span class="decision">Deux lignes, un total en mono dans l'accent doux. Le trajet dû court de la dernière gare atteinte au terminus, en 2e classe, par le même barème que la vente.</span>
+          <span class="code-actuel">l'ajout du trajet dû à l'amende est une règle du code, non écrite dans la documentation : à confirmer par SETRAG.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:59</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">8</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre"><span class="titre" style="padding-left:var(--s-3)">Procès-verbal<small>Express 201 · voiture 4</small></span></div>
+          <div class="m-corps">
+            <div data-demo="etapes" data-depart="2"><ol class="etapes m-etapes" style="--n:3"><span class="ruban"></span><li class="etape"><span class="gare"></span>Motif</li><li class="etape"><span class="gare"></span>Montant</li><li class="etape"><span class="gare"></span>Signature</li></ol></div>
+            <div class="c-msg ok"><b><i data-i="circle-check"></i>Procès-verbal enregistré — n° PV-0001</b>Le procès-verbal existe même s'il n'est pas encore parti.</div>
+            <div class="c-recap"><b>NGUEMA · CNI 04-889-231</b><span>Voyage sans titre de transport · Express 201 · voiture 4 · <span class="tabular">30/09 à 15:59</span></span><span class="tabular">Amende 25 000 FCFA + trajet 17 000 FCFA = 42 000 FCFA</span></div>
+            <div class="champ"><span class="champ-libelle">Signature du contrevenant — facultative</span>
+              <div class="c-signature"><svg viewBox="0 0 260 70" aria-hidden="true"><path d="M6 48c14-26 26-34 30-22s-6 30 4 26 18-38 28-34-4 34 6 30 14-22 22-20 2 18 12 16 18-14 30-16 20 8 34 4 26-10 40-12" fill="none" stroke="var(--c-ink)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><small>Signé à 15:59</small></div>
+            </div>
+            <div class="c-choix3" style="--n:2" role="radiogroup" aria-label="Signature"><span role="radio" aria-checked="true">Faire signer</span><span role="radio" aria-checked="false">Refus de signer</span></div>
+            <div class="c-tags"><span class="tag tag-retard"><i data-i="cloud-upload"></i>en attente d'envoi</span></div>
+          </div>
+          <div class="m-bas"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Terminer</span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Signature</b> — facultative ; le refus se consigne aussi.
+          <span class="decision">Numéro local lisible (PV-0001), numéro définitif attribué à la synchronisation (numérotation continue du réseau, <code>PV-000002</code> après celui de la démo). Le procès-verbal existe dès cet écran, réseau ou pas.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 09 -->
+  <section class="doc-section">
+    <h2><span class="n">09</span>Signaler un incident</h2>
+    <p class="doc-intro">Catégorie, gravité, lieu, description, photos. La gravité règle la place dans la file d'envoi, et l'écran le dit. Un signalement n'est pas une alerte en temps réel : pour une urgence, la radio.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">16:00</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">8</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre logo"><span class="m-grand-titre" style="font-size:24px">Incident</span><div class="actions"><span class="matricule">Express 201</span></div></div>
+          <div class="m-corps c-serre">
+            <div class="champ"><span class="champ-libelle">Catégorie</span>
+              <div class="c-puces" role="radiogroup" aria-label="Catégorie"><span role="radio" aria-checked="false"><i data-i="shield-alert"></i>Sécurité</span><span role="radio" aria-checked="true"><i data-i="wrench"></i>Technique</span><span role="radio" aria-checked="false"><i data-i="user-x"></i>Comportement</span><span role="radio" aria-checked="false"><i data-i="heart-pulse"></i>Médical</span><span role="radio" aria-checked="false"><i data-i="ellipsis"></i>Autre</span></div>
+            </div>
+            <div class="champ"><span class="champ-libelle">Gravité</span>
+              <div class="c-choix3" role="radiogroup" aria-label="Gravité"><span role="radio" aria-checked="false">Information</span><span role="radio" aria-checked="true">Important</span><span role="radio" aria-checked="false">Critique</span></div>
+              <span class="c-aide-champ">Part avant les contrôles et les ventes.</span>
+            </div>
+            <div class="c-replie"><i data-i="map-pin"></i><span>Voiture 3 · après Booué <small>· lieu</small></span><span class="changer-l">Modifier</span></div>
+            <div class="champ"><span class="champ-libelle">Description</span><div class="c-texte">Porte de la voiture 3 bloquée en position ouverte depuis Booué. Voyageurs écartés de la zone.</div></div>
+            <div class="c-photos"><span class="photo"></span><span class="ajout"><i data-i="camera"></i></span><p class="c-note">Photos stockées localement, envoyées à la reconnexion.</p></div>
+          </div>
+          <div class="m-bas avec-onglets"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Enregistrer le signalement</span></div>
+          <nav class="onglets-m c4" data-glisse="a"><a><i data-i="house"></i>Tournée</a><a><i data-i="scan-line"></i>Scanner</a><a><i data-i="list-ordered"></i>Historique<span class="badge">8</span></a><a aria-current="page"><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Signalement</b> — l'incident de la démo : une porte bloquée.
+          <span class="decision">Catégories en cases de 48 px avec icône, plutôt qu'une liste déroulante. La localisation suit la tournée (voiture, dernière gare). En « Critique », un avertissement danger renvoie à la radio du chef de train.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">16:01</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">9</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre logo"><span class="m-grand-titre" style="font-size:24px">Incident</span><div class="actions"><span class="matricule">Express 201</span></div></div>
+          <div class="m-corps">
+            <div class="c-msg"><b><i data-i="info"></i>Signalement enregistré — n° INC-001</b>Enregistré hors couverture réseau. Il partira en tête de file dès le premier signal.</div>
+            <div class="c-tags"><span class="tag tag-neutre"><i data-i="gauge"></i>priorité normale</span><span class="tag tag-retard"><i data-i="cloud-upload"></i>en attente d'envoi</span></div>
+            <p class="c-titre-liste" style="margin-top:var(--s-2)">Signalements de ce terminal</p>
+            <div class="c-journal">
+              <div class="l"><span class="h">16:01</span><span class="qui">INC-001 · Porte de la voiture 3 bloquée en position ouverte</span><span class="ref">Technique · Important</span><span class="tag tag-retard"><i data-i="cloud-upload"></i>en attente</span></div>
+            </div>
+            <div class="c-msg danger"><b><i data-i="triangle-alert"></i>En « Critique »</b>Il passera en tête de file, avant les contrôles et les ventes. Pour une urgence immédiate, prévenez le chef de train par radio : ce signalement n'est pas une alerte temps réel.</div>
+          </div>
+          <div class="m-bas avec-onglets"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Retour au contrôle</span><span class="btn btn-fantome btn-bloc">Nouveau signalement</span></div>
+          <nav class="onglets-m c4" data-glisse="a"><a><i data-i="house"></i>Tournée</a><a><i data-i="scan-line"></i>Scanner</a><a><i data-i="list-ordered"></i>Historique<span class="badge">9</span></a><a aria-current="page"><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Enregistré</b> — numéro local, place dans la file, état d'envoi.
+          <span class="decision">« Retour au contrôle » devient le bouton primaire : c'est ce que l'agent fait neuf fois sur dix. L'encadré du bas reproduit l'avertissement affiché dès qu'on choisit « Critique ».</span>
+          <span class="code-actuel">le code met « Nouveau signalement » en primaire. Et il dit « en tête de file » pour tout signalement hors réseau, même d'importance normale : à corriger.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 10 -->
+  <section class="doc-section">
+    <h2><span class="n">10</span>Hors ligne, et la synchronisation</h2>
+    <p class="doc-intro">Hors ligne est le régime normal, pas une panne. Le bandeau de service dit en permanence l'état du réseau, ce qui attend et l'heure de la dernière confirmation. L'envoi part seul dès que le réseau revient ; un échec ne supprime rien. Un contrôle enregistré ne se modifie jamais.</p>
+
+    <div class="doc-grille g2" style="margin-bottom:var(--s-10)">
+      <div class="doc-carte etats-bandeau" data-theme="light">
+        <h3>Le bandeau de service, ses cinq états</h3>
+        <figure><div class="c-service en-ligne"><i data-i="cloud-check"></i><span><b>En ligne</b> · tout est envoyé</span><span class="fin">synchro <span class="tabular">22:06</span></span></div><figcaption><b>En ligne.</b> Rien n'attend ; l'heure est celle de la dernière confirmation.</figcaption></figure>
+        <figure><div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">7</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div><figcaption><b>Hors ligne.</b> Régime normal en pleine voie. Toucher le bandeau ouvre la file d'envoi.</figcaption></figure>
+        <figure><div class="c-service en-ligne envoi"><i data-i="refresh-cw"></i><span><b>Envoi</b> · <span class="tabular">2</span> sur <span class="tabular">9</span></span><span class="fin">lot <span class="tabular">3</span> sur <span class="tabular">4</span></span></div><figcaption><b>Envoi en cours.</b> Une rame passe sous le bandeau, le temps de l'envoi.</figcaption></figure>
+        <figure><div class="c-service"><i data-i="key-round"></i><span><b>Session non reconnue</b> · <span class="compte">7</span></span><span class="fin">reprise auto.</span></div><figcaption><b>Réseau sans session.</b> L'envoi reprendra dès qu'elle sera rétablie.</figcaption></figure>
+        <figure><div class="c-service echec"><i data-i="circle-alert"></i><span><b>2 en échec</b> · conservés</span><span class="fin">nouvel essai <span class="tabular">30 s</span></span></div><figcaption><b>Échec.</b> Rien n'est perdu ; le terminal réessaie toutes les 30 secondes.</figcaption></figure>
+      </div>
+      <div class="doc-carte etats-bandeau" data-theme="dark">
+        <h3>De nuit</h3>
+        <figure><div class="c-service en-ligne"><i data-i="cloud-check"></i><span><b>En ligne</b> · tout est envoyé</span><span class="fin">synchro <span class="tabular">07:31</span></span></div><figcaption><b>En ligne.</b></figcaption></figure>
+        <figure><div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">2</span> à envoyer</span><span class="fin">synchro <span class="tabular">23:51</span><i data-i="chevron-right"></i></span></div><figcaption><b>Hors ligne.</b></figcaption></figure>
+        <figure><div class="c-service en-ligne envoi"><i data-i="refresh-cw"></i><span><b>Envoi</b> · <span class="tabular">1</span> sur <span class="tabular">2</span></span><span class="fin">lot <span class="tabular">1</span> sur <span class="tabular">1</span></span></div><figcaption><b>Envoi en cours.</b></figcaption></figure>
+        <figure><div class="c-service"><i data-i="key-round"></i><span><b>Session non reconnue</b> · <span class="compte">2</span></span><span class="fin">reprise auto.</span></div><figcaption><b>Réseau sans session.</b></figcaption></figure>
+        <figure><div class="c-service echec"><i data-i="circle-alert"></i><span><b>1 en échec</b> · conservé</span><span class="fin">nouvel essai <span class="tabular">30 s</span></span></div><figcaption><b>Échec.</b></figcaption></figure>
+      </div>
+    </div>
+
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">16:05</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">9</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre logo"><span class="m-grand-titre" style="font-size:24px">Historique</span><div class="actions"><span class="matricule">Express 201</span></div></div>
+          <div class="m-corps">
+            <div class="segment" data-glisse="span:not(.indicateur)" style="width:100%"><span aria-pressed="true">File d'envoi</span><span aria-pressed="false">Contrôles</span><span class="indicateur"></span></div>
+            <table class="c-file serre">
+              <thead><tr><th>Élément</th><th style="text-align:right">Nb</th><th>État</th></tr></thead>
+              <tbody>
+                <tr><td>Incidents</td><td class="n">1</td><td class="etat"><span class="c-etat attente"><i data-i="hourglass"></i>en attente</span></td></tr>
+                <tr><td>Procès-verbaux</td><td class="n">1</td><td class="etat"><span class="c-etat attente"><i data-i="hourglass"></i>en attente</span></td></tr>
+                <tr><td>Ventes à bord</td><td class="n">1</td><td class="etat"><span class="c-etat attente"><i data-i="hourglass"></i>en attente</span></td></tr>
+                <tr><td>Contrôles</td><td class="n">6</td><td class="etat"><span class="c-etat attente"><i data-i="hourglass"></i>en attente</span></td></tr>
+              </tbody>
+            </table>
+            <p class="c-note">Ordre d'envoi : incidents critiques, procès-verbaux, ventes, contrôles. Les ventes partent une par une.</p>
+            <div class="c-msg alerte"><b><i data-i="cloud-off"></i>Aucun réseau — l'envoi partira automatiquement dès le retour du signal.</b>C'est le cas nominal en pleine voie : rien n'est perdu, tout est écrit dans la base du terminal.</div>
+          </div>
+          <div class="m-bas avec-onglets"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain" aria-disabled="true">Envoi impossible sans réseau</span></div>
+          <nav class="onglets-m c4" data-glisse="a"><a><i data-i="house"></i>Tournée</a><a><i data-i="scan-line"></i>Scanner</a><a aria-current="page"><i data-i="list-ordered"></i>Historique<span class="badge">9</span></a><a><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>File d'envoi</b> — ce qui attend, dans l'ordre où cela partira.
+          <span class="decision">Les lignes suivent l'ordre d'envoi fixé par l'exploitation. Hors réseau, le bouton ne promet rien : il dit pourquoi il est inactif.</span>
+          <span class="code-actuel">le code garde le libellé « Envoyer sans attendre », simplement désactivé.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">16:05</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">9</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre logo"><span class="m-grand-titre" style="font-size:24px">Historique</span><div class="actions"><span class="matricule">Express 201</span></div></div>
+          <div class="m-corps">
+            <div class="segment" data-glisse="span:not(.indicateur)" style="width:100%"><span aria-pressed="false">File d'envoi</span><span aria-pressed="true">Contrôles</span><span class="indicateur"></span></div>
+            <div class="c-journal">
+              <div class="l"><span class="h">15:53</span><span class="qui">NDONG Sylvain</span><span class="ref">B-OWE-PV-20260930-000005</span><span class="tag v-refus"><span data-picto="refus"></span>Titre remboursé</span></div>
+              <div class="l"><span class="h">15:51</span><span class="qui">Code non SETRAG</span><span class="ref">B-OWE-PV-20260929-000017</span><span class="tag v-refus"><span data-picto="refus"></span>Signature invalide</span></div>
+              <div class="l"><span class="h">15:50</span><span class="qui">Autre circulation</span><span class="ref">B-OWE-PV-20260928-000014</span><span class="tag v-refus"><span data-picto="refus"></span>Mauvaise desserte</span></div>
+              <div class="l"><span class="h">15:47</span><span class="qui">OBAME Jean</span><span class="ref">B-OWE-PV-20260930-000003</span><span class="tag v-refus"><span data-picto="refus"></span>Hors segment</span></div>
+              <div class="l"><span class="h">15:45</span><span class="qui">MBADINGA Paul</span><span class="ref">B-OWE-PV-20260930-000001</span><span class="tag v-vigilance"><span data-picto="vigilance"></span>Déjà contrôlé</span></div>
+              <div class="l"><span class="h">15:44</span><span class="qui">NZE Antoinette</span><span class="ref">B-OWE-PV-20260930-000004</span><span class="tag v-ok"><span data-picto="ok"></span>Valide</span></div>
+              <div class="sep"><i data-i="check-check"></i>Confirmés à 11:52 · 3 contrôles</div>
+            </div>
+            <p class="c-verrou"><i data-i="lock"></i>Un contrôle enregistré ne se modifie pas et ne se supprime pas depuis le terminal. Un doute se signale ; il ne se corrige pas.</p>
+          </div>
+          <nav class="onglets-m c4" data-glisse="a"><a><i data-i="house"></i>Tournée</a><a><i data-i="scan-line"></i>Scanner</a><a aria-current="page"><i data-i="list-ordered"></i>Historique<span class="badge">9</span></a><a><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Contrôles</b> — un journal, pas une liste d'édition.
+          <span class="decision">Aucune ligne n'offre de modification, de suppression ni de glissement : ce qui ressemble à un geste d'édition n'existe pas. Le verdict y garde sa forme en miniature.</span>
+          <span class="regle">invariante du projet, vérifiée par la matrice de droits.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">22:04</span><span class="reseau"><i data-i="signal"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service en-ligne envoi"><i data-i="refresh-cw"></i><span><b>Envoi</b> · <span class="tabular">2</span> sur <span class="tabular">9</span></span><span class="fin">lot <span class="tabular">3</span> sur <span class="tabular">4</span></span></div>
+          <div class="m-barre logo"><span class="m-grand-titre" style="font-size:24px">Historique</span><div class="actions"><span class="matricule">Express 201</span></div></div>
+          <div class="m-corps">
+            <div class="segment" data-glisse="span:not(.indicateur)" style="width:100%"><span aria-pressed="true">File d'envoi</span><span aria-pressed="false">Contrôles</span><span class="indicateur"></span></div>
+            <div class="c-progres" style="--p:.22"><div class="haut"><span>Lot 3 sur 4</span><span class="tabular">2 / 9</span></div><span class="voie"><span class="ruban"></span></span><small>Ventes à bord · les lots sont idempotents : une reprise ne crée pas de doublon.</small></div>
+            <table class="c-file serre">
+              <thead><tr><th>Élément</th><th style="text-align:right">Nb</th><th>État</th></tr></thead>
+              <tbody>
+                <tr><td>Incidents</td><td class="n">1</td><td class="etat"><span class="c-etat envoye"><i data-i="circle-check"></i>envoyé</span></td></tr>
+                <tr><td>Procès-verbaux</td><td class="n">1</td><td class="etat"><span class="c-etat envoye"><i data-i="circle-check"></i>envoyé</span></td></tr>
+                <tr><td>Ventes à bord</td><td class="n">1</td><td class="etat"><span class="c-etat priorite"><i data-i="send"></i>en cours</span></td></tr>
+                <tr><td>Contrôles</td><td class="n">6</td><td class="etat"><span class="c-etat attente"><i data-i="hourglass"></i>en attente</span></td></tr>
+              </tbody>
+            </table>
+            <p class="c-note">Envoi automatique : 7 éléments en attente de confirmation. Aucune action n'est requise, l'application les transmet et réessaie seule.</p>
+          </div>
+          <div class="m-bas avec-onglets"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain en-cours">Envoyer sans attendre</span></div>
+          <nav class="onglets-m c4" data-glisse="a"><a><i data-i="house"></i>Tournée</a><a><i data-i="scan-line"></i>Scanner</a><a aria-current="page"><i data-i="list-ordered"></i>Historique<span class="badge">7</span></a><a><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Envoi en cours</b> — à Franceville, le réseau revient.
+          <span class="decision">L'avancement se lit sur une voie que le ruban remplit ; le bouton garde son libellé, un ruban fin passe dessous. L'agent n'a rien à faire : le bouton ne sert qu'à forcer une reprise.</span>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="tels" style="margin-top:var(--s-8)">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">22:06</span><span class="reseau"><i data-i="signal"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service en-ligne"><i data-i="cloud-check"></i><span><b>En ligne</b> · tout est envoyé</span><span class="fin">synchro <span class="tabular">22:06</span></span></div>
+          <div class="m-barre logo"><span class="m-grand-titre" style="font-size:24px">Historique</span><div class="actions"><span class="matricule">Express 201</span></div></div>
+          <div class="m-corps">
+            <div class="c-msg ok"><b><i data-i="check-check"></i>Tournée synchronisée — 12 éléments confirmés.</b>La purge des données locales est maintenant possible.</div>
+            <p class="c-titre-liste">Ventes à bord</p>
+            <div class="c-journal">
+              <div class="l"><span class="h">15:49</span><span class="qui">Booué → Franceville</span><span class="ref">V-OWE-PV-20260930-000007 · était B-0001</span><span class="tabular" style="font-weight:700">17 000 FCFA</span></div>
+            </div>
+            <div class="c-msg alerte"><b><i data-i="triangle-alert"></i>1 titre en conflit.</b>Un même titre a été contrôlé sur deux terminaux. L'arbitrage est humain.</div>
+          </div>
+          <div class="m-bas avec-onglets"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Voir le conflit</span><span class="btn btn-danger btn-bloc">Purger les données locales</span></div>
+          <nav class="onglets-m c4" data-glisse="a"><a><i data-i="house"></i>Tournée</a><a><i data-i="scan-line"></i>Scanner</a><a aria-current="page"><i data-i="list-ordered"></i>Historique</a><a><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Tournée synchronisée</b> — la vente a reçu son numéro définitif.
+          <span class="decision">L'ancien numéro provisoire reste écrit à côté du définitif : l'agent retrouve la vente qu'il a faite. La purge demande une confirmation (« Effacer les données voyageurs de ce terminal ? »), les contrôles restent journalisés côté système.</span>
+          <span class="code-actuel">numéro définitif : exemple au format réel <code>V-{point de vente}-{date}-{séquence}</code>. En cas d'écart de prix recalculé, les deux montants s'affichent côte à côte (aucun écart ici).</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">22:07</span><span class="reseau"><i data-i="signal"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service en-ligne"><i data-i="cloud-check"></i><span><b>En ligne</b> · tout est envoyé</span><span class="fin">synchro <span class="tabular">22:06</span></span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">Conflits à arbitrer<small><span class="tabular">1</span> titre en conflit</small></span></div>
+          <div class="m-corps">
+            <div class="c-msg alerte"><b><i data-i="triangle-alert"></i>1 titre en conflit — arbitrage humain requis.</b>Un même titre a été contrôlé sur deux terminaux. Le système ne peut pas distinguer une fraude d'un second contrôle légitime : il signale, il ne tranche pas.</div>
+            <div class="c-resultats">
+              <div class="c-resultat"><b>MBADINGA Paul</b><span class="ref">B-OWE-PV-20260930-000001</span><p>C-402 à <span class="tabular">08:51</span> · autre terminal à <span class="tabular">08:49</span></p><span class="tag tag-annule"><i data-i="circle-alert"></i>suspect</span></div>
+            </div>
+            <p class="c-note">La liste n'existe qu'après synchronisation : les conflits naissent de la confrontation des terminaux. Hors réseau, l'écran le dit plutôt que d'afficher une liste vide.</p>
+          </div>
+          <div class="m-bas"><span class="btn btn-fantome btn-bloc">Retour à l'historique</span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Conflits</b> — le conflit de la démo : deux passages à 2 minutes d'écart.
+          <span class="decision">« Suspect » sous 10 minutes d'écart, « à arbitrer » au-delà : le mot est écrit, avec une icône. C-402 est le second contrôleur de la démonstration.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">22:08</span><span class="reseau"><i data-i="signal"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service en-ligne"><i data-i="cloud-check"></i><span><b>En ligne</b> · tout est envoyé</span><span class="fin">synchro <span class="tabular">22:06</span></span></div>
+          <div class="m-barre"><span class="retour"><i data-i="chevron-left"></i></span><span class="titre">MBADINGA Paul<small>Express 201 · 2e classe · 1A</small></span></div>
+          <div class="m-corps">
+            <div class="c-msg danger"><b><i data-i="circle-alert"></i>Écart suspect — 2 min entre les deux contrôles.</b>Deux personnes ont vraisemblablement présenté le même titre.</div>
+            <table class="c-tab-controles">
+              <thead><tr><th>Heure</th><th>Arrêt</th><th>Résultat</th></tr></thead>
+              <tbody>
+                <tr><td class="tabular">08:49</td><td>Owendo Virié</td><td><span class="tag v-ok"><span data-picto="ok"></span>Valide</span></td></tr>
+                <tr><td class="tabular">08:51</td><td>Ntoum</td><td><span class="tag v-ok"><span data-picto="ok"></span>Valide</span></td></tr>
+              </tbody>
+            </table>
+            <p class="c-note">2 min d'écart : un second contrôle légitime est peu vraisemblable sur un intervalle aussi court. Cette lecture est une aide, pas un verdict.</p>
+            <div class="c-msg"><b><i data-i="info"></i>Clore un conflit relève du chef de gare.</b>Un contrôle enregistré ne se réécrit pas depuis le terrain. Vous pouvez signaler l'écart, avec votre observation.</div>
+          </div>
+          <div class="m-bas"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Signaler pour enquête</span><span class="btn btn-secondaire btn-bloc">Établir un PV a posteriori</span></div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Détail d'un conflit</b> — l'agent signale, le chef de gare tranche.
+          <span class="decision">Pour un contrôleur, « Signaler pour enquête » devient le bouton primaire, puisqu'il ne peut pas clore. Le chef de gare voit à sa place « Accepter — double contrôle légitime ».</span>
+          <span class="code-actuel">le code n'a aucun bouton primaire pour le contrôleur.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 11 -->
+  <section class="doc-section">
+    <h2><span class="n">11</span>De nuit, dans l'Omnibus</h2>
+    <p class="doc-intro">L'Omnibus 202 part de Franceville à 17:30 et arrive à Owendo Virié à 07:30 le lendemain (livret de démonstration). Vers minuit et demi il est entre Offoué et Lopé, sans réseau. Les écrans passent aux tokens sombres de la charte : aucun aplat clair, des verdicts sur fonds sourds, un texte clair qui n'éblouit pas.</p>
+    <div class="tels">
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" data-theme="dark">
+          <div class="statut"><span class="tabular">00:34</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">2</span> à envoyer</span><span class="fin">synchro <span class="tabular">23:51</span><i data-i="chevron-right"></i></span></div>
+          <div class="m-barre logo"><span data-logo="compact" data-theme="negatif"></span><div class="actions"><span class="matricule"><i data-i="user"></i>C-401</span><span class="action" aria-label="Verrouiller le terminal"><i data-i="lock"></i></span></div></div>
+          <div class="m-corps">
+            <div class="c-desserte">
+              <div class="prochain-tete"><span><b>Omnibus 202</b> · Mer. 30 sept. · <span class="tabular">23</span> gares</span></div>
+              <div class="trajet-heures"><div class="trajet-pt"><b>17:30</b><span>Franceville</span></div><div class="trajet-milieu"><span class="voie" style="--p:.534"><span class="ruban"></span></span><small>PK 312</small></div><div class="trajet-pt fin"><b>07:30<sup>+1</sup></b><span>Owendo Virié</span></div></div>
+              <div class="c-position"><i data-i="map-pin"></i><span>Après <b>Offoué</b> · <span class="tabular">00:20</span></span><span class="changer">Changer</span></div>
+            </div>
+            <div class="c-compteurs">
+              <div class="c-compteur"><b>3</b><span>contrôlés</span></div>
+              <div class="c-compteur"><b>6</b><span>attendus</span></div>
+              <div class="c-compteur attente"><b>2</b><span><i data-i="cloud-upload"></i>à envoyer</span></div>
+            </div>
+            <p class="c-rame-tete">Voitures <span>ruban : part contrôlée</span></p>
+            <div class="c-rame" style="--n:4">
+              <div class="c-voiture"><b>V1</b><small>1re</small><span class="n vide">—</span></div>
+              <div class="c-voiture ici" style="--p:.5"><b>V2</b><small>2e · ici</small><span class="n">3/6</span></div>
+              <div class="c-voiture"><b>V3</b><small>2e</small><span class="n vide">—</span></div>
+              <div class="c-voiture"><b>V4</b><small>2e</small><span class="n vide">—</span></div>
+            </div>
+            <div class="liste"><div class="ligne" style="min-height:48px"><i data-i="moon"></i><span>Thème de nuit<small>auto. 18:30 → 06:00, heures à fixer</small></span><span class="fin"><span class="interrupteur on"></span></span></div></div>
+          </div>
+          <div class="m-bas avec-onglets"><span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Reprendre le contrôle</span></div>
+          <nav class="onglets-m c4" data-glisse="a"><a aria-current="page"><i data-i="house"></i>Tournée</a><a><i data-i="scan-line"></i>Scanner</a><a><i data-i="list-ordered"></i>Historique<span class="badge">2</span></a><a><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Tournée de nuit</b> — l'Omnibus et ses quatre voitures.
+          <span class="decision">Même écran, composition de l'Omnibus (V1 1re, V2–V4 2e). La démo provisionne la prochaine desserte ouverte : selon l'heure, ce sont ces six voyageurs-là. Voiture supposée : V2.</span>
+          <span class="code-actuel">le code n'a de thème sombre que sur le viseur ; aucune bascule, ni manuelle ni automatique.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" data-theme="dark">
+          <div class="statut"><span class="tabular">00:36</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">2</span> à envoyer</span><span class="fin">synchro <span class="tabular">23:51</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-viseur-tete"><div><b>Voiture 2 · 2e classe</b><small>Omnibus 202 · après Offoué</small></div></div>
+          <div class="c-viseur">
+            <div class="presente"><span data-aztec="57"></span></div>
+            <div class="cadre"><i></i><i></i><i></i><i></i></div>
+            <div class="consigne">Présentez le code Aztec dans le cadre<span class="voie attente sur-encre"><span class="ruban"></span></span></div>
+          </div>
+          <div class="c-viseur-pied"><span><b>3</b> contrôlés</span><span class="attente"><b>2</b> à envoyer</span></div>
+          <div class="c-commandes"><span class="on"><i data-i="flashlight"></i>Lampe</span><span><i data-i="train-front"></i>Voiture 2</span><span><i data-i="search"></i>Chercher</span><span><i data-i="keyboard"></i>Saisir</span></div>
+          <nav class="onglets-m c4" data-glisse="a"><a><i data-i="house"></i>Tournée</a><a aria-current="page"><i data-i="scan-line"></i>Scanner</a><a><i data-i="list-ordered"></i>Historique<span class="badge">2</span></a><a><i data-i="triangle-alert"></i>Incident</a><span class="indicateur"></span></nav>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Viseur de nuit</b> — la lampe allumée, et c'est écrit.
+          <span class="decision">La lampe éclaire le billet papier, pas l'agent. Son état se lit par le fond plein de la case, pas par la seule couleur de l'icône.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" data-theme="dark">
+          <div class="statut"><span class="tabular">00:37</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">2</span> à envoyer</span><span class="fin">synchro <span class="tabular">23:51</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verdict v-ok"><span data-picto="ok"></span><p class="source">Signature vérifiée localement</p><h1>Valide</h1></div>
+          <div class="m-corps" style="padding-top:var(--s-4)">
+            <div class="billet c-billet">
+              <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span>Omnibus 202 · Mer. 30 sept.</span></div>
+              <span class="qui">MOUSSAVOU Édith</span>
+              <div class="billet-trajet"><div><b>17:30</b><span>Franceville</span></div><div class="milieu"><span class="voie sur-encre pleine"><span class="ruban"></span></span></div><div><b>00:50</b><span>Lopé</span></div></div>
+              <div class="billet-grille" style="grid-template-columns:repeat(3,1fr)"><div><span>Voiture</span><b>2</b></div><div><span>Place</span><b>2B</b></div><div><span>Classe</span><b>2e</b></div></div>
+              <span class="ref">N° B-OWE-PV-20260930-000006</span>
+            </div>
+            <div class="c-tags"><span class="tag v-ok"><i data-i="circle-check"></i>segment couvert</span><span class="tag v-ok"><i data-i="circle-check"></i>1er contrôle</span></div>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Valider et scanner le suivant</span>
+            <p class="c-auto">Retour au viseur dans <span class="tabular">1,5</span> s · touchez l'écran pour rester</p>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Valide, de nuit</b> — elle descend à Lopé dans treize minutes.
+          <span class="decision">Le verdict garde sa forme et son mot ; seul le fond s'assombrit. Le billet ne change pas : il est déjà sur fond encre.</span>
+        </figcaption>
+      </figure>
+
+      <figure class="ecran-m">
+        <div class="tel"><div class="tel-ecran" data-theme="dark">
+          <div class="statut"><span class="tabular">00:39</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">3</span> à envoyer</span><span class="fin">synchro <span class="tabular">23:51</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Signature vérifiée localement</p><h1>Signature invalide</h1><p class="motif">Signature non valide — ce code n'a pas été émis par SETRAG</p></div>
+          <div class="m-corps" style="padding-top:var(--s-4)">
+            <div class="c-carte-titre vide"><b>Aucune identité</b><p>Un code que la clé SETRAG ne reconnaît pas ne dit rien de son porteur.</p></div>
+            <div class="c-tags"><span class="tag v-refus"><i data-i="octagon-x"></i>signature non valide</span></div>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Établir un procès-verbal</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Vendre un titre à bord</span>
+            <span class="btn btn-fantome btn-bloc">Fermer sans enregistrer</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div></div>
+        <figcaption class="tel-legende"><b>Refus, de nuit</b> — hachures et octogone, sur fond sourd.
+          <span class="decision">Le rouge sombre reste lisible sans s'allumer. Le son de refus est une proposition à régler : des voyageurs endormis ne doivent pas être réveillés à chaque contrôle.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================ 12 -->
+  <section class="doc-section">
+    <h2><span class="n">12</span>Le terrain</h2>
+    <p class="doc-intro">Quatre contraintes que la billetterie n'a pas. Elles expliquent la plupart des écarts avec l'app voyageur : des cibles plus grandes, les actions en bas, un bandeau permanent, peu de mouvement.</p>
+    <div class="terrain" style="display:grid;grid-template-columns:auto 1fr;gap:var(--s-8);align-items:start">
+      <figure class="ecran-m">
+        <div class="tel" style="position:relative"><div class="tel-ecran">
+          <div class="statut"><span class="tabular">15:54</span><span class="reseau"><i data-i="signal-zero"></i><i data-i="battery-medium"></i></span></div><div class="ilot"></div>
+          <div class="c-service"><i data-i="cloud-off"></i><span><b>Hors ligne</b> · <span class="compte">7</span> à envoyer</span><span class="fin">synchro <span class="tabular">11:52</span><i data-i="chevron-right"></i></span></div>
+          <div class="c-verdict v-refus"><span data-picto="refus"></span><p class="source">Signature vérifiée localement</p><h1>Hors segment</h1><p class="motif">Le voyageur circule au-delà du parcours payé</p></div>
+          <div class="m-corps" style="padding-top:var(--s-4)">
+            <div class="billet c-billet">
+              <div class="billet-tete"><span data-logo="compact" data-theme="negatif"></span><span>Express 201 · Mer. 30 sept.</span></div>
+              <span class="qui">OBAME Jean</span>
+              <div class="billet-trajet"><div><b>08:00</b><span>Owendo Virié</span></div><div class="milieu"><span class="voie sur-encre pleine"><span class="ruban"></span></span></div><div><b>14:40</b><span>Lopé</span></div></div>
+            </div>
+          </div>
+          <div class="m-bas">
+            <span class="btn btn-primaire btn-lg btn-bloc btn-terrain">Régulariser — vendre le complément</span>
+            <span class="btn btn-secondaire btn-bloc btn-terrain">Établir un procès-verbal</span>
+            <span class="btn btn-fantome btn-bloc">Fermer sans enregistrer</span>
+          </div>
+          <div class="barre-accueil"></div>
+        </div>
+        <div class="pouce" style="inset:8px"><div class="z z1"><span>lire</span></div><div class="z z2"><span>atteignable</span></div><div class="z z3"><span>au pouce : agir</span></div></div>
+        </div>
+        <figcaption class="tel-legende"><b>Zones du pouce</b>, main droite, terminal de 6 pouces.
+          <span class="decision">Le haut se lit, le bas s'actionne. Aucune action d'un verdict ne se trouve dans le tiers supérieur.</span>
+        </figcaption>
+      </figure>
+      <div class="doc-grille g2">
+        <div class="doc-carte"><h3><i data-i="hand"></i>À une main, parfois avec des gants</h3>
+          <ul class="doc-liste">
+            <li><span><b>56 px</b> pour toute action de terrain (verdict, commandes du viseur, formulaires), 48 px pour les choix, jamais moins de 44 px.</span></li>
+            <li><span><b>Les actions en bas</b>, le bouton principal au-dessus des onglets ou de la barre d'accueil.</span></li>
+            <li><span><b>Aucun geste caché</b> : ni glissement, ni appui long, ni double tape. Tout passe par un bouton écrit.</span></li>
+            <li><span><b>8 px au moins</b> entre deux cibles voisines : un doigt ganté appuie large.</span></li>
+            <li><span><b>Pas de saisie libre quand un choix suffit</b> : motifs, catégories, classes et raccourcis de billets en cases.</span></li>
+          </ul>
+        </div>
+        <div class="doc-carte"><h3><i data-i="sun"></i>En plein soleil, sur le quai</h3>
+          <ul class="doc-liste">
+            <li><span><b>Le mot du verdict en 36 px gras</b>, sa forme en 62 px : lisibles à bout de bras.</span></li>
+            <li><span><b>Texte en encre sur fond doux</b> (contraste des tokens *-ink sur *-soft), jamais de texte blanc sur une teinte moyenne.</span></li>
+            <li><span><b>Pas de gris pâle pour une information</b> : <code>ink-faint</code> reste réservé au texte de 18 px et plus, comme le veut la charte.</span></li>
+            <li><span><b>Proposé : un mode « contraste renforcé »</b> — bordures pleines, texte muted passé en ink. <span class="a-confirmer">à valider</span></span></li>
+          </ul>
+        </div>
+        <div class="doc-carte"><h3><i data-i="battery-medium"></i>Batterie, sur quatorze heures de tournée</h3>
+          <ul class="doc-liste">
+            <li><span><b>Caméra allumée seulement sur le viseur</b>, coupée dès que le verdict s'affiche ou que l'écran change.</span></li>
+            <li><span><b>Thème sombre la nuit</b> : moins de lumière émise, et un écran OLED consomme moins.</span></li>
+            <li><span><b>Aucune animation en boucle</b> hors attente réelle (caméra, envoi). Le mouvement réduit du système est respecté.</span></li>
+            <li><span><b>Envois groupés</b> : une tentative au retour du réseau, puis toutes les 30 s après un échec, pas d'interrogation permanente.</span></li>
+            <li><span><b>Proposé : écran maintenu allumé sur le viseur seulement</b> (Screen Wake Lock), absent du code. <span class="a-confirmer">à valider</span></span></li>
+          </ul>
+        </div>
+        <div class="doc-carte"><h3><i data-i="cloud-off"></i>Sans réseau, sur une grande partie de la ligne</h3>
+          <ul class="doc-liste">
+            <li><span><b>Tout se vérifie sur le terminal</b> : signature Ed25519, portée, manifeste. Le réseau n'est exigé qu'à l'ouverture de session.</span></li>
+            <li><span><b>Chaque écran dit de quand datent ses données</b> : âge du manifeste, heure de la dernière synchro.</span></li>
+            <li><span><b>Rien ne se perd</b> : opération et mise en file écrites ensemble, identifiant client, échecs conservés.</span></li>
+            <li><span><b>Rien ne ment</b> : la liste des conflits n'apparaît pas hors réseau, le mobile money n'est jamais présenté comme payé.</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 13 -->
+  <section class="doc-section">
+    <h2><span class="n">13</span>La marque sur le terminal</h2>
+    <p class="doc-intro">Moins de marque que dans la billetterie, et au même endroit à chaque fois. Le logo identifie l'application officielle ; le ruban garde son seul sens, « ça avance, c'est choisi, vous êtes ici ». Il ne juge jamais un titre : un verdict n'est jamais aux couleurs de la marque.</p>
+    <table class="specs">
+      <thead><tr><th>Où</th><th>Ce qui apparaît</th><th>Pourquoi</th></tr></thead>
+      <tbody>
+        <tr><td>Démarrage à froid</td><td>Logo animé (Lottie), une fois</td><td>Même ouverture que l'app voyageur ; ne retient jamais l'agent</td></tr>
+        <tr><td>Connexion, écrans racines</td><td>Logo compact dans la barre d'app ; négatif en thème sombre</td><td>Reconnaître l'application officielle, y compris face à une copie</td></tr>
+        <tr><td>Tournée</td><td>Voie de la desserte, ruban jusqu'à la position du train ; ruban sous chaque voiture</td><td>« Où en est-on » : le train, puis le contrôle</td></tr>
+        <tr><td>Onglets, segments, étapes</td><td>Ruban au-dessus de l'onglet courant, ruban des étapes (vente, procès-verbal)</td><td>Les composants de la billetterie, sans modification</td></tr>
+        <tr><td>Viseur, envoi, bouton en cours</td><td>Une rame qui passe</td><td>Seulement pendant une attente réelle</td></tr>
+        <tr><td>Verdict, titre remis</td><td>Le billet, objet encre, logo négatif ; le ruban traverse la découpe à l'émission</td><td>L'objet que tient le voyageur, reconnu d'un coup d'œil</td></tr>
+        <tr><td>États vides</td><td>Le S gris, rame à quai</td><td>Rien ne roule encore</td></tr>
+        <tr><td>Jamais</td><td>Ruban ou couleurs de marque sur un verdict, une pastille d'état, un montant</td><td>La marque ne tranche pas ; la sémantique a ses propres teintes</td></tr>
+      </tbody>
+    </table>
+
+    <div class="doc-grille g2" style="margin-top:var(--s-8)">
+      <div class="doc-carte">
+        <h3>Pas d'assistant sur le terminal</h3>
+        <p>Ruban reste l'assistant du voyageur. Côté contrôleur, il n'apporterait rien au terrain, et il y poserait des problèmes.</p>
+        <ul class="doc-liste" style="margin-top:var(--s-3)">
+          <li><span><b>Pas de réseau</b> là où l'on contrôle : un assistant qui exige le réseau serait absent au moment où on l'appellerait.</span></li>
+          <li><span><b>Un verdict doit être déterministe et vérifiable</b> : signature, portée, manifeste. Aucun intermédiaire génératif entre le code et la décision.</span></li>
+          <li><span><b>Les mains sont prises</b> et le temps compté : l'agent lit un mot, il ne converse pas.</span></li>
+          <li><span><b>Les données voyageurs</b> (noms, pièces d'identité des procès-verbaux) n'ont pas à partir vers un service tiers.</span></li>
+          <li><span><b>Ce qu'on demanderait à un assistant</b> — barème, motifs, marche à suivre — est déjà embarqué, sous forme de données fixes.</span></li>
+        </ul>
+        <p style="margin-top:var(--s-3)">Le signe de Ruban n'apparaît donc nulle part dans le terminal. Une aide hors ligne statique (fiches de procédure) pourrait venir plus tard, si les contrôleurs la demandent.</p>
+      </div>
+      <div class="doc-carte">
+        <h3>Ce qui vient de la billetterie, tel quel</h3>
+        <ul class="doc-liste">
+          <li><span>Cadre, barre d'app, grand titre des écrans racines, feuille du bas.</span></li>
+          <li><span>Onglets avec ruban, segments à fond glissant, étapes à ruban.</span></li>
+          <li><span>Billet encre, voie et découpe, code Aztec (dessin fictif ici).</span></li>
+          <li><span>Choix en cartes (classes, motifs), champs de 48 à 52 px, pastilles d'état avec icône et mot.</span></li>
+          <li><span>Liste des gares sur la voie, avec leurs points kilométriques.</span></li>
+          <li><span>État vide au S gris, bouton en cours au ruban fin.</span></li>
+        </ul>
+        <h3 style="margin-top:var(--s-5)">Ce qui est propre au terminal</h3>
+        <ul class="doc-liste">
+          <li><span>Bandeau de service permanent, sous la barre d'état.</span></li>
+          <li><span>Viseur sombre et commandes au pouce.</span></li>
+          <li><span>Quatre familles de verdict : forme, mot, texture, retour physique.</span></li>
+          <li><span>Rame des voitures, plan de voiture, journal non modifiable, file d'envoi.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ 14 -->
+  <section class="doc-section">
+    <h2><span class="n">14</span>Décisions à valider</h2>
+    <p class="doc-intro">Les choix que ces maquettes font à votre place. Pour chacun, la proposition retenue ici est signalée ; les autres options restent ouvertes.</p>
+    <ol class="decisions">
+      <li><h4>Navigation</h4><p>Quatre onglets sur les écrans racines (Tournée, Scanner, Historique, Incident) ; les sous-écrans (vente, procès-verbal, recherche, conflits, verdicts) les masquent et portent un retour, comme l'app voyageur.</p><div class="options"><span class="reco">4 onglets, masqués hors racines</span><span>onglets partout (code actuel)</span><span>pas d'onglets : le viseur comme écran d'accueil</span></div></li>
+      <li><h4>Bandeau de service</h4><p>Un bandeau permanent de 44 px sous la barre d'état : réseau, nombre à envoyer, heure de la dernière synchro. Il ouvre la file d'envoi.</p><div class="options"><span class="reco">bandeau permanent</span><span>pastille dans la barre d'app (code actuel)</span></div></li>
+      <li><h4>Retour automatique après « Valide »</h4><p>Enregistrer et revenir au viseur après 1,5 s, annulable d'un toucher, pour contrôler en rafale.</p><div class="options"><span class="reco">retour automatique</span><span>validation manuelle (code actuel)</span></div></li>
+      <li><h4>Quatre familles de verdict</h4><p>Cercle, triangle, octogone, cadre en tirets ; hachures pour les refus. « Clé hors service » passe en « à vérifier » et « Code illisible » en « lecture impossible » : le code les traite en refus et propose un procès-verbal.</p><div class="options"><span class="reco">4 familles</span><span>3 tons du code (succès, alerte, danger)</span></div></li>
+      <li><h4>Sons et vibrations</h4><p>Le code vibre et n'émet aucun son. Proposé : un son par famille, une vibration longue pour les refus, rien pour la lecture impossible, et « Abonnement valide » qui vibre comme « Valide ». Volume et coupure de nuit à régler avec les contrôleurs.</p><div class="options"><span class="reco">sons proposés, désactivables</span><span>vibration seule</span></div></li>
+      <li><h4>Thème sombre</h4><p>Le viseur reste toujours sombre. Le reste de l'application bascule seul à la tombée de la nuit, heure à fixer, avec un interrupteur manuel.</p><div class="options"><span class="reco">automatique + manuel</span><span>suivre le réglage du téléphone</span><span>manuel seulement</span></div></li>
+      <li><h4>Assistant</h4><p>Aucun assistant sur le terminal, pour les raisons de la section 13.</p><div class="options"><span class="reco">aucun</span><span>aide hors ligne statique plus tard</span></div></li>
+      <li><h4>Dernière gare atteinte</h4><p>Le terminal la propose d'après l'horaire embarqué, l'agent la confirme. Aujourd'hui, aucun écran ne la fait avancer, ce qui empêche le verdict « hors segment » en route.</p><div class="options"><span class="reco">proposée par l'horaire, confirmée par l'agent</span><span>saisie manuelle seule</span><span>avance automatique sans confirmation</span></div></li>
+      <li><h4>Progression par voiture et plan de voiture</h4><p>Suppose que le manifeste porte la voiture de chaque titre. Les titres vendus au guichet ne l'ont pas aujourd'hui (<code>coachLabel</code> absent). Le sélecteur de voiture suivrait la composition réelle (6 voitures pour l'Express, 4 pour l'Omnibus).</p><div class="options"><span class="reco">ajouter la voiture au manifeste</span><span>garder une seule voiture courante</span></div></li>
+      <li><h4>« Contrôlés » : titres ou passages</h4><p>Compter les titres distincts contrôlés (5 sur 6), pas le nombre de passages.</p><div class="options"><span class="reco">titres distincts</span><span>passages (code actuel)</span></div></li>
+      <li><h4>Nom des trains</h4><p>« Express 201 », « Omnibus 202 », comme sur le billet, au lieu de « TR-201 ».</p><div class="options"><span class="reco">nom du billet</span><span>code interne</span></div></li>
+      <li><h4>Barème des amendes et trajet dû</h4><p>Montants provisoires du système (25 000, 15 000, 8 000 et 10 000 FCFA) et ajout du trajet restant à l'amende : deux règles à arrêter par SETRAG. <span class="a-confirmer">à confirmer par SETRAG</span></p></li>
+      <li><h4>Titre vendu à bord sans code Aztec</h4><p>Le terminal ne peut pas signer. Le titre remis porte une référence provisoire jusqu'à la synchronisation ; le voyageur peut-il voyager avec ? Faut-il l'envoyer par SMS au retour du réseau ?</p><div class="options"><span class="reco">référence provisoire, dite comme telle</span><span>à définir avec SETRAG</span></div></li>
+      <li><h4>Suite des refus de bonne foi</h4><p>Pour « Mauvaise desserte » et « Expiré », le code propose d'abord un procès-verbal. Faut-il proposer d'abord la vente, comme pour « Hors segment » ?</p><div class="options"><span>procès-verbal d'abord (code)</span><span>vente d'abord</span></div></li>
+      <li><h4>Bouton principal, la nuit</h4><p>Dans les tokens sombres, le bouton principal devient un aplat bleu clair : c'est la plus grande surface lumineuse d'un écran de nuit. Faut-il, de nuit, un bouton principal plus sourd ?</p><div class="options"><span class="reco">tokens sombres tels quels</span><span>variante de nuit plus sourde</span></div></li>
+      <li><h4>Mode « contraste renforcé »</h4><p>Un réglage pour le plein soleil : bordures pleines, textes secondaires passés en encre.</p><div class="options"><span class="reco">à prévoir</span><span>inutile avec les tokens actuels</span></div></li>
+    </ol>
+  </section>
+</main>
+
+<footer class="doc-pied">
+  <span>SETRAG — contrôle à bord. Maquettes à valider. Voyageurs, procès-verbal, incident et conflit de la démonstration ; gares, PK et compositions du référentiel ; horaires du livret de démonstration ; codes Aztec fictifs.</span>
+  <span><a href="mobile.html">← App voyageur</a></span>
+</footer>
+</body>
+</html>
