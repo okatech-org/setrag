@@ -47,6 +47,7 @@ import type * as functions_rollup from "../functions/rollup.js";
 import type * as functions_sales from "../functions/sales.js";
 import type * as functions_trips from "../functions/trips.js";
 import type * as functions_wallet from "../functions/wallet.js";
+import type * as functions_walletStorage from "../functions/walletStorage.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_aztecRender from "../lib/aztecRender.js";
@@ -179,6 +180,7 @@ declare const fullApi: ApiFromModules<{
   "functions/sales": typeof functions_sales;
   "functions/trips": typeof functions_trips;
   "functions/wallet": typeof functions_wallet;
+  "functions/walletStorage": typeof functions_walletStorage;
   http: typeof http;
   "lib/auth": typeof lib_auth;
   "lib/aztecRender": typeof lib_aztecRender;

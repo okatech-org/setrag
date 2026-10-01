@@ -16,7 +16,11 @@ type WalletPassResult =
       provider: "apple"
       filename: string
       bytes: ArrayBuffer
+      url: string
     }
+
+/** Durée de vie du fichier .pkpass déposé pour l'app mobile. */
+const DUREE_PASS_APPLE_MS = 10 * 60 * 1000
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name]?.trim()
@@ -81,10 +85,23 @@ export const createPass = action({
         "APPLE_WALLET_WWDR_CERTIFICATE_BASE64"
       ),
     })
+    const bytes = Uint8Array.from(pass).buffer
+    const storageId = await ctx.storage.store(
+      new Blob([bytes], { type: "application/vnd.apple.pkpass" })
+    )
+    // L'app mobile ouvre le pass par son URL ; elle ne vit que dix minutes.
+    await ctx.scheduler.runAfter(
+      DUREE_PASS_APPLE_MS,
+      internal.functions.walletStorage.effacerPass,
+      { storageId }
+    )
+    const url = await ctx.storage.getUrl(storageId)
+    if (!url) throw new Error("Le billet Wallet n’a pas pu être préparé.")
     return {
       provider: "apple" as const,
       filename: `billet-${data.number}.pkpass`,
-      bytes: Uint8Array.from(pass).buffer,
+      bytes,
+      url,
     }
   },
 })
