@@ -7,6 +7,7 @@ import { cn } from "@workspace/ui/lib/utils"
 
 import { ApparenceProvider, useApparenceCourante } from "./apparence"
 import { BandeauService } from "./bandeau-service"
+import { EcranAllume } from "./ecran-allume"
 import { estRacine, Onglets } from "./onglets"
 
 /**
@@ -15,7 +16,8 @@ import { estRacine, Onglets } from "./onglets"
  *
  * Le viseur demande un écran entièrement sombre, jour comme nuit — la caméra
  * montre une image sombre, un fond clair éblouirait dans une voiture éteinte.
- * Le verdict, lui, recouvre tout et masque les onglets.
+ * Le verdict, lui, recouvre tout et masque les onglets. Pendant la tournée,
+ * l'écran reste allumé (`EcranAllume`).
  */
 function Cadre({ children }: { children: ReactNode }) {
   const chemin = usePathname()
@@ -28,6 +30,7 @@ function Cadre({ children }: { children: ReactNode }) {
         "mx-auto flex min-h-dvh w-full max-w-md flex-col bg-canvas text-ink"
       )}
     >
+      <EcranAllume />
       <BandeauService />
       <main id="contenu" className="flex flex-1 flex-col">
         {children}

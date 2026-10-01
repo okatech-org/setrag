@@ -1,5 +1,6 @@
 /**
- * Réglages d'affichage du terminal : thème de nuit, son, contraste.
+ * Réglages d'affichage du terminal : thème de nuit, son, contraste, écran
+ * allumé pendant le contrôle.
  *
  * Ils vivent dans `localStorage`, pas dans la base embarquée : ils doivent
  * être lus avant le premier rendu (pour ne pas éblouir l'agent la nuit avec
@@ -22,6 +23,12 @@ export interface Preferences {
   son: boolean
   /** Plein soleil : bordures pleines, textes secondaires passés en encre. */
   contraste: boolean
+  /**
+   * Empêcher la mise en veille de l'écran pendant la tournée (API Screen
+   * Wake Lock). Actif par défaut : un viseur éteint entre deux voyageurs
+   * coûte un déverrouillage à chaque titre.
+   */
+  ecranAllume: boolean
 }
 
 export const PREFERENCES_PAR_DEFAUT: Preferences = {
@@ -30,6 +37,7 @@ export const PREFERENCES_PAR_DEFAUT: Preferences = {
   nuitFin: "06:00",
   son: true,
   contraste: false,
+  ecranAllume: true,
 }
 
 export const CLE_PREFERENCES = "setrag.controle.preferences"
@@ -60,6 +68,8 @@ function lire(): Preferences {
       son:
         typeof brut.son === "boolean" ? brut.son : PREFERENCES_PAR_DEFAUT.son,
       contraste: brut.contraste === true,
+      // Absent d'un réglage enregistré avant son ajout : actif.
+      ecranAllume: brut.ecranAllume !== false,
     }
   } catch {
     return PREFERENCES_PAR_DEFAUT

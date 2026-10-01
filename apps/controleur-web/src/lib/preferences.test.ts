@@ -72,6 +72,22 @@ describe("Réglages persistants", () => {
     })
   })
 
+  it("garde l'écran allumé par défaut, y compris sur un réglage plus ancien", async () => {
+    localStorage.setItem(CLE_PREFERENCES, JSON.stringify({ son: false }))
+    const { preferences } = await import("./preferences")
+    expect(PREFERENCES_PAR_DEFAUT.ecranAllume).toBe(true)
+    expect(preferences().ecranAllume).toBe(true)
+  })
+
+  it("retient que l'agent a autorisé la veille", async () => {
+    localStorage.setItem(
+      CLE_PREFERENCES,
+      JSON.stringify({ ecranAllume: false })
+    )
+    const { preferences } = await import("./preferences")
+    expect(preferences().ecranAllume).toBe(false)
+  })
+
   it("enregistre une modification et prévient les abonnés", async () => {
     const { abonnerPreferences, modifierPreferences, preferences } =
       await import("./preferences")
