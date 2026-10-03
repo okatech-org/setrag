@@ -1,4 +1,5 @@
-import { SvgXml } from "react-native-svg"
+import { Platform } from "react-native"
+import { SvgXml, type SvgProps } from "react-native-svg"
 
 import { COMPACT, COMPACT_NEGATIF, SYMBOLE_MONO_BLANC, SYMBOLE_MONO_ENCRE, SYMBOLE_RUBAN } from "./logos"
 
@@ -30,15 +31,29 @@ export interface LogoProps {
  */
 export function Logo({ variante = "compact", hauteur = 30, decoratif = false }: LogoProps) {
   const { xml, ratio } = VARIANTES[variante]
+  // SvgXml transforme les attributs aria-* du XML en camelCase. Le composant
+  // porte donc l'accessibilité, avec les attributs propres à chaque plateforme.
+  const xmlSansAccessibilite = xml.replace(/\s(?:role|aria-[\w-]+)="[^"]*"/g, "")
+  const accessibilite: SvgProps = Platform.OS === "web"
+    ? {
+        role: decoratif ? undefined : "img",
+        "aria-label": decoratif ? undefined : "SETRAG",
+        "aria-hidden": decoratif,
+      }
+    : {
+        accessible: !decoratif,
+        accessibilityRole: decoratif ? undefined : "image",
+        accessibilityLabel: decoratif ? undefined : "SETRAG",
+        accessibilityElementsHidden: decoratif,
+        importantForAccessibility: decoratif ? "no-hide-descendants" : "auto",
+      }
 
   return (
     <SvgXml
-      xml={xml}
+      xml={xmlSansAccessibilite}
       width={hauteur * ratio}
       height={hauteur}
-      accessible={!decoratif}
-      accessibilityRole={decoratif ? undefined : "image"}
-      accessibilityLabel={decoratif ? undefined : "SETRAG"}
+      {...accessibilite}
     />
   )
 }

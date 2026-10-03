@@ -23,6 +23,9 @@ const LOCAL_WEB_ORIGINS = [
   // Application de contrôle à bord.
   "http://localhost:3002",
   "https://localhost:3002",
+  // Aperçu navigateur de l'application Expo.
+  "http://localhost:8081",
+  "https://localhost:8081",
 ] as const
 
 const NATIVE_APP_ORIGINS = ["setrag://**", "setrag://", "exp://**"] as const

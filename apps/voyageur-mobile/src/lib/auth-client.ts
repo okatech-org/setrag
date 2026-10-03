@@ -1,9 +1,10 @@
 import { expoClient } from "@better-auth/expo/client"
-import { convexClient } from "@convex-dev/better-auth/client/plugins"
+import { convexClient, crossDomainClient } from "@convex-dev/better-auth/client/plugins"
 import type { BetterAuthClientPlugin } from "better-auth"
 import { emailOTPClient, phoneNumberClient } from "better-auth/client/plugins"
 import { createAuthClient } from "better-auth/react"
 import * as SecureStore from "expo-secure-store"
+import { Platform } from "react-native"
 
 const CONVEX_SITE_URL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL
 
@@ -28,21 +29,25 @@ const sessionStorage = {
 }
 
 /**
- * Client Better Auth natif : les jetons de session sont conservés dans le
- * trousseau iOS / Keystore Android via `expo-secure-store`.
+ * Client Better Auth : session cross-domain dans le navigateur, trousseau
+ * iOS / Keystore Android via `expo-secure-store` sur les appareils natifs.
  */
 export const authClient = createAuthClient({
   baseURL: CONVEX_SITE_URL,
   plugins: [
     convexClient(),
-    // `@better-auth/expo` déclare `getActions` avec une signature `BetterFetch`
-    // plus étroite que celle attendue par `createAuthClient` : les deux sont
-    // compatibles à l'exécution, seule l'inférence des types diverge.
-    expoClient({
-      scheme: "setrag",
-      storagePrefix: "setrag",
-      storage: sessionStorage,
-    }) as BetterAuthClientPlugin,
+    // Les deux transports sont exclusifs : expoClient ne gère pas les
+    // cookies cross-domain sur le web.
+    ...(Platform.OS === "web"
+      ? [crossDomainClient({ storagePrefix: "setrag" })]
+      : [
+          // Le cast corrige uniquement l'inférence de BetterFetch du plugin Expo.
+          expoClient({
+            scheme: "setrag",
+            storagePrefix: "setrag",
+            storage: sessionStorage,
+          }) as BetterAuthClientPlugin,
+        ]),
     emailOTPClient(),
     phoneNumberClient(),
   ],

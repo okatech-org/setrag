@@ -46,4 +46,25 @@ describe("origines de confiance Better Auth", () => {
     ])
     expect(trustedWebOrigins({})).not.toContain("setrag://")
   })
+
+  it("autorise Expo web en développement dans CORS et Better Auth", () => {
+    for (const origin of ["http://localhost:8081", "https://localhost:8081"]) {
+      expect(trustedWebOrigins({ DEV_SIGNIN_ENABLED: "true" })).toContain(origin)
+      expect(trustedAuthOrigins({ DEV_SIGNIN_ENABLED: "true" })).toContain(origin)
+      expect(trustedWebOrigins({})).not.toContain(origin)
+      expect(trustedAuthOrigins({ DEV_SIGNIN_ENABLED: "false" })).not.toContain(origin)
+    }
+  })
+
+  it("n'étend pas l'autorisation Expo aux ports et domaines voisins", () => {
+    const environment = { DEV_SIGNIN_ENABLED: "true" }
+    for (const origin of [
+      "http://localhost:8082",
+      "http://localhost.example:8081",
+      "https://partenaire.example",
+    ]) {
+      expect(trustedWebOrigins(environment)).not.toContain(origin)
+      expect(trustedAuthOrigins(environment)).not.toContain(origin)
+    }
+  })
 })

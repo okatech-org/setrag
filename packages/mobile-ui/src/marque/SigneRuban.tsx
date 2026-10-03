@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react"
-import { Animated, Easing } from "react-native"
-import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg"
+import { Animated, Easing, Platform } from "react-native"
+import Svg, { Defs, LinearGradient, Path, Stop, type SvgProps } from "react-native-svg"
 
 import { motion, RUBAN } from "../tokens"
 import { S, S_LONGUEUR } from "./logos"
@@ -28,6 +28,9 @@ export function SigneRuban({ etat = "repos", fond = "sombre", hauteur = 35 }: Si
   const reduit = useMouvementReduit()
   const [passage] = useState(() => new Animated.Value(0))
   const reflexion = etat === "reflexion" && !reduit
+  const accessibilite: SvgProps = Platform.OS === "web"
+    ? { "aria-hidden": true }
+    : { accessibilityElementsHidden: true, importantForAccessibility: "no-hide-descendants" }
 
   useEffect(() => {
     if (!reflexion) return
@@ -44,7 +47,7 @@ export function SigneRuban({ etat = "repos", fond = "sombre", hauteur = 35 }: Si
   }, [passage, reflexion])
 
   return (
-    <Svg viewBox="8 -6 84 112" width={(hauteur * 84) / 112} height={hauteur} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <Svg viewBox="8 -6 84 112" width={(hauteur * 84) / 112} height={hauteur} {...accessibilite}>
       <Defs>
         <LinearGradient id={id} gradientUnits="userSpaceOnUse" x1="0" y1="4" x2="0" y2="97">
           {RUBAN[fond].map(([offset, couleur]) => (
